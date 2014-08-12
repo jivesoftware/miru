@@ -1,0 +1,42 @@
+{
+    "module:KafkaMessageConsumerConfig" : {
+        "moduleInstance:default" : {
+            "groupid" : "miru-event-consumer",
+            "topics" : "event-generator"
+        },
+        "moduleInstance:viewChangeToWALWriter" : {
+            "zookeeperConnectHostPortTuples" : "localhost:2181"
+        }
+    },
+    "module:KafkaMessageProducerConfig" : {
+        "moduleInstance:ANNOUNCEMENTS" : {
+            "enabled" : "false"
+        }
+    },
+    "module:LoadBalancerServiceConfiguration" : {
+        "moduleInstance:http" : {
+            "LOAD_BALANCER_SERVER_NAMES" : "miru-deployable.dev.jiveon.com"
+        },
+        "moduleInstance:https" : {
+            "LOAD_BALANCER_SERVER_NAMES" : "miru-deployable.dev.jiveon.com"
+        }
+    },
+    "module:MetricSamplerConfig" : {
+        "moduleInstance:default" : {
+            "sampleEveryNMillis" : "0"
+        }
+    },
+    "module:MiruServiceConfig" : {
+        "moduleInstance:default" : {
+            "runnerClass" : "com.jivesoftware.jive.platform.miru.miru.service.runner.MiruNaiveMultiPortRunner",
+            "runnerPorts" : "49651,49652,49653,49654,49655"
+        }
+    },
+    "module:ServiceConfiguration" : {
+        "moduleInstance:default" : {
+            "ARCHIVE_COUNT" : "1",
+            "PORT" : "49651",
+            "RELEASE_COUNT" : "1"
+        }
+    }
+}

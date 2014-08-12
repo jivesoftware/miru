@@ -1,0 +1,523 @@
+package com.jivesoftware.os.miru.cluster.rcvs;
+
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Sets;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
+import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.MiruTopologyStatus;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
+import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
+import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
+import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.ColumnValueAndTimestamp;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.KeyedColumnValueCallbackStream;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.TenantIdAndRow;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.ConstantTimestamper;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.Timestamper;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
+@Singleton
+public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
+
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
+    // See MiruRegistryInitializer for schema information
+    private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry;
+    private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry;
+    private final RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry;
+    private final RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry;
+    private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry;
+    private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry;
+
+    private final int defaultNumberOfReplicas;
+    private final long defaultTopologyIsStaleAfterMillis;
+
+    private final StripingLocksProvider<TenantPartitionHostKey> topologyLocks = new StripingLocksProvider<>(64);
+
+    @Inject
+    public MiruRCVSClusterRegistry(
+        RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry,
+        RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry,
+        RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry,
+        RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry,
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry,
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry,
+        @Named("miruNumberOfReplicas") int defaultNumberOfReplicas,
+        @Named("miruTopologyIsStaleAfterMillis") long defaultTopologyIsStaleAfterMillis) {
+        this.hostsRegistry = hostsRegistry;
+        this.expectedTenantsRegistry = expectedTenantsRegistry;
+        this.expectedTenantPartitionsRegistry = expectedTenantPartitionsRegistry;
+        this.replicaRegistry = replicaRegistry;
+        this.topologyRegistry = topologyRegistry;
+        this.configRegistry = configRegistry;
+        this.defaultNumberOfReplicas = defaultNumberOfReplicas;
+        this.defaultTopologyIsStaleAfterMillis = defaultTopologyIsStaleAfterMillis;
+    }
+
+    @Override
+    public void sendHeartbeatForHost(MiruHost miruHost, long sizeInMemory, long sizeOnDisk) throws Exception {
+        hostsRegistry.add(MiruVoidByte.INSTANCE, miruHost, MiruHostsColumnKey.heartbeat, new MiruHostsColumnValue(sizeInMemory, sizeOnDisk), null, null);
+    }
+
+    @Override
+    public LinkedHashSet<HostHeartbeat> getAllHosts() throws Exception {
+        final LinkedHashSet<HostHeartbeat> hostHeartbeats = Sets.newLinkedHashSet();
+        final List<KeyedColumnValueCallbackStream<MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, Long>> streams = Lists.newArrayList();
+
+        hostsRegistry.getAllRowKeys(1000, null, new CallbackStream<TenantIdAndRow<MiruVoidByte, MiruHost>>() {
+            @Override
+            public TenantIdAndRow<MiruVoidByte, MiruHost> callback(TenantIdAndRow<MiruVoidByte, MiruHost> value) throws Exception {
+                if (value != null) {
+                    final MiruHost host = value.getRow();
+                    streams.add(new KeyedColumnValueCallbackStream<MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, Long>(
+                        host, new CallbackStream<ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long>>() {
+
+                        @Override
+                        public ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> callback(
+                            ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> columnValueAndTimestamp) throws Exception {
+
+                            if (columnValueAndTimestamp != null
+                                && columnValueAndTimestamp.getColumn().getIndex() == MiruHostsColumnKey.heartbeat.getIndex()) {
+                                MiruHostsColumnValue value = columnValueAndTimestamp.getValue();
+                                hostHeartbeats.add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp(), value.sizeInMemory, value.sizeOnDisk));
+                            }
+                            return columnValueAndTimestamp;
+                        }
+                    }));
+                }
+                return value;
+            }
+        });
+
+        hostsRegistry.multiRowGetAll(MiruVoidByte.INSTANCE, streams);
+
+        return hostHeartbeats;
+    }
+
+    @Override
+    public List<MiruTenantId> getTenantsForHost(MiruHost miruHost) throws Exception {
+        final List<MiruTenantId> tenants = Lists.newArrayList();
+        expectedTenantsRegistry.getEntrys(MiruVoidByte.INSTANCE, miruHost, null, null, 1000, false, null, null,
+            new CallbackStream<ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long>>() {
+                @Override
+                public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(
+                    ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> value) throws Exception {
+                    if (value != null) {
+                        tenants.add(value.getColumn());
+                    }
+                    return value;
+                }
+            });
+        return tenants;
+    }
+
+    @Override
+    public MiruTenantConfig getTenantConfig(MiruTenantId tenantId) throws Exception {
+        ColumnValueAndTimestamp<MiruTenantConfigFields, Long, Long>[] valueAndTimestamps = configRegistry
+            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, MiruTenantConfigFields.values(), null, null);
+
+        Map<MiruTenantConfigFields, Long> config = Maps.newHashMap();
+        if (valueAndTimestamps != null) {
+            for (ColumnValueAndTimestamp<MiruTenantConfigFields, Long, Long> valueAndTimestamp : valueAndTimestamps) {
+                if (valueAndTimestamp != null) {
+                    config.put(valueAndTimestamp.getColumn(), valueAndTimestamp.getValue());
+                }
+            }
+        }
+
+        return new MiruTenantConfig(config);
+    }
+
+    @Override
+    public Set<MiruHost> electToReplicaSetForTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, MiruReplicaSet replicaSet) throws Exception {
+        LinkedHashSet<HostHeartbeat> hostHeartbeats = getAllHosts();
+
+        Set<MiruHost> hostsWithReplica = Sets.newHashSet(replicaSet.getHostsWithReplica());
+        int countOfMissingReplicas = replicaSet.getCountOfMissingReplicas();
+
+        // hosts that provided heartbeat in the past hour
+        final long eligibleAfter = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
+        MiruHost[] hostsArray = FluentIterable.from(hostHeartbeats)
+            .filter(new Predicate<HostHeartbeat>() {
+                @Override
+                public boolean apply(@Nullable HostHeartbeat input) {
+                    return input != null && input.heartbeat > eligibleAfter;
+                }
+            })
+            .transform(new Function<HostHeartbeat, MiruHost>() {
+                @Nullable
+                @Override
+                public MiruHost apply(@Nullable HostHeartbeat input) {
+                    return input.host;
+                }
+            })
+            .toArray(MiruHost.class);
+
+        // We use a hash code derived from the tenant and partition to choose a starting index,
+        // and start electing eligible hosts from there.
+        // TODO come up with a better approach?
+        int hashCode = Objects.hash(tenantId, partitionId);
+        int electedCount = 0;
+        final long electionTime = System.currentTimeMillis();
+        for (int i = 0; i < hostsArray.length && electedCount < countOfMissingReplicas; i++, hashCode++) {
+            MiruHost hostToElect = hostsArray[Math.abs(hashCode) % hostsArray.length];
+            if (!hostsWithReplica.contains(hostToElect)) {
+                // this host is eligible
+                expectCoord(new MiruPartitionCoord(tenantId, partitionId, hostToElect));
+                // offset by election index (i) to ensure uniqueness of column keys
+                //TODO concurrent writes can still collide, we should pad currentTimeMillis and add ordered host index to ensure uniqueness
+                replicaRegistry.add(tenantId, partitionId, Long.MAX_VALUE - electionTime - i, hostToElect, null, null);
+                hostsWithReplica.add(hostToElect);
+                electedCount++;
+
+                log.debug("Elected {} to {} on {}", new Object[] { hostToElect, tenantId, partitionId });
+            }
+        }
+        return hostsWithReplica;
+    }
+
+    private void expectCoord(MiruPartitionCoord coord) throws Exception {
+        expectedTenantsRegistry.add(MiruVoidByte.INSTANCE, coord.host, coord.tenantId, MiruVoidByte.INSTANCE, null, null);
+        expectedTenantPartitionsRegistry.add(coord.tenantId, coord.host, coord.partitionId, MiruVoidByte.INSTANCE, null, null);
+        topologyRegistry.addIfNotExists(MiruVoidByte.INSTANCE, coord.tenantId,
+            new MiruTopologyColumnKey(coord.partitionId, coord.host),
+            new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, -1, -1),
+            null, null);
+        log.debug("Expecting {}", coord);
+    }
+
+    @Override
+    public ListMultimap<MiruPartitionState, MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception {
+        final MiruTenantConfig config = getTenantConfig(tenantId);
+        return Multimaps.transformValues(
+            getTopologyStatusByState(config, tenantId, Optional.<MiruPartitionId>absent(), Optional.<MiruHost>absent(),
+                Optional.<Map<MiruPartitionId, Set<MiruHost>>>absent()),
+            topologyStatusToPartition);
+    }
+
+    @Override
+    public ListMultimap<MiruPartitionState, MiruPartition> getPartitionsForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception {
+        final MiruTenantConfig config = getTenantConfig(tenantId);
+        return Multimaps.transformValues(
+            getTopologyStatusByState(config, tenantId, Optional.<MiruPartitionId>absent(), Optional.of(host),
+                Optional.<Map<MiruPartitionId, Set<MiruHost>>>absent()),
+            topologyStatusToPartition);
+    }
+
+    @Override
+    public ListMultimap<MiruPartitionState, MiruTopologyStatus> getTopologyStatusForTenant(MiruTenantId tenantId) throws Exception {
+        final MiruTenantConfig config = getTenantConfig(tenantId);
+        return getTopologyStatusByState(config, tenantId, Optional.<MiruPartitionId>absent(), Optional.<MiruHost>absent(),
+            Optional.<Map<MiruPartitionId, Set<MiruHost>>>absent());
+    }
+
+    @Override
+    public ListMultimap<MiruPartitionState, MiruTopologyStatus> getTopologyStatusForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception {
+        final MiruTenantConfig config = getTenantConfig(tenantId);
+        return getTopologyStatusByState(config, tenantId, Optional.<MiruPartitionId>absent(), Optional.of(host),
+            Optional.<Map<MiruPartitionId, Set<MiruHost>>>absent());
+    }
+
+    @Override
+    public MiruReplicaSet getReplicaSet(MiruTenantId tenantId, MiruPartitionId requiredPartitionId) throws Exception {
+
+        MiruTenantConfig config = getTenantConfig(tenantId);
+        int numberOfReplicas = config.getInt(MiruTenantConfigFields.number_of_replicas, defaultNumberOfReplicas);
+        Set<MiruHost> hostsWithReplica = getHostsWithReplica(tenantId, requiredPartitionId, numberOfReplicas);
+
+        Map<MiruPartitionId, Set<MiruHost>> partitionHostsWithReplica = Maps.newHashMap();
+        partitionHostsWithReplica.put(requiredPartitionId, hostsWithReplica);
+
+        ListMultimap<MiruPartitionState, MiruPartition> partitionsByState = Multimaps.transformValues(
+            getTopologyStatusByState(config, tenantId, Optional.of(requiredPartitionId), Optional.<MiruHost>absent(), Optional.of(partitionHostsWithReplica)),
+            topologyStatusToPartition);
+        int countOfMissingReplicas = numberOfReplicas - hostsWithReplica.size();
+        return new MiruReplicaSet(partitionsByState, hostsWithReplica, countOfMissingReplicas);
+    }
+
+    private Set<MiruHost> getHostsWithReplica(MiruTenantId tenantId, MiruPartitionId requiredPartitionId, final int numberOfReplicas) throws Exception {
+        final Set<MiruHost> hostsWithReplica = Sets.newHashSetWithExpectedSize(numberOfReplicas);
+        replicaRegistry.getEntrys(tenantId, requiredPartitionId, null, null, 100, false, null, null,
+            new CallbackStream<ColumnValueAndTimestamp<Long, MiruHost, Long>>() {
+                @Override
+                public ColumnValueAndTimestamp<Long, MiruHost, Long> callback(ColumnValueAndTimestamp<Long, MiruHost, Long> value) throws Exception {
+                    if (value != null) {
+                        hostsWithReplica.add(value.getValue());
+                        if (hostsWithReplica.size() < numberOfReplicas) {
+                            // keep going until we find as many replicas as we need
+                            return value;
+                        }
+                    }
+                    return null;
+                }
+            });
+        return hostsWithReplica;
+    }
+
+    @Override
+    public void updateTopology(MiruPartitionCoord coord, MiruPartitionCoordInfo coordInfo, MiruPartitionCoordMetrics coordMetrics,
+        Optional<Long> refreshTimestamp) throws Exception {
+
+        synchronized (topologyLocks.lock(new TenantPartitionHostKey(coord))) {
+            ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = getTopologyValueAndTimestamp(
+                coord.tenantId, coord.partitionId, coord.host);
+            long timestamp;
+            if (valueAndTimestamp != null) {
+                timestamp = refreshTimestamp.or(Optional.fromNullable(valueAndTimestamp.getTimestamp())).or(0l);
+            } else {
+                timestamp = refreshTimestamp.or(0l);
+            }
+            Timestamper timestamper = new ConstantTimestamper(timestamp);
+            topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
+                new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, coordMetrics.sizeInMemory, coordMetrics.sizeOnDisk), null, timestamper);
+            log.debug("Updated {} to {} at {}", new Object[] { coord, coordInfo, refreshTimestamp });
+        }
+    }
+
+    @Override
+    public void refreshTopology(MiruPartitionCoord coord, MiruPartitionCoordMetrics metrics, long refreshTimestamp) throws Exception {
+        synchronized (topologyLocks.lock(new TenantPartitionHostKey(coord))) {
+            MiruTopologyColumnValue value = topologyRegistry.get(MiruVoidByte.INSTANCE, coord.tenantId,
+                new MiruTopologyColumnKey(coord.partitionId, coord.host), null, null);
+            MiruTopologyColumnValue refresh;
+            if (value != null) {
+                refresh = new MiruTopologyColumnValue(value.state, value.storage, metrics.sizeInMemory, metrics.sizeOnDisk);
+            } else {
+                // this has the side effect of bootstrapping the topology
+                refresh = new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, metrics.sizeInMemory, metrics.sizeOnDisk);
+            }
+            Timestamper timestamper = new ConstantTimestamper(refreshTimestamp);
+            topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
+                refresh, null, timestamper);
+            log.debug("Refreshed {} at {}", new Object[] { coord, refreshTimestamp });
+        }
+    }
+
+    @Override
+    public boolean isPartitionActive(MiruPartitionCoord coord) throws Exception {
+        MiruTenantConfig config = getTenantConfig(coord.tenantId);
+        return isTenantPartitionActiveForHost(coord.tenantId, coord.partitionId, coord.host, config);
+    }
+
+    @Override
+    public MiruPartition getPartition(MiruPartitionCoord coord) throws Exception {
+        MiruTopologyColumnValue value = topologyRegistry.get(MiruVoidByte.INSTANCE, coord.tenantId,
+            new MiruTopologyColumnKey(coord.partitionId, coord.host), null, null);
+        if (value != null) {
+            return new MiruPartition(coord, new MiruPartitionCoordInfo(value.state, value.storage));
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public void removeHost(MiruHost host) throws Exception {
+        hostsRegistry.removeRow(MiruVoidByte.INSTANCE, host, null);
+    }
+
+    @Override
+    public void removeReplicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        replicaRegistry.removeRow(tenantId, partitionId, null);
+    }
+
+    @Override
+    public void moveReplica(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<MiruHost> fromHost, MiruHost toHost) throws Exception {
+        MiruReplicaSet replicaSet = getReplicaSet(tenantId, partitionId);
+
+        List<MiruHost> hosts = Lists.newArrayList(replicaSet.getHostsWithReplica());
+        if (fromHost.isPresent() && !hosts.isEmpty()) {
+            // list is small enough that direct removal is better than copying from intermediate set
+            hosts.remove(fromHost.or(hosts.get(0)));
+        }
+        hosts.add(toHost);
+
+        // rewrite new list of hosts to the head of the replica registry
+        long electionTime = System.currentTimeMillis();
+        for (int i = 0; i < hosts.size(); i++) {
+            MiruHost host = hosts.get(i);
+            expectCoord(new MiruPartitionCoord(tenantId, partitionId, host));
+            replicaRegistry.add(tenantId, partitionId, Long.MAX_VALUE - electionTime - i, host, null, null);
+        }
+    }
+
+    @Override
+    public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
+        topologyRegistry.remove(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey(partitionId, host), null);
+    }
+
+    private ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> getTopologyValueAndTimestamp(
+        MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
+
+        MiruTopologyColumnKey key = new MiruTopologyColumnKey(partitionId, host);
+        ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>[] valueAndTimestamps = topologyRegistry
+            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[] { key }, null, null);
+        if (valueAndTimestamps != null && valueAndTimestamps.length > 0 && valueAndTimestamps[0] != null) {
+            ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = valueAndTimestamps[0];
+            return valueAndTimestamp;
+        } else {
+            return null;
+        }
+    }
+
+    private ListMultimap<MiruPartitionState, MiruTopologyStatus> getTopologyStatusByState(
+        final MiruTenantConfig config,
+        final MiruTenantId tenantId,
+        final Optional<MiruPartitionId> requiredPartitionId,
+        final Optional<MiruHost> requiredHost,
+        final Optional<Map<MiruPartitionId, Set<MiruHost>>> seedPartitionHostsWithReplica) throws Exception {
+
+        final long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, defaultTopologyIsStaleAfterMillis);
+        final int numberOfReplicas = config.getInt(MiruTenantConfigFields.number_of_replicas, defaultNumberOfReplicas);
+
+        final Map<MiruPartitionId, Set<MiruHost>> partitionHostsWithReplica = seedPartitionHostsWithReplica
+            .or(Maps.<MiruPartitionId, Set<MiruHost>>newHashMap());
+
+        final ListMultimap<MiruPartitionState, MiruTopologyStatus> statusByState = ArrayListMultimap.create();
+        topologyRegistry.getEntrys(
+            MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey(requiredPartitionId.orNull(), null), null, 100, false, null, null,
+            new CallbackStream<ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>>() {
+                @Override
+                public ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> callback(
+                    ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> cvat) throws Exception {
+
+                    if (cvat != null) {
+                        MiruPartitionId partitionId = cvat.getColumn().partitionId;
+                        if (!requiredPartitionId.isPresent() || requiredPartitionId.get().equals(partitionId)) {
+                            MiruHost host = cvat.getColumn().host;
+                            if (!requiredHost.isPresent() || requiredHost.get().equals(host)) {
+                                Set<MiruHost> hostsWithReplica = partitionHostsWithReplica.get(partitionId);
+                                if (hostsWithReplica == null) {
+                                    hostsWithReplica = getHostsWithReplica(tenantId, partitionId, numberOfReplicas);
+                                    partitionHostsWithReplica.put(partitionId, hostsWithReplica);
+                                }
+                                if (hostsWithReplica.contains(host)) {
+                                    MiruTopologyColumnValue value = cvat.getValue();
+                                    MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, host);
+                                    MiruPartitionState state = normalizeState(value.state, cvat.getTimestamp(), topologyIsStaleAfterMillis);
+                                    MiruBackingStorage storage = value.storage;
+                                    MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(state, storage);
+                                    statusByState.put(state, new MiruTopologyStatus(
+                                        new MiruPartition(coord, coordInfo),
+                                        new MiruPartitionCoordMetrics(value.sizeInMemory, value.sizeOnDisk)));
+                                }
+                            }
+                            return cvat;
+                        }
+                    }
+                    return null;
+                }
+            });
+        return statusByState;
+    }
+
+    private MiruPartitionState normalizeState(MiruPartitionState state, Long timestamp, long topologyIsStaleAfterMillis) {
+        if (state != MiruPartitionState.offline && timestamp != null &&
+            timestamp < (System.currentTimeMillis() - topologyIsStaleAfterMillis)) {
+            return MiruPartitionState.offline;
+        } else {
+            return state;
+        }
+    }
+
+    private boolean isTenantPartitionActiveForHost(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host, MiruTenantConfig config)
+        throws Exception {
+
+        MiruTopologyColumnKey key = new MiruTopologyColumnKey(partitionId, host);
+        ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>[] valueAndTimestamps = topologyRegistry
+            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[] { key }, null, null);
+
+        Long topologyTimestamp = null;
+        if (valueAndTimestamps != null && valueAndTimestamps.length > 0 && valueAndTimestamps[0] != null) {
+            topologyTimestamp = valueAndTimestamps[0].getTimestamp();
+        }
+
+        long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, defaultTopologyIsStaleAfterMillis);
+        return topologyTimestamp != null && (topologyTimestamp + topologyIsStaleAfterMillis) > System.currentTimeMillis();
+    }
+
+    private final Function<MiruTopologyStatus, MiruPartition> topologyStatusToPartition = new Function<MiruTopologyStatus, MiruPartition>() {
+        @Nullable
+        @Override
+        public MiruPartition apply(@Nullable MiruTopologyStatus input) {
+            return input.partition;
+        }
+    };
+
+    private static class TenantPartitionHostKey {
+
+        private final MiruTenantId tenantId;
+        private final MiruPartitionId partitionId;
+        private final MiruHost host;
+
+        private TenantPartitionHostKey(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) {
+            this.tenantId = tenantId;
+            this.partitionId = partitionId;
+            this.host = host;
+        }
+
+        public TenantPartitionHostKey(MiruPartitionCoord coord) {
+            this(coord.tenantId, coord.partitionId, coord.host);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            TenantPartitionHostKey that = (TenantPartitionHostKey) o;
+
+            if (host != null ? !host.equals(that.host) : that.host != null) {
+                return false;
+            }
+            if (partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null) {
+                return false;
+            }
+            if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null) {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = tenantId != null ? tenantId.hashCode() : 0;
+            result = 31 * result + (partitionId != null ? partitionId.hashCode() : 0);
+            result = 31 * result + (host != null ? host.hashCode() : 0);
+            return result;
+        }
+    }
+}

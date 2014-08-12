@@ -1,0 +1,4 @@
+This product includes software developed by Jive Software
+(http://www.jivesoftware.com/).
+
+In addition, this product includes software developed by:

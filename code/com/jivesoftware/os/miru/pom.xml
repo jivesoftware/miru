@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.jivesoftware.miru</groupId>
+    <artifactId>miru</artifactId>
+    <version>0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <parent>
+        <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
+        <artifactId>global-repo-management</artifactId>
+        <version>0.1-SNAPSHOT</version>
+        <relativePath>inheritance-poms/global-repo-management/pom.xml</relativePath>
+    </parent>
+    <modules>
+        <module>inheritance-poms</module>
+        <module>miru-service</module>
+        <module>miru-api</module>
+        <module>miru-reader</module>
+        <module>miru-client</module>
+        <module>miru-cluster</module>
+        <module>miru-wal</module>
+        <module>miru-reco</module>
+        <module>miru-test</module>
+    </modules>
+</project>

@@ -1,0 +1,93 @@
+{
+    "service:miru-deployable" : {
+        "module:EnvConfiguration" : {
+            "moduleInstance:default" : {
+                "JAVA_DEBUG_PORT" : "49601",
+                "JAVA_JMX_PORT" : "49602",
+                "JAVA_MAIN" : "com.jivesoftware.jive.platform.miru.miru.deployable.MiruMain"
+            }
+        },
+        "module:KafkaMessageConsumerConfig" : {
+            "moduleInstance:default" : {
+                "desiredBatchSize" : "100"
+            },
+            "moduleInstance:viewChangeToWALWriter" : {
+                "consumerFetchSizeInBytes" : "10485760",
+                "desiredBatchSize" : "100",
+                "enabled" : "true",
+                "groupid" : "miru-view-change",
+                "numberOfConsumerThreads" : "1",
+                "topics" : "unset",
+                "zookeeperConnectionTimeoutMillis" : "1000000",
+                "zookeeperSessionTimeoutMillis" : "15000"
+            }
+        },
+        "module:LoadBalancerServiceConfiguration" : {
+            "moduleInstance:http" : {
+                "LOAD_BALANCER_PORT" : "49605"
+            },
+            "moduleInstance:https" : {
+                "LOAD_BALANCER_PORT" : "49606"
+            }
+        },
+        "module:MiruHttpClientReaderConfig" : {
+            "moduleInstance:default" : {
+                "defaultHostAddresses" : "",
+                "maxConnections" : "100",
+                "readerClass" : "com.jivesoftware.jive.platform.miru.miru.reader.MiruHttpClientReader",
+                "socketTimeoutInMillis" : "-1"
+            }
+        },
+        "module:MiruRegistryConfig" : {
+            "moduleInstance:default" : {
+                "defaultNumberOfReplicas" : "3",
+                "defaultTopologyIsStaleAfterMillis" : "3600000"
+            }
+        },
+        "module:MiruServiceConfig" : {
+            "moduleInstance:default" : {
+                "activityWalReaderClass" : "com.jivesoftware.jive.platform.miru.miru.wal.activity.MiruActivityWALReaderImpl",
+                "activityWalWriterClass" : "com.jivesoftware.jive.platform.miru.miru.wal.activity.MiruWriteToActivityAndSipWAL",
+                "bitsetBufferSize" : "8192",
+                "clusterRegistryClass" : "com.jivesoftware.jive.platform.miru.miru.cluster.rcvs.MiruRCVSClusterRegistry",
+                "defaultAddAnotherSolverAfterNMillis" : "100",
+                "defaultFailAfterNMillis" : "3000",
+                "defaultInitialSolvers" : "1",
+                "defaultMaxNumberOfSolvers" : "10",
+                "defaultStorage" : "hybrid",
+                "diskResourceInitialChunkSize" : "33554432",
+                "diskResourceLocatorClass" : "com.jivesoftware.jive.platform.miru.miru.service.stream.locator.DiskIdentifierPartResourceLocator",
+                "diskResourceLocatorPath" : "${J_VAR}/lib/${FULLY_QUALIFIED_SERVICE_NAME}/data",
+                "ensurePartitionsIntervalInMillis" : "5000",
+                "expectedTenantsClass" : "com.jivesoftware.jive.platform.miru.miru.service.partition.cluster.MiruClusterExpectedTenants",
+                "heartbeatIntervalInMillis" : "5000",
+                "longTailSolverPercentile" : "95",
+                "longTailSolverWindowSize" : "1000",
+                "partitionAuthzCacheSize" : "10000",
+                "partitionBootstrapIntervalInMillis" : "5000",
+                "partitionRebuildBatchSize" : "1000",
+                "partitionRunnableIntervalInMillis" : "5000",
+                "readTrackingWalReaderClass" : "com.jivesoftware.jive.platform.miru.miru.wal.readtracking.MiruReadTrackingWALReaderImpl",
+                "readTrackingWalWriterClass" : "com.jivesoftware.jive.platform.miru.miru.wal.readtracking.MiruWriteToReadTrackingAndSipWAL",
+                "runnerClass" : "com.jivesoftware.jive.platform.miru.miru.service.runner.MiruRestfulServerConfigRunner",
+                "runnerPorts" : "",
+                "streamFactoryExecutorCount" : "10",
+                "transientResourceInitialChunkSize" : "4096",
+                "transientResourceLocatorClass" : "com.jivesoftware.jive.platform.miru.miru.service.stream.locator.TransientIdentifierPartResourceLocator",
+                "transientResourceLocatorPath" : "${J_VAR}/lib/${FULLY_QUALIFIED_SERVICE_NAME}/transient"
+            }
+        },
+        "module:ServiceConfiguration" : {
+            "moduleInstance:default" : {
+                "HOST_NAME" : "${J_HOSTNAME}",
+                "MANAGE_PORT" : "49607",
+                "PORT" : "49600",
+                "SERVICE_NAME" : "miru-deployable",
+                "SERVICE_PHASE" : "main",
+                "SERVICE_TAGS" : "app,fe-dev",
+                "SHUTDOWN_TIMEOUT" : "60",
+                "STARTUP_TIMEOUT" : "60"
+            }
+        }
+    }
+}

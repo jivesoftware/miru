@@ -1,0 +1,27 @@
+{
+    "module:KafkaMessageConsumerConfig" : {
+        "moduleInstance:default" : {
+            "groupid" : "miru-event-consumer",
+            "topics" : "event-generator"
+        },
+        "moduleInstance:viewChangeToWALWriter" : {
+            "zookeeperConnectHostPortTuples" : "soa-prod-hdp1-data11.phx1.jivehosted.com:2191,soa-prod-hdp1-data12.phx1.jivehosted.com:2191,soa-prod-hdp1-data13.phx1.jivehosted.com:2191"
+        }
+    },
+    "module:LoadBalancerServiceConfiguration" : {
+        "moduleInstance:http" : {
+            "LOAD_BALANCER_SERVER_NAMES" : "miru-deployable.prod.jiveon.com"
+        },
+        "moduleInstance:https" : {
+            "LOAD_BALANCER_SERVER_NAMES" : "miru-deployable.prod.jiveon.com"
+        }
+    },
+    "module:ServiceConfiguration" : {
+        "moduleInstance:default" : {
+            "ARCHIVE_COUNT" : "10",
+            "DATACENTER_NAME" : "phx",
+            "RELEASE_COUNT" : "10",
+            "SERVICE_TAGS" : ""
+        }
+    }
+}
