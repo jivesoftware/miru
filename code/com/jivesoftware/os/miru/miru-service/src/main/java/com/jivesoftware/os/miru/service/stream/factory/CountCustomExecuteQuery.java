@@ -17,7 +17,6 @@ import com.jivesoftware.os.miru.service.partition.MiruRemoteHostedPartition;
 import com.jivesoftware.os.miru.service.query.DistinctCountReport;
 import com.jivesoftware.os.miru.service.query.base.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
-import com.jivesoftware.jive.tracing_api.Trace;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,7 +76,6 @@ public class CountCustomExecuteQuery implements ExecuteQuery<DistinctCountResult
             EWAHCompressedBitmap answer = utils.bufferedAnd(ands, bitsetBufferSize);
             DistinctCountResult numberOfDistincts = utils.numberOfDistincts(stream, query, report, answer);
 
-            Trace.currentSpan().classify("count", numberOfDistincts.collectedDistincts);
             return numberOfDistincts;
         }
     }

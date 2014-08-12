@@ -2,6 +2,8 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.id.TenantId;
+import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.RowColumnValueStoreImpl;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -24,8 +26,6 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
-import com.jivesoftware.os.jive.utils.id.TenantId;
-import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.RowColumnValueStoreImpl;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;

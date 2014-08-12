@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.test;
 
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.TenantId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;

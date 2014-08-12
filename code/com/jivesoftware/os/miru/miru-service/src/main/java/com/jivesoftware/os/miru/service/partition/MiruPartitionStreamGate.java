@@ -2,6 +2,8 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -12,8 +14,6 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
 import com.jivesoftware.os.miru.service.stream.MiruStream;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.Semaphore;

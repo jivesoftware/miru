@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.wal.readtracking;
 
+import com.jivesoftware.os.jive.utils.id.TenantId;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriterImpl.CollisionId;
@@ -8,8 +10,6 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriterImpl.C
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
-import com.jivesoftware.os.jive.utils.id.TenantId;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 import java.util.List;
 import javax.inject.Inject;
 

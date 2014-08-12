@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.service.index.MiruAuthzIndex;
@@ -11,7 +12,6 @@ import com.jivesoftware.os.miru.service.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.query.base.EWAHUtils;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import java.util.concurrent.ExecutorService;
 
 /**

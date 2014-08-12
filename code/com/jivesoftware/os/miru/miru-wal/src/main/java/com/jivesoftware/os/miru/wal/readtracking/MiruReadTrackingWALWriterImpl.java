@@ -1,15 +1,15 @@
 package com.jivesoftware.os.miru.wal.readtracking;
 
 import com.google.common.base.Charsets;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.MultiAdd;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumValueTimestampAdd;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.ConstantTimestamper;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
 import java.util.List;
 
 public class MiruReadTrackingWALWriterImpl<C, V> implements MiruReadTrackingWALWriter {

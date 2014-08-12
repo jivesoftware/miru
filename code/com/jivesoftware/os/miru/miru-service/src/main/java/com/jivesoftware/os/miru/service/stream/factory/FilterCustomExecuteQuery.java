@@ -17,7 +17,6 @@ import com.jivesoftware.os.miru.service.partition.MiruRemoteHostedPartition;
 import com.jivesoftware.os.miru.service.query.AggregateCountsReport;
 import com.jivesoftware.os.miru.service.query.base.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
-import com.jivesoftware.jive.tracing_api.Trace;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -69,7 +68,6 @@ public class FilterCustomExecuteQuery implements ExecuteQuery<AggregateCountsRes
 
             AggregateCountsResult aggregateCounts = utils.getAggregateCounts(stream, query, report, answer, Optional.fromNullable(counter));
 
-            Trace.currentSpan().classify("count", aggregateCounts.collectedDistincts);
             return aggregateCounts;
         }
     }

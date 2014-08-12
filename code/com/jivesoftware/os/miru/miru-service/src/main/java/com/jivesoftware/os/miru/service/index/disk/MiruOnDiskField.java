@@ -1,14 +1,14 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
+import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
-import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
-import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Collections;

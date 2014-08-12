@@ -6,8 +6,6 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
-import com.jivesoftware.os.miru.service.runner.MiruRestfulServerConfigRunner;
-import com.jivesoftware.os.miru.service.runner.MiruRunner;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTransientResourceLocator;
@@ -30,16 +28,6 @@ public class MockMiruServiceConfig implements MiruServiceConfig {
     @Override
     public int getStreamFactoryExecutorCount() {
         return 10;
-    }
-
-    @Override
-    public Class<? extends MiruRunner> getRunnerClass() {
-        return MiruRestfulServerConfigRunner.class;
-    }
-
-    @Override
-    public String getRunnerPorts() {
-        return "";
     }
 
     @Override

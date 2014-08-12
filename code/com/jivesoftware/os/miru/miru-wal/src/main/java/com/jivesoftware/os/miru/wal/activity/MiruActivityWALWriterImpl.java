@@ -1,14 +1,14 @@
 package com.jivesoftware.os.miru.wal.activity;
 
 import com.google.common.base.Charsets;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.MultiAdd;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumValueTimestampAdd;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.ConstantTimestamper;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
 import java.util.List;
 
 /**

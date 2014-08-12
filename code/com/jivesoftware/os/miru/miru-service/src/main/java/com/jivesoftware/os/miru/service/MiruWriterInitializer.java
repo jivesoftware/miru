@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.service;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Guice;
-import com.google.inject.Inject;
 import com.jivesoftware.os.miru.api.MiruWriter;
+import javax.inject.Inject;
 
 public class MiruWriterInitializer {
 

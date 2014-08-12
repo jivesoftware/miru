@@ -2,20 +2,16 @@ package com.jivesoftware.os.miru.service;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Guice;
-import com.google.inject.Inject;
-import com.jivesoftware.jive.entitlements.entitlements.api.EntitlementExpressionProvider;
 import com.jivesoftware.os.miru.api.MiruReader;
+import javax.inject.Inject;
 
 public final class MiruReaderInitializer {
 
     public static MiruReaderInitializer initialize(
         MiruReaderConfig config,
-        MiruService miruService,
-        EntitlementExpressionProvider entitlementExpressionProvider) {
+        MiruService miruService) {
 
-        return Guice.createInjector(
-            new MiruReaderInitializerModule(config, miruService, entitlementExpressionProvider)
-        ).getInstance(MiruReaderInitializer.class);
+        return Guice.createInjector(new MiruReaderInitializerModule(config, miruService)).getInstance(MiruReaderInitializer.class);
     }
 
     private final MiruReader miruReader;

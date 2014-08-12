@@ -6,7 +6,6 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
-import com.jivesoftware.jive.tracing_api.Trace;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -321,7 +320,6 @@ public class MiruService {
         debugPath(solutions);
         partitionComparison.analyzeSolutions(solutions);
 
-        Trace.currentSpan().classify("numSearchedPartitions", numSearchedPartitions);
         return merger.done(lastResult, defaultValue);
     }
 

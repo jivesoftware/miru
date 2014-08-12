@@ -4,6 +4,14 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.jivesoftware.os.jive.utils.id.SaltingDelegatingMarshaller;
+import com.jivesoftware.os.jive.utils.id.TenantId;
+import com.jivesoftware.os.jive.utils.id.TenantIdMarshaller;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.DefaultRowColumnValueStoreMarshaller;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
+import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.primatives.LongTypeMarshaller;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
@@ -21,14 +29,6 @@ import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumn
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKeyMarshaller;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRowMarshaller;
-import com.jivesoftware.os.jive.utils.id.SaltingDelegatingMarshaller;
-import com.jivesoftware.os.jive.utils.id.TenantId;
-import com.jivesoftware.os.jive.utils.id.TenantIdMarshaller;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.DefaultRowColumnValueStoreMarshaller;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
-import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.primatives.LongTypeMarshaller;
 
 public class MiruWALInitializer {
 

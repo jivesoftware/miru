@@ -1,6 +1,9 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
@@ -9,9 +12,6 @@ import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.util.Set;
 
 /**

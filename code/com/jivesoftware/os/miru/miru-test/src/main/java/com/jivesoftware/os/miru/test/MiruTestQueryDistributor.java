@@ -5,16 +5,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jivesoftware.jive.platform.model.model.api.Ref;
-import com.jivesoftware.jive.ui.base.model.event.User;
-import com.jivesoftware.jive.ui.base.model.id.CompositeIds;
-import com.jivesoftware.jive.ui.base.model.view.CommentVersionActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.ContentVersionActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.LikeActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.MembershipActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.PlaceActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.UserFollowActivitySearchView;
 import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.jive.utils.id.ObjectId;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryCriteria;
 import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryParams;
@@ -62,7 +54,7 @@ public class MiruTestQueryDistributor {
 
     public MiruAggregateCountsQueryParams aggregateCountsQuery(boolean inbox) {
         Id userId = featureSupplier.oldUsers(1).get(0);
-        Ref<User> user = Ref.fromId(userId, User.class);
+        ObjectId user = new ObjectId("User", userId);
         MiruAggregateCountsQueryCriteria.Builder criteriaBuilder = new MiruAggregateCountsQueryCriteria.Builder()
             .setDesiredNumberOfDistincts(numResultsAggregateCounts + 1) // we usually add 1 for "hasMore"
             .setStreamId(streamId(inbox, user))
@@ -100,7 +92,7 @@ public class MiruTestQueryDistributor {
 
     public MiruDistinctCountQueryParams distinctCountQuery(boolean inbox) {
         Id userId = featureSupplier.oldUsers(1).get(0);
-        Ref<User> user = Ref.fromId(userId, User.class);
+        ObjectId user = new ObjectId("User", userId);
         MiruDistinctCountQueryCriteria.Builder criteriaBuilder = new MiruDistinctCountQueryCriteria.Builder()
             .setDesiredNumberOfDistincts(numResultsDistinctCount + 1) // we usually add 1 for "hasMore"
             .setStreamId(streamId(inbox, user))
@@ -130,23 +122,23 @@ public class MiruTestQueryDistributor {
             criteriaBuilder.build());
     }
 
-    private Id streamId(boolean inbox, Ref<User> user) {
+    private Id streamId(boolean inbox, ObjectId user) {
         if (inbox) {
-            return CompositeIds.inboxStreamId(featureSupplier.tenantId(), user);
+            return new Id("inbox|" + featureSupplier.tenantId() + "|" + user);
         } else {
-            return CompositeIds.connectionsStreamId(featureSupplier.tenantId(), user);
+            return new Id("stream|" + featureSupplier.tenantId() + "|" + user);
         }
     }
 
     private MiruFieldFilter viewClassesFilter() {
         return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.copyOf(Lists.transform(
-            Lists.<Class<?>>newArrayList(
-                ContentVersionActivitySearchView.class,
-                CommentVersionActivitySearchView.class,
-                LikeActivitySearchView.class,
-                UserFollowActivitySearchView.class,
-                MembershipActivitySearchView.class,
-                PlaceActivitySearchView.class),
+            Lists.<String>newArrayList(
+                "ContentVersionActivitySearchView",
+                "CommentVersionActivitySearchView",
+                "LikeActivitySearchView",
+                "UserFollowActivitySearchView",
+                "MembershipActivitySearchView",
+                "PlaceActivitySearchView"),
             CLASS_NAME_TO_TERMID)));
     }
 
@@ -199,11 +191,11 @@ public class MiruTestQueryDistributor {
         }
     }
 
-    private static final Function<Class<?>, MiruTermId> CLASS_NAME_TO_TERMID = new Function<Class<?>, MiruTermId>() {
+    private static final Function<String, MiruTermId> CLASS_NAME_TO_TERMID = new Function<String, MiruTermId>() {
         @Nullable
         @Override
-        public MiruTermId apply(@Nullable Class<?> input) {
-            return input != null ? new MiruTermId(input.getSimpleName().getBytes(Charsets.UTF_8)) : null;
+        public MiruTermId apply(@Nullable String input) {
+            return input != null ? new MiruTermId(input.getBytes(Charsets.UTF_8)) : null;
         }
     };
 

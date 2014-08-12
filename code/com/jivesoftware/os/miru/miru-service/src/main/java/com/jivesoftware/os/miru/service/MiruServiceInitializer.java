@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service;
 
 import com.google.inject.Guice;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
@@ -12,6 +11,7 @@ import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
+import javax.inject.Inject;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

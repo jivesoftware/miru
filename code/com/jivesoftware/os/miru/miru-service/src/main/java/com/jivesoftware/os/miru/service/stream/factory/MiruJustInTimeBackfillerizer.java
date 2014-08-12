@@ -5,6 +5,8 @@ import com.google.common.collect.Lists;
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.IntIterator;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -20,10 +22,6 @@ import com.jivesoftware.os.miru.service.query.base.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader.StreamReadTrackingSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader.StreamReadTrackingWAL;
-import com.jivesoftware.jive.tracing_api.Trace;
-import com.jivesoftware.jive.tracing_api.common.TracedCallable;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -48,11 +46,10 @@ public class MiruJustInTimeBackfillerizer {
         final MiruPartitionId partitionId, final MiruStreamId streamId, final int bitsetBufferSize) throws Exception {
 
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
-        Future<?> future = backfillExecutor.submit(TracedCallable.decorate(new Callable<Void>() {
+        Future<?> future = backfillExecutor.submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
                 try {
-                    Trace.currentSpan().mark("Backfillerizer Start");
 
                     synchronized (stream.streamLocks.lock(streamId)) {
                         int lastActivityIndex = stream.inboxIndex.getLastActivityIndex(streamId);
@@ -108,14 +105,13 @@ public class MiruJustInTimeBackfillerizer {
                         sipAndApplyReadTracking(stream, tenantId, partitionId, streamId, lastId, oldestBackfilledEventId);
                     }
 
-                    Trace.currentSpan().mark("Backfillerizer End");
                 } catch (Exception e) {
                     log.error("Backfillerizer failed", e);
                     throw new RuntimeException("Backfillerizer failed");
                 }
                 return null;
             }
-        }));
+        });
 
         // if this is interrupted, the backfill will still complete
         future.get();
@@ -123,8 +119,6 @@ public class MiruJustInTimeBackfillerizer {
 
     private void sipAndApplyReadTracking(final MiruQueryStream stream, MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId,
         final int lastActivityIndex, long oldestBackfilledEventId) throws Exception {
-
-        Trace.currentSpan().mark("SipAndApplyReadTracking Start");
 
         final AtomicLong minimumEventId = new AtomicLong(Long.MAX_VALUE);
         final AtomicLong newSipTimestamp = new AtomicLong(0);
@@ -175,6 +169,5 @@ public class MiruJustInTimeBackfillerizer {
             stream.readTrackingWALReader.setSipTimestamp(tenantId, partitionId, streamId, newSipTimestamp.get());
         }
 
-        Trace.currentSpan().mark("SipAndApplyReadTracking End");
     }
 }

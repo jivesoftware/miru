@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourcePartitionIdentifier;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import java.util.Map;
 
 /**

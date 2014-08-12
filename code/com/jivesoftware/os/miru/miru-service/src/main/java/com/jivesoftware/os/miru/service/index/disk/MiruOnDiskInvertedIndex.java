@@ -1,13 +1,13 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
+import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.stream.filter.MatchNoMoreThanNBitmapStorage;
-import com.jivesoftware.os.jive.utils.io.FilerIO;
-import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
-import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
 import java.io.DataInput;
 import java.util.List;
 

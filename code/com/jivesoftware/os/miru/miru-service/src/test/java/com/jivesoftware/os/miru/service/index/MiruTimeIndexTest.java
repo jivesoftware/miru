@@ -1,13 +1,13 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex.TimeOrderAnomalyStream;
 import com.jivesoftware.os.jive.utils.io.ByteBufferBackedFiler;
 import com.jivesoftware.os.jive.utils.io.FileBackedMemMappedByteBufferFactory;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
+import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
+import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
+import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex.TimeOrderAnomalyStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;

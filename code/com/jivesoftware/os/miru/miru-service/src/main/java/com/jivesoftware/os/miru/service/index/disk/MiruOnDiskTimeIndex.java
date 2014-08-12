@@ -1,10 +1,6 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
-import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
@@ -12,6 +8,10 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.map.store.FileBackMapStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
+import com.jivesoftware.os.miru.service.index.BulkExport;
+import com.jivesoftware.os.miru.service.index.BulkImport;
+import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
+import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;

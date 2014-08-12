@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.wal;
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
+import com.jivesoftware.os.jive.utils.id.TenantId;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
@@ -14,8 +16,6 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
-import com.jivesoftware.os.jive.utils.id.TenantId;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 
 public class MiruWALInitializerModule extends AbstractModule {
 

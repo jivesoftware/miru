@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.stream.factory;
 import com.google.common.base.Optional;
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.jive.tracing_api.Trace;
 import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.query.TrendingQuery;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
@@ -59,7 +58,6 @@ public class TrendingExecuteQuery implements ExecuteQuery<TrendingResult, Trendi
             EWAHCompressedBitmap answer = utils.bufferedAnd(ands, bitsetBufferSize);
             TrendingResult trending = utils.trending(stream, query, report, answer);
 
-            Trace.currentSpan().classify("count", trending.collectedDistincts);
             return trending;
         } catch (Exception e) {
             throw e;

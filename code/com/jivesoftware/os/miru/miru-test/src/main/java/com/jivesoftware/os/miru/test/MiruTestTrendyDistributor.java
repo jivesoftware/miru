@@ -5,12 +5,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jivesoftware.jive.ui.base.model.view.CommentVersionActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.ContentVersionActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.LikeActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.MembershipActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.PlaceActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.UserFollowActivitySearchView;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruTrendingQueryCriteria;
@@ -60,21 +54,21 @@ public class MiruTestTrendyDistributor {
 
     private MiruFieldFilter viewClassesFilter() {
         return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.copyOf(Lists.transform(
-            Lists.<Class<?>>newArrayList(
-                ContentVersionActivitySearchView.class,
-                CommentVersionActivitySearchView.class,
-                LikeActivitySearchView.class,
-                UserFollowActivitySearchView.class,
-                MembershipActivitySearchView.class,
-                PlaceActivitySearchView.class),
+            Lists.<String>newArrayList(
+                "ContentVersionActivitySearchView",
+                "CommentVersionActivitySearchView",
+                "LikeActivitySearchView",
+                "UserFollowActivitySearchView",
+                "MembershipActivitySearchView",
+                "PlaceActivitySearchView"),
             CLASS_NAME_TO_TERMID)));
     }
 
-    private static final Function<Class<?>, MiruTermId> CLASS_NAME_TO_TERMID = new Function<Class<?>, MiruTermId>() {
+    private static final Function<String, MiruTermId> CLASS_NAME_TO_TERMID = new Function<String, MiruTermId>() {
         @Nullable
         @Override
-        public MiruTermId apply(@Nullable Class<?> input) {
-            return input != null ? new MiruTermId(input.getSimpleName().getBytes(Charsets.UTF_8)) : null;
+        public MiruTermId apply(@Nullable String input) {
+            return input != null ? new MiruTermId(input.getBytes(Charsets.UTF_8)) : null;
         }
     };
 }

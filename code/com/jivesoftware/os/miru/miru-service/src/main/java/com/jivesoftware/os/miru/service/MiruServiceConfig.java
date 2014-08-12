@@ -4,8 +4,6 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
-import com.jivesoftware.os.miru.service.runner.MiruRestfulServerConfigRunner;
-import com.jivesoftware.os.miru.service.runner.MiruRunner;
 import com.jivesoftware.os.miru.service.stream.locator.AbstractIdentifierPartResourceLocator;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTransientResourceLocator;
@@ -31,13 +29,6 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(10)
     int getStreamFactoryExecutorCount();
-
-    @ClassDefault(MiruRestfulServerConfigRunner.class)
-    Class<? extends MiruRunner> getRunnerClass();
-
-    // This is only used by naive in-process implementations. Real implementations should use the single service config port.
-    @StringDefault("")
-    String getRunnerPorts();
 
     @ClassDefault(MiruRCVSClusterRegistry.class)
     Class<? extends MiruClusterRegistry> getClusterRegistryClass();

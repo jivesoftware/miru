@@ -41,16 +41,6 @@
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.jive.ui</groupId>
-            <artifactId>base-model</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.jive.platform.model</groupId>
-            <artifactId>model-api</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
             <version>0.1-SNAPSHOT</version>

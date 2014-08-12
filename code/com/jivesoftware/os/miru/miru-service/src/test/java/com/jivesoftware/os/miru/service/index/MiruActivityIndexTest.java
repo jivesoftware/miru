@@ -1,14 +1,14 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.jive.utils.io.Filer;
+import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.index.disk.MiruMemMappedActivityIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskActivityIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryActivityIndex;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.jive.utils.io.Filer;
-import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;

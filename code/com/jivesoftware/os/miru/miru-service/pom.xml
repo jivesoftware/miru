@@ -24,11 +24,6 @@
             <artifactId>base</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.jive.platform.shared</groupId>
-            <artifactId>quorum-config</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>logger</artifactId>
         </dependency>
@@ -37,27 +32,17 @@
             <artifactId>merlin-config</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.jive.deployer.monitor</groupId>
-            <artifactId>health-check</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.jive.platform.configurator</groupId>
-            <artifactId>configurable</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.jive.entitlements</groupId>
-            <artifactId>entitlements-api</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftwareos.miru</groupId>
+            <artifactId>miru-reco</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -67,26 +52,13 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-admin</artifactId>
-            <version>0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-reader</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>server-http-jetty-jersey</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.jive.deployer</groupId>
-            <artifactId>deployable-service-add-ons</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
-            <groupId>com.googlecode.javaewah</groupId>
-            <artifactId>JavaEWAH</artifactId>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-ewah</artifactId>
+            <version>0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
@@ -150,10 +122,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
-            <artifactId>row-column-value-store-hbase</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
             <artifactId>row-column-value-store-inmemory</artifactId>
             <scope>test</scope>
         </dependency>
@@ -162,35 +130,9 @@
             <artifactId>row-column-value-store-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.jive.ui.shared.render</groupId>
-            <artifactId>core</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.jive.platform.reader</groupId>
-            <artifactId>reader-client</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.jive.identity</groupId>
-            <artifactId>identity-client</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.jive.shared.tracing</groupId>
-            <artifactId>tracing-api</artifactId>
-            <version>unspecified</version>
-        </dependency>
-        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.jive.ui.shared.render</groupId>
-            <artifactId>guice</artifactId>
-            <version>unspecified</version>
-        </dependency>
-
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -202,10 +144,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
             <version>0.1-SNAPSHOT</version>
@@ -214,12 +152,6 @@
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.jive.entitlements</groupId>
-            <artifactId>entitlements-impl</artifactId>
-            <version>unspecified</version>
             <scope>test</scope>
         </dependency>
         <dependency>

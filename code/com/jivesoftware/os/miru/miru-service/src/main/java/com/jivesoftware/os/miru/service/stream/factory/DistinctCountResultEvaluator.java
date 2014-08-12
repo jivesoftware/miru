@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.service.stream.factory;
 
-import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
-import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
+import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
 
 /**
 *

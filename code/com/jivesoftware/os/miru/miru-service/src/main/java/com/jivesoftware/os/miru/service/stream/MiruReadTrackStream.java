@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.stream;
 import com.google.common.base.Optional;
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.service.index.MiruFields;
@@ -11,7 +12,6 @@ import com.jivesoftware.os.miru.service.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.query.base.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import java.util.concurrent.ExecutorService;
 
 /** @author jonathan */

@@ -2,15 +2,15 @@ package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
+import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
+import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.index.MiruUnreadTrackingIndex;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
-import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
-import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import java.io.File;
 import java.util.Map;
 

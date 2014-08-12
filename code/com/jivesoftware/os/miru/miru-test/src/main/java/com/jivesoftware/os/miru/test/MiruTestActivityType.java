@@ -3,29 +3,10 @@ package com.jivesoftware.os.miru.test;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.jive.utils.id.ObjectId;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
-import com.jivesoftware.jive.platform.model.model.api.Ref;
-import com.jivesoftware.jive.ui.base.model.event.Comment;
-import com.jivesoftware.jive.ui.base.model.event.CommentVersion;
-import com.jivesoftware.jive.ui.base.model.event.ConnectionsActivityStream;
-import com.jivesoftware.jive.ui.base.model.event.Group;
-import com.jivesoftware.jive.ui.base.model.event.Like;
-import com.jivesoftware.jive.ui.base.model.event.Membership;
-import com.jivesoftware.jive.ui.base.model.event.Place;
-import com.jivesoftware.jive.ui.base.model.event.Post;
-import com.jivesoftware.jive.ui.base.model.event.PostVersion;
-import com.jivesoftware.jive.ui.base.model.event.User;
-import com.jivesoftware.jive.ui.base.model.event.UserFollow;
-import com.jivesoftware.jive.ui.base.model.id.CompositeIds;
-import com.jivesoftware.jive.ui.base.model.id.WellKnownObjectIds;
-import com.jivesoftware.jive.ui.base.model.view.CommentVersionActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.ContentVersionActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.LikeActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.MembershipActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.PlaceActivitySearchView;
-import com.jivesoftware.jive.ui.base.model.view.UserFollowActivitySearchView;
-import com.jivesoftware.os.jive.utils.id.Id;
 import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -40,20 +21,19 @@ public enum MiruTestActivityType {
         public MiruActivity generate(MiruTestFeatureSupplier supplier, long time) {
             Id authorId = supplier.oldUsers(1).get(0);
             Id containerId = supplier.newContainer();
-            Ref<Place> verbSubject = Ref.fromId(containerId, Place.class);
+            ObjectId verbSubject = new ObjectId("Place", containerId);
             String[] authz = supplier.authz(containerId);
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
-                .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), WellKnownObjectIds.getSocialNewsParent(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), WellKnownObjectIds.getSocialNewsContainer(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
-                .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getObjectId().getClassName())
-                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.getObjectId().toStringForm())
-                .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), PlaceActivitySearchView.class.getSimpleName())
-                .build();
+                    .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "SocialNewsParent_ABC")
+                    .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), "SocialNewsContainer_ABC")
+                    .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
+                    .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getClassName())
+                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.toStringForm())
+                    .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), "PlaceActivitySearchView")
+                    .build();
             return activity;
         }
     }),
-
     contentItem(new ActivityGenerator() {
         @Override
         public MiruActivity generate(MiruTestFeatureSupplier supplier, long time) {
@@ -64,24 +44,23 @@ public enum MiruTestActivityType {
             List<Id> containerIds = supplier.oldContainers(2);
             Id authorId = users.get(0);
             Id contentItemId = supplier.newContentItem(authorId, containerIds.toArray(new Id[0]));
-            Ref<PostVersion> verbSubject = Ref.fromId(supplier.newContentVersion(contentItemId), PostVersion.class);
+            ObjectId verbSubject = new ObjectId("PostVersion", supplier.newContentVersion(contentItemId));
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
-                .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), contentItemId.toStringForm())
-                .putAllFieldValues(MiruFieldName.CONTAINER_IDS.getFieldName(), Lists.transform(containerIds, ID_TO_STRING_FORM))
-                .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
-                .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getObjectId().getClassName())
-                .putAllFieldValues(MiruFieldName.PARTICIPANT_IDS.getFieldName(), Lists.transform(users.subList(0, participants), ID_TO_STRING_FORM))
-                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.getObjectId().toStringForm())
-                .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ContentVersionActivitySearchView.class.getSimpleName())
-                .putAllFieldValues(MiruFieldName.MENTIONED_USER_IDS.getFieldName(), Lists.transform(users.subList(1, 1 + userMentions), ID_TO_STRING_FORM))
-                .putAllFieldValues(MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName(),
-                    Lists.transform(supplier.oldContainers(containerMentions), ID_TO_STRING_FORM))
-                .build();
+                    .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), contentItemId.toStringForm())
+                    .putAllFieldValues(MiruFieldName.CONTAINER_IDS.getFieldName(), Lists.transform(containerIds, ID_TO_STRING_FORM))
+                    .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
+                    .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getClassName())
+                    .putAllFieldValues(MiruFieldName.PARTICIPANT_IDS.getFieldName(), Lists.transform(users.subList(0, participants), ID_TO_STRING_FORM))
+                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.toStringForm())
+                    .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), "ContentVersionActivitySearchView")
+                    .putAllFieldValues(MiruFieldName.MENTIONED_USER_IDS.getFieldName(), Lists.transform(users.subList(1, 1 + userMentions), ID_TO_STRING_FORM))
+                    .putAllFieldValues(MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName(),
+                            Lists.transform(supplier.oldContainers(containerMentions), ID_TO_STRING_FORM))
+                    .build();
             return activity;
         }
     }),
-
     comment(new ActivityGenerator() {
         @Override
         public MiruActivity generate(MiruTestFeatureSupplier supplier, long time) {
@@ -93,118 +72,116 @@ public enum MiruTestActivityType {
             Id contentItemId = supplier.oldContentItem();
             Id commentId = supplier.newComment(authorId, contentItemId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
-            Ref<CommentVersion> verbSubject = Ref.fromId(supplier.newCommentVersion(commentId), CommentVersion.class);
+            ObjectId verbSubject = new ObjectId("CommentVersion", supplier.newCommentVersion(commentId));
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
-                .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), contentItemId.toStringForm())
-                .putAllFieldValues(MiruFieldName.CONTAINER_IDS.getFieldName(), Collections2.transform(containerIds, ID_TO_STRING_FORM))
-                .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
-                .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getObjectId().getClassName())
-                .putAllFieldValues(MiruFieldName.PARTICIPANT_IDS.getFieldName(), Lists.transform(users.subList(0, participants), ID_TO_STRING_FORM))
-                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.getObjectId().toStringForm())
-                .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), CommentVersionActivitySearchView.class.getSimpleName())
-                .putAllFieldValues(MiruFieldName.MENTIONED_USER_IDS.getFieldName(), Lists.transform(users.subList(1, 1 + userMentions), ID_TO_STRING_FORM))
-                .putAllFieldValues(MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName(),
-                    Lists.transform(supplier.oldContainers(containerMentions), ID_TO_STRING_FORM))
-                .build();
+                    .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), contentItemId.toStringForm())
+                    .putAllFieldValues(MiruFieldName.CONTAINER_IDS.getFieldName(), Collections2.transform(containerIds, ID_TO_STRING_FORM))
+                    .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
+                    .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getClassName())
+                    .putAllFieldValues(MiruFieldName.PARTICIPANT_IDS.getFieldName(), Lists.transform(users.subList(0, participants), ID_TO_STRING_FORM))
+                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.toStringForm())
+                    .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), "CommentVersionActivitySearchView")
+                    .putAllFieldValues(MiruFieldName.MENTIONED_USER_IDS.getFieldName(), Lists.transform(users.subList(1, 1 + userMentions), ID_TO_STRING_FORM))
+                    .putAllFieldValues(MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName(),
+                            Lists.transform(supplier.oldContainers(containerMentions), ID_TO_STRING_FORM))
+                    .build();
             return activity;
         }
     }),
-
     userFollow(new ActivityGenerator() {
         @Override
         public MiruActivity generate(MiruTestFeatureSupplier supplier, long time) {
             List<Id> users = supplier.oldUsers(2);
             Id authorId = users.get(0);
-            Ref<User> author = Ref.fromId(authorId, User.class);
-            Id streamId = CompositeIds.connectionsStreamId(supplier.tenantId(), author);
-            Ref<ConnectionsActivityStream> stream = Ref.fromId(streamId, ConnectionsActivityStream.class);
+            ObjectId author = new ObjectId("User", authorId);
+            Id streamId = new Id("connectionsStreamId|" + supplier.tenantId() + "|" + author);
+            ObjectId stream = new ObjectId("ConnectionsActivityStream", streamId);
             Id followedUserId = users.get(1);
-            Ref<User> followedUser = Ref.fromId(followedUserId, User.class);
-            Id userFollowId = CompositeIds.followId(supplier.tenantId(), author, followedUser, stream);
-            Ref<UserFollow> verbSubject = Ref.fromId(userFollowId, UserFollow.class);
+            ObjectId followedUser = new ObjectId("User", followedUserId);
+            Id userFollowId = new Id("followId|" + supplier.tenantId() + "|" + author + "|" + followedUser + "|" + stream);
+
+            ObjectId verbSubject = new ObjectId("UserFollow", userFollowId);
             String[] authz = supplier.globalAuthz();
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
-                .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), WellKnownObjectIds.getSocialNewsParent(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), WellKnownObjectIds.getSocialNewsContainer(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
-                .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getObjectId().getClassName())
-                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.getObjectId().toStringForm())
-                .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), UserFollowActivitySearchView.class.getSimpleName())
-                .build();
+                    .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "SocialNewsParent_ABC")
+                    .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), "SocialNewsContainer_ABC")
+                    .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
+                    .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getClassName())
+                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.toStringForm())
+                    .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), "UserFollowActivitySearchView")
+                    .build();
             return activity;
         }
     }),
-
     joinPlace(new ActivityGenerator() {
         @Override
         public MiruActivity generate(MiruTestFeatureSupplier supplier, long time) {
             Id authorId = supplier.oldUsers(1).get(0);
-            Ref<User> author = Ref.fromId(authorId, User.class);
+            ObjectId author = new ObjectId("User", authorId);
             Id containerId = supplier.oldContainers(1).get(0);
-            Ref<Group> group = Ref.fromId(supplier.groupForContainer(containerId), Group.class);
-            Id membershipId = CompositeIds.membershipId(supplier.tenantId(), group, author);
-            Ref<Membership> verbSubject = Ref.fromId(membershipId, Membership.class);
+            ObjectId group = new ObjectId("Group", supplier.groupForContainer(containerId));
+            Id membershipId = new Id("membershipId|" + supplier.tenantId() + "|" + group + "|" + author);
+
+            ObjectId verbSubject = new ObjectId("Membership", membershipId);
             String[] authz = supplier.authz(containerId);
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
-                .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), WellKnownObjectIds.getSocialNewsParent(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), WellKnownObjectIds.getSocialNewsContainer(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
-                .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getObjectId().getClassName())
-                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.getObjectId().toStringForm())
-                .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), MembershipActivitySearchView.class.getSimpleName())
-                .build();
+                    .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "SocialNewsParent_ABC")
+                    .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), "SocialNewsContainer_ABC")
+                    .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
+                    .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getClassName())
+                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.toStringForm())
+                    .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), "MembershipActivitySearchView")
+                    .build();
             return activity;
         }
     }),
-
     likeContentItem(new ActivityGenerator() {
         @Override
         public MiruActivity generate(MiruTestFeatureSupplier supplier, long time) {
             Id authorId = supplier.oldUsers(1).get(0);
             Id contentItemId = supplier.oldContentItem();
             Id contentAuthorId = supplier.contentAuthor(contentItemId);
-            Ref<Post> contentItem = Ref.fromId(contentItemId, Post.class);
-            Id likeId = CompositeIds.likeId(supplier.tenantId(), authorId, contentItem.getObjectId());
-            Ref<Like> verbSubject = Ref.fromId(likeId, Like.class);
+            ObjectId contentItem = new ObjectId("Post", contentItemId);
+            Id likeId = new Id("likeId|" + supplier.tenantId() + "|" + authorId + "|" + contentItem);
+            ObjectId verbSubject = new ObjectId("Like", likeId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
-                .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), WellKnownObjectIds.getAcclaimParent(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.CONTAINER_IDS.getFieldName(), WellKnownObjectIds.getAcclaimContainer(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.META_ID.getFieldName(), contentItemId.toStringForm())
-                .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
-                .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getObjectId().getClassName())
-                .putFieldValue(MiruFieldName.PARTICIPANT_IDS.getFieldName(), ID_TO_STRING_FORM.apply(contentAuthorId))
-                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.getObjectId().toStringForm())
-                .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), LikeActivitySearchView.class.getSimpleName())
-                .build();
+                    .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "AcclaimParent_ABC")
+                    .putFieldValue(MiruFieldName.CONTAINER_IDS.getFieldName(), "AcclaimContainer_ABC")
+                    .putFieldValue(MiruFieldName.META_ID.getFieldName(), contentItemId.toStringForm())
+                    .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
+                    .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getClassName())
+                    .putFieldValue(MiruFieldName.PARTICIPANT_IDS.getFieldName(), ID_TO_STRING_FORM.apply(contentAuthorId))
+                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.toStringForm())
+                    .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), "LikeActivitySearchView")
+                    .build();
             return activity;
         }
     }),
-
     likeComment(new ActivityGenerator() {
         @Override
         public MiruActivity generate(MiruTestFeatureSupplier supplier, long time) {
             Id authorId = supplier.oldUsers(1).get(0);
             Id commentId = supplier.oldComment();
             Id commentAuthorId = supplier.contentAuthor(commentId);
-            Ref<Comment> comment = Ref.fromId(commentId, Comment.class);
-            Id likeId = CompositeIds.likeId(supplier.tenantId(), authorId, comment.getObjectId());
-            Ref<Like> verbSubject = Ref.fromId(likeId, Like.class);
+            ObjectId comment = new ObjectId("Comment", commentId);
+            Id likeId = new Id("likeId|" + supplier.tenantId() + "|" + authorId + "|" + comment);
+            ObjectId verbSubject = new ObjectId("Like", likeId);
             Id contentItemId = supplier.contentItemForComment(commentId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
-                .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), WellKnownObjectIds.getAcclaimParent(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.CONTAINER_IDS.getFieldName(), WellKnownObjectIds.getAcclaimContainer(supplier.tenantId()).getId().toStringForm())
-                .putFieldValue(MiruFieldName.META_ID.getFieldName(), commentId.toStringForm())
-                .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
-                .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getObjectId().getClassName())
-                .putFieldValue(MiruFieldName.PARTICIPANT_IDS.getFieldName(), ID_TO_STRING_FORM.apply(commentAuthorId))
-                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.getObjectId().toStringForm())
-                .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), LikeActivitySearchView.class.getSimpleName())
-                .build();
+                    .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "AcclaimParent_ABC")
+                    .putFieldValue(MiruFieldName.CONTAINER_IDS.getFieldName(), "AcclaimContainer_ABC")
+                    .putFieldValue(MiruFieldName.META_ID.getFieldName(), commentId.toStringForm())
+                    .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
+                    .putFieldValue(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), verbSubject.getClassName())
+                    .putFieldValue(MiruFieldName.PARTICIPANT_IDS.getFieldName(), ID_TO_STRING_FORM.apply(commentAuthorId))
+                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), verbSubject.toStringForm())
+                    .putFieldValue(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), "LikeActivitySearchView")
+                    .build();
             return activity;
         }
     });
