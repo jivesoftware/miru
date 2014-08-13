@@ -10,7 +10,7 @@
     <artifactId>global-version-management</artifactId>
     <packaging>pom</packaging>
     <properties>
-        <jive-utils-version>0.30</jive-utils-version>
+        <jive-utils-version>0.31</jive-utils-version>
     </properties>
     <dependencyManagement>
         <dependencies>
