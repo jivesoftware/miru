@@ -14,6 +14,9 @@ import com.jivesoftware.os.miru.api.MiruDistinctCountQueryCriteria;
 import com.jivesoftware.os.miru.api.MiruDistinctCountQueryParams;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.MiruReader;
+import com.jivesoftware.os.miru.api.MiruRecoQueryAndResultParams;
+import com.jivesoftware.os.miru.api.MiruRecoQueryCriteria;
+import com.jivesoftware.os.miru.api.MiruRecoQueryParams;
 import com.jivesoftware.os.miru.api.MiruTrendingQueryAndResultParams;
 import com.jivesoftware.os.miru.api.MiruTrendingQueryCriteria;
 import com.jivesoftware.os.miru.api.MiruTrendingQueryParams;
@@ -21,10 +24,12 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
+import com.jivesoftware.os.miru.api.query.RecoQuery;
 import com.jivesoftware.os.miru.api.query.TrendingQuery;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
+import com.jivesoftware.os.miru.api.query.result.RecoResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 
 /**
@@ -287,6 +292,37 @@ public class MiruHttpClientReader implements MiruReader {
             return requestHelper.executeRequest(params,
                 QUERY_SERVICE_ENDPOINT_PREFIX + TRENDING_INFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId(),
                 TrendingResult.class, TrendingResult.EMPTY_RESULTS);
+        } catch (RuntimeException e) {
+            throw new MiruQueryServiceException("Failed score trending stream for partition: " + partitionId.getId(), e);
+        } finally {
+            processMetrics.stop();
+        }
+    }
+
+    @Override
+    public RecoResult collaborativeFilteringRecommendations(MiruTenantId tenantId, Optional<MiruActorId> userIdentity, Optional<MiruAuthzExpression> authzExpression, MiruRecoQueryCriteria queryCriteria) throws MiruQueryServiceException {
+        MiruRecoQueryParams params = new MiruRecoQueryParams(tenantId, userIdentity, authzExpression, queryCriteria);
+        processMetrics.start();
+        try {
+            return requestHelper.executeRequest(params,
+                QUERY_SERVICE_ENDPOINT_PREFIX + TRENDING_INFIX + CUSTOM_QUERY_ENDPOINT,
+                RecoResult.class, RecoResult.EMPTY_RESULTS);
+        } catch (RuntimeException e) {
+            throw new MiruQueryServiceException("Failed score trending stream", e);
+        } finally {
+            processMetrics.stop();
+        }
+    }
+
+
+    @Override
+    public RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQuery query, Optional<RecoResult> lastResult) throws MiruQueryServiceException {
+        MiruRecoQueryAndResultParams params = new MiruRecoQueryAndResultParams(query, lastResult.orNull());
+        processMetrics.start();
+        try {
+            return requestHelper.executeRequest(params,
+                QUERY_SERVICE_ENDPOINT_PREFIX + TRENDING_INFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId(),
+                RecoResult.class, RecoResult.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed score trending stream for partition: " + partitionId.getId(), e);
         } finally {

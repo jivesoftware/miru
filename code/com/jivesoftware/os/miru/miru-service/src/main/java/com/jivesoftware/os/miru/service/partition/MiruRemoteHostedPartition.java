@@ -11,14 +11,17 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
+import com.jivesoftware.os.miru.api.query.result.RecoResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 import com.jivesoftware.os.miru.service.query.AggregateCountsReport;
 import com.jivesoftware.os.miru.service.query.DistinctCountReport;
+import com.jivesoftware.os.miru.service.query.RecoReport;
 import com.jivesoftware.os.miru.service.query.TrendingReport;
 import com.jivesoftware.os.miru.service.stream.factory.ExecuteQuery;
 import com.jivesoftware.os.miru.service.stream.factory.MiruStreamCollector;
 import com.jivesoftware.os.miru.service.stream.factory.remote.RemoteCountCollector;
 import com.jivesoftware.os.miru.service.stream.factory.remote.RemoteFilterCollector;
+import com.jivesoftware.os.miru.service.stream.factory.remote.RemoteRecoCollector;
 import com.jivesoftware.os.miru.service.stream.factory.remote.RemoteTrendingCollector;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -116,10 +119,17 @@ public class MiruRemoteHostedPartition implements MiruHostedPartition {
         return new RemoteTrendingCollector(this, executeQuery);
     }
 
+
+    @Override
+    public MiruStreamCollector<RecoResult> createRecoCollector(ExecuteQuery<RecoResult, RecoReport> executeQuery) {
+        return new RemoteRecoCollector(this, executeQuery);
+    }
+
     @Override
     public String toString() {
         return "MiruRemoteHostedPartition{" +
             "coord=" + coord +
             '}';
     }
+
 }

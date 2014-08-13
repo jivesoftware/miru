@@ -28,15 +28,18 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.MiruReader;
+import com.jivesoftware.os.miru.api.MiruRecoQueryCriteria;
 import com.jivesoftware.os.miru.api.MiruTrendingQueryCriteria;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
+import com.jivesoftware.os.miru.api.query.RecoQuery;
 import com.jivesoftware.os.miru.api.query.TrendingQuery;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
+import com.jivesoftware.os.miru.api.query.result.RecoResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 import com.jivesoftware.os.miru.reader.MiruHttpClientConfigReader;
 import com.jivesoftware.os.miru.reader.MiruHttpClientConfigReaderConfig;
@@ -315,6 +318,21 @@ public class MiruClusterReader implements MiruReader {
 
     @Override
     public TrendingResult scoreTrending(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingResult> lastResult) {
+        throw new UnsupportedOperationException("Direct host communication is not supported with this MiruReader.");
+    }
+
+    @Override
+    public RecoResult collaborativeFilteringRecommendations(MiruTenantId tenantId,
+            Optional<MiruActorId> userIdentity,
+            Optional<MiruAuthzExpression> authzExpression, MiruRecoQueryCriteria queryCriteria) throws MiruQueryServiceException {
+        // TODO
+        return null;
+    }
+
+
+    @Override
+    public RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQuery query, Optional<RecoResult> lastResult)
+            throws MiruQueryServiceException {
         throw new UnsupportedOperationException("Direct host communication is not supported with this MiruReader.");
     }
 

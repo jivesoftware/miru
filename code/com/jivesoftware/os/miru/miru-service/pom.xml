@@ -39,6 +39,7 @@
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
             <version>0.7-SNAPSHOT</version>
+            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftwareos.miru</groupId>
@@ -150,9 +151,10 @@
             <type>jar</type>
         </dependency>
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <scope>test</scope>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.3.2</version>
+            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

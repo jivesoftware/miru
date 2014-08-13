@@ -3,20 +3,25 @@ package com.jivesoftware.os.miru.service.stream.factory;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
 import com.googlecode.javaewah.IntIterator;
+import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
+import com.jivesoftware.os.miru.api.query.RecoQuery;
 import com.jivesoftware.os.miru.api.query.TrendingQuery;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult.AggregateCount;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
+import com.jivesoftware.os.miru.api.query.result.RecoResult;
+import com.jivesoftware.os.miru.api.query.result.RecoResult.Recommendation;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
@@ -25,22 +30,27 @@ import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.query.AggregateCountsReport;
 import com.jivesoftware.os.miru.service.query.DistinctCountReport;
+import com.jivesoftware.os.miru.service.query.RecoReport;
 import com.jivesoftware.os.miru.service.query.TrendingReport;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
 import com.jivesoftware.os.miru.service.stream.filter.AnswerCardinalityLastSetBitmapStorage;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import org.apache.commons.lang3.mutable.MutableObject;
 
 import static com.google.common.base.Preconditions.checkState;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 public class MiruFilterUtils {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     public AggregateCountsResult getAggregateCounts(MiruQueryStream stream, AggregateCountsQuery query, Optional<AggregateCountsReport> lastReport,
-        EWAHCompressedBitmap answer, Optional<EWAHCompressedBitmap> counter) throws Exception {
+            EWAHCompressedBitmap answer, Optional<EWAHCompressedBitmap> counter) throws Exception {
 
         log.debug("Get aggregate counts for answer {}", answer);
 
@@ -185,7 +195,7 @@ public class MiruFilterUtils {
     }
 
     public DistinctCountResult numberOfDistincts(MiruQueryStream stream, DistinctCountQuery query, Optional<DistinctCountReport> lastReport,
-        EWAHCompressedBitmap answer) throws Exception {
+            EWAHCompressedBitmap answer) throws Exception {
 
         log.debug("Get number of distincts for answer {}", answer);
 
@@ -258,7 +268,7 @@ public class MiruFilterUtils {
     }
 
     public TrendingResult trending(MiruQueryStream stream, TrendingQuery query, Optional<TrendingReport> lastReport, EWAHCompressedBitmap answer)
-        throws Exception {
+            throws Exception {
 
         log.debug("Get trending for answer {}", answer);
 
@@ -345,10 +355,10 @@ public class MiruFilterUtils {
 
                     //TODO desiredNumberOfDistincts is used to truncate the final list. Do we need a maxDistincts of some sort?
                     /*
-                    if (trendies.size() >= query.desiredNumberOfDistincts) {
-                        break;
-                    }
-                    */
+                     if (trendies.size() >= query.desiredNumberOfDistincts) {
+                     break;
+                     }
+                     */
                 }
             }
         }
@@ -453,12 +463,160 @@ public class MiruFilterUtils {
         }
     }
 
+    /*  I have viewd these thing who has also view these things and what other thing have the viewed that I have not.*/
+    RecoResult collaborativeFiltering(MiruQueryStream stream, RecoQuery query, Optional<RecoReport> report, EWAHCompressedBitmap answer) throws Exception {
+
+        MiruField aggregateField1 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName1));
+        final MiruField lookupField1 = stream.fieldIndex.getField(stream.schema.getFieldId(query.lookupFieldNamed1));
+
+        MiruField aggregateField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName2));
+        final MiruField lookupField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.lookupFieldNamed2));
+
+        MiruField aggregateField3 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName3));
+
+        // feeds us our docIds
+        final MutableObject<EWAHCompressedBitmap> join1 = new MutableObject<>(new EWAHCompressedBitmap());
+        stream(stream, answer, Optional.<EWAHCompressedBitmap>absent(), aggregateField1, query.retrieveFieldName1, new CallbackStream<TermCount>() {
+
+            @Override
+            public TermCount callback(TermCount v) throws Exception {
+                if (v != null) {
+                    Optional<MiruInvertedIndex> invertedIndex = lookupField1.getInvertedIndex(v.termId);
+                    if (invertedIndex.isPresent()) {
+                        join1.setValue(join1.getValue().or(invertedIndex.get().getIndex()));
+                    }
+                }
+                return v;
+            }
+        });
+        // at this point have all activity for all my documents in join1.
+
+        // feeds us all users
+        final MutableObject<EWAHCompressedBitmap> join2 = new MutableObject<>(new EWAHCompressedBitmap());
+        stream(stream, join1.getValue(), Optional.<EWAHCompressedBitmap>absent(), aggregateField2, query.retrieveFieldName2, new CallbackStream<TermCount>() {
+
+            @Override
+            public TermCount callback(TermCount v) throws Exception {
+                if (v != null) {
+                    Optional<MiruInvertedIndex> invertedIndex = lookupField2.getInvertedIndex(v.termId);
+                    if (invertedIndex.isPresent()) {
+                        join2.setValue(join2.getValue().or(invertedIndex.get().getIndex()));
+                    }
+                }
+                return v;
+            }
+        });
+        // at this point have all activity for all users that have also touched my documents
+
+        //join2.setValue(join2.getValue().and(authz.getValue())); // TODO
+        join2.setValue(join2.getValue().andNot(join1.getValue())); // remove my activity from all activity around said documents
+
+        // feeds us all recommended documents
+        final MinMaxPriorityQueue<TermCount> heap = MinMaxPriorityQueue.orderedBy(new Comparator<TermCount>() {
+
+            @Override
+            public int compare(TermCount o1, TermCount o2) {
+                return -Long.compare(o1.count, o2.count); // mimus to reverse :)
+            }
+        }).maximumSize(query.resultCount).create();
+        stream(stream, join2.getValue(), Optional.<EWAHCompressedBitmap>absent(), aggregateField3, query.retrieveFieldName3, new CallbackStream<TermCount>() {
+
+            @Override
+            public TermCount callback(TermCount v) throws Exception {
+                if (v != null) {
+                    heap.add(v);
+                }
+                return v;
+            }
+        });
+
+        List<Recommendation> results = new ArrayList<>();
+        for (TermCount result : heap) {
+            results.add(new Recommendation(result.termId, result.count));
+        }
+        return new RecoResult(results);
+
+
+    }
+
+    private void stream(MiruQueryStream stream, EWAHCompressedBitmap answer,
+            Optional<EWAHCompressedBitmap> counter,
+            MiruField pivotField, String streamField, CallbackStream<TermCount> terms) throws Exception {
+
+        AnswerCardinalityLastSetBitmapStorage answerCollector = null;
+        ReusableBuffers reusable = new ReusableBuffers(2);
+        int beforeCount = counter.isPresent() ? counter.get().cardinality() : answer.cardinality();
+        while (true) {
+            int lastSetBit = answerCollector == null ? stream.ewahUtils.lastSetBit(answer) : answerCollector.getLastSetBit();
+            if (lastSetBit < 0) {
+                break;
+            }
+
+            MiruActivity activity = stream.activityIndex.get(lastSetBit);
+            MiruTermId[] fieldValues = activity.fieldsValues.get(streamField);
+            if (fieldValues == null || fieldValues.length == 0) {
+                // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
+                EWAHCompressedBitmap removeUnknownField = new EWAHCompressedBitmap();
+                removeUnknownField.set(lastSetBit);
+                EWAHCompressedBitmap revisedAnswer = reusable.next();
+                answerCollector = new AnswerCardinalityLastSetBitmapStorage(revisedAnswer);
+                answer.andNotToContainer(removeUnknownField, answerCollector);
+                answer = revisedAnswer;
+
+            } else {
+                MiruTermId pivotTerm = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
+
+                Optional<MiruInvertedIndex> invertedIndex = pivotField.getInvertedIndex(pivotTerm);
+                checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
+
+                EWAHCompressedBitmap termIndex = invertedIndex.get().getIndex();
+
+                EWAHCompressedBitmap revisedAnswer = reusable.next();
+                answerCollector = new AnswerCardinalityLastSetBitmapStorage(revisedAnswer);
+                answer.andNotToContainer(termIndex, answerCollector);
+                answer = revisedAnswer;
+
+                int afterCount;
+                if (counter.isPresent()) {
+                    EWAHCompressedBitmap revisedCounter = reusable.next();
+                    AnswerCardinalityLastSetBitmapStorage counterCollector = new AnswerCardinalityLastSetBitmapStorage(revisedCounter);
+                    counter.get().andNotToContainer(termIndex, counterCollector);
+                    counter = Optional.of(revisedCounter);
+                    afterCount = counterCollector.getCount();
+                } else {
+                    afterCount = answerCollector.getCount();
+                }
+
+                TermCount termCount = new TermCount(pivotTerm, activity, beforeCount - afterCount);
+                if (termCount != terms.callback(termCount)) { // Stop stream
+                    return;
+                }
+                beforeCount = afterCount;
+            }
+
+        }
+        terms.callback(null); // EOS
+
+    }
+
+    static class TermCount {
+
+        public final MiruTermId termId;
+        public MiruActivity mostRecent;
+        public final long count;
+
+        public TermCount(MiruTermId termId, MiruActivity mostRecent, long count) {
+            this.termId = termId;
+            this.mostRecent = mostRecent;
+            this.count = count;
+        }
+
+    }
+
     /**
-     * Cycles between buffers with the expectation that each buffer is derived from no more than
-     * "size - 1" previous buffers. For example, to aggregate a previous reusable answer plus an
-     * additional reusable bitmap into a new answer, "size" must be at least 3. However, if the
-     * previous answer is reusable but the additional bitmap is non-reusable, then "size" need
-     * only be 2.
+     * Cycles between buffers with the expectation that each buffer is derived from no more than "size - 1" previous buffers. For example, to aggregate a
+     * previous reusable answer plus an additional reusable bitmap into a new answer, "size" must be at least 3. However, if the previous answer is reusable but
+     * the additional bitmap is non-reusable, then "size" need only be 2.
      */
     private static class ReusableBuffers {
 

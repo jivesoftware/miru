@@ -17,9 +17,11 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
+import com.jivesoftware.os.miru.api.query.RecoQuery;
 import com.jivesoftware.os.miru.api.query.TrendingQuery;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
+import com.jivesoftware.os.miru.api.query.result.RecoResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartition;
@@ -28,6 +30,7 @@ import com.jivesoftware.os.miru.service.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.service.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.service.query.merge.MergeAggregateCountResults;
 import com.jivesoftware.os.miru.service.query.merge.MergeDistinctCountResults;
+import com.jivesoftware.os.miru.service.query.merge.MergeRecoResults;
 import com.jivesoftware.os.miru.service.query.merge.MergeTrendingResults;
 import com.jivesoftware.os.miru.service.query.merge.MiruResultMerger;
 import com.jivesoftware.os.miru.service.stream.factory.AggregateCountsExecuteQueryCallableFactory;
@@ -46,6 +49,9 @@ import com.jivesoftware.os.miru.service.stream.factory.MiruResultEvaluator;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolution;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolvable;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolver;
+import com.jivesoftware.os.miru.service.stream.factory.RecoExecuteQuery;
+import com.jivesoftware.os.miru.service.stream.factory.RecoExecuteQueryCallableFactory;
+import com.jivesoftware.os.miru.service.stream.factory.RecoResultEvaluator;
 import com.jivesoftware.os.miru.service.stream.factory.TrendingExecuteQuery;
 import com.jivesoftware.os.miru.service.stream.factory.TrendingExecuteQueryCallableFactory;
 import com.jivesoftware.os.miru.service.stream.factory.TrendingResultEvaluator;
@@ -242,6 +248,21 @@ public class MiruService {
             new TrendingExecuteQueryCallableFactory(new TrendingExecuteQuery(filterUtils, query, bitsetBufferSize)),
             lastResult, TrendingResult.EMPTY_RESULTS);
     }
+
+     public RecoResult collaborativeFilteringRecommendations(RecoQuery query) throws Exception {
+         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
+            new RecoExecuteQueryCallableFactory(new RecoExecuteQuery(filterUtils, query, bitsetBufferSize)),
+            new RecoResultEvaluator(query),
+            new MergeRecoResults(query.resultCount),
+            RecoResult.EMPTY_RESULTS);
+     }
+
+     public RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQuery query, Optional<RecoResult> lastResult)
+            throws Exception {
+         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
+            new RecoExecuteQueryCallableFactory(new RecoExecuteQuery(filterUtils, query, bitsetBufferSize)),
+            lastResult, RecoResult.EMPTY_RESULTS);
+     }
 
     /** Proactively warm a tenant for immediate use. */
     public void warm(MiruTenantId tenantId) throws Exception {

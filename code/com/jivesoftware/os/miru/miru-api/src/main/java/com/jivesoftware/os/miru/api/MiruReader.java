@@ -5,13 +5,14 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
+import com.jivesoftware.os.miru.api.query.RecoQuery;
 import com.jivesoftware.os.miru.api.query.TrendingQuery;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
+import com.jivesoftware.os.miru.api.query.result.RecoResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 
-/** This interface provides the method to read data from miru. */
 /** This interface provides the method to read data from miru. */
 public interface MiruReader {
 
@@ -20,6 +21,7 @@ public interface MiruReader {
     public static final String AGGREGATE_COUNTS_INFIX = "/aggregate";
     public static final String DISTINCT_COUNT_INFIX = "/distinct";
     public static final String TRENDING_INFIX = "/trending";
+    public static final String RECO_INFIX = "/reco";
 
     public static final String CUSTOM_QUERY_ENDPOINT = "/custom";
     public static final String INBOX_ALL_QUERY_ENDPOINT = "/inboxAll";
@@ -87,6 +89,13 @@ public interface MiruReader {
 
     /** Score trending on a specific local partition. */
     TrendingResult scoreTrending(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingResult> lastResult) throws MiruQueryServiceException;
+
+
+    RecoResult collaborativeFilteringRecommendations(MiruTenantId tenantId, Optional<MiruActorId> userIdentity, Optional<MiruAuthzExpression> authzExpression,
+        MiruRecoQueryCriteria queryCriteria) throws MiruQueryServiceException;
+
+    RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQuery query, Optional<RecoResult> lastResult)
+            throws MiruQueryServiceException;
 
     /** Warm up tenant. */
     void warm(MiruTenantId tenantId) throws MiruQueryServiceException;
