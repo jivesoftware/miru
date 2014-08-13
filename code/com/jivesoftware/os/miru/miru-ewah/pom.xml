@@ -5,9 +5,18 @@
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-ewah</artifactId>
     <version>0.1-SNAPSHOT</version>
-    <properties>
-        <module.type>shared_lib</module.type>
-    </properties>
+    <scm>
+        <url>https://github.com/jivesoftware/miru</url>
+        <connection>scm:git:git://github.com/jivesoftware/miru.git</connection>
+        <developerConnection>scm:git:git@github.com:jivesoftware/miru.git</developerConnection>
+    </scm>
+    <distributionManagement>
+        <repository>
+            <id>modified-thirdparty</id>
+            <name>Jive Internal Repository</name>
+            <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
+        </repository>
+    </distributionManagement>
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
