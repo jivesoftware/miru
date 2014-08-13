@@ -2,21 +2,15 @@
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
+        <artifactId>shared-lib-build-management</artifactId>
+        <version>0.4-SNAPSHOT</version>
+        <relativePath>../inheritance-poms/global-repo-management/pom.xml</relativePath>
+    </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-ewah</artifactId>
-    <version>0.1-SNAPSHOT</version>
-    <scm>
-        <url>https://github.com/jivesoftware/miru</url>
-        <connection>scm:git:git://github.com/jivesoftware/miru.git</connection>
-        <developerConnection>scm:git:git@github.com:jivesoftware/miru.git</developerConnection>
-    </scm>
-    <distributionManagement>
-        <repository>
-            <id>modified-thirdparty</id>
-            <name>Jive Internal Repository</name>
-            <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
-        </repository>
-    </distributionManagement>
+    <version>0.4-SNAPSHOT</version>
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
