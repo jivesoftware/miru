@@ -1,23 +1,6 @@
 package com.jivesoftware.os.miru.service;
 
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
-import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
-import com.jivesoftware.os.miru.service.stream.locator.AbstractIdentifierPartResourceLocator;
-import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocator;
-import com.jivesoftware.os.miru.service.stream.locator.MiruTransientResourceLocator;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
-import com.jivesoftware.os.miru.wal.readtracking.MiruWriteToReadTrackingAndSipWAL;
 import org.merlin.config.Config;
-import org.merlin.config.annotations.Property;
-import org.merlin.config.defaults.ClassDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -29,34 +12,6 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(10)
     int getStreamFactoryExecutorCount();
-
-    @ClassDefault(MiruRCVSClusterRegistry.class)
-    Class<? extends MiruClusterRegistry> getClusterRegistryClass();
-
-    @ClassDefault(MiruClusterExpectedTenants.class)
-    Class<? extends MiruExpectedTenants> getExpectedTenantsClass();
-
-    @ClassDefault(MiruActivityWALReaderImpl.class)
-    @Property("activityWalReaderClass")
-    Class<? extends MiruActivityWALReader> getActivityWALReaderClass();
-
-    @ClassDefault(MiruWriteToActivityAndSipWAL.class)
-    @Property("activityWalWriterClass")
-    Class<? extends MiruActivityWALWriter> getActivityWALWriterClass();
-
-    @ClassDefault(MiruReadTrackingWALReaderImpl.class)
-    @Property("readTrackingWalReaderClass")
-    Class<? extends MiruReadTrackingWALReader> getReadTrackingWALReaderClass();
-
-    @ClassDefault(MiruWriteToReadTrackingAndSipWAL.class)
-    @Property("readTrackingWalWriterClass")
-    Class<? extends MiruReadTrackingWALWriter> getReadTrackingWALWriterClass();
-
-    @ClassDefault(AbstractIdentifierPartResourceLocator.class)
-    Class<? extends MiruResourceLocator> getDiskResourceLocatorClass();
-
-    @ClassDefault(AbstractIdentifierPartResourceLocator.class)
-    Class<? extends MiruTransientResourceLocator> getTransientResourceLocatorClass();
 
     @StringDefault("var/lib/miru/data")
     String getDiskResourceLocatorPath();

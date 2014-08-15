@@ -24,7 +24,6 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruAuthzCache;
@@ -66,11 +65,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Singleton;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 @Singleton
 public class MiruStreamFactory {
 
@@ -86,32 +85,33 @@ public class MiruStreamFactory {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Interner<String> stringInterner = Interners.newWeakInterner();
     private final MiruActivityInterner activityInterner = new MiruActivityInterner(
-        Interners.<MiruIBA>newWeakInterner(),
-        Interners.<MiruTermId>newWeakInterner(),
-        // tenants are strongly interned
-        Interners.<MiruTenantId>newStrongInterner(),
-        // makes sense to share string internment as this is authz in both cases
-        stringInterner);
+            Interners.<MiruIBA>newWeakInterner(),
+            Interners.<MiruTermId>newWeakInterner(),
+            // tenants are strongly interned
+            Interners.<MiruTenantId>newStrongInterner(),
+            // makes sense to share string internment as this is authz in both cases
+            stringInterner);
 
     private final int bitsetBufferSize;
     private final int partitionAuthzCacheSize;
     private final MiruBackingStorage defaultStorage;
 
-    @Inject
-    public MiruStreamFactory(MiruServiceConfig config,
-        MiruSchema schema,
-        @Named("miruStreamFactoryExecutorService") ExecutorService executorService,
-        MiruReadTrackingWALReader readTrackingWALReader,
-        @Named("miruDiskResourceLocator") MiruResourceLocator diskResourceLocator,
-        @Named("miruTransientResourceLocator") MiruTransientResourceLocator transientResourceLocator) {
+    public MiruStreamFactory(MiruSchema schema,
+            ExecutorService executorService,
+            MiruReadTrackingWALReader readTrackingWALReader,
+            MiruResourceLocator diskResourceLocator,
+            MiruTransientResourceLocator transientResourceLocator,
+            int bitsetBufferSize,
+            int partitionAuthzCacheSize,
+            MiruBackingStorage defaultStorage) {
         this.schema = schema;
         this.executorService = executorService;
         this.readTrackingWALReader = readTrackingWALReader;
         this.diskResourceLocator = diskResourceLocator;
         this.transientResourceLocator = transientResourceLocator;
-        this.bitsetBufferSize = config.getBitsetBufferSize();
-        this.partitionAuthzCacheSize = config.getPartitionAuthzCacheSize();
-        this.defaultStorage = MiruBackingStorage.valueOf(config.getDefaultStorage());
+        this.bitsetBufferSize = bitsetBufferSize;
+        this.partitionAuthzCacheSize = partitionAuthzCacheSize;
+        this.defaultStorage = defaultStorage;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
@@ -161,9 +161,9 @@ public class MiruStreamFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> authzCache = CacheBuilder.newBuilder()
-            .maximumSize(partitionAuthzCacheSize)
-            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-            .build();
+                .maximumSize(partitionAuthzCacheSize)
+                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+                .build();
         MiruInMemoryAuthzIndex authzIndex = new MiruInMemoryAuthzIndex(new MiruAuthzCache(authzCache, stringInterner, authzUtils));
         exportHandles.put("authzIndex", authzIndex);
 
@@ -180,11 +180,11 @@ public class MiruStreamFactory {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackStream readTrackStream = new MiruReadTrackStream(filterUtils, schema, fieldIndex, timeIndex, unreadTrackingIndex,
-            executorService, bitsetBufferSize, streamLocks);
+                executorService, bitsetBufferSize, streamLocks);
 
         MiruQueryStream queryStream = new MiruQueryStream(executorService,
-            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-            readTrackStream, readTrackingWALReader, streamLocks);
+                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+                readTrackStream, readTrackingWALReader, streamLocks);
 
         return new MiruStream(indexStream, queryStream, readTrackStream, timeIndex, Optional.<ChunkStore>absent()).exportable(exportHandles);
     }
@@ -201,10 +201,10 @@ public class MiruStreamFactory {
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), transientResourceLocator.getInitialChunkSize(), true);
 
         MiruTransientActivityIndex activityIndex = new MiruTransientActivityIndex(
-            transientResourceLocator.getMapDirectory(identifier, "activity"),
-            transientResourceLocator.getSwapDirectory(identifier, "activity"),
-            chunkStore,
-            objectMapper);
+                transientResourceLocator.getMapDirectory(identifier, "activity"),
+                transientResourceLocator.getSwapDirectory(identifier, "activity"),
+                chunkStore,
+                objectMapper);
         exportHandles.put("activityIndex", activityIndex);
 
         MiruInMemoryIndex index = new MiruInMemoryIndex();
@@ -222,9 +222,9 @@ public class MiruStreamFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> authzCache = CacheBuilder.newBuilder()
-            .maximumSize(partitionAuthzCacheSize)
-            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-            .build();
+                .maximumSize(partitionAuthzCacheSize)
+                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+                .build();
         MiruInMemoryAuthzIndex authzIndex = new MiruInMemoryAuthzIndex(new MiruAuthzCache(authzCache, stringInterner, authzUtils));
         exportHandles.put("authzIndex", authzIndex);
 
@@ -241,15 +241,15 @@ public class MiruStreamFactory {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackStream readTrackStream = new MiruReadTrackStream(filterUtils, schema, fieldIndex, timeIndex, unreadTrackingIndex,
-            executorService, bitsetBufferSize, streamLocks);
+                executorService, bitsetBufferSize, streamLocks);
 
         MiruQueryStream queryStream = new MiruQueryStream(executorService,
-            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-            readTrackStream, readTrackingWALReader, streamLocks);
+                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+                readTrackStream, readTrackingWALReader, streamLocks);
 
         return new MiruStream(indexStream, queryStream, readTrackStream, timeIndex, Optional.of(chunkStore))
-            .exportable(exportHandles)
-            .withTransientResource(identifier);
+                .exportable(exportHandles)
+                .withTransientResource(identifier);
     }
 
     private MiruStream allocateMemMapped(MiruPartitionCoord coord) throws Exception {
@@ -266,22 +266,22 @@ public class MiruStreamFactory {
         Map<String, BulkImport<?>> importHandles = Maps.newHashMap();
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
-            new MemMappedFilerProvider(identifier, "timeIndex"),
-            diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
+                new MemMappedFilerProvider(identifier, "timeIndex"),
+                diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
         importHandles.put("timeIndex", timeIndex);
 
         MiruMemMappedActivityIndex activityIndex = new MiruMemMappedActivityIndex(
-            new MemMappedFilerProvider(identifier, "activity"),
-            diskResourceLocator.getMapDirectory(identifier, "activity"),
-            diskResourceLocator.getSwapDirectory(identifier, "activity"),
-            chunkStore,
-            objectMapper);
+                new MemMappedFilerProvider(identifier, "activity"),
+                diskResourceLocator.getMapDirectory(identifier, "activity"),
+                diskResourceLocator.getSwapDirectory(identifier, "activity"),
+                chunkStore,
+                objectMapper);
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex index = new MiruOnDiskIndex(
-            diskResourceLocator.getMapDirectory(identifier, "index"),
-            diskResourceLocator.getSwapDirectory(identifier, "index"),
-            chunkStore);
+                diskResourceLocator.getMapDirectory(identifier, "index"),
+                diskResourceLocator.getSwapDirectory(identifier, "index"),
+                chunkStore);
         importHandles.put("index", index);
 
         MiruOnDiskField[] fields = new MiruOnDiskField[schema.fieldCount()];
@@ -296,41 +296,41 @@ public class MiruStreamFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> authzCache = CacheBuilder.newBuilder()
-            .maximumSize(partitionAuthzCacheSize)
-            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-            .build();
+                .maximumSize(partitionAuthzCacheSize)
+                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+                .build();
         MiruOnDiskAuthzIndex authzIndex = new MiruOnDiskAuthzIndex(
-            diskResourceLocator.getMapDirectory(identifier, "authz"),
-            diskResourceLocator.getSwapDirectory(identifier, "authz"),
-            chunkStore,
-            new MiruAuthzCache(authzCache, stringInterner, authzUtils));
+                diskResourceLocator.getMapDirectory(identifier, "authz"),
+                diskResourceLocator.getSwapDirectory(identifier, "authz"),
+                chunkStore,
+                new MiruAuthzCache(authzCache, stringInterner, authzUtils));
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex removalIndex = new MiruOnDiskRemovalIndex(new RandomAccessSwappableFiler(
-            diskResourceLocator.getFilerFile(identifier, "removal")));
+                diskResourceLocator.getFilerFile(identifier, "removal")));
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex(
-            diskResourceLocator.getMapDirectory(identifier, "unread"),
-            diskResourceLocator.getSwapDirectory(identifier, "unread"),
-            chunkStore);
+                diskResourceLocator.getMapDirectory(identifier, "unread"),
+                diskResourceLocator.getSwapDirectory(identifier, "unread"),
+                chunkStore);
         importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex inboxIndex = new MiruOnDiskInboxIndex(
-            diskResourceLocator.getMapDirectory(identifier, "inbox"),
-            diskResourceLocator.getSwapDirectory(identifier, "inbox"),
-            chunkStore);
+                diskResourceLocator.getMapDirectory(identifier, "inbox"),
+                diskResourceLocator.getSwapDirectory(identifier, "inbox"),
+                chunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
         MiruIndexStream indexStream = new MiruIndexStream(schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInterner);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackStream readTrackStream = new MiruReadTrackStream(filterUtils, schema, fieldIndex, timeIndex, unreadTrackingIndex,
-            executorService, bitsetBufferSize, streamLocks);
+                executorService, bitsetBufferSize, streamLocks);
 
         MiruQueryStream queryStream = new MiruQueryStream(executorService,
-            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-            readTrackStream, readTrackingWALReader, streamLocks);
+                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+                readTrackStream, readTrackingWALReader, streamLocks);
 
         return new MiruStream(indexStream, queryStream, readTrackStream, timeIndex, Optional.of(chunkStore)).importable(importHandles);
     }
@@ -348,22 +348,22 @@ public class MiruStreamFactory {
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), diskResourceLocator.getInitialChunkSize(), true);
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
-            new OnDiskFilerProvider(identifier, "timeIndex"),
-            diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
+                new OnDiskFilerProvider(identifier, "timeIndex"),
+                diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
         importHandles.put("timeIndex", timeIndex);
 
         MiruMemMappedActivityIndex activityIndex = new MiruMemMappedActivityIndex(
-            new MemMappedFilerProvider(identifier, "activity"),
-            diskResourceLocator.getMapDirectory(identifier, "activity"),
-            diskResourceLocator.getSwapDirectory(identifier, "activity"),
-            chunkStore,
-            objectMapper);
+                new MemMappedFilerProvider(identifier, "activity"),
+                diskResourceLocator.getMapDirectory(identifier, "activity"),
+                diskResourceLocator.getSwapDirectory(identifier, "activity"),
+                chunkStore,
+                objectMapper);
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex index = new MiruOnDiskIndex(
-            diskResourceLocator.getMapDirectory(identifier, "index"),
-            diskResourceLocator.getSwapDirectory(identifier, "index"),
-            chunkStore);
+                diskResourceLocator.getMapDirectory(identifier, "index"),
+                diskResourceLocator.getSwapDirectory(identifier, "index"),
+                chunkStore);
         importHandles.put("index", index);
 
         MiruOnDiskField[] fields = new MiruOnDiskField[schema.fieldCount()];
@@ -377,41 +377,41 @@ public class MiruStreamFactory {
         MiruFilterUtils filterUtils = new MiruFilterUtils();
 
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> authzCache = CacheBuilder.newBuilder()
-            .maximumSize(partitionAuthzCacheSize)
-            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-            .build();
+                .maximumSize(partitionAuthzCacheSize)
+                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+                .build();
         MiruOnDiskAuthzIndex authzIndex = new MiruOnDiskAuthzIndex(
-            diskResourceLocator.getMapDirectory(identifier, "authz"),
-            diskResourceLocator.getSwapDirectory(identifier, "authz"),
-            chunkStore,
-            new MiruAuthzCache(authzCache, stringInterner, authzUtils));
+                diskResourceLocator.getMapDirectory(identifier, "authz"),
+                diskResourceLocator.getSwapDirectory(identifier, "authz"),
+                chunkStore,
+                new MiruAuthzCache(authzCache, stringInterner, authzUtils));
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex removalIndex = new MiruOnDiskRemovalIndex(new RandomAccessSwappableFiler(
-            diskResourceLocator.getFilerFile(identifier, "removal")));
+                diskResourceLocator.getFilerFile(identifier, "removal")));
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex(
-            diskResourceLocator.getMapDirectory(identifier, "unread"),
-            diskResourceLocator.getSwapDirectory(identifier, "unread"),
-            chunkStore);
+                diskResourceLocator.getMapDirectory(identifier, "unread"),
+                diskResourceLocator.getSwapDirectory(identifier, "unread"),
+                chunkStore);
         importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex inboxIndex = new MiruOnDiskInboxIndex(
-            diskResourceLocator.getMapDirectory(identifier, "inbox"),
-            diskResourceLocator.getSwapDirectory(identifier, "inbox"),
-            chunkStore);
+                diskResourceLocator.getMapDirectory(identifier, "inbox"),
+                diskResourceLocator.getSwapDirectory(identifier, "inbox"),
+                chunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
         MiruIndexStream indexStream = new MiruIndexStream(schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInterner);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackStream readTrackStream = new MiruReadTrackStream(filterUtils, schema, fieldIndex, timeIndex, unreadTrackingIndex,
-            executorService, bitsetBufferSize, streamLocks);
+                executorService, bitsetBufferSize, streamLocks);
 
         MiruQueryStream queryStream = new MiruQueryStream(executorService,
-            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-            readTrackStream, readTrackingWALReader, streamLocks);
+                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+                readTrackStream, readTrackingWALReader, streamLocks);
 
         return new MiruStream(indexStream, queryStream, readTrackStream, timeIndex, Optional.of(chunkStore)).importable(importHandles);
     }
@@ -457,7 +457,7 @@ public class MiruStreamFactory {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private MiruStream copy(MiruStream from, MiruStream to) throws Exception {
         Map<String, BulkImport<?>> importHandles = to.getImportHandles();
         for (Map.Entry<String, BulkExport<?>> entry : from.getExportHandles().entrySet()) {
@@ -511,10 +511,10 @@ public class MiruStreamFactory {
             mapDirectories.add("field-" + i);
         }
         return diskResourceAnalyzer.checkExists(
-            diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
-            Lists.newArrayList("timeIndex", "activity", "removal"),
-            mapDirectories,
-            Lists.newArrayList("stream"));
+                diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
+                Lists.newArrayList("timeIndex", "activity", "removal"),
+                mapDirectories,
+                Lists.newArrayList("stream"));
     }
 
     private boolean checkOnDisk(MiruPartitionCoord coord) throws IOException {
@@ -523,10 +523,10 @@ public class MiruStreamFactory {
             mapDirectories.add("field-" + i);
         }
         return diskResourceAnalyzer.checkExists(
-            diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
-            Lists.newArrayList("timeIndex", "activity", "removal"),
-            mapDirectories,
-            Lists.newArrayList("stream"));
+                diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
+                Lists.newArrayList("timeIndex", "activity", "removal"),
+                mapDirectories,
+                Lists.newArrayList("stream"));
     }
 
     private class MemMappedFilerProvider implements MiruFilerProvider {

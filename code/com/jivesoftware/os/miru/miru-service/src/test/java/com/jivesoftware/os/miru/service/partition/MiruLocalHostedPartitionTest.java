@@ -82,13 +82,16 @@ public class MiruLocalHostedPartitionTest {
             new RowColumnValueStoreImpl<>();
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
+
         streamFactory = new MiruStreamFactory(
-            config,
             schema,
             Executors.newSingleThreadExecutor(),
             new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
             new MiruTempDirectoryResourceLocator(),
-            new MiruTempDirectoryResourceLocator());
+            new MiruTempDirectoryResourceLocator(),
+            32,
+            20,
+            MiruBackingStorage.memory);
         clusterRegistry = new MiruInMemoryClusterRegistry();
 
         activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);

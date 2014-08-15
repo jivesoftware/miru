@@ -21,6 +21,7 @@
         <module>miru-wal</module>
         <module>miru-reco</module>
         <module>miru-ewah</module>
+        <module>miru-deployable</module>
         <module>miru-test</module>
     </modules>
 </project>

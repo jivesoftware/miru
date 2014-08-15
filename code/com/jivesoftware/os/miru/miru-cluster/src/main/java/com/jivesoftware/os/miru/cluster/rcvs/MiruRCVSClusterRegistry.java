@@ -10,6 +10,16 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.ColumnValueAndTimestamp;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.KeyedColumnValueCallbackStream;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.TenantIdAndRow;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.ConstantTimestamper;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.Timestamper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
@@ -24,16 +34,6 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
-import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.ColumnValueAndTimestamp;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.KeyedColumnValueCallbackStream;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.TenantIdAndRow;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.ConstantTimestamper;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.Timestamper;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +42,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Singleton;
 
 @Singleton
@@ -71,8 +70,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry,
-        @Named("miruNumberOfReplicas") int defaultNumberOfReplicas,
-        @Named("miruTopologyIsStaleAfterMillis") long defaultTopologyIsStaleAfterMillis) {
+        int defaultNumberOfReplicas,
+        long defaultTopologyIsStaleAfterMillis) {
         this.hostsRegistry = hostsRegistry;
         this.expectedTenantsRegistry = expectedTenantsRegistry;
         this.expectedTenantPartitionsRegistry = expectedTenantPartitionsRegistry;

@@ -1,10 +1,8 @@
 package com.jivesoftware.os.miru.service.stream.locator;
 
 import com.google.common.io.BaseEncoding;
-import com.google.inject.name.Named;
+import java.io.File;
 import java.util.Random;
-import java.util.concurrent.ScheduledExecutorService;
-import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
@@ -16,14 +14,11 @@ public class TransientIdentifierPartResourceLocator extends AbstractIdentifierPa
     private final MiruTransientResourceCleaner cleaner;
     private final Random random = new Random();
 
-    @Inject
-    public TransientIdentifierPartResourceLocator(
-        @Named("miruTransientResourceLocatorPath") String path,
-        @Named("miruTransientResourceInitialChunkSize") long initialChunkSize,
-        @Named("miruScheduledExecutor") ScheduledExecutorService executor) {
+    public TransientIdentifierPartResourceLocator(File path,
+        long initialChunkSize,
+        MiruTransientResourceCleaner cleaner) {
         super(path, initialChunkSize);
-
-        this.cleaner = new MiruTransientResourceCleaner(basePath, executor);
+        this.cleaner = cleaner;
     }
 
     @Override

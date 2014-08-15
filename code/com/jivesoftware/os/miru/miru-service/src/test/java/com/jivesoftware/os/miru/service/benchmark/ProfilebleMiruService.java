@@ -5,7 +5,6 @@
  */
 package com.jivesoftware.os.miru.service.benchmark;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -15,7 +14,9 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -31,23 +32,17 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult.AggregateCount;
-import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.memory.MiruInMemoryClusterRegistry;
-import com.jivesoftware.os.miru.cluster.naive.MiruNoOpActivityLookupTable;
+import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
+import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
-import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
-import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
-import com.jivesoftware.os.miru.service.partition.MiruPartitionDirector;
-import com.jivesoftware.os.miru.service.partition.MiruPartitionEventHandler;
-import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
+import com.jivesoftware.os.miru.service.MiruServiceInitializer;
+import com.jivesoftware.os.miru.service.MiruTempResourceLocatorProviderInitializer;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
-import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
-import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.naive.MiruNoOpActivityWAL;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
+import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
+import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,8 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -104,32 +98,39 @@ public class ProfilebleMiruService {
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(8192);
-        MiruReadTrackingWALReader miruReadTrackingWALReader = mock(MiruReadTrackingWALReader.class);
 
         MiruHost miruHost = new MiruHost("logicalName", 1234);
-        MiruStreamFactory factory = new MiruStreamFactory(
-            config,
-            new MiruSchema(ImmutableMap.copyOf(rawSchema)),
-            Executors.newCachedThreadPool(),
-            miruReadTrackingWALReader,
-            new MiruTempDirectoryResourceLocator(),
-            new MiruTempDirectoryResourceLocator());
-        MiruClusterRegistry clusterRegistry = new MiruInMemoryClusterRegistry();
-        MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
-        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
-        MiruNoOpActivityWAL activityWALReader = new MiruNoOpActivityWAL();
-        MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(100, 95);
-        MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(config, miruHost, scheduledExecutorService, clusterRegistry, partitionComparison,
-            factory, activityWALReader, partitionEventHandler, httpClientFactory, new ObjectMapper());
 
-        MiruActivityWALWriter activityWALWriter = new MiruNoOpActivityWAL();
-        MiruActivityLookupTable activityLookupTable = new MiruNoOpActivityLookupTable();
-        MiruPartitionDirector miruPartitionDirector = new MiruPartitionDirector(miruHost, clusterRegistry, expectedTenants);
 
-        this.service = new MiruService(config, miruHost, Executors.newCachedThreadPool(), Executors.newScheduledThreadPool(2), Executors.newCachedThreadPool(),
-            miruPartitionDirector, partitionComparison, activityWALWriter, activityLookupTable);
+        InMemorySetOfSortedMapsImplInitializer inMemorySetOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer);
+        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(),
+                registryStore.getExpectedTenantsRegistry(),
+                registryStore.getExpectedTenantPartitionsRegistry(),
+                registryStore.getReplicaRegistry(),
+                registryStore.getTopologyRegistry(),
+                registryStore.getConfigRegistry(),
+                3,
+                TimeUnit.HOURS.toMillis(1));
+
+        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer);
+
+        MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
+        miruResourceLocatorProviderLifecyle.start();
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+                registryStore,
+                clusterRegistry,
+                miruHost,
+                new MiruSchema(ImmutableMap.copyOf(rawSchema)),
+                wal,
+                httpClientFactory,
+                miruResourceLocatorProviderLifecyle.getService());
+
+        miruServiceLifecyle.start();
+        this.service = miruServiceLifecyle.getService();
     }
 
     public void basicTest() throws Exception {
@@ -137,32 +138,38 @@ public class ProfilebleMiruService {
         capacity = 10_000_000;
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(8192);
-        MiruReadTrackingWALReader miruReadTrackingWALReader = mock(MiruReadTrackingWALReader.class);
-
+        
         MiruHost miruHost = new MiruHost("logicalName", 1234);
-        MiruStreamFactory factory = new MiruStreamFactory(
-            config,
-            new MiruSchema(ImmutableMap.copyOf(rawSchema)),
-            Executors.newCachedThreadPool(),
-            miruReadTrackingWALReader,
-            new MiruTempDirectoryResourceLocator(),
-            new MiruTempDirectoryResourceLocator());
-        MiruClusterRegistry clusterRegistry = new MiruInMemoryClusterRegistry();
-        MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
-        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
-        MiruNoOpActivityWAL activityWALReader = new MiruNoOpActivityWAL();
-        MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(100, 95);
-        MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(config, miruHost, scheduledExecutorService, clusterRegistry, partitionComparison,
-            factory, activityWALReader, partitionEventHandler, httpClientFactory, new ObjectMapper());
 
-        MiruActivityWALWriter activityWALWriter = new MiruNoOpActivityWAL();
-        MiruActivityLookupTable activityLookupTable = new MiruNoOpActivityLookupTable();
-        MiruPartitionDirector miruPartitionDirector = new MiruPartitionDirector(miruHost, clusterRegistry, expectedTenants);
 
-        this.service = new MiruService(config, miruHost, Executors.newCachedThreadPool(), Executors.newScheduledThreadPool(2), Executors.newCachedThreadPool(),
-            miruPartitionDirector, partitionComparison, activityWALWriter, activityLookupTable);
+        InMemorySetOfSortedMapsImplInitializer inMemorySetOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer);
+        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(),
+                registryStore.getExpectedTenantsRegistry(),
+                registryStore.getExpectedTenantPartitionsRegistry(),
+                registryStore.getReplicaRegistry(),
+                registryStore.getTopologyRegistry(),
+                registryStore.getConfigRegistry(),
+                3,
+                TimeUnit.HOURS.toMillis(1));
+
+        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer);
+
+        MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
+        miruResourceLocatorProviderLifecyle.start();
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+                registryStore,
+                clusterRegistry,
+                miruHost,
+                new MiruSchema(ImmutableMap.copyOf(rawSchema)),
+                wal,
+                httpClientFactory,
+                miruResourceLocatorProviderLifecyle.getService());
+
+        miruServiceLifecyle.start();
+        this.service = miruServiceLifecyle.getService();
 
         Random rand = new Random(1234);
         List<MiruPartitionedActivity> activities = new ArrayList<>();

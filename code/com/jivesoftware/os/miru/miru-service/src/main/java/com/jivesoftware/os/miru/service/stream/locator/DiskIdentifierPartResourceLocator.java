@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.stream.locator;
 
-import com.google.inject.name.Named;
-import javax.inject.Inject;
+import java.io.File;
 import javax.inject.Singleton;
 
 /**
@@ -10,10 +9,7 @@ import javax.inject.Singleton;
 @Singleton
 public class DiskIdentifierPartResourceLocator extends AbstractIdentifierPartResourceLocator {
 
-    @Inject
-    public DiskIdentifierPartResourceLocator(
-        @Named("miruDiskResourceLocatorPath") String path,
-        @Named("miruDiskResourceInitialChunkSize") long initialChunkSize) {
+    public DiskIdentifierPartResourceLocator(File path, long initialChunkSize) {
         super(path, initialChunkSize);
     }
 

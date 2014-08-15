@@ -36,7 +36,9 @@ import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
 import com.jivesoftware.os.miru.service.stream.filter.AnswerCardinalityLastSetBitmapStorage;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.mutable.MutableObject;
 
@@ -474,6 +476,15 @@ public class MiruFilterUtils {
 
         MiruField aggregateField3 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName3));
 
+        /*
+        G: -
+        Jane v1,
+        G: - v1,
+        Bob G+v1, v2,
+        Jane v3: v1, v2, v3
+
+        */
+
         // feeds us our docIds
         final MutableObject<EWAHCompressedBitmap> join1 = new MutableObject<>(new EWAHCompressedBitmap());
         stream(stream, answer, Optional.<EWAHCompressedBitmap>absent(), aggregateField1, query.retrieveFieldName1, new CallbackStream<TermCount>() {
@@ -492,20 +503,36 @@ public class MiruFilterUtils {
         // at this point have all activity for all my documents in join1.
 
         // feeds us all users
-        final MutableObject<EWAHCompressedBitmap> join2 = new MutableObject<>(new EWAHCompressedBitmap());
+        final MinMaxPriorityQueue<TermCount> userHeap = MinMaxPriorityQueue.orderedBy(new Comparator<TermCount>() {
+
+            @Override
+            public int compare(TermCount o1, TermCount o2) {
+                return -Long.compare(o1.count, o2.count); // mimus to reverse :)
+            }
+        }).maximumSize(query.resultCount).create(); // overloaded :(
+
         stream(stream, join1.getValue(), Optional.<EWAHCompressedBitmap>absent(), aggregateField2, query.retrieveFieldName2, new CallbackStream<TermCount>() {
 
             @Override
             public TermCount callback(TermCount v) throws Exception {
                 if (v != null) {
-                    Optional<MiruInvertedIndex> invertedIndex = lookupField2.getInvertedIndex(v.termId);
-                    if (invertedIndex.isPresent()) {
-                        join2.setValue(join2.getValue().or(invertedIndex.get().getIndex()));
-                    }
+                    userHeap.add(v);
                 }
                 return v;
             }
         });
+        Map<MiruTermId, Long> scalar = new HashMap<>();
+        final MutableObject<EWAHCompressedBitmap> join2 = new MutableObject<>(new EWAHCompressedBitmap());
+//        BloomIndex userBloom = new BloomIndex();
+        for (TermCount tc : userHeap) {
+            Optional<MiruInvertedIndex> invertedIndex = lookupField2.getInvertedIndex(tc.termId);
+            if (invertedIndex.isPresent()) {
+                join2.setValue(join2.getValue().or(invertedIndex.get().getIndex()));
+                scalar.put(tc.termId, tc.count);
+//                bloomIndex.put(tc.termId);
+            }
+        }
+
         // at this point have all activity for all users that have also touched my documents
 
         //join2.setValue(join2.getValue().and(authz.getValue())); // TODO
@@ -524,7 +551,11 @@ public class MiruFilterUtils {
             @Override
             public TermCount callback(TermCount v) throws Exception {
                 if (v != null) {
+//                    BloomIndex docBloom = bloomIndexProvider.get(v.termId);
+//                    BloomIndex result = docBloom.and(userBloom);
+                    
                     heap.add(v);
+
                 }
                 return v;
             }

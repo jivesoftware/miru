@@ -53,12 +53,14 @@ public class MiruStreamFactoryTest {
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
         streamFactory = new MiruStreamFactory(
-            config,
-            schema,
-            Executors.newSingleThreadExecutor(),
-            new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
-            new MiruTempDirectoryResourceLocator(),
-            new MiruTempDirectoryResourceLocator());
+                schema,
+                Executors.newSingleThreadExecutor(),
+                new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
+                new MiruTempDirectoryResourceLocator(),
+                new MiruTempDirectoryResourceLocator(),
+                32,
+                20,
+                MiruBackingStorage.memory);
 
     }
 

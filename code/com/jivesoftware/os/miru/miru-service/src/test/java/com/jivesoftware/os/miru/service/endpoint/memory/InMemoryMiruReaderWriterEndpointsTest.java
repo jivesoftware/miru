@@ -3,13 +3,23 @@ package com.jivesoftware.os.miru.service.endpoint.memory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryCriteria;
 import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryParams;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruLifecyle;
+import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.MiruWriter;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -24,19 +34,32 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.service.MiruReaderWriterInMemoryModule;
+import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
+import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.service.MiruReaderImpl;
+import com.jivesoftware.os.miru.service.MiruService;
+import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.service.MiruServiceInitializer;
+import com.jivesoftware.os.miru.service.MiruTempResourceLocatorProviderInitializer;
+import com.jivesoftware.os.miru.service.MiruWriterImpl;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
-import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
-import com.jivesoftware.os.miru.service.partition.MiruPartitionDirector;
+import com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
+import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.ws.rs.core.Response;
+import org.merlin.config.BindInterfaceToConfiguration;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import static com.jivesoftware.os.miru.api.field.MiruFieldName.AUTHOR_ID;
@@ -44,31 +67,70 @@ import static com.jivesoftware.os.miru.api.field.MiruFieldName.OBJECT_ID;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
-@Guice(modules = MiruReaderWriterInMemoryModule.class)
 public class InMemoryMiruReaderWriterEndpointsTest {
 
-    private MiruPartitionedActivityFactory activityFactory = new MiruPartitionedActivityFactory();
-    private ObjectMapper objectMapper = new ObjectMapper();
+    MiruTenantId tenantId = new MiruTenantId("tenant1".getBytes());
+    MiruPartitionId partitionId = MiruPartitionId.of(1);
 
-    @Inject
-    @Named("miruServiceHost")
-    MiruHost miruHost;
-    @Inject
-    MiruReader miruReader;
-    @Inject
-    MiruWriter miruWriter;
-    @Inject
-    MiruClusterRegistry miruClusterRegistry;
-    @Inject
-    MiruExpectedTenants miruExpectedTenants;
-    @Inject
-    MiruPartitionDirector miruPartitionDirector;
+    private final MiruPartitionedActivityFactory activityFactory = new MiruPartitionedActivityFactory();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private MiruReaderEndpoints miruReaderEndpoints;
     private MiruWriterEndpoints miruWriterEndpoints;
+    private MiruService service;
 
     @BeforeMethod
     public void setUp() throws Exception {
+
+        MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
+
+        MiruHost miruHost = new MiruHost("logicalName", 1234);
+        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
+            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+
+
+        InMemorySetOfSortedMapsImplInitializer inMemorySetOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer);
+        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(),
+                registryStore.getExpectedTenantsRegistry(),
+                registryStore.getExpectedTenantPartitionsRegistry(),
+                registryStore.getReplicaRegistry(),
+                registryStore.getTopologyRegistry(),
+                registryStore.getConfigRegistry(),
+                3,
+                TimeUnit.HOURS.toMillis(1));
+
+        clusterRegistry.sendHeartbeatForHost(miruHost, 0, 0);
+        clusterRegistry.electToReplicaSetForTenantPartition(tenantId, partitionId,
+                new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3));
+
+        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer);
+
+        MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
+        miruResourceLocatorProviderLifecyle.start();
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+                registryStore,
+                clusterRegistry,
+                miruHost,
+                new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA),
+                wal,
+                httpClientFactory,
+                miruResourceLocatorProviderLifecyle.getService());
+
+        miruServiceLifecyle.start();
+        MiruService miruService = miruServiceLifecyle.getService();
+
+        long t = System.currentTimeMillis();
+        while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory))) {
+            Thread.sleep(10);
+            if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(10)) {
+                Assert.fail("Partition failed to come online");
+            }
+        }
+
+
+        MiruReader miruReader = new MiruReaderImpl(service);
+        MiruWriter miruWriter = new MiruWriterImpl(service);
         this.miruReaderEndpoints = new MiruReaderEndpoints(miruReader);
         this.miruWriterEndpoints = new MiruWriterEndpoints(miruWriter);
     }
@@ -78,8 +140,7 @@ public class InMemoryMiruReaderWriterEndpointsTest {
         AtomicLong time = new AtomicLong(0);
         AtomicInteger index = new AtomicInteger(0);
 
-        MiruTenantId tenantId = new MiruTenantId("tenant1".getBytes(Charsets.UTF_8));
-        miruExpectedTenants.expect(Lists.newArrayList(tenantId));
+        //miruExpectedTenants.expect(Lists.newArrayList(tenantId));
 
         miruReaderEndpoints.warm(tenantId);
 

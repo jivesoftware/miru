@@ -44,7 +44,6 @@ import com.jivesoftware.os.miru.service.stream.factory.FilterCustomExecuteQuery;
 import com.jivesoftware.os.miru.service.stream.factory.FilterInboxExecuteQuery;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import com.jivesoftware.os.miru.service.stream.factory.MiruJustInTimeBackfillerizer;
-import com.jivesoftware.os.miru.service.stream.factory.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.stream.factory.MiruResultEvaluator;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolution;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolvable;
@@ -60,11 +59,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Singleton;
 
 /** @author jonathan */
@@ -83,37 +78,28 @@ public class MiruService {
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruActivityLookupTable activityLookupTable;
 
-    @Inject
-    public MiruService(MiruServiceConfig config,
-        @Named("miruServiceHost") MiruHost localhost,
-        @Named("miruServiceExecutor") Executor executor,
-        @Named("miruScheduledExecutor") ScheduledExecutorService scheduledExecutorService,
-        @Named("miruBackfillExecutor") ExecutorService backfillExecutor,
+    public MiruService(MiruHost localhost,
+        Executor executor,
+        ScheduledExecutorService scheduledExecutorService,
+        MiruJustInTimeBackfillerizer backfillerizer,
         MiruPartitionDirector partitionDirector,
         MiruHostedPartitionComparison partitionComparison,
         MiruActivityWALWriter activityWALWriter,
-        MiruActivityLookupTable activityLookupTable) {
+        MiruActivityLookupTable activityLookupTable,
+        MiruSolver solver,
+        int bitsetBufferSize) {
         this.localhost = localhost;
         this.partitionDirector = partitionDirector;
         this.partitionComparison = partitionComparison;
         this.activityWALWriter = activityWALWriter;
         this.activityLookupTable = activityLookupTable;
         this.filterUtils = new MiruFilterUtils();
-        this.backfillerizer = new MiruJustInTimeBackfillerizer(localhost, backfillExecutor);
-        this.bitsetBufferSize = config.getBitsetBufferSize();
+        this.backfillerizer = backfillerizer;
+        this.bitsetBufferSize = bitsetBufferSize;
 
-        int initialSolvers = config.getDefaultInitialSolvers();
-        int maxNumberOfSolvers = config.getDefaultMaxNumberOfSolvers();
-        long addAnotherSolverAfterNMillis = config.getDefaultAddAnotherSolverAfterNMillis();
-        long failAfterNMillis = config.getDefaultFailAfterNMillis();
-        this.solver = new MiruLowestLatencySolver(executor, initialSolvers, maxNumberOfSolvers, addAnotherSolverAfterNMillis, failAfterNMillis);
+        this.solver = solver;
 
-        long heartbeatInterval = config.getHeartbeatIntervalInMillis();
-        scheduledExecutorService.scheduleWithFixedDelay(
-            new DirectorHeartbeatRunnable(), heartbeatInterval, heartbeatInterval, TimeUnit.MILLISECONDS);
-        long ensurePartitionsInterval = config.getEnsurePartitionsIntervalInMillis();
-        scheduledExecutorService.scheduleWithFixedDelay(
-            new DirectorEnsurePartitionsRunnable(), ensurePartitionsInterval, ensurePartitionsInterval, TimeUnit.MILLISECONDS);
+
     }
 
     public void writeToIndex(List<MiruPartitionedActivity> partitionedActivities) throws Exception {
@@ -373,17 +359,4 @@ public class MiruService {
         return partitionDirector.checkInfo(tenantId, partitionId, info);
     }
 
-    private class DirectorHeartbeatRunnable implements Runnable {
-        @Override
-        public void run() {
-            partitionDirector.heartbeat();
-        }
-    }
-
-    private class DirectorEnsurePartitionsRunnable implements Runnable {
-        @Override
-        public void run() {
-            partitionDirector.ensureServerPartitions();
-        }
-    }
 }

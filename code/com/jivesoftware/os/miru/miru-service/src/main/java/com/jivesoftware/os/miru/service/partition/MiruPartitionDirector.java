@@ -14,8 +14,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import java.util.Collections;
 import java.util.List;
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Singleton;
 
 /** @author jonathan */
@@ -28,8 +26,7 @@ public class MiruPartitionDirector {
     private final MiruClusterRegistry clusterRegistry;
     private final MiruExpectedTenants expectedTenants;
 
-    @Inject
-    public MiruPartitionDirector(@Named("miruServiceHost") MiruHost host,
+    public MiruPartitionDirector(MiruHost host,
         MiruClusterRegistry clusterRegistry,
         MiruExpectedTenants expectedTenants) {
         this.host = host;

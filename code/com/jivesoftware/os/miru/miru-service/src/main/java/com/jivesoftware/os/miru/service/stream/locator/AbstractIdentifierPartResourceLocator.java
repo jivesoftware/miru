@@ -20,8 +20,8 @@ public abstract class AbstractIdentifierPartResourceLocator implements MiruResou
     protected final File basePath;
     protected final long initialChunkSize;
 
-    public AbstractIdentifierPartResourceLocator(String path, long initialChunkSize) {
-        this.basePath = ensureDirectory(new File(path));
+    public AbstractIdentifierPartResourceLocator(File basePath, long initialChunkSize) {
+        this.basePath = basePath;
         this.initialChunkSize = initialChunkSize;
     }
 

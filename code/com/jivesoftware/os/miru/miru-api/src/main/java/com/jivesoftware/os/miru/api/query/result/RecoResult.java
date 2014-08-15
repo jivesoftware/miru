@@ -58,7 +58,7 @@ public class RecoResult {
 
         @Override
         public String toString() {
-            return "Trendy{"
+            return "Recommendation{"
                     + ", distinctValue=" + distinctValue
                     + ", rank=" + rank
                     + '}';

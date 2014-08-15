@@ -6,6 +6,8 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ListMultimap;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -20,16 +22,12 @@ import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruPartitioner;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Singleton;
 
 /** @author jonathan */
@@ -46,9 +44,8 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
     private final Cache<TenantAndPartitionKey, MiruReplicaSet> replicaCache;
     private final Cache<MiruTenantId, Boolean> latestAlignmentCache;
 
-    @Inject
     public MiruBestEffortFailureTolerantClient(
-        @Named("sendActivitiesThreadPool") ExecutorService sendActivitiesToHostsThreadPool,
+        ExecutorService sendActivitiesToHostsThreadPool,
         MiruClusterRegistry clusterRegistry,
         MiruActivitySenderProvider activitySenderProvider,
         MiruPartitioner miruPartitioner) {
