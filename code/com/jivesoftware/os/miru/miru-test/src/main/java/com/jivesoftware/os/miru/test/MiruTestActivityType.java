@@ -7,9 +7,10 @@ import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.ObjectId;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
+
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
-import javax.annotation.Nullable;
 
 /**
  *
@@ -95,11 +96,12 @@ public enum MiruTestActivityType {
             List<Id> users = supplier.oldUsers(2);
             Id authorId = users.get(0);
             ObjectId author = new ObjectId("User", authorId);
-            Id streamId = new Id("connectionsStreamId|" + supplier.tenantId() + "|" + author);
+            Id streamId = CompositeId.createOrdered("ConnectionsStream", supplier.tenantId(), author.toStringForm());
             ObjectId stream = new ObjectId("ConnectionsActivityStream", streamId);
             Id followedUserId = users.get(1);
             ObjectId followedUser = new ObjectId("User", followedUserId);
-            Id userFollowId = new Id("followId|" + supplier.tenantId() + "|" + author + "|" + followedUser + "|" + stream);
+            Id userFollowId = CompositeId.createOrdered("Follow", supplier.tenantId(), author.toStringForm(), followedUser.toStringForm(),
+                    stream.toStringForm());
 
             ObjectId verbSubject = new ObjectId("UserFollow", userFollowId);
             String[] authz = supplier.globalAuthz();
@@ -121,7 +123,7 @@ public enum MiruTestActivityType {
             ObjectId author = new ObjectId("User", authorId);
             Id containerId = supplier.oldContainers(1).get(0);
             ObjectId group = new ObjectId("Group", supplier.groupForContainer(containerId));
-            Id membershipId = new Id("membershipId|" + supplier.tenantId() + "|" + group + "|" + author);
+            Id membershipId = CompositeId.createOrdered("Membership", supplier.tenantId(), group.toStringForm(), author.toStringForm());
 
             ObjectId verbSubject = new ObjectId("Membership", membershipId);
             String[] authz = supplier.authz(containerId);
@@ -143,7 +145,7 @@ public enum MiruTestActivityType {
             Id contentItemId = supplier.oldContentItem();
             Id contentAuthorId = supplier.contentAuthor(contentItemId);
             ObjectId contentItem = new ObjectId("Post", contentItemId);
-            Id likeId = new Id("likeId|" + supplier.tenantId() + "|" + authorId + "|" + contentItem);
+            Id likeId = CompositeId.createOrdered("Like", supplier.tenantId(), authorId.toStringForm(), contentItem.toStringForm());
             ObjectId verbSubject = new ObjectId("Like", likeId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
@@ -167,7 +169,7 @@ public enum MiruTestActivityType {
             Id commentId = supplier.oldComment();
             Id commentAuthorId = supplier.contentAuthor(commentId);
             ObjectId comment = new ObjectId("Comment", commentId);
-            Id likeId = new Id("likeId|" + supplier.tenantId() + "|" + authorId + "|" + comment);
+            Id likeId = CompositeId.createOrdered("Like", supplier.tenantId(), authorId.toStringForm(), comment.toStringForm());
             ObjectId verbSubject = new ObjectId("Like", likeId);
             Id contentItemId = supplier.contentItemForComment(commentId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);

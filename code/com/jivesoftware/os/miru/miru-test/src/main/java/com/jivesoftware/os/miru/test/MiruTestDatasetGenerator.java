@@ -50,7 +50,9 @@ public class MiruTestDatasetGenerator {
             .addOption(null, "bg-repair-pct", true, "The percentage of background activity that are repairs (default 0.1)")
             .addOption(null, "bg-remove-pct", true, "The percentage of background activity that are removes (default 0.01)")
             .addOption(null, "count-aggregate", true, "The desired results for aggregate counts queries (default 10)")
+            .addOption(null, "count-cfilter", true, "The desired results for collaborative filtering queries (default 50)")
             .addOption(null, "count-distinct", true, "The desired results for distinct count queries (default 50)")
+            .addOption(null, "count-gtrendy", true, "The desired results for global trending queries (default 50)")
             .addOption(null, "num-comments", true, "The number of new comments to emit (default 100,000)")
             .addOption(null, "num-containers", true, "The number of new containers to emit (default 0)")
             .addOption(null, "num-content", true, "The number of new content items to emit (default 10,000)")
@@ -58,14 +60,14 @@ public class MiruTestDatasetGenerator {
             .addOption(null, "num-joins", true, "The number of new container joins to emit (default 0)")
             .addOption(null, "num-liked-comments", true, "The number of new comment likes to emit (default 10,000)")
             .addOption(null, "num-liked-content", true, "The number of new content item likes to emit (default 1,000)")
-            .addOption(null, "num-queries", true, "The number of queries to generate of each stream query type (default 10,000)")
-            .addOption(null, "num-trendy", true, "The number of queries to generate of each trending query type (default 10_000)")
+            .addOption(null, "num-stream-queries", true, "The number of queries to generate of each stream query type (default 10,000)")
+            .addOption(null, "num-reco-queries", true, "The number of queries to generate of each recommender query type (default 10_000)")
             .addOption(null, "participation", true, "The weight, average, and max participants (comma separated) (default 1.1,10,40)")
-            .addOption(null, "public-container-pct", true, "The percentage of containers that are public (default 0.75)")
             .addOption(null, "pre-comments", true, "The number of existing comments to simulate (default 10,000)")
             .addOption(null, "pre-containers", true, "The number of existing containers to simulate (default 10)")
             .addOption(null, "pre-content", true, "The number of existing content items to simulate (default 1,000)")
             .addOption(null, "pre-users", true, "The number of existing users to simulate (default 1,000)")
+            .addOption(null, "public-container-pct", true, "The percentage of containers that are public (default 0.75)")
             .addOption(null, "query-containers", true, "The random upper bound of followed containers in a stream query (default 20)")
             .addOption(null, "query-users", true, "The random upper bound of followed users in a stream query (default 20)")
             .addOption(null, "writerId", true, "The writerId to populate (default 1)");
@@ -125,11 +127,12 @@ public class MiruTestDatasetGenerator {
         int numJoins = Integer.parseInt(commandLine.getOptionValue("num-joins", "100"));
         int numLikeContentItems = Integer.parseInt(commandLine.getOptionValue("num-liked-content", "1000"));
         int numLikeComments = Integer.parseInt(commandLine.getOptionValue("num-liked-comments", "10000"));
-        int numQueries = Integer.parseInt(commandLine.getOptionValue("num-queries", "10000"));
-        int numTrendy = Integer.parseInt(commandLine.getOptionValue("num-trendy", "10000"));
+        int numStreamQueries = Integer.parseInt(commandLine.getOptionValue("num-stream-queries", "10000"));
+        int numRecoQueries = Integer.parseInt(commandLine.getOptionValue("num-reco-queries", "10000"));
         int numResultsAggregateCounts = Integer.parseInt(commandLine.getOptionValue("count-aggregate", "10"));
         int numResultsDistinctCount = Integer.parseInt(commandLine.getOptionValue("count-distinct", "50"));
         int numResultsGlobalTrendy = Integer.parseInt(commandLine.getOptionValue("count-gtrendy", "50"));
+        int numResultsCollaborativeFiltering = Integer.parseInt(commandLine.getOptionValue("count-cfilter", "50"));
 
         String[] participation = commandLine.getOptionValue("participation", "1.1,10,40").split(",");
         double participationWeight = Double.parseDouble(participation[0]);
@@ -169,9 +172,10 @@ public class MiruTestDatasetGenerator {
             bgRemovePercent,
             activityCounts,
             totalActivities);
-        MiruTestQueryDistributor queryDistributor = new MiruTestQueryDistributor(random, featureSupplier, numQueries, queryUsers, queryContainers,
-            numResultsAggregateCounts, numResultsDistinctCount);
-        MiruTestTrendyDistributor trendyDistributor = new MiruTestTrendyDistributor(featureSupplier, numTrendy, numResultsGlobalTrendy);
+        MiruTestStreamQueryDistributor queryDistributor = new MiruTestStreamQueryDistributor(random, featureSupplier, numStreamQueries, queryUsers,
+            queryContainers, numResultsAggregateCounts, numResultsDistinctCount);
+        MiruTestRecoQueryDistributor trendyDistributor = new MiruTestRecoQueryDistributor(numRecoQueries, featureSupplier, numResultsGlobalTrendy,
+            numResultsCollaborativeFiltering);
 
         MiruTestDatasetGenerator generator = new MiruTestDatasetGenerator(
             writerId,
@@ -195,7 +199,8 @@ public class MiruTestDatasetGenerator {
             writer(hadoopConfiguration, outputPath, tenantId + ".query.aggregate-inbox", LongWritable.class, Text.class, fileSystem),
             writer(hadoopConfiguration, outputPath, tenantId + ".query.distinct-custom", LongWritable.class, Text.class, fileSystem),
             writer(hadoopConfiguration, outputPath, tenantId + ".query.distinct-inbox", LongWritable.class, Text.class, fileSystem),
-            writer(hadoopConfiguration, outputPath, tenantId + ".query.global-trendy", LongWritable.class, Text.class, fileSystem));
+            writer(hadoopConfiguration, outputPath, tenantId + ".query.global-trendy", LongWritable.class, Text.class, fileSystem),
+            writer(hadoopConfiguration, outputPath, tenantId + ".query.collaborative-filtering", LongWritable.class, Text.class, fileSystem));
     }
 
     private static SequenceFile.Writer writer(Configuration hadoopConfiguration, String dirName, String fileName, Class<?> keyClass, Class<?> valueClass,
@@ -217,24 +222,24 @@ public class MiruTestDatasetGenerator {
     private final int writerId;
     private final MiruTestFeatureSupplier featureSupplier;
     private final MiruTestActivityDistributor activityDistributor;
-    private final MiruTestQueryDistributor queryDistributor;
-    private final MiruTestTrendyDistributor trendyDistributor;
+    private final MiruTestStreamQueryDistributor streamQueryDistributor;
+    private final MiruTestRecoQueryDistributor recoQueryDistributor;
     private final int numPartitions;
     private final boolean closeFinalPartition;
 
     public MiruTestDatasetGenerator(int writerId,
         MiruTestFeatureSupplier featureSupplier,
         MiruTestActivityDistributor activityDistributor,
-        MiruTestQueryDistributor queryDistributor,
-        MiruTestTrendyDistributor trendyDistributor,
+        MiruTestStreamQueryDistributor streamQueryDistributor,
+        MiruTestRecoQueryDistributor recoQueryDistributor,
         int numPartitions,
         boolean closeFinalPartition) {
 
         this.writerId = writerId;
         this.featureSupplier = featureSupplier;
         this.activityDistributor = activityDistributor;
-        this.queryDistributor = queryDistributor;
-        this.trendyDistributor = trendyDistributor;
+        this.streamQueryDistributor = streamQueryDistributor;
+        this.recoQueryDistributor = recoQueryDistributor;
         this.numPartitions = numPartitions;
         this.closeFinalPartition = closeFinalPartition;
     }
@@ -247,7 +252,8 @@ public class MiruTestDatasetGenerator {
         SequenceFile.Writer queryAggregateInboxWriter,
         SequenceFile.Writer queryDistinctCustomWriter,
         SequenceFile.Writer queryDistinctInboxWriter,
-        SequenceFile.Writer queryGlobalTrendyWriter)
+        SequenceFile.Writer queryGlobalTrendyWriter,
+        SequenceFile.Writer queryCollaborativeFilteringWriter)
         throws IOException, InterruptedException, ExecutionException {
 
         metaWriter.append(new Text("tenantId"), new Text(featureSupplier.miruTenantId().getBytes()));
@@ -261,34 +267,40 @@ public class MiruTestDatasetGenerator {
         activityProduceAndConsume(activityWriter, index, Optional.<MiruTestActivityDistributor.Revisitor>absent(), executor);
         activityProduceAndConsume(backgroundWriter, index, Optional.of(activityRevisitor), executor);
 
-        queryProduceAndConsume(queryAggregateCustomWriter, executor, new Callable<Object>() {
+        queryProduceAndConsume(queryAggregateCustomWriter, executor, streamQueryDistributor.getNumQueries(), new Callable<Object>() {
             @Override
             public Object call() throws Exception {
-                return queryDistributor.aggregateCountsQuery(false);
+                return streamQueryDistributor.aggregateCountsQuery(false);
             }
         });
-        queryProduceAndConsume(queryAggregateInboxWriter, executor, new Callable<Object>() {
+        queryProduceAndConsume(queryAggregateInboxWriter, executor, streamQueryDistributor.getNumQueries(), new Callable<Object>() {
             @Override
             public Object call() throws Exception {
-                return queryDistributor.aggregateCountsQuery(true);
+                return streamQueryDistributor.aggregateCountsQuery(true);
             }
         });
-        queryProduceAndConsume(queryDistinctCustomWriter, executor, new Callable<Object>() {
+        queryProduceAndConsume(queryDistinctCustomWriter, executor, streamQueryDistributor.getNumQueries(), new Callable<Object>() {
             @Override
             public Object call() throws Exception {
-                return queryDistributor.distinctCountQuery(false);
+                return streamQueryDistributor.distinctCountQuery(false);
             }
         });
-        queryProduceAndConsume(queryDistinctInboxWriter, executor, new Callable<Object>() {
+        queryProduceAndConsume(queryDistinctInboxWriter, executor, streamQueryDistributor.getNumQueries(), new Callable<Object>() {
             @Override
             public Object call() throws Exception {
-                return queryDistributor.distinctCountQuery(true);
+                return streamQueryDistributor.distinctCountQuery(true);
             }
         });
-        queryProduceAndConsume(queryGlobalTrendyWriter, executor, new Callable<Object>() {
+        queryProduceAndConsume(queryGlobalTrendyWriter, executor, recoQueryDistributor.getNumQueries(), new Callable<Object>() {
             @Override
             public Object call() throws Exception {
-                return trendyDistributor.globalTrending();
+                return recoQueryDistributor.globalTrending();
+            }
+        });
+        queryProduceAndConsume(queryCollaborativeFilteringWriter, executor, recoQueryDistributor.getNumQueries(), new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+                return recoQueryDistributor.collaborativeFiltering();
             }
         });
 
@@ -322,13 +334,13 @@ public class MiruTestDatasetGenerator {
         }
     }
 
-    private void queryProduceAndConsume(SequenceFile.Writer queryWriter, ExecutorService executor, Callable<Object> callable)
+    private void queryProduceAndConsume(SequenceFile.Writer queryWriter, ExecutorService executor, int numQueries, Callable<Object> callable)
         throws ExecutionException, InterruptedException, IOException {
 
         BlockingQueue<Object> queue = Queues.newArrayBlockingQueue(1000);
         AtomicBoolean done = new AtomicBoolean(false);
 
-        Future<?> producer = executor.submit(new QueryProducerRunnable(queryDistributor, queue, done, callable));
+        Future<?> producer = executor.submit(new QueryProducerRunnable(numQueries, queue, done, callable));
         Future<?> consumer = executor.submit(new QueryConsumerRunnable(queryWriter, queue, done));
 
         log.info("Waiting for query producer to finish...");

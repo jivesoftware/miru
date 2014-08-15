@@ -7,11 +7,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.ObjectId;
-import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryCriteria;
-import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryParams;
-import com.jivesoftware.os.miru.api.MiruDistinctCountQueryCriteria;
-import com.jivesoftware.os.miru.api.MiruDistinctCountQueryParams;
+import com.jivesoftware.os.miru.api.*;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.MiruTimeRange;
@@ -19,13 +15,14 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import java.util.Random;
+
 import javax.annotation.Nullable;
+import java.util.Random;
 
 /**
  *
  */
-public class MiruTestQueryDistributor {
+public class MiruTestStreamQueryDistributor {
 
     private final Random random;
     private final MiruTestFeatureSupplier featureSupplier;
@@ -37,8 +34,8 @@ public class MiruTestQueryDistributor {
 
     private final OneTailedRandomNumber pageNumber = new OneTailedRandomNumber(2.0, 10, 0, 10); // 50% back one page, 0.1% back 10 pages
 
-    public MiruTestQueryDistributor(Random random, MiruTestFeatureSupplier featureSupplier, int numQueries, int queryUsers, int queryContainers,
-        int numResultsAggregateCounts, int numResultsDistinctCount) {
+    public MiruTestStreamQueryDistributor(Random random, MiruTestFeatureSupplier featureSupplier, int numQueries, int queryUsers, int queryContainers,
+            int numResultsAggregateCounts, int numResultsDistinctCount) {
         this.random = random;
         this.featureSupplier = featureSupplier;
         this.numQueries = numQueries;
@@ -56,16 +53,16 @@ public class MiruTestQueryDistributor {
         Id userId = featureSupplier.oldUsers(1).get(0);
         ObjectId user = new ObjectId("User", userId);
         MiruAggregateCountsQueryCriteria.Builder criteriaBuilder = new MiruAggregateCountsQueryCriteria.Builder()
-            .setDesiredNumberOfDistincts(numResultsAggregateCounts + 1) // we usually add 1 for "hasMore"
-            .setStreamId(streamId(inbox, user))
-            .setStreamFilter(new MiruFilter(
-                MiruFilterOperation.and,
-                Optional.of(ImmutableList.of(viewClassesFilter())),
-                Optional.of(ImmutableList.of(
-                    new MiruFilter(
-                        MiruFilterOperation.or,
-                        Optional.of(buildFieldFilters(inbox, userId)),
-                        Optional.<ImmutableList<MiruFilter>>absent())))));
+                .setDesiredNumberOfDistincts(numResultsAggregateCounts + 1) // we usually add 1 for "hasMore"
+                .setStreamId(streamId(inbox, user))
+                .setStreamFilter(new MiruFilter(
+                        MiruFilterOperation.and,
+                        Optional.of(ImmutableList.of(viewClassesFilter())),
+                        Optional.of(ImmutableList.of(
+                                new MiruFilter(
+                                        MiruFilterOperation.or,
+                                        Optional.of(buildFieldFilters(inbox, userId)),
+                                        Optional.<ImmutableList<MiruFilter>>absent())))));
 
         if (random.nextInt(100) < 10) {
             // 10% page, which uses an origin timestamp plus an offset
@@ -84,26 +81,26 @@ public class MiruTestQueryDistributor {
         }
 
         return new MiruAggregateCountsQueryParams(
-            featureSupplier.miruTenantId(),
-            Optional.<MiruActorId>absent(),
-            Optional.<MiruAuthzExpression>of(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId)))),
-            criteriaBuilder.build());
+                featureSupplier.miruTenantId(),
+                Optional.<MiruActorId>absent(),
+                Optional.<MiruAuthzExpression>of(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId)))),
+                criteriaBuilder.build());
     }
 
     public MiruDistinctCountQueryParams distinctCountQuery(boolean inbox) {
         Id userId = featureSupplier.oldUsers(1).get(0);
         ObjectId user = new ObjectId("User", userId);
         MiruDistinctCountQueryCriteria.Builder criteriaBuilder = new MiruDistinctCountQueryCriteria.Builder()
-            .setDesiredNumberOfDistincts(numResultsDistinctCount + 1) // we usually add 1 for "hasMore"
-            .setStreamId(streamId(inbox, user))
-            .setStreamFilter(new MiruFilter(
-                MiruFilterOperation.and,
-                Optional.of(ImmutableList.of(viewClassesFilter())),
-                Optional.of(ImmutableList.of(
-                    new MiruFilter(
-                        MiruFilterOperation.or,
-                        Optional.of(buildFieldFilters(inbox, userId)),
-                        Optional.<ImmutableList<MiruFilter>>absent())))));
+                .setDesiredNumberOfDistincts(numResultsDistinctCount + 1) // we usually add 1 for "hasMore"
+                .setStreamId(streamId(inbox, user))
+                .setStreamFilter(new MiruFilter(
+                        MiruFilterOperation.and,
+                        Optional.of(ImmutableList.of(viewClassesFilter())),
+                        Optional.of(ImmutableList.of(
+                                new MiruFilter(
+                                        MiruFilterOperation.or,
+                                        Optional.of(buildFieldFilters(inbox, userId)),
+                                        Optional.<ImmutableList<MiruFilter>>absent())))));
 
         if (!inbox) {
             // activity stream gets distinct count after last time viewed
@@ -116,44 +113,44 @@ public class MiruTestQueryDistributor {
         }
 
         return new MiruDistinctCountQueryParams(
-            featureSupplier.miruTenantId(),
-            Optional.<MiruActorId>absent(),
-            Optional.<MiruAuthzExpression>of(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId)))),
-            criteriaBuilder.build());
+                featureSupplier.miruTenantId(),
+                Optional.<MiruActorId>absent(),
+                Optional.<MiruAuthzExpression>of(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId)))),
+                criteriaBuilder.build());
     }
 
     private Id streamId(boolean inbox, ObjectId user) {
         if (inbox) {
-            return new Id("inbox|" + featureSupplier.tenantId() + "|" + user);
+            return CompositeId.createOrdered("InboxStream", featureSupplier.tenantId(), user.toStringForm());
         } else {
-            return new Id("stream|" + featureSupplier.tenantId() + "|" + user);
+            return CompositeId.createOrdered("ConnectionsStream", featureSupplier.tenantId(), user.toStringForm());
         }
     }
 
     private MiruFieldFilter viewClassesFilter() {
         return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.copyOf(Lists.transform(
-            Lists.<String>newArrayList(
-                "ContentVersionActivitySearchView",
-                "CommentVersionActivitySearchView",
-                "LikeActivitySearchView",
-                "UserFollowActivitySearchView",
-                "MembershipActivitySearchView",
-                "PlaceActivitySearchView"),
-            CLASS_NAME_TO_TERMID)));
+                Lists.<String>newArrayList(
+                        "ContentVersionActivitySearchView",
+                        "CommentVersionActivitySearchView",
+                        "LikeActivitySearchView",
+                        "UserFollowActivitySearchView",
+                        "MembershipActivitySearchView",
+                        "PlaceActivitySearchView"),
+                CLASS_NAME_TO_TERMID)));
     }
 
     private ImmutableList<MiruFieldFilter> buildFieldFilters(boolean inbox, Id userId) {
         if (inbox) {
             return ImmutableList.of(new MiruFieldFilter(MiruFieldName.PARTICIPANT_IDS.getFieldName(),
-                ImmutableList.of(ID_TO_TERMID.apply(userId))));
+                    ImmutableList.of(ID_TO_TERMID.apply(userId))));
         } else {
             int numUsers = random.nextInt(queryUsers);
             int numContainers = random.nextInt(queryContainers);
             return ImmutableList.of(
-                new MiruFieldFilter(MiruFieldName.CONTAINER_IDS.getFieldName(), ImmutableList.copyOf(
-                    Lists.transform(featureSupplier.oldContainers(numContainers), ID_TO_TERMID))),
-                new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), ImmutableList.copyOf(
-                    Lists.transform(featureSupplier.oldUsers(numUsers), ID_TO_TERMID))));
+                    new MiruFieldFilter(MiruFieldName.CONTAINER_IDS.getFieldName(), ImmutableList.copyOf(
+                            Lists.transform(featureSupplier.oldContainers(numContainers), ID_TO_TERMID))),
+                    new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), ImmutableList.copyOf(
+                            Lists.transform(featureSupplier.oldUsers(numUsers), ID_TO_TERMID))));
         }
     }
 
@@ -185,9 +182,9 @@ public class MiruTestQueryDistributor {
             return Optional.absent();
         } else {
             return Optional.of(new MiruFilter(
-                MiruFilterOperation.and,
-                Optional.of(fieldFilters),
-                Optional.<ImmutableList<MiruFilter>>absent()));
+                    MiruFilterOperation.and,
+                    Optional.of(fieldFilters),
+                    Optional.<ImmutableList<MiruFilter>>absent()));
         }
     }
 

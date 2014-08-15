@@ -13,13 +13,13 @@ public class QueryProducerRunnable implements Runnable {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruTestQueryDistributor queryDistributor;
+    private final int numQueries;
     private final BlockingQueue<Object> queue;
     private final AtomicBoolean done;
     private final Callable<?> callable;
 
-    public QueryProducerRunnable(MiruTestQueryDistributor queryDistributor, BlockingQueue<Object> queue, AtomicBoolean done, Callable<?> callable) {
-        this.queryDistributor = queryDistributor;
+    public QueryProducerRunnable(int numQueries, BlockingQueue<Object> queue, AtomicBoolean done, Callable<?> callable) {
+        this.numQueries = numQueries;
         this.queue = queue;
         this.done = done;
         this.callable = callable;
@@ -28,7 +28,7 @@ public class QueryProducerRunnable implements Runnable {
     @Override
     public void run() {
         try {
-            for (int i = 0; i < queryDistributor.getNumQueries(); i++) {
+            for (int i = 0; i < numQueries; i++) {
                 queue.put(callable.call());
             }
         } catch (Exception e) {
