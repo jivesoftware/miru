@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index;
 
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.googlecode.javaewah.EWAHCompressedBitmap;

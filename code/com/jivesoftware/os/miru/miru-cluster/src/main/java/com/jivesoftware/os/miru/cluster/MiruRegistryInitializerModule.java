@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.cluster;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -13,7 +14,6 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnValue;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

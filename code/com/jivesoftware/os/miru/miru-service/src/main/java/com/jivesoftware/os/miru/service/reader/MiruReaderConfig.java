@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service;
+package com.jivesoftware.os.miru.service.reader;
 
 import org.merlin.config.Config;
 

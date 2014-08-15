@@ -124,7 +124,7 @@ public class MiruFilterUtils {
             }
 
             while (true) {
-                int lastSetBit = answerCollector == null ? stream.ewahUtils.lastSetBit(answer) : answerCollector.getLastSetBit();
+                int lastSetBit = answerCollector == null ? lastSetBit(answer) : answerCollector.getLastSetBit();
                 if (lastSetBit < 0) {
                     break;
                 }
@@ -230,7 +230,7 @@ public class MiruFilterUtils {
 
             AnswerCardinalityLastSetBitmapStorage answerCollector = null;
             while (true) {
-                int lastSetBit = answerCollector == null ? stream.ewahUtils.lastSetBit(answer) : answerCollector.getLastSetBit();
+                int lastSetBit = answerCollector == null ? lastSetBit(answer) : answerCollector.getLastSetBit();
                 if (lastSetBit < 0) {
                     break;
                 }
@@ -312,7 +312,7 @@ public class MiruFilterUtils {
 
             AnswerCardinalityLastSetBitmapStorage answerCollector = null;
             while (true) {
-                int lastSetBit = answerCollector == null ? stream.ewahUtils.lastSetBit(answer) : answerCollector.getLastSetBit();
+                int lastSetBit = answerCollector == null ? lastSetBit(answer) : answerCollector.getLastSetBit();
                 if (lastSetBit < 0) {
                     break;
                 }
@@ -553,7 +553,7 @@ public class MiruFilterUtils {
                 if (v != null) {
 //                    BloomIndex docBloom = bloomIndexProvider.get(v.termId);
 //                    BloomIndex result = docBloom.and(userBloom);
-                    
+
                     heap.add(v);
 
                 }
@@ -578,7 +578,7 @@ public class MiruFilterUtils {
         ReusableBuffers reusable = new ReusableBuffers(2);
         int beforeCount = counter.isPresent() ? counter.get().cardinality() : answer.cardinality();
         while (true) {
-            int lastSetBit = answerCollector == null ? stream.ewahUtils.lastSetBit(answer) : answerCollector.getLastSetBit();
+            int lastSetBit = answerCollector == null ? lastSetBit(answer) : answerCollector.getLastSetBit();
             if (lastSetBit < 0) {
                 break;
             }
@@ -628,6 +628,15 @@ public class MiruFilterUtils {
         }
         terms.callback(null); // EOS
 
+    }
+
+    public int lastSetBit(EWAHCompressedBitmap bitmap) {
+        IntIterator iterator = bitmap.intIterator();
+        int last = -1;
+        for (; iterator.hasNext();) {
+            last = iterator.next();
+        }
+        return last;
     }
 
     static class TermCount {

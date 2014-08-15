@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.index;
+package com.jivesoftware.os.miru.service.index.auth;
 
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;

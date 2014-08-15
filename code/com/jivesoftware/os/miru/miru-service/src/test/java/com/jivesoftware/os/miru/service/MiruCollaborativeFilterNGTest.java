@@ -160,9 +160,15 @@ public class MiruCollaborativeFilterNGTest {
         for(int i=0;i<1000;i++) {
             String user = "bob"+i;
             for(int d=0;d<1000;d++) {
-                activities.add(viewActivity(time.incrementAndGet(), user, String.valueOf(i+d)));
+                activities.add(viewActivity(time.incrementAndGet(), user, ""+i+d));
             }
         }
+
+//        activities.add(viewActivity(time.incrementAndGet(), "bob", "1"));
+//        activities.add(viewActivity(time.incrementAndGet(), "bob", "2"));
+//        activities.add(viewActivity(time.incrementAndGet(), "bob", "3"));
+//        activities.add(viewActivity(time.incrementAndGet(), "bob", "4"));
+//        activities.add(viewActivity(time.incrementAndGet(), "bob", "9"));
 
 //        activities.add(viewActivity(time.incrementAndGet(), "frank", "1"));
 //        activities.add(viewActivity(time.incrementAndGet(), "frank", "2"));

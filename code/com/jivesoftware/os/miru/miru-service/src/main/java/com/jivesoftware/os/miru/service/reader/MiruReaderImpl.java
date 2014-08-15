@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service;
+package com.jivesoftware.os.miru.service.reader;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
 import com.jivesoftware.os.miru.api.query.result.RecoResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
+import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionUnavailableException;
 import javax.inject.Inject;
 import javax.inject.Singleton;

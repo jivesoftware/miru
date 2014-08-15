@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.cluster.marshaller;
 
 import com.google.common.base.Preconditions;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityLookupEntry;
 import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.TypeMarshaller;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityLookupEntry;
 import java.nio.ByteBuffer;
 
 /**

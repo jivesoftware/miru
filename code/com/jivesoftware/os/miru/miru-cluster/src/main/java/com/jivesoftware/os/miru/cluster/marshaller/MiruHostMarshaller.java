@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.cluster.marshaller;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.TypeMarshaller;
+import com.jivesoftware.os.miru.api.MiruHost;
 
 /**
  *

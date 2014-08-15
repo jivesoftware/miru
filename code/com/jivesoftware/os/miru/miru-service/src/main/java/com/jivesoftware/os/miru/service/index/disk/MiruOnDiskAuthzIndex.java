@@ -12,9 +12,9 @@ import com.jivesoftware.os.jive.utils.keyed.store.VariableKeySizeFileBackedKeyed
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruAuthzCache;
-import com.jivesoftware.os.miru.service.index.MiruAuthzIndex;
-import com.jivesoftware.os.miru.service.index.MiruAuthzUtils;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import java.io.File;
 import java.util.List;

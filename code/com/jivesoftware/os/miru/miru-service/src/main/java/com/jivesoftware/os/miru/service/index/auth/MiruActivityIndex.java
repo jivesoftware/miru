@@ -4,7 +4,7 @@
  * and open the template in the editor.
  */
 
-package com.jivesoftware.os.miru.service.index;
+package com.jivesoftware.os.miru.service.index.auth;
 
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 

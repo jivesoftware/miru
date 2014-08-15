@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.cluster.marshaller;
 
-import com.jivesoftware.os.miru.cluster.rcvs.MiruHostsColumnValue;
 import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.TypeMarshaller;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruHostsColumnValue;
 import java.nio.ByteBuffer;
 
 /**

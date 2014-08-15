@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.index;
+package com.jivesoftware.os.miru.service.index.auth;
 
 import com.google.common.cache.Cache;
 import com.google.common.collect.Interner;

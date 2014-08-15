@@ -1,7 +1,8 @@
-package com.jivesoftware.os.miru.service;
+package com.jivesoftware.os.miru.service.writer;
 
 import com.jivesoftware.os.miru.api.MiruWriter;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.service.MiruService;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;

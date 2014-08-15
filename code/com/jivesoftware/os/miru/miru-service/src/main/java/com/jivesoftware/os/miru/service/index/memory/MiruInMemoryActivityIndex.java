@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
+import com.jivesoftware.os.miru.service.index.auth.MiruActivityIndex;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkArgument;

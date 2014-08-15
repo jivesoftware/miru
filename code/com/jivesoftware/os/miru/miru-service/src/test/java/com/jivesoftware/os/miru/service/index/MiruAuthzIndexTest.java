@@ -1,5 +1,9 @@
 package com.jivesoftware.os.miru.service.index;
 
+import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
