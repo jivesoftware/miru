@@ -18,4 +18,6 @@ public interface MiruField {
 
     Optional<MiruInvertedIndex> getInvertedIndex(MiruTermId term) throws Exception;
 
+    Optional<MiruInvertedIndex> getOrCreateInvertedIndex(MiruTermId term) throws Exception;
+
 }

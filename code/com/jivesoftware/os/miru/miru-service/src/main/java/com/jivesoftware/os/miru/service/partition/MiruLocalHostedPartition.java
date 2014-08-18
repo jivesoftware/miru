@@ -94,7 +94,7 @@ public class MiruLocalHostedPartition implements MiruHostedPartition {
         this.gateRef.set(gate);
 
         scheduledExecutorService.scheduleWithFixedDelay(
-            new BootstrapRunnable(), partitionBootstrapIntervalInMillis, partitionBootstrapIntervalInMillis, TimeUnit.MILLISECONDS);
+            new BootstrapRunnable(), 0, partitionBootstrapIntervalInMillis, TimeUnit.MILLISECONDS);
 
         runnables = ImmutableList.<Runnable>of(new ManageIndexRunnable());
         futures = Lists.newArrayListWithCapacity(runnables.size());
@@ -124,7 +124,7 @@ public class MiruLocalHostedPartition implements MiruHostedPartition {
                 clearFutures();
                 for (Runnable runnable : runnables) {
                     ScheduledFuture<?> future = scheduledExecutorService.scheduleWithFixedDelay(
-                        runnable, partitionRunnableIntervalInMillis, partitionRunnableIntervalInMillis, TimeUnit.MILLISECONDS);
+                        runnable, 0, partitionRunnableIntervalInMillis, TimeUnit.MILLISECONDS);
                     futures.add(future);
                 }
                 return opened;

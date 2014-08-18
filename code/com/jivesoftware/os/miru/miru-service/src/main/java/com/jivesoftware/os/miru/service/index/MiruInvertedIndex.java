@@ -14,6 +14,10 @@ public interface MiruInvertedIndex extends MiruInvertedIndexAppender {
 
     void set(int id) throws Exception;
 
+    void andNotToSourceSize(EWAHCompressedBitmap mask) throws Exception;
+
+    void orToSourceSize(EWAHCompressedBitmap mask) throws Exception;
+
     void andNot(EWAHCompressedBitmap mask) throws Exception;
 
     void or(EWAHCompressedBitmap mask) throws Exception;

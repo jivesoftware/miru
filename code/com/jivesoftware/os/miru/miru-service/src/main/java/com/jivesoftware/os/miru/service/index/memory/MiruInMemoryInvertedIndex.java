@@ -97,7 +97,7 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
         remove.set(id);
         synchronized (write) {
             EWAHCompressedBitmap bitmap = writer();
-            EWAHCompressedBitmap r = andNotToSourceSize(bitmap, remove);
+            EWAHCompressedBitmap r = MiruInMemoryInvertedIndex.this.andNotToSourceSize(bitmap, remove);
             write.set(r);
             markForMerge();
         }
@@ -122,6 +122,30 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
         }
         synchronized (write) {
             EWAHCompressedBitmap bitmap = writer();
+            write.set(bitmap.andNot(mask));
+            markForMerge();
+        }
+    }
+
+    @Override
+    public void or(EWAHCompressedBitmap mask) {
+        if (mask.sizeInBits() == 0) {
+            return;
+        }
+        synchronized (write) {
+            EWAHCompressedBitmap bitmap = writer();
+            write.set(bitmap.or(mask));
+            markForMerge();
+        }
+    }
+
+    @Override
+    public void andNotToSourceSize(EWAHCompressedBitmap mask) {
+        if (mask.sizeInBits() == 0) {
+            return;
+        }
+        synchronized (write) {
+            EWAHCompressedBitmap bitmap = writer();
             EWAHCompressedBitmap andNot = andNotToSourceSize(bitmap, mask);
             write.set(andNot);
             markForMerge();
@@ -129,7 +153,7 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
     }
 
     @Override
-    public void or(EWAHCompressedBitmap mask) {
+    public void orToSourceSize(EWAHCompressedBitmap mask) {
         if (mask.sizeInBits() == 0) {
             return;
         }

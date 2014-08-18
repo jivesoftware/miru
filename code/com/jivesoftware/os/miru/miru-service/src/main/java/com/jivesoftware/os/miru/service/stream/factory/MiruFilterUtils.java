@@ -5,6 +5,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hashing;
+import com.google.common.primitives.Bytes;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
 import com.googlecode.javaewah.IntIterator;
@@ -25,6 +27,7 @@ import com.jivesoftware.os.miru.api.query.result.RecoResult.Recommendation;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
+import com.jivesoftware.os.miru.service.index.BloomIndex;
 import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
@@ -40,6 +43,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.commons.lang3.mutable.MutableObject;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -466,7 +471,7 @@ public class MiruFilterUtils {
     }
 
     /*  I have viewd these thing who has also view these things and what other thing have the viewed that I have not.*/
-    RecoResult collaborativeFiltering(MiruQueryStream stream, RecoQuery query, Optional<RecoReport> report, EWAHCompressedBitmap answer) throws Exception {
+    RecoResult collaborativeFiltering(MiruQueryStream stream, final RecoQuery query, Optional<RecoReport> report, EWAHCompressedBitmap answer, int bitsetBufferSize) throws Exception {
 
         MiruField aggregateField1 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName1));
         final MiruField lookupField1 = stream.fieldIndex.getField(stream.schema.getFieldId(query.lookupFieldNamed1));
@@ -474,7 +479,7 @@ public class MiruFilterUtils {
         MiruField aggregateField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName2));
         final MiruField lookupField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.lookupFieldNamed2));
 
-        MiruField aggregateField3 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName3));
+        final MiruField aggregateField3 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName3));
 
         /*
         G: -
@@ -487,6 +492,7 @@ public class MiruFilterUtils {
 
         // feeds us our docIds
         final MutableObject<EWAHCompressedBitmap> join1 = new MutableObject<>(new EWAHCompressedBitmap());
+        final List<EWAHCompressedBitmap> toBeORed = new ArrayList<>();
         stream(stream, answer, Optional.<EWAHCompressedBitmap>absent(), aggregateField1, query.retrieveFieldName1, new CallbackStream<TermCount>() {
 
             @Override
@@ -494,12 +500,14 @@ public class MiruFilterUtils {
                 if (v != null) {
                     Optional<MiruInvertedIndex> invertedIndex = lookupField1.getInvertedIndex(v.termId);
                     if (invertedIndex.isPresent()) {
-                        join1.setValue(join1.getValue().or(invertedIndex.get().getIndex()));
+                        //join1.setValue(join1.getValue().or(invertedIndex.get().getIndex()));
+                        toBeORed.add(invertedIndex.get().getIndex());
                     }
                 }
                 return v;
             }
         });
+        join1.setValue(FastAggregation.bufferedor(bitsetBufferSize, toBeORed.toArray(new EWAHCompressedBitmap[toBeORed.size()])));
         // at this point have all activity for all my documents in join1.
 
         // feeds us all users
@@ -510,7 +518,6 @@ public class MiruFilterUtils {
                 return -Long.compare(o1.count, o2.count); // mimus to reverse :)
             }
         }).maximumSize(query.resultCount).create(); // overloaded :(
-
         stream(stream, join1.getValue(), Optional.<EWAHCompressedBitmap>absent(), aggregateField2, query.retrieveFieldName2, new CallbackStream<TermCount>() {
 
             @Override
@@ -523,22 +530,24 @@ public class MiruFilterUtils {
         });
         Map<MiruTermId, Long> scalar = new HashMap<>();
         final MutableObject<EWAHCompressedBitmap> join2 = new MutableObject<>(new EWAHCompressedBitmap());
-//        BloomIndex userBloom = new BloomIndex();
+        final BloomIndex bloomIndex = new BloomIndex(Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
+        toBeORed.clear();
         for (TermCount tc : userHeap) {
             Optional<MiruInvertedIndex> invertedIndex = lookupField2.getInvertedIndex(tc.termId);
             if (invertedIndex.isPresent()) {
-                join2.setValue(join2.getValue().or(invertedIndex.get().getIndex()));
+                toBeORed.add(invertedIndex.get().getIndex());
                 scalar.put(tc.termId, tc.count);
-//                bloomIndex.put(tc.termId);
             }
         }
+        join2.setValue(FastAggregation.bufferedor(bitsetBufferSize, toBeORed.toArray(new EWAHCompressedBitmap[toBeORed.size()])));
 
+        final List<TermCount> mostLike = new ArrayList<>(userHeap);
+        final List<BloomIndex.Mights<TermCount>> wantBits = bloomIndex.wantBits(mostLike);
         // at this point have all activity for all users that have also touched my documents
 
         //join2.setValue(join2.getValue().and(authz.getValue())); // TODO
         join2.setValue(join2.getValue().andNot(join1.getValue())); // remove my activity from all activity around said documents
 
-        // feeds us all recommended documents
         final MinMaxPriorityQueue<TermCount> heap = MinMaxPriorityQueue.orderedBy(new Comparator<TermCount>() {
 
             @Override
@@ -546,20 +555,39 @@ public class MiruFilterUtils {
                 return -Long.compare(o1.count, o2.count); // mimus to reverse :)
             }
         }).maximumSize(query.resultCount).create();
+        // feeds us all recommended documents
+        final MutableLong tested = new MutableLong();
         stream(stream, join2.getValue(), Optional.<EWAHCompressedBitmap>absent(), aggregateField3, query.retrieveFieldName3, new CallbackStream<TermCount>() {
 
             @Override
             public TermCount callback(TermCount v) throws Exception {
                 if (v != null) {
-//                    BloomIndex docBloom = bloomIndexProvider.get(v.termId);
-//                    BloomIndex result = docBloom.and(userBloom);
 
-                    heap.add(v);
+                    Optional<MiruInvertedIndex> invertedIndex = aggregateField3.getInvertedIndex(makeComposite(v.termId, query.retrieveFieldName2));
+                    if (invertedIndex.isPresent()) {
+                        MiruInvertedIndex index = invertedIndex.get();
+                        final MutableInt count = new MutableInt(0);
+                        bloomIndex.mightContain(index, wantBits, new BloomIndex.MightContain<TermCount>() {
+
+                            @Override
+                            public void mightContain(TermCount value) {
+                                count.add(value.count);
+                            }
+                        });
+                        heap.add(new TermCount(v.termId, v.mostRecent, count.longValue()));
+
+                        for(BloomIndex.Mights<TermCount> boo:wantBits) {
+                            boo.reset();
+                        }
+                        tested.increment();
+                    }
 
                 }
                 return v;
             }
         });
+
+        System.out.println("Tested!="+tested.longValue());
 
         List<Recommendation> results = new ArrayList<>();
         for (TermCount result : heap) {
@@ -568,6 +596,10 @@ public class MiruFilterUtils {
         return new RecoResult(results);
 
 
+    }
+
+     private MiruTermId makeComposite(MiruTermId fieldValue, String bloomsFieldName) {
+        return new MiruTermId(Bytes.concat(fieldValue.getBytes(), "|".getBytes(), bloomsFieldName.getBytes()));
     }
 
     private void stream(MiruQueryStream stream, EWAHCompressedBitmap answer,
@@ -639,7 +671,7 @@ public class MiruFilterUtils {
         return last;
     }
 
-    static class TermCount {
+    static class TermCount implements BloomIndex.HasValue {
 
         public final MiruTermId termId;
         public MiruActivity mostRecent;
@@ -649,6 +681,16 @@ public class MiruFilterUtils {
             this.termId = termId;
             this.mostRecent = mostRecent;
             this.count = count;
+        }
+
+        @Override
+        public byte[] getValue() {
+            return termId.getBytes();
+        }
+
+        @Override
+        public String toString() {
+            return "TermCount{" + "termId=" + termId + ", mostRecent=" + mostRecent + ", count=" + count + '}';
         }
 
     }

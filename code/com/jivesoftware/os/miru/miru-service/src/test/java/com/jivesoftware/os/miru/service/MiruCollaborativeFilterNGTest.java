@@ -50,6 +50,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -57,11 +58,12 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 public class MiruCollaborativeFilterNGTest {
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
-
 
     MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
     Map<String, Integer> rawSchema = new HashMap<>();
@@ -71,35 +73,22 @@ public class MiruCollaborativeFilterNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
 
-//        for(double p=1;p>0;p/=2) {
-//            long optimalNumOfBits = optimalNumOfBits(100000,p);
-//            if (optimalNumOfBits > Integer.MAX_VALUE) {
-//                break;
-//            }
-//            System.out.println("p="+p+" "+optimalNumOfBits);
-//        }
-//        System.out.println();
-
         rawSchema.put("user", 0);
         rawSchema.put("doc", 1);
 
-//        MiruServiceConfig config = mock(MiruServiceConfig.class);
-//        when(config.getBitsetBufferSize()).thenReturn(8192);
-//        when(config.getHeartbeatIntervalInMillis()).thenReturn(10L);
-//        when(config.getEnsurePartitionsIntervalInMillis()).thenReturn(10L);
-//        when(config.getPartitionBootstrapIntervalInMillis()).thenReturn(10L);
-//        when(config.getPartitionRunnableIntervalInMillis()).thenReturn(10L);
-//        when(config.getDefaultInitialSolvers()).thenReturn(1);
-//        when(config.getDefaultMaxNumberOfSolvers()).thenReturn(1);
-//        when(config.getDefaultAddAnotherSolverAfterNMillis()).thenReturn(1000L);
-//        when(config.getDefaultFailAfterNMillis()).thenReturn(60000L);
+        Map<String, List<String>> fieldNamesBlooms = new HashMap<>();
+        fieldNamesBlooms.put("doc", ImmutableList.of("user"));
+
+        MiruSchema miruSchema = new MiruSchema(ImmutableMap.copyOf(rawSchema), fieldNamesBlooms);
+
+        MiruBackingStorage disiredStorage = MiruBackingStorage.hybrid;
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
+        config.setDefaultStorage(disiredStorage.name());
 
         MiruHost miruHost = new MiruHost("logicalName", 1234);
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
-
+                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
         SetOfSortedMapsImplInitializer setOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", setOfSortedMapsImplInitializer);
@@ -125,7 +114,7 @@ public class MiruCollaborativeFilterNGTest {
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                new MiruSchema(ImmutableMap.copyOf(rawSchema)),
+                miruSchema,
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService());
@@ -134,14 +123,14 @@ public class MiruCollaborativeFilterNGTest {
         MiruService miruService = miruServiceLifecyle.getService();
 
         long t = System.currentTimeMillis();
-        while (!miruService.checkInfo(tenant1, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.hybrid))) {
+        while (!miruService.checkInfo(tenant1, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, disiredStorage))) {
             Thread.sleep(10);
             if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(5000)) {
                 Assert.fail("Partition failed to come online");
             }
         }
 
-        this.service =miruService;
+        this.service = miruService;
     }
 
     static long optimalNumOfBits(long n, double p) {
@@ -154,64 +143,98 @@ public class MiruCollaborativeFilterNGTest {
     @Test(enabled = true)
     public void basicTest() throws Exception {
 
+         // P , G, C
+        // P G P
+        // P C P
+        // G P G
+        // C P C
+        // 
 
         AtomicInteger time = new AtomicInteger();
         List<MiruPartitionedActivity> activities = new ArrayList<>();
-        for(int i=0;i<1000;i++) {
-            String user = "bob"+i;
-            for(int d=0;d<1000;d++) {
-                activities.add(viewActivity(time.incrementAndGet(), user, ""+i+d));
+        Random rand = new Random(1234);
+        int numberOfUsers = 1;
+        int numberOfDocument = 100_000;
+        int numberOfViewsPerUser = 1_000;
+        System.out.println("Building activities....");
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < numberOfUsers; i++) {
+            String user = "bob" + i;
+            for (int d = 0; d < numberOfViewsPerUser; d++) {
+                activities.add(viewActivity(time.incrementAndGet(), user, String.valueOf(rand.nextInt(numberOfDocument))));
             }
         }
+        System.out.println("Built " + activities.size() + " in " + (System.currentTimeMillis() - start) + "millis");
 
-//        activities.add(viewActivity(time.incrementAndGet(), "bob", "1"));
-//        activities.add(viewActivity(time.incrementAndGet(), "bob", "2"));
-//        activities.add(viewActivity(time.incrementAndGet(), "bob", "3"));
-//        activities.add(viewActivity(time.incrementAndGet(), "bob", "4"));
-//        activities.add(viewActivity(time.incrementAndGet(), "bob", "9"));
+        activities.add(viewActivity(time.incrementAndGet(), "bob0", "1"));
+        activities.add(viewActivity(time.incrementAndGet(), "bob0", "2"));
+        activities.add(viewActivity(time.incrementAndGet(), "bob0", "3"));
+        activities.add(viewActivity(time.incrementAndGet(), "bob0", "4"));
+        activities.add(viewActivity(time.incrementAndGet(), "bob0", "9"));
 
-//        activities.add(viewActivity(time.incrementAndGet(), "frank", "1"));
-//        activities.add(viewActivity(time.incrementAndGet(), "frank", "2"));
-//        activities.add(viewActivity(time.incrementAndGet(), "frank", "3"));
-//        activities.add(viewActivity(time.incrementAndGet(), "frank", "4"));
-//        activities.add(viewActivity(time.incrementAndGet(), "frank", "10"));
-//
-//        activities.add(viewActivity(time.incrementAndGet(), "jane", "2"));
-//        activities.add(viewActivity(time.incrementAndGet(), "jane", "3"));
-//        activities.add(viewActivity(time.incrementAndGet(), "jane", "4"));
-//        activities.add(viewActivity(time.incrementAndGet(), "jane", "11"));
-//
-//        activities.add(viewActivity(time.incrementAndGet(), "liz", "3"));
-//        activities.add(viewActivity(time.incrementAndGet(), "liz", "4"));
-//        activities.add(viewActivity(time.incrementAndGet(), "liz", "12"));
-//        activities.add(viewActivity(time.incrementAndGet(), "liz", "12"));
+        activities.add(viewActivity(time.incrementAndGet(), "frank", "1"));
+        activities.add(viewActivity(time.incrementAndGet(), "frank", "2"));
+        activities.add(viewActivity(time.incrementAndGet(), "frank", "3"));
+        activities.add(viewActivity(time.incrementAndGet(), "frank", "4"));
+        activities.add(viewActivity(time.incrementAndGet(), "frank", "10"));
+
+        activities.add(viewActivity(time.incrementAndGet(), "jane", "2"));
+        activities.add(viewActivity(time.incrementAndGet(), "jane", "3"));
+        activities.add(viewActivity(time.incrementAndGet(), "jane", "4"));
+        activities.add(viewActivity(time.incrementAndGet(), "jane", "11"));
+
+        activities.add(viewActivity(time.incrementAndGet(), "liz", "3"));
+        activities.add(viewActivity(time.incrementAndGet(), "liz", "4"));
+        activities.add(viewActivity(time.incrementAndGet(), "liz", "12"));
+        activities.add(viewActivity(time.incrementAndGet(), "liz", "12"));
 
         System.out.println("Indexing...");
-        service.writeToIndex(activities);
-        System.out.println("Indexed...");
+        start = System.currentTimeMillis();
+
+//        int numPartitions = 8;
+//        ExecutorService indexThread = Executors.newFixedThreadPool(numPartitions);
+//        final CountDownLatch latch = new CountDownLatch(numPartitions);
+//        for (final List<MiruPartitionedActivity> partition : Lists.partition(activities, activities.size() / numPartitions)) {
+//
+//            indexThread.submit(new Runnable() {
+//
+//                @Override
+//                public void run() {
+//                    try {
+                        service.writeToIndex(activities);
+//                    } catch (Exception x) {
+//                        x.printStackTrace();
+//                    } finally {
+//                        latch.countDown();
+//                    }
+//                }
+//            });
+//        }
+//        latch.await();
 
 
-        for(int i=0;i<1000;i++) {
-            String user = "bob"+i;
-             MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(new MiruTermId(user.getBytes())));
-            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, Optional.of(ImmutableList.of(miruFieldFilter)), Optional.<ImmutableList<MiruFilter>>absent());
+        System.out.println("Indexed " + activities.size() + " in " + (System.currentTimeMillis() - start) + "millis");
 
+        for (int i = 0; i < numberOfUsers; i++) {
+            String user = "bob" + i;
+            MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(new MiruTermId(user.getBytes())));
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, Optional.of(ImmutableList.of(miruFieldFilter)), Optional
+                    .<ImmutableList<MiruFilter>>absent());
 
-            long start = System.currentTimeMillis();
+            start = System.currentTimeMillis();
             RecoResult recoResult = service.collaborativeFilteringRecommendations(new RecoQuery(tenant1,
-                            Optional.<MiruAuthzExpression>absent(),
-                            filter,
-                            "doc", "doc", "doc",
-                            "user", "user", "user",
-                            "doc", "doc",
-                            10));
+                    Optional.<MiruAuthzExpression>absent(),
+                    filter,
+                    "doc", "doc", "doc",
+                    "user", "user", "user",
+                    "doc", "doc",
+                    10));
 
-            System.out.println("recoResult:"+recoResult);
-            System.out.println("Took:"+(System.currentTimeMillis() - start));
+            System.out.println("recoResult:" + recoResult);
+            System.out.println("Took:" + (System.currentTimeMillis() - start));
         }
 
     }
-
 
     private MiruPartitionedActivity viewActivity(int time, String user, String doc) {
         Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
@@ -222,19 +245,18 @@ public class MiruCollaborativeFilterNGTest {
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }
 
-
     private MiruPartitionedActivity buildActivity(int time, int verb, Integer container, int target, Integer tag, int author) {
         Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
-        fieldsValues.put("verb", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(verb)) });
+        fieldsValues.put("verb", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(verb))});
         if (container != null) {
-            fieldsValues.put("container", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(container)) });
+            fieldsValues.put("container", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(container))});
         }
-        fieldsValues.put("target", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(target)) });
+        fieldsValues.put("target", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(target))});
         if (tag != null) {
-            fieldsValues.put("tag", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(tag)) });
+            fieldsValues.put("tag", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(tag))});
         }
-        fieldsValues.put("author", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(author)) });
-        String[] authz = new String[] { "aaabbbcccddd" };
+        fieldsValues.put("author", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(author))});
+        String[] authz = new String[]{"aaabbbcccddd"};
         MiruActivity activity = new MiruActivity.Builder(tenant1, time, authz, 0).putFieldsValues(fieldsValues).build();
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }

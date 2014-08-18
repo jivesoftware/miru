@@ -131,7 +131,7 @@ public class MiruInvertedIndexTest {
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
         bitmap.set(1);
         bitmap.set(3);
-        miruInvertedIndex.andNot(bitmap);
+        miruInvertedIndex.andNotToSourceSize(bitmap);
 
         assertFalse(miruInvertedIndex.getIndex().get(1));
         assertTrue(miruInvertedIndex.getIndex().get(2));
@@ -148,7 +148,7 @@ public class MiruInvertedIndexTest {
         bitmap.set(1);
         bitmap.set(3);
         bitmap.set(5);
-        miruInvertedIndex.or(bitmap);
+        miruInvertedIndex.orToSourceSize(bitmap);
 
         assertTrue(miruInvertedIndex.getIndex().get(1));
         assertTrue(miruInvertedIndex.getIndex().get(2));

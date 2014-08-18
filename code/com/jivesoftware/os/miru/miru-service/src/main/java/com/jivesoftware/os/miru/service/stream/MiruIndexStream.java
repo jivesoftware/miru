@@ -1,17 +1,23 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hashing;
+import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.index.auth.MiruActivityIndex;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
+import com.jivesoftware.os.miru.service.index.BloomIndex;
 import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruFields;
+import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.MiruRemovalIndex;
+import com.jivesoftware.os.miru.service.index.auth.MiruActivityIndex;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -31,11 +37,11 @@ public class MiruIndexStream {
     private final StripingLocksProvider<Integer> stripingLocksProvider = new StripingLocksProvider<>(64);
 
     public MiruIndexStream(MiruSchema schema,
-        MiruActivityIndex activityIndex,
-        MiruFields fieldIndex,
-        MiruAuthzIndex authzIndex,
-        MiruRemovalIndex removalIndex,
-        MiruActivityInterner activityInterner) {
+            MiruActivityIndex activityIndex,
+            MiruFields fieldIndex,
+            MiruAuthzIndex authzIndex,
+            MiruRemovalIndex removalIndex,
+            MiruActivityInterner activityInterner) {
         this.schema = schema;
         this.activityIndex = activityIndex;
         this.fieldIndex = fieldIndex;
@@ -48,6 +54,7 @@ public class MiruIndexStream {
         activity = activityInterner.intern(activity);
         indexFieldValues(activity, id);
         indexAuthz(activity, id);
+        indexBloomins(activity);
         // add to the activity index last, and use it as the ultimate indicator of whether an activity is fully indexed
         set(activity, id);
     }
@@ -84,7 +91,6 @@ public class MiruIndexStream {
                 }
 
                 //TODO repair fields?
-
                 // repairs also unhide (remove from removal)
                 removalIndex.remove(id);
 
@@ -106,7 +112,6 @@ public class MiruIndexStream {
                 activity = activityInterner.intern(activity);
 
                 //TODO apply field changes?
-
                 // hide (add to removal)
                 removalIndex.set(id);
 
@@ -120,9 +125,9 @@ public class MiruIndexStream {
         for (String fieldName : activity.fieldsValues.keySet()) {
             int fieldId = schema.getFieldId(fieldName);
             if (fieldId >= 0) {
-                MiruField termIndex = fieldIndex.getField(fieldId);
+                MiruField miruField = fieldIndex.getField(fieldId);
                 for (MiruTermId term : activity.fieldsValues.get(fieldName)) {
-                    termIndex.index(term, id);
+                    miruField.index(term, id);
                 }
             }
         }
@@ -138,5 +143,40 @@ public class MiruIndexStream {
 
     private void repairAuthz(String authz, int id, boolean value) throws Exception {
         authzIndex.repair(authz, id, value);
+    }
+
+    private void indexBloomins(MiruActivity activity) throws Exception {
+        BloomIndex bloomIndex = new BloomIndex(Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
+
+
+        for (String fieldName : activity.fieldsValues.keySet()) {
+            int fieldId = schema.getFieldId(fieldName);
+            if (fieldId >= 0) {
+                MiruField miruField = fieldIndex.getField(fieldId);
+                Optional<List<String>> bloomsFieldNames = schema.getFieldsBlooms(fieldName);
+                if (bloomsFieldNames.isPresent()) {
+                    for (String bloomsFieldName : bloomsFieldNames.get()) {
+                        MiruTermId[] bloomFieldValues = activity.fieldsValues.get(bloomsFieldName);
+                        if (bloomFieldValues != null) {
+                            MiruTermId[] fieldValues = activity.fieldsValues.get(fieldName);
+                            if (fieldValues != null) {
+                                for(MiruTermId fieldValue:fieldValues) {
+                                    MiruTermId compositeBloomId = makeComposite(fieldValue, bloomsFieldName);
+                                    Optional<MiruInvertedIndex> invertedIndex = miruField.getOrCreateInvertedIndex(compositeBloomId);
+                                    if (invertedIndex.isPresent()) {
+                                        bloomIndex.put(invertedIndex.get(), bloomFieldValues);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    private MiruTermId makeComposite(MiruTermId fieldValue, String bloomsFieldName) {
+        return new MiruTermId(Bytes.concat(fieldValue.getBytes(), "|".getBytes(), bloomsFieldName.getBytes()));
     }
 }

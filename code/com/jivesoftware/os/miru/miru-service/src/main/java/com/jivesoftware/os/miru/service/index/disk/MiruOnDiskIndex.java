@@ -33,6 +33,11 @@ public class MiruOnDiskIndex implements MiruIndex, BulkImport<Map<Long, MiruInve
     }
 
     @Override
+    public void allocate(int fieldId, int termId) throws Exception {
+        getOrAllocate(fieldId, termId);
+    }
+
+    @Override
     public void index(int fieldId, int termId, int id) throws Exception {
         getOrAllocate(fieldId, termId).append(id);
     }

@@ -78,9 +78,9 @@ public class MergeRecoResults implements MiruResultMerger<RecoResult> {
             @Override
             public RecoResult apply(@Nullable RecoResult result) {
                 List<RecoResult.Recommendation> results = Lists.newArrayList(result.results);
-                long t = System.currentTimeMillis();
+                //long t = System.currentTimeMillis();
                 Collections.sort(results);
-                log.info("mergeReco: sorted in " + (System.currentTimeMillis() - t) + " ms");
+                //log.info("mergeReco: sorted in " + (System.currentTimeMillis() - t) + " ms");
                 results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
                 return new RecoResult(ImmutableList.copyOf(results));
             }

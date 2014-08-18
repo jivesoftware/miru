@@ -102,6 +102,11 @@ public class MiruOnDiskField implements MiruField, BulkImport<Map<MiruTermId, Mi
     }
 
     @Override
+    public Optional<MiruInvertedIndex> getOrCreateInvertedIndex(MiruTermId term) throws Exception {
+        throw new UnsupportedOperationException("On disk index is read only");
+    }
+
+    @Override
     public Optional<MiruInvertedIndex> getInvertedIndex(MiruTermId term, int considerIfIndexIdGreaterThanN) throws Exception {
         Optional<MiruFieldIndexKey> indexKey = getTermId(term);
         if (indexKey.isPresent() && indexKey.get().getMaxId() > considerIfIndexIdGreaterThanN) {

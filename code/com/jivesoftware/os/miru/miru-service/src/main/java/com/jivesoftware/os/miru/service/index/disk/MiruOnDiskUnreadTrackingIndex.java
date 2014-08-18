@@ -51,13 +51,13 @@ public class MiruOnDiskUnreadTrackingIndex implements MiruUnreadTrackingIndex, B
     @Override
     public void applyRead(MiruStreamId streamId, EWAHCompressedBitmap readMask) throws Exception {
         MiruInvertedIndex unread = getOrCreateUnread(streamId);
-        unread.andNot(readMask);
+        unread.andNotToSourceSize(readMask);
     }
 
     @Override
     public void applyUnread(MiruStreamId streamId, EWAHCompressedBitmap unreadMask) throws Exception {
         MiruInvertedIndex unread = getOrCreateUnread(streamId);
-        unread.or(unreadMask);
+        unread.orToSourceSize(unreadMask);
     }
 
     @Override

@@ -32,6 +32,7 @@ public class RecoExecuteQuery implements ExecuteQuery<RecoResult, RecoReport> {
         this.bitsetBufferSize = bitsetBufferSize;
     }
 
+
     @Override
     public RecoResult executeLocal(MiruLocalHostedPartition partition, Optional<RecoReport> report) throws Exception {
         try (MiruQueryHandle handle = partition.getQueryHandle()) {
@@ -51,12 +52,12 @@ public class RecoExecuteQuery implements ExecuteQuery<RecoResult, RecoReport> {
                 ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression.get()));
             }
 
-            // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
+            // 3) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
             ands.add(utils.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
             // AND it all together and return the results
             EWAHCompressedBitmap answer = utils.bufferedAnd(ands, bitsetBufferSize);
-            RecoResult reco = utils.collaborativeFiltering(stream, query, report, answer);
+            RecoResult reco = utils.collaborativeFiltering(stream, query, report, answer, bitsetBufferSize);
 
             return reco;
         } catch (Exception e) {

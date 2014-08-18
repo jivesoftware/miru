@@ -109,6 +109,17 @@ public class MiruTransientField implements MiruField, BulkExport<Map<MiruTermId,
     }
 
     @Override
+    public Optional<MiruInvertedIndex> getOrCreateInvertedIndex(MiruTermId term) throws Exception {
+        MiruFieldIndexKey indexKey = getOrCreateTermId(term);
+        Optional<MiruInvertedIndex> invertedIndex = getInvertedIndex(indexKey);
+        if (invertedIndex.isPresent()) {
+            return invertedIndex;
+        }
+        index.allocate(fieldId, indexKey.getId());
+        return getInvertedIndex(indexKey);
+    }
+
+    @Override
     public Optional<MiruInvertedIndex> getInvertedIndex(MiruTermId term, int considerIfIndexIdGreaterThanN) throws Exception {
         Optional<MiruFieldIndexKey> indexKey = getTermId(term);
         if (indexKey.isPresent() && indexKey.get().getMaxId() > considerIfIndexIdGreaterThanN) {

@@ -57,6 +57,7 @@ public interface MiruServiceConfig extends Config {
 
     @StringDefault("hybrid")
     String getDefaultStorage();
+    void setDefaultStorage(String storageType);
 
     @IntDefault(1000)
     int getLongTailSolverWindowSize();

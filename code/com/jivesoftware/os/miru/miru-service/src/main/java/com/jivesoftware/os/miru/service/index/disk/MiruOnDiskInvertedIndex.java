@@ -103,13 +103,29 @@ public class MiruOnDiskInvertedIndex implements MiruInvertedIndex, BulkImport<EW
     public void andNot(EWAHCompressedBitmap mask) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
+            setIndex(getIndex().andNot(mask));
+        }
+    }
+
+    @Override
+    public void or(EWAHCompressedBitmap mask) throws Exception {
+        synchronized (filer.lock()) {
+            filer.sync();
+            setIndex(getIndex().or(mask));
+        }
+    }
+
+    @Override
+    public void andNotToSourceSize(EWAHCompressedBitmap mask) throws Exception {
+        synchronized (filer.lock()) {
+            filer.sync();
             EWAHCompressedBitmap andNot = andNotToSourceSize(getIndex(), mask);
             setIndex(andNot);
         }
     }
 
     @Override
-    public void or(EWAHCompressedBitmap mask) throws Exception {
+    public void orToSourceSize(EWAHCompressedBitmap mask) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
             EWAHCompressedBitmap or = orToSourceSize(getIndex(), mask);

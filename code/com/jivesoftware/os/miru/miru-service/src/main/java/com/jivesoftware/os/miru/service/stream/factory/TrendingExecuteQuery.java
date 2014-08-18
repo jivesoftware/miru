@@ -51,7 +51,7 @@ public class TrendingExecuteQuery implements ExecuteQuery<TrendingResult, Trendi
                 ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression.get()));
             }
 
-            // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
+            // 3) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
             ands.add(utils.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
             // AND it all together and return the results
