@@ -10,14 +10,33 @@
     <artifactId>global-version-management</artifactId>
     <packaging>pom</packaging>
     <properties>
-        <jive-utils-version>0.32-SNAPSHOT</jive-utils-version>
+        <jive-utils-version>0.32</jive-utils-version>
+        <upena-version>0.4</upena-version>
     </properties>
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>com.jivesoftware.os.upena</groupId>
+                <artifactId>tenant-routing-http-client</artifactId>
+                <version>${upena-version}</version>
+                <type>jar</type>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.upena</groupId>
+                <artifactId>upena-main</artifactId>
+                <version>${upena-version}</version>
+                <type>jar</type>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.upena</groupId>
+                <artifactId>upena-routing-shared</artifactId>
+                <version>${upena-version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.1-SNAPSHOT</version>
+                <version>0.7-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>

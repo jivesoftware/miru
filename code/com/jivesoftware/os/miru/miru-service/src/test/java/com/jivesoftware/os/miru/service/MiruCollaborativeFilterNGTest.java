@@ -148,7 +148,8 @@ public class MiruCollaborativeFilterNGTest {
         // P C P
         // G P G
         // C P C
-        // 
+        // I am looking at this persons what content should I look at?
+        // I am looking at this group what content should I look at?
 
         AtomicInteger time = new AtomicInteger();
         List<MiruPartitionedActivity> activities = new ArrayList<>();
