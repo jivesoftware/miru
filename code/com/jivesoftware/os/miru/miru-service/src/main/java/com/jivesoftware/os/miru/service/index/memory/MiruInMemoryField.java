@@ -3,10 +3,8 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.MiruField;
-import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.*;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -17,16 +15,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class MiruInMemoryField implements MiruField, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> {
 
-    private final int fieldId;
+    private final MiruFieldDefinition fieldDefinition;
     private final ConcurrentMap<MiruTermId, MiruFieldIndexKey> termToIndex;
     private final MiruInMemoryIndex index;
     private final AtomicInteger nextTermId;
 
-    public MiruInMemoryField(int fieldId, Map<MiruTermId, MiruFieldIndexKey> termToIndex, MiruInMemoryIndex index) {
-        this.fieldId = fieldId;
+    public MiruInMemoryField(MiruFieldDefinition fieldDefinition, Map<MiruTermId, MiruFieldIndexKey> termToIndex, MiruInMemoryIndex index) {
+        this.fieldDefinition = fieldDefinition;
         this.termToIndex = new ConcurrentHashMap<>(termToIndex);
         this.index = index;
         this.nextTermId = new AtomicInteger();
+    }
+
+    @Override
+    public MiruFieldDefinition getFieldDefinition() {
+        return fieldDefinition;
     }
 
     @Override
@@ -46,25 +49,24 @@ public class MiruInMemoryField implements MiruField, BulkExport<Map<MiruTermId, 
     @Override
     public void index(MiruTermId term, int id) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
-        index.index(fieldId, indexKey.getId(), id);
+        index.index(fieldDefinition.fieldId, indexKey.getId(), id);
         indexKey.retain(id);
     }
 
     @Override
     public void remove(MiruTermId term, int id) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
-        index.remove(fieldId, indexKey.getId(), id);
+        index.remove(fieldDefinition.fieldId, indexKey.getId(), id);
     }
 
     @Override
-    public Optional<MiruInvertedIndex> getOrCreateInvertedIndex(MiruTermId term) throws Exception {
+    public MiruInvertedIndex getOrCreateInvertedIndex(MiruTermId term) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
         Optional<MiruInvertedIndex> invertedIndex = getInvertedIndex(indexKey);
         if (invertedIndex.isPresent()) {
-            return invertedIndex;
+            return invertedIndex.get();
         }
-        index.allocate(fieldId, indexKey.getId());
-        return getInvertedIndex(indexKey);
+        return index.allocate(fieldDefinition.fieldId, indexKey.getId());
     }
 
     @Override
@@ -91,7 +93,7 @@ public class MiruInMemoryField implements MiruField, BulkExport<Map<MiruTermId, 
 
     private Optional<MiruInvertedIndex> getInvertedIndex(MiruFieldIndexKey indexKey) throws Exception {
         if (indexKey != null) {
-            return index.get(fieldId, indexKey.getId());
+            return index.get(fieldDefinition.fieldId, indexKey.getId());
         }
         return Optional.absent();
     }

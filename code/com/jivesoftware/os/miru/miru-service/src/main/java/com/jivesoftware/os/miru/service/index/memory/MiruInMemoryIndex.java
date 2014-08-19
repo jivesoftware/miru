@@ -38,8 +38,8 @@ public class MiruInMemoryIndex implements MiruIndex, BulkImport<Map<Long, MiruIn
     }
 
     @Override
-    public void allocate(int fieldId, int termId) throws Exception {
-        getOrAllocate(fieldId, termId);
+    public MiruInvertedIndex allocate(int fieldId, int termId) throws Exception {
+        return getOrAllocate(fieldId, termId);
     }
 
     @Override

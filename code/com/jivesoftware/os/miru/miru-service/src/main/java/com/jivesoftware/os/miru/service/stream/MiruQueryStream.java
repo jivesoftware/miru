@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
-import com.jivesoftware.os.miru.service.index.auth.MiruActivityIndex;
+import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruInboxIndex;

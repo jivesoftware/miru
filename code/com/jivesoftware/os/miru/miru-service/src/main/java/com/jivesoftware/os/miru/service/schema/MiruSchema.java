@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.service.schema;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
-import java.util.Collections;
-import java.util.List;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
+
 import java.util.Map;
 
 /**
@@ -12,16 +12,18 @@ import java.util.Map;
  */
 public class MiruSchema {
 
+    public static final String RESERVED_AGGREGATE = "~";
+
     private final Map<String, Integer> fieldNameToId;
-    private final Map<String, List<String>> fieldNamesBlooms;
+    private final MiruFieldDefinition[] fieldDefinitions;
 
-    public MiruSchema(ImmutableMap<String, Integer> fieldNameToId) {
-        this(fieldNameToId, Collections.<String, List<String>>emptyMap());
-    }
-
-    public MiruSchema(ImmutableMap<String, Integer> fieldNameToId, Map<String, List<String>> fieldNamesBlooms) {
-        this.fieldNameToId = fieldNameToId;
-        this.fieldNamesBlooms = fieldNamesBlooms;
+    public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
+        this.fieldDefinitions = fieldDefinitions;
+        this.fieldNameToId = Maps.newHashMap();
+        for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+            Preconditions.checkArgument(!RESERVED_AGGREGATE.equals(fieldDefinition.name), "Cannot use reserved aggregate field name");
+            fieldNameToId.put(fieldDefinition.name, fieldDefinition.fieldId);
+        }
     }
 
     public int getFieldId(String fieldName) {
@@ -32,11 +34,11 @@ public class MiruSchema {
         return fieldId;
     }
 
-    public Optional<List<String>> getFieldsBlooms(String fieldName) {
-        return Optional.fromNullable(fieldNamesBlooms.get(fieldName));
+    public MiruFieldDefinition getFieldDefinition(int fieldId) {
+        return fieldDefinitions[fieldId];
     }
 
     public int fieldCount() {
-        return fieldNameToId.size();
+        return fieldDefinitions.length;
     }
 }

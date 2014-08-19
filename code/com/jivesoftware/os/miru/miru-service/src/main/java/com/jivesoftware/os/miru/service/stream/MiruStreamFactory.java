@@ -24,40 +24,18 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
-import com.jivesoftware.os.miru.service.index.MiruFields;
-import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
+import com.jivesoftware.os.miru.service.index.*;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
-import com.jivesoftware.os.miru.service.index.disk.MiruMemMappedActivityIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskAuthzIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskField;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInboxIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskRemovalIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryActivityIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryAuthzIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryField;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryRemovalIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruTransientActivityIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruTransientField;
+import com.jivesoftware.os.miru.service.index.disk.*;
+import com.jivesoftware.os.miru.service.index.memory.*;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
-import com.jivesoftware.os.miru.service.stream.locator.MiruDiskResourceAnalyzer;
-import com.jivesoftware.os.miru.service.stream.locator.MiruPartitionCoordIdentifier;
-import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocator;
-import com.jivesoftware.os.miru.service.stream.locator.MiruResourcePartitionIdentifier;
-import com.jivesoftware.os.miru.service.stream.locator.MiruTransientResourceLocator;
+import com.jivesoftware.os.miru.service.stream.locator.*;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
+
+import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -65,7 +43,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Singleton;
 
 /**
  * @author jonathan
@@ -150,9 +127,9 @@ public class MiruStreamFactory {
         exportHandles.put("index", index);
 
         MiruInMemoryField[] fields = new MiruInMemoryField[schema.fieldCount()];
-        for (int i = 0; i < fields.length; i++) {
-            fields[i] = new MiruInMemoryField(i, new ConcurrentHashMap<MiruTermId, MiruFieldIndexKey>(), index);
-            exportHandles.put("field" + i, fields[i]);
+        for (int fieldId = 0; fieldId < fields.length; fieldId++) {
+            fields[fieldId] = new MiruInMemoryField(schema.getFieldDefinition(fieldId), new ConcurrentHashMap<MiruTermId, MiruFieldIndexKey>(), index);
+            exportHandles.put("field" + fieldId, fields[fieldId]);
         }
 
         MiruFields fieldIndex = new MiruFields(fields, index);
@@ -211,9 +188,12 @@ public class MiruStreamFactory {
         exportHandles.put("index", index);
 
         MiruTransientField[] fields = new MiruTransientField[schema.fieldCount()];
-        for (int i = 0; i < fields.length; i++) {
-            fields[i] = new MiruTransientField(i, index, transientResourceLocator.getMapDirectory(identifier, "field" + i));
-            exportHandles.put("field" + i, fields[i]);
+        for (int fieldId = 0; fieldId < fields.length; fieldId++) {
+            fields[fieldId] = new MiruTransientField(
+                    schema.getFieldDefinition(fieldId),
+                    index,
+                    transientResourceLocator.getMapDirectory(identifier, "field" + fieldId));
+            exportHandles.put("field" + fieldId, fields[fieldId]);
         }
 
         MiruFields fieldIndex = new MiruFields(fields, index);
@@ -285,9 +265,12 @@ public class MiruStreamFactory {
         importHandles.put("index", index);
 
         MiruOnDiskField[] fields = new MiruOnDiskField[schema.fieldCount()];
-        for (int i = 0; i < fields.length; i++) {
-            fields[i] = new MiruOnDiskField(i, index, diskResourceLocator.getMapDirectory(identifier, "field-" + i));
-            importHandles.put("field" + i, fields[i]);
+        for (int fieldId = 0; fieldId < fields.length; fieldId++) {
+            fields[fieldId] = new MiruOnDiskField(
+                    schema.getFieldDefinition(fieldId),
+                    index,
+                    diskResourceLocator.getMapDirectory(identifier, "field-" + fieldId));
+            importHandles.put("field" + fieldId, fields[fieldId]);
         }
 
         MiruFields fieldIndex = new MiruFields(fields, index);
@@ -367,9 +350,11 @@ public class MiruStreamFactory {
         importHandles.put("index", index);
 
         MiruOnDiskField[] fields = new MiruOnDiskField[schema.fieldCount()];
-        for (int i = 0; i < fields.length; i++) {
-            fields[i] = new MiruOnDiskField(i, index, diskResourceLocator.getMapDirectory(identifier, "field-" + i));
-            importHandles.put("field" + i, fields[i]);
+        for (int fieldId = 0; fieldId < fields.length; fieldId++) {
+            fields[fieldId] = new MiruOnDiskField(schema.getFieldDefinition(fieldId),
+                    index,
+                    diskResourceLocator.getMapDirectory(identifier, "field-" + fieldId));
+            importHandles.put("field" + fieldId, fields[fieldId]);
         }
 
         MiruFields fieldIndex = new MiruFields(fields, index);

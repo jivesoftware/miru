@@ -4,6 +4,7 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.ReusableBuffers;
 import com.jivesoftware.os.miru.service.stream.filter.MatchNoMoreThanNBitmapStorage;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -12,6 +13,9 @@ import java.util.concurrent.atomic.AtomicReference;
 /** @author jonathan */
 public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<EWAHCompressedBitmap>, BulkExport<EWAHCompressedBitmap> {
 
+    private static final EWAHCompressedBitmap EMPTY = new EWAHCompressedBitmap();
+
+    private final ReusableBuffers reusable = new ReusableBuffers(4);
     private final AtomicReference<EWAHCompressedBitmap> read;
     private final AtomicReference<EWAHCompressedBitmap> write;
     private final AtomicBoolean needsMerge;
@@ -93,9 +97,9 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
 
     @Override
     public void remove(int id) { // Kinda crazy expensive way to remove an intermediary bit.
-        EWAHCompressedBitmap remove = new EWAHCompressedBitmap();
-        remove.set(id);
         synchronized (write) {
+            EWAHCompressedBitmap remove = reusable.next();
+            remove.set(id);
             EWAHCompressedBitmap bitmap = writer();
             EWAHCompressedBitmap r = MiruInMemoryInvertedIndex.this.andNotToSourceSize(bitmap, remove);
             write.set(r);
@@ -105,9 +109,9 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
 
     @Override
     public void set(int id) { // Kinda crazy expensive way to set an intermediary bit.
-        EWAHCompressedBitmap set = new EWAHCompressedBitmap();
-        set.set(id);
         synchronized (write) {
+            EWAHCompressedBitmap set = reusable.next();
+            set.set(id);
             EWAHCompressedBitmap bitmap = writer();
             EWAHCompressedBitmap r = bitmap.or(set);
             write.set(r);
@@ -200,21 +204,23 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
     private EWAHCompressedBitmap copy(EWAHCompressedBitmap original) {
         //TODO fix EWAHCompressedBitmap.clone()
         if (original.sizeInBits() == 0) {
-            return new EWAHCompressedBitmap();
+            return reusable.next();
         } else {
-            return original.or(new EWAHCompressedBitmap());
+            EWAHCompressedBitmap next = reusable.next();
+            original.orToContainer(EMPTY, next);
+            return next;
         }
     }
 
     private EWAHCompressedBitmap orToSourceSize(EWAHCompressedBitmap source, EWAHCompressedBitmap mask) {
-        EWAHCompressedBitmap result = new EWAHCompressedBitmap();
+        EWAHCompressedBitmap result = reusable.next();
         MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(result, source.sizeInBits());
         source.orToContainer(mask, matchNoMoreThanNBitmapStorage);
         return result;
     }
 
     private EWAHCompressedBitmap andNotToSourceSize(EWAHCompressedBitmap source, EWAHCompressedBitmap mask) {
-        EWAHCompressedBitmap result = new EWAHCompressedBitmap();
+        EWAHCompressedBitmap result = reusable.next();
         MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(result, source.sizeInBits());
         source.andNotToContainer(mask, matchNoMoreThanNBitmapStorage);
         return result;

@@ -8,22 +8,16 @@ package com.jivesoftware.os.miru.service;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.miru.api.MiruBackingStorage;
-import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.*;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -41,22 +35,18 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author jonathan
@@ -66,22 +56,17 @@ public class MiruCollaborativeFilterNGTest {
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
 
     MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
-    Map<String, Integer> rawSchema = new HashMap<>();
     MiruService service;
     MiruPartitionId partitionId = MiruPartitionId.of(1);
 
     @BeforeMethod
     public void setUpMethod() throws Exception {
 
-        rawSchema.put("user", 0);
-        rawSchema.put("doc", 1);
+        MiruSchema miruSchema = new MiruSchema(
+                new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
+                new MiruFieldDefinition(1, "doc", false, ImmutableList.<String>of(), ImmutableList.of("user")));
 
-        Map<String, List<String>> fieldNamesBlooms = new HashMap<>();
-        fieldNamesBlooms.put("doc", ImmutableList.of("user"));
-
-        MiruSchema miruSchema = new MiruSchema(ImmutableMap.copyOf(rawSchema), fieldNamesBlooms);
-
-        MiruBackingStorage disiredStorage = MiruBackingStorage.hybrid;
+        MiruBackingStorage disiredStorage = MiruBackingStorage.memory;
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultStorage(disiredStorage.name());
@@ -104,7 +89,8 @@ public class MiruCollaborativeFilterNGTest {
         clusterRegistry.sendHeartbeatForHost(miruHost, 0, 0);
         clusterRegistry.electToReplicaSetForTenantPartition(tenant1, partitionId,
                 new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3));
-        clusterRegistry.refreshTopology(new MiruPartitionCoord(tenant1, partitionId, miruHost), new MiruPartitionCoordMetrics(0, 0), System.currentTimeMillis());
+        clusterRegistry.refreshTopology(new MiruPartitionCoord(tenant1, partitionId, miruHost), new MiruPartitionCoordMetrics(0, 0),
+                System.currentTimeMillis());
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer);
 
@@ -143,7 +129,7 @@ public class MiruCollaborativeFilterNGTest {
     @Test(enabled = true)
     public void basicTest() throws Exception {
 
-         // P , G, C
+        // P , G, C
         // P G P
         // P C P
         // G P G
@@ -154,7 +140,7 @@ public class MiruCollaborativeFilterNGTest {
         AtomicInteger time = new AtomicInteger();
         List<MiruPartitionedActivity> activities = new ArrayList<>();
         Random rand = new Random(1234);
-        int numberOfUsers = 1;
+        int numberOfUsers = 1_000;
         int numberOfDocument = 100_000;
         int numberOfViewsPerUser = 1_000;
         System.out.println("Building activities....");
@@ -195,14 +181,18 @@ public class MiruCollaborativeFilterNGTest {
 //        int numPartitions = 8;
 //        ExecutorService indexThread = Executors.newFixedThreadPool(numPartitions);
 //        final CountDownLatch latch = new CountDownLatch(numPartitions);
-//        for (final List<MiruPartitionedActivity> partition : Lists.partition(activities, activities.size() / numPartitions)) {
+        int activitiesPerPartition = 10_000;
+        int count = 0;
+        for (final List<MiruPartitionedActivity> partition : Lists.partition(activities, activitiesPerPartition)) { // activities.size() / numPartitions)) {
 //
 //            indexThread.submit(new Runnable() {
 //
 //                @Override
 //                public void run() {
 //                    try {
-                        service.writeToIndex(activities);
+            service.writeToIndex(partition);
+            count += activitiesPerPartition;
+            System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
 //                    } catch (Exception x) {
 //                        x.printStackTrace();
 //                    } finally {
@@ -210,17 +200,18 @@ public class MiruCollaborativeFilterNGTest {
 //                    }
 //                }
 //            });
-//        }
+        }
 //        latch.await();
 
-
-        System.out.println("Indexed " + activities.size() + " in " + (System.currentTimeMillis() - start) + "millis");
+        System.out.println("Indexed " + activities.size() + " in " + (System.currentTimeMillis() - start) + " ms");
 
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(new MiruTermId(user.getBytes())));
-            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, Optional.of(ImmutableList.of(miruFieldFilter)), Optional
-                    .<ImmutableList<MiruFilter>>absent());
+            MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(makeComposite(new MiruTermId(user.getBytes()), "^", "doc")));
+            MiruFilter filter = new MiruFilter(
+                    MiruFilterOperation.or,
+                    Optional.of(ImmutableList.of(miruFieldFilter)),
+                    Optional.<ImmutableList<MiruFilter>>absent());
 
             start = System.currentTimeMillis();
             RecoResult recoResult = service.collaborativeFilteringRecommendations(new RecoQuery(tenant1,
@@ -235,6 +226,10 @@ public class MiruCollaborativeFilterNGTest {
             System.out.println("Took:" + (System.currentTimeMillis() - start));
         }
 
+    }
+
+    private MiruTermId makeComposite(MiruTermId fieldValue, String separator, String fieldName) {
+        return new MiruTermId(Bytes.concat(fieldValue.getBytes(), separator.getBytes(), fieldName.getBytes()));
     }
 
     private MiruPartitionedActivity viewActivity(int time, String user, String doc) {

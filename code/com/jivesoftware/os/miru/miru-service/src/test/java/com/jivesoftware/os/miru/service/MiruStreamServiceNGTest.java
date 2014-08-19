@@ -8,7 +8,6 @@ package com.jivesoftware.os.miru.service;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
@@ -16,12 +15,7 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.miru.api.MiruBackingStorage;
-import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.*;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -45,28 +39,28 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.text.DecimalFormat;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 public class MiruStreamServiceNGTest {
+
+    private MiruSchema miruSchema;
+    private MiruFieldDefinition[] fieldDefinitions;
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     int verb1 = 1;
@@ -88,18 +82,20 @@ public class MiruStreamServiceNGTest {
     int capacity = 100_000;
 
     MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
-    Map<String, Integer> rawSchema = new HashMap<>();
     MiruService service;
     MiruPartitionId partitionId = MiruPartitionId.of(1);
 
     @BeforeMethod
     public void setUpMethod() throws Exception {
 
-        rawSchema.put("verb", 0);
-        rawSchema.put("container", 1);
-        rawSchema.put("target", 2);
-        rawSchema.put("tag", 3);
-        rawSchema.put("author", 4);
+        this.fieldDefinitions = new MiruFieldDefinition[]{
+                new MiruFieldDefinition(0, "verb"),
+                new MiruFieldDefinition(1, "container"),
+                new MiruFieldDefinition(2, "target"),
+                new MiruFieldDefinition(3, "tag"),
+                new MiruFieldDefinition(4, "author")
+        };
+        this.miruSchema = new MiruSchema(fieldDefinitions);
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(8192);
@@ -114,7 +110,7 @@ public class MiruStreamServiceNGTest {
 
         MiruHost miruHost = new MiruHost("logicalName", 1234);
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
 
         InMemorySetOfSortedMapsImplInitializer inMemorySetOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
@@ -140,7 +136,7 @@ public class MiruStreamServiceNGTest {
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                new MiruSchema(ImmutableMap.copyOf(rawSchema)),
+                miruSchema,
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService());
@@ -156,7 +152,7 @@ public class MiruStreamServiceNGTest {
             }
         }
 
-        this.service =miruService;
+        this.service = miruService;
     }
 
     @Test(groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
@@ -187,7 +183,7 @@ public class MiruStreamServiceNGTest {
             long seconds = e / 1000;
             int indexSize = (p + 1) * (capacity / passes);
             System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
-                + " millis ratePerSecond:" + formatter.format(activities.size() / (seconds < 1 ? 1 : seconds)));
+                    + " millis ratePerSecond:" + formatter.format(activities.size() / (seconds < 1 ? 1 : seconds)));
             System.out.println("\t\tIndexSize:" + formatter.format(indexSize) + " sizeInBytes:" + formatter.format(service.sizeInBytes()));
 
             for (int q = 0; q < 2; q++) {
@@ -198,18 +194,18 @@ public class MiruStreamServiceNGTest {
                 fieldFilters.add(new MiruFieldFilter("target", ImmutableList.copyOf(following)));
 
                 MiruFilter filter = new MiruFilter(MiruFilterOperation.or,
-                    Optional.of(ImmutableList.copyOf(fieldFilters)),
-                    Optional.<ImmutableList<MiruFilter>>absent());
+                        Optional.of(ImmutableList.copyOf(fieldFilters)),
+                        Optional.<ImmutableList<MiruFilter>>absent());
                 AggregateCountsQuery query = new AggregateCountsQuery(tenant1,
-                    Optional.of(streamId),
-                    Optional.of(new MiruTimeRange(0, capacity)),
-                    Optional.of(new MiruTimeRange(0, capacity)),
-                    Optional.<MiruAuthzExpression>absent(),
-                    filter,
-                    Optional.<MiruFilter>absent(),
-                    "",
-                    "container",
-                    0, 51);
+                        Optional.of(streamId),
+                        Optional.of(new MiruTimeRange(0, capacity)),
+                        Optional.of(new MiruTimeRange(0, capacity)),
+                        Optional.<MiruAuthzExpression>absent(),
+                        filter,
+                        Optional.<MiruFilter>absent(),
+                        "",
+                        "container",
+                        0, 51);
 
                 long start = System.currentTimeMillis();
                 AggregateCountsResult results = service.filterInboxStreamAll(query);
@@ -219,9 +215,9 @@ public class MiruStreamServiceNGTest {
                 //                    System.out.println(a);
                 //                }
                 System.out.println("\t\t\tQuery:" + (q + 1) + " latency:" + elapse
-                    + " count:" + results.results.size()
-                    + " all:" + formatter.format(count(results.results))
-                    + " indexSizeToLatencyRatio:" + ((double) indexSize / (double) elapse));
+                        + " count:" + results.results.size()
+                        + " all:" + formatter.format(count(results.results))
+                        + " indexSizeToLatencyRatio:" + ((double) indexSize / (double) elapse));
             }
         }
     }
@@ -244,16 +240,16 @@ public class MiruStreamServiceNGTest {
      * schema.put("tag", 3); <br>
      * schema.put("author", 4); <br>
      */
-    private final int[] fieldCardinality = new int[] { 10, 10_000, 1_000_000, 10_000, 1000 };
-    private final int[] fieldFrequency = new int[] { 1, 1, 1, 10, 1 };
+    private final int[] fieldCardinality = new int[]{10, 10_000, 1_000_000, 10_000, 1000};
+    private final int[] fieldFrequency = new int[]{1, 1, 1, 10, 1};
 
     private MiruPartitionedActivity generateActivity(int time, Random rand) {
         Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
-        for (String fieldName : rawSchema.keySet()) {
-            int index = rawSchema.get(fieldName);
+        for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+            int index = fieldDefinition.fieldId;
             int count = 1 + rand.nextInt(fieldFrequency[index]);
             List<MiruTermId> terms = generateDisticts(rand, count, fieldCardinality[index]);
-            fieldsValues.put(fieldName, terms.toArray(new MiruTermId[0]));
+            fieldsValues.put(fieldDefinition.name, terms.toArray(new MiruTermId[0]));
         }
         MiruActivity activity = new MiruActivity.Builder(tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
@@ -294,31 +290,31 @@ public class MiruStreamServiceNGTest {
         following.add(new MiruTermId(FilerIO.intBytes(container1)));
         fieldFilters.add(new MiruFieldFilter("container", ImmutableList.copyOf(following)));
         MiruFilter followingFilter = new MiruFilter(MiruFilterOperation.or,
-            Optional.of(ImmutableList.copyOf(fieldFilters)),
-            Optional.<ImmutableList<MiruFilter>>absent());
+                Optional.of(ImmutableList.copyOf(fieldFilters)),
+                Optional.<ImmutableList<MiruFilter>>absent());
 
         fieldFilters = new ArrayList<>();
         List<MiruTermId> authors = new ArrayList<>();
         authors.add(new MiruTermId(FilerIO.intBytes(author1)));
         fieldFilters.add(new MiruFieldFilter("author", ImmutableList.copyOf(authors)));
         MiruFilter authoredByFilter = new MiruFilter(MiruFilterOperation.or,
-            Optional.of(ImmutableList.copyOf(fieldFilters)),
-            Optional.<ImmutableList<MiruFilter>>absent());
+                Optional.of(ImmutableList.copyOf(fieldFilters)),
+                Optional.<ImmutableList<MiruFilter>>absent());
 
         MiruFilter filter = new MiruFilter(MiruFilterOperation.and,
-            Optional.<ImmutableList<MiruFieldFilter>>absent(),
-            Optional.of(ImmutableList.of(followingFilter, authoredByFilter)));
+                Optional.<ImmutableList<MiruFieldFilter>>absent(),
+                Optional.of(ImmutableList.of(followingFilter, authoredByFilter)));
 
         //aggregateQuery:
         {
             AggregateCountsQuery query = new AggregateCountsQuery(tenant1,
-                Optional.of(streamId),
-                Optional.of(new MiruTimeRange(0, 1000)),
-                Optional.of(new MiruTimeRange(0, 1000)),
-                Optional.<MiruAuthzExpression>absent(),
-                filter,
-                Optional.<MiruFilter>absent(),
-                "", "container", 0, 10);
+                    Optional.of(streamId),
+                    Optional.of(new MiruTimeRange(0, 1000)),
+                    Optional.of(new MiruTimeRange(0, 1000)),
+                    Optional.<MiruAuthzExpression>absent(),
+                    filter,
+                    Optional.<MiruFilter>absent(),
+                    "", "container", 0, 10);
             AggregateCountsResult results = service.filterInboxStreamAll(query);
             for (AggregateCount a : results.results) {
                 System.out.println(a);
@@ -330,13 +326,13 @@ public class MiruStreamServiceNGTest {
         //countQuery:
         {
             DistinctCountQuery query = new DistinctCountQuery(tenant1,
-                Optional.of(streamId),
-                Optional.of(new MiruTimeRange(0, 1000)),
-                Optional.<MiruAuthzExpression>absent(),
-                filter,
-                Optional.<MiruFilter>absent(),
-                "container",
-                50);
+                    Optional.of(streamId),
+                    Optional.of(new MiruTimeRange(0, 1000)),
+                    Optional.<MiruAuthzExpression>absent(),
+                    filter,
+                    Optional.<MiruFilter>absent(),
+                    "container",
+                    50);
             DistinctCountResult count = service.countInboxStreamAll(query);
             System.out.println(count);
         }
@@ -348,13 +344,13 @@ public class MiruStreamServiceNGTest {
         //aggregateQuery:
         {
             AggregateCountsQuery query = new AggregateCountsQuery(tenant1,
-                Optional.of(streamId),
-                Optional.of(new MiruTimeRange(0, 1000)),
-                Optional.of(new MiruTimeRange(0, 1000)),
-                Optional.<MiruAuthzExpression>absent(),
-                filter,
-                Optional.<MiruFilter>absent(),
-                "", "container", 0, 10);
+                    Optional.of(streamId),
+                    Optional.of(new MiruTimeRange(0, 1000)),
+                    Optional.of(new MiruTimeRange(0, 1000)),
+                    Optional.<MiruAuthzExpression>absent(),
+                    filter,
+                    Optional.<MiruFilter>absent(),
+                    "", "container", 0, 10);
             AggregateCountsResult results = service.filterInboxStreamAll(query);
             for (AggregateCount a : results.results) {
                 System.out.println(a);
@@ -366,13 +362,13 @@ public class MiruStreamServiceNGTest {
         //countQuery:
         {
             DistinctCountQuery query = new DistinctCountQuery(tenant1,
-                Optional.of(streamId),
-                Optional.of(new MiruTimeRange(0, 1000)),
-                Optional.<MiruAuthzExpression>absent(),
-                filter,
-                Optional.<MiruFilter>absent(),
-                "container",
-                50);
+                    Optional.of(streamId),
+                    Optional.of(new MiruTimeRange(0, 1000)),
+                    Optional.<MiruAuthzExpression>absent(),
+                    filter,
+                    Optional.<MiruFilter>absent(),
+                    "container",
+                    50);
             DistinctCountResult count = service.countInboxStreamAll(query);
             System.out.println(count);
         }
@@ -381,16 +377,16 @@ public class MiruStreamServiceNGTest {
 
     private MiruPartitionedActivity buildActivity(int time, int verb, Integer container, int target, Integer tag, int author) {
         Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
-        fieldsValues.put("verb", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(verb)) });
+        fieldsValues.put("verb", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(verb))});
         if (container != null) {
-            fieldsValues.put("container", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(container)) });
+            fieldsValues.put("container", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(container))});
         }
-        fieldsValues.put("target", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(target)) });
+        fieldsValues.put("target", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(target))});
         if (tag != null) {
-            fieldsValues.put("tag", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(tag)) });
+            fieldsValues.put("tag", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(tag))});
         }
-        fieldsValues.put("author", new MiruTermId[] { new MiruTermId(FilerIO.intBytes(author)) });
-        String[] authz = new String[] { "aaabbbcccddd" };
+        fieldsValues.put("author", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(author))});
+        String[] authz = new String[]{"aaabbbcccddd"};
         MiruActivity activity = new MiruActivity.Builder(tenant1, time, authz, 0).putFieldsValues(fieldsValues).build();
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }

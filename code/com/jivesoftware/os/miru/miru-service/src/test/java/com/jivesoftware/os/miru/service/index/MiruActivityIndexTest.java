@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.jivesoftware.os.miru.service.index.auth.MiruActivityIndex;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.io.Filer;

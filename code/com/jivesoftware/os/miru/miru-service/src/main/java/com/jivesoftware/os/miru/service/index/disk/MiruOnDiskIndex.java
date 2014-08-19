@@ -33,8 +33,8 @@ public class MiruOnDiskIndex implements MiruIndex, BulkImport<Map<Long, MiruInve
     }
 
     @Override
-    public void allocate(int fieldId, int termId) throws Exception {
-        getOrAllocate(fieldId, termId);
+    public MiruInvertedIndex allocate(int fieldId, int termId) throws Exception {
+        return getOrAllocate(fieldId, termId);
     }
 
     @Override

@@ -1,36 +1,41 @@
 package com.jivesoftware.os.miru.service.schema;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
+import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
+
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DefaultMiruSchemaDefinition {
 
-    public static final ImmutableMap<String, Integer> SCHEMA;
+    public static final MiruFieldDefinition[] SCHEMA;
 
     static {
         AtomicInteger fieldIndex = new AtomicInteger();
-        SCHEMA = ImmutableMap.<String, Integer>builder()
-            .put(MiruFieldName.OBJECT_ID.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), fieldIndex.getAndIncrement())
+        List<MiruFieldDefinition> schema = Lists.newArrayList();
+        
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.OBJECT_ID.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.VIEW_CLASS_NAME.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName()));
 
-            .put(MiruFieldName.META_CLASS_NAME.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.META_ID.getFieldName(), fieldIndex.getAndIncrement())
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.META_CLASS_NAME.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.META_ID.getFieldName()));
 
-            .put(MiruFieldName.PARTICIPANT_IDS.getFieldName(), fieldIndex.getAndIncrement())
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.PARTICIPANT_IDS.getFieldName()));
 
-            .put(MiruFieldName.ACTIVITY_PARENT.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.CONTAINER_ID.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.AUTHOR_ID.getFieldName(), fieldIndex.getAndIncrement())
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.ACTIVITY_PARENT.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.CONTAINER_ID.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.AUTHOR_ID.getFieldName()));
 
-            .put(MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.MENTIONED_USER_IDS.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.TAG_IDS.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.TAGS.getFieldName(), fieldIndex.getAndIncrement())
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.MENTIONED_USER_IDS.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.TAG_IDS.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.TAGS.getFieldName()));
 
-            .put(MiruFieldName.STATUS.getFieldName(), fieldIndex.getAndIncrement())
-            .put(MiruFieldName.CONTAINER_IDS.getFieldName(), fieldIndex.getAndIncrement())
-            .build();
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.STATUS.getFieldName()));
+        schema.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.CONTAINER_IDS.getFieldName()));
+
+        SCHEMA = schema.toArray(new MiruFieldDefinition[schema.size()]);
     }
 }

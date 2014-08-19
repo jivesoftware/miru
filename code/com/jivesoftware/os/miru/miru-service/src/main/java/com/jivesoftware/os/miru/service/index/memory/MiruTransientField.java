@@ -6,10 +6,8 @@ import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.MiruField;
-import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.*;
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -25,13 +23,13 @@ public class MiruTransientField implements MiruField, BulkExport<Map<MiruTermId,
     private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1024 }; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
 
-    private final int fieldId;
+    private final MiruFieldDefinition fieldDefinition;
     private final MiruInMemoryIndex index;
     private final AtomicInteger nextTermId;
     private final VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
 
-    public MiruTransientField(int fieldId, MiruInMemoryIndex index, File mapDirectory) {
-        this.fieldId = fieldId;
+    public MiruTransientField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex index, File mapDirectory) {
+        this.fieldDefinition = fieldDefinition;
         this.index = index;
         this.nextTermId = new AtomicInteger();
 
@@ -84,6 +82,11 @@ public class MiruTransientField implements MiruField, BulkExport<Map<MiruTermId,
     }
 
     @Override
+    public MiruFieldDefinition getFieldDefinition() {
+        return fieldDefinition;
+    }
+
+    @Override
     public long sizeInMemory() throws Exception {
         return 0;
     }
@@ -96,7 +99,7 @@ public class MiruTransientField implements MiruField, BulkExport<Map<MiruTermId,
     @Override
     public void index(MiruTermId term, int id) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
-        index.index(fieldId, indexKey.getId(), id);
+        index.index(fieldDefinition.fieldId, indexKey.getId(), id);
         if (indexKey.retain(id)) {
             termToIndex.add(term, indexKey);
         }
@@ -105,18 +108,17 @@ public class MiruTransientField implements MiruField, BulkExport<Map<MiruTermId,
     @Override
     public void remove(MiruTermId term, int id) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
-        index.remove(fieldId, indexKey.getId(), id);
+        index.remove(fieldDefinition.fieldId, indexKey.getId(), id);
     }
 
     @Override
-    public Optional<MiruInvertedIndex> getOrCreateInvertedIndex(MiruTermId term) throws Exception {
+    public MiruInvertedIndex getOrCreateInvertedIndex(MiruTermId term) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
         Optional<MiruInvertedIndex> invertedIndex = getInvertedIndex(indexKey);
         if (invertedIndex.isPresent()) {
-            return invertedIndex;
+            return invertedIndex.get();
         }
-        index.allocate(fieldId, indexKey.getId());
-        return getInvertedIndex(indexKey);
+        return index.allocate(fieldDefinition.fieldId, indexKey.getId());
     }
 
     @Override
@@ -143,7 +145,7 @@ public class MiruTransientField implements MiruField, BulkExport<Map<MiruTermId,
 
     private Optional<MiruInvertedIndex> getInvertedIndex(MiruFieldIndexKey indexKey) throws Exception {
         if (indexKey != null) {
-            return index.get(fieldId, indexKey.getId());
+            return index.get(fieldDefinition.fieldId, indexKey.getId());
         }
         return Optional.absent();
     }

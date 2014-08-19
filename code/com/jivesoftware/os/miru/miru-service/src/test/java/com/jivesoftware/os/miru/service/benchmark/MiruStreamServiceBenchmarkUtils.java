@@ -13,11 +13,9 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
+
+import java.util.*;
 
 import static com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition.SCHEMA;
 
@@ -26,13 +24,13 @@ public class MiruStreamServiceBenchmarkUtils {
     private static final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
     public static MiruPartitionedActivity generateActivity(OrderIdProvider orderIdProvider, Random random, TenantId tenantId, String[] authz,
-        MiruFieldCardinality fieldCardinality, Map<MiruFieldName, Integer> fieldNameToTotalCount) {
+            MiruFieldCardinality fieldCardinality, Map<MiruFieldName, Integer> fieldNameToTotalCount) {
 
         Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
-        for (String fieldName : SCHEMA.keySet()) {
+        for (MiruFieldDefinition fieldDefinition : SCHEMA) {
             int termFrequency = 1; // TODO - Figure out if we need come up with real term frequencies
 
-            MiruFieldName miruFieldName = MiruFieldName.fieldNameToMiruFieldName(fieldName);
+            MiruFieldName miruFieldName = MiruFieldName.fieldNameToMiruFieldName(fieldDefinition.name);
             Integer totalCount = fieldNameToTotalCount.get(miruFieldName);
             if (totalCount == null) {
                 continue;
@@ -40,13 +38,13 @@ public class MiruStreamServiceBenchmarkUtils {
 
             int cardinality = fieldCardinality.getCardinality(miruFieldName, totalCount);
             List<MiruTermId> terms = generateDisticts(random, termFrequency, cardinality);
-            fieldsValues.put(fieldName, terms.toArray(new MiruTermId[0]));
+            fieldsValues.put(fieldDefinition.name, terms.toArray(new MiruTermId[0]));
         }
 
         long time = orderIdProvider.nextId();
         MiruActivity activity = new MiruActivity.Builder(new MiruTenantId(tenantId.toStringForm().getBytes(Charsets.UTF_8)), time, authz, 0)
-            .putFieldsValues(fieldsValues)
-            .build();
+                .putFieldsValues(fieldsValues)
+                .build();
         return partitionedActivityFactory.activity(1, MiruPartitionId.of(1), 1, activity); // HACK
     }
 

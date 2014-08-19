@@ -19,27 +19,15 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.service.index.auth.MiruActivityIndex;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
-import com.jivesoftware.os.miru.service.index.MiruField;
-import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
-import com.jivesoftware.os.miru.service.index.MiruFields;
-import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
-import com.jivesoftware.os.miru.service.index.disk.MiruMemMappedActivityIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskAuthzIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskField;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskRemovalIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryActivityIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryAuthzIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryField;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryRemovalIndex;
+import com.jivesoftware.os.miru.service.index.*;
+import com.jivesoftware.os.miru.service.index.auth.*;
+import com.jivesoftware.os.miru.service.index.disk.*;
+import com.jivesoftware.os.miru.service.index.memory.*;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -47,21 +35,30 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.*;
 import static org.testng.AssertJUnit.fail;
 
 public class MiruIndexStreamTest {
 
     private long initialChunkStoreSizeInBytes = 4096;
+    private MiruFieldDefinition[] fieldDefinitions;
+    private MiruSchema miruSchema;
+
+    @BeforeMethod
+    public void setUp() throws Exception {
+        // Miru schema
+        this.fieldDefinitions = new MiruFieldDefinition[]{
+                new MiruFieldDefinition(0, "field1"),
+                new MiruFieldDefinition(1, "field2"),
+                new MiruFieldDefinition(2, "field3")
+        };
+        this.miruSchema = new MiruSchema(fieldDefinitions);
+    }
 
     @Test(dataProvider = "miruIndexStreamDataProvider")
     public void testSizeInBytes(MiruTenantId tenantId, MiruIndexStream miruIndexStream, MiruActivityIndex miruActivityIndex, MiruFields miruFields,
-        MiruAuthzIndex miruAuthzIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+            MiruAuthzIndex miruAuthzIndex, MiruBackingStorage miruBackingStorage) throws Exception {
 
         long sizeInBytes = miruFields.sizeInMemory() + miruFields.sizeOnDisk() + miruAuthzIndex.sizeInMemory() + miruAuthzIndex.sizeOnDisk();
         if (miruBackingStorage.equals(MiruBackingStorage.memory)) {
@@ -86,7 +83,7 @@ public class MiruIndexStreamTest {
 
     @Test(dataProvider = "miruIndexStreamDataProvider")
     public void testIndexSize(MiruTenantId tenantId, MiruIndexStream miruIndexStream, MiruActivityIndex miruActivityIndex, MiruFields miruFields,
-        MiruAuthzIndex miruAuthzIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+            MiruAuthzIndex miruAuthzIndex, MiruBackingStorage miruBackingStorage) throws Exception {
 
         if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
             try {
@@ -98,14 +95,14 @@ public class MiruIndexStreamTest {
         } else {
             long expectedSizeInBytes = (52 * 3) + (42 * 3); // See testSizeInBytes();
 
-            miruIndexStream.index(buildMiruActivity(tenantId, 4, new String[] { "uvwxy" },
-                ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4);
+            miruIndexStream.index(buildMiruActivity(tenantId, 4, new String[]{"uvwxy"},
+                    ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4);
             expectedSizeInBytes += 52 + 52 + 42; // 2 new fields, 1 new authz value
             long sizeInBytes = miruFields.sizeInMemory() + miruFields.sizeOnDisk() + miruAuthzIndex.sizeInMemory() + miruAuthzIndex.sizeOnDisk();
             assertEquals(sizeInBytes, expectedSizeInBytes);
 
-            miruIndexStream.index(buildMiruActivity(tenantId, 5, new String[] { "pqrst" },
-                ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")), 5);
+            miruIndexStream.index(buildMiruActivity(tenantId, 5, new String[]{"pqrst"},
+                    ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")), 5);
             expectedSizeInBytes += 52 + 0 + 42; // 1 new field, 1 existing field and 1 new authz value
             sizeInBytes = miruFields.sizeInMemory() + miruFields.sizeOnDisk() + miruAuthzIndex.sizeInMemory() + miruAuthzIndex.sizeOnDisk();
             assertEquals(sizeInBytes, expectedSizeInBytes);
@@ -114,7 +111,7 @@ public class MiruIndexStreamTest {
 
     @Test(dataProvider = "miruIndexStreamDataProvider")
     public void testIndexData(MiruTenantId tenantId, MiruIndexStream miruIndexStream, MiruActivityIndex miruActivityIndex, MiruFields miruFields,
-        MiruAuthzIndex miruAuthzIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+            MiruAuthzIndex miruAuthzIndex, MiruBackingStorage miruBackingStorage) throws Exception {
 
         // First check existing data
         verifyFieldValues(miruActivityIndex, miruFields, "field1", 0, 0);
@@ -133,14 +130,14 @@ public class MiruIndexStreamTest {
             }
         } else {
             // Next add new data and check it
-            miruIndexStream.index(buildMiruActivity(tenantId, 4, new String[] { "pqrst" },
-                ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 3);
+            miruIndexStream.index(buildMiruActivity(tenantId, 4, new String[]{"pqrst"},
+                    ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 3);
             verifyFieldValues(miruActivityIndex, miruFields, "field1", 3, 0);
             verifyFieldValues(miruActivityIndex, miruFields, "field2", 3, 1);
             verifyAuthzValues(miruAuthzIndex, miruActivityIndex.get(3).authz, 3);
 
-            miruIndexStream.index(buildMiruActivity(tenantId, 5, new String[] { "uvwxy" },
-                ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")), 4);
+            miruIndexStream.index(buildMiruActivity(tenantId, 5, new String[]{"uvwxy"},
+                    ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")), 4);
             verifyFieldValues(miruActivityIndex, miruFields, "field1", 4, 0);
             verifyFieldValues(miruActivityIndex, miruFields, "field3", 4, 2);
             verifyAuthzValues(miruAuthzIndex, miruActivityIndex.get(4).authz, 4);
@@ -172,13 +169,6 @@ public class MiruIndexStreamTest {
     public Object[][] miruIndexStreamDataProvider() throws Exception {
         final MiruTenantId tenantId = new MiruTenantId("indexStreamTenant".getBytes());
 
-        // Miru schema
-        MiruSchema miruSchema = new MiruSchema(ImmutableMap.<String, Integer>of(
-            "field1", 0,
-            "field2", 1,
-            "field3", 2
-        ));
-
         // Miru in-memory activity index
         MiruInMemoryActivityIndex miruInMemoryActivityIndex = new MiruInMemoryActivityIndex();
 
@@ -193,15 +183,15 @@ public class MiruIndexStreamTest {
         MiruInMemoryRemovalIndex miruInMemoryRemovalIndex = new MiruInMemoryRemovalIndex(new EWAHCompressedBitmap());
 
         MiruActivityInterner activityInterner = new MiruActivityInterner(Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
-            Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+                Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
 
         // Build in-memory index stream object
         MiruIndexStream miruInMemoryIndexStream = new MiruIndexStream(miruSchema, miruInMemoryActivityIndex, inMemoryMiruFields, miruInMemoryAuthzIndex,
-            miruInMemoryRemovalIndex, activityInterner);
+                miruInMemoryRemovalIndex, activityInterner);
 
-        MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[] { "abcde" }, ImmutableMap.of("field1", "field1Value1"));
-        MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[] { "fghij" }, ImmutableMap.of("field2", "field2Value1"));
-        MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "klmno" }, ImmutableMap.of("field3", "field3Value1"));
+        MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[]{"abcde"}, ImmutableMap.of("field1", "field1Value1"));
+        MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[]{"fghij"}, ImmutableMap.of("field2", "field2Value1"));
+        MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[]{"klmno"}, ImmutableMap.of("field3", "field3Value1"));
 
         // Index initial activities
         miruInMemoryIndexStream.index(miruActivity1, 0);
@@ -211,21 +201,21 @@ public class MiruIndexStreamTest {
         // Miru mem-mapped activity index
         final File memMap = File.createTempFile("memmap", "activityindex");
         MiruMemMappedActivityIndex miruMemMappedActivityIndex = new MiruMemMappedActivityIndex(
-            new MiruFilerProvider() {
-                @Override
-                public File getBackingFile() {
-                    return memMap;
-                }
+                new MiruFilerProvider() {
+                    @Override
+                    public File getBackingFile() {
+                        return memMap;
+                    }
 
-                @Override
-                public Filer getFiler(long length) throws IOException {
-                    return new RandomAccessFiler(memMap, "rw");
-                }
-            },
-            Files.createTempDirectory("memmap").toFile(),
-            Files.createTempDirectory("memmap").toFile(),
-            new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true),
-            new ObjectMapper());
+                    @Override
+                    public Filer getFiler(long length) throws IOException {
+                        return new RandomAccessFiler(memMap, "rw");
+                    }
+                },
+                Files.createTempDirectory("memmap").toFile(),
+                Files.createTempDirectory("memmap").toFile(),
+                new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true),
+                new ObjectMapper());
         miruMemMappedActivityIndex.bulkImport(miruInMemoryActivityIndex);
 
         // Miru on-disk fields
@@ -245,23 +235,23 @@ public class MiruIndexStreamTest {
         File removalMapDir = Files.createTempDirectory("mapRemoval").toFile();
         File removalSwapDir = Files.createTempDirectory("swapRemoval").toFile();
         FileBackedKeyedStore removalStore = new FileBackedKeyedStore(removalMapDir.getAbsolutePath(), removalSwapDir.getAbsolutePath(), 1, 32, chunkStore, 32);
-        MiruOnDiskRemovalIndex miruOnDiskRemovalIndex = new MiruOnDiskRemovalIndex(removalStore.get(new byte[] { 0 }));
+        MiruOnDiskRemovalIndex miruOnDiskRemovalIndex = new MiruOnDiskRemovalIndex(removalStore.get(new byte[]{0}));
 
         // Build on-disk index stream object
         MiruIndexStream miruOnDiskIndexStream = new MiruIndexStream(
-            miruSchema, miruMemMappedActivityIndex, onDiskMiruFields, miruOnDiskAuthzIndex, miruOnDiskRemovalIndex, activityInterner);
+                miruSchema, miruMemMappedActivityIndex, onDiskMiruFields, miruOnDiskAuthzIndex, miruOnDiskRemovalIndex, activityInterner);
 
-        return new Object[][] {
-            { tenantId, miruInMemoryIndexStream, miruInMemoryActivityIndex, inMemoryMiruFields, miruInMemoryAuthzIndex, MiruBackingStorage.memory },
-            { tenantId, miruOnDiskIndexStream, miruMemMappedActivityIndex, onDiskMiruFields, miruOnDiskAuthzIndex, MiruBackingStorage.disk }
+        return new Object[][]{
+                {tenantId, miruInMemoryIndexStream, miruInMemoryActivityIndex, inMemoryMiruFields, miruInMemoryAuthzIndex, MiruBackingStorage.memory},
+                {tenantId, miruOnDiskIndexStream, miruMemMappedActivityIndex, onDiskMiruFields, miruOnDiskAuthzIndex, MiruBackingStorage.disk}
         };
     }
 
     private MiruAuthzCache cache(MiruAuthzUtils miruAuthzUtils, int maximumSize) {
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> cache = CacheBuilder.newBuilder()
-            .maximumSize(maximumSize)
-            .expireAfterAccess(1, TimeUnit.MINUTES)
-            .build();
+                .maximumSize(maximumSize)
+                .expireAfterAccess(1, TimeUnit.MINUTES)
+                .build();
         return new MiruAuthzCache(cache, Interners.<String>newWeakInterner(), miruAuthzUtils);
     }
 
@@ -274,10 +264,10 @@ public class MiruIndexStreamTest {
     }
 
     private MiruFields buildInMemoryMiruFields(MiruInMemoryIndex miruInMemoryIndex) {
-        MiruField[] miruFieldArray = new MiruField[] {
-            new MiruInMemoryField(0, Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex),
-            new MiruInMemoryField(1, Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex),
-            new MiruInMemoryField(2, Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex)
+        MiruField[] miruFieldArray = new MiruField[]{
+                new MiruInMemoryField(fieldDefinitions[0], Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex),
+                new MiruInMemoryField(fieldDefinitions[1], Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex),
+                new MiruInMemoryField(fieldDefinitions[2], Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex)
         };
 
         return new MiruFields(miruFieldArray, miruInMemoryIndex);
@@ -294,7 +284,7 @@ public class MiruIndexStreamTest {
 
         MiruField[] miruFieldArray = new MiruField[3];
         for (int i = 0; i < 3; i++) {
-            MiruOnDiskField miruField = new MiruOnDiskField(i, miruOnDiskIndex, mapDir);
+            MiruOnDiskField miruField = new MiruOnDiskField(fieldDefinitions[i], miruOnDiskIndex, mapDir);
             miruField.bulkImport(((MiruInMemoryField) inMemoryMiruFields.getField(i)));
             miruFieldArray[i] = miruField;
         }

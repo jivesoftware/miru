@@ -6,6 +6,8 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 /** @author jonathan */
 public interface MiruField {
 
+    MiruFieldDefinition getFieldDefinition();
+
     long sizeInMemory() throws Exception;
 
     long sizeOnDisk() throws Exception;
@@ -18,6 +20,6 @@ public interface MiruField {
 
     Optional<MiruInvertedIndex> getInvertedIndex(MiruTermId term) throws Exception;
 
-    Optional<MiruInvertedIndex> getOrCreateInvertedIndex(MiruTermId term) throws Exception;
+    MiruInvertedIndex getOrCreateInvertedIndex(MiruTermId term) throws Exception;
 
 }

@@ -7,7 +7,6 @@ package com.jivesoftware.os.miru.service.benchmark;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
@@ -40,24 +39,25 @@ import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.MiruTempResourceLocatorProviderInitializer;
+import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 public class ProfilebleMiruService {
+
+    private MiruSchema miruSchema;
+    private MiruFieldDefinition[] fieldDefinitions;
 
     public static void main(String[] args) throws Exception {
         ProfilebleMiruService perfMiruStreamServive = new ProfilebleMiruService();
@@ -85,16 +85,9 @@ public class ProfilebleMiruService {
     int capacity = 100_000;
 
     MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
-    Map<String, Integer> rawSchema = new HashMap<>();
     MiruService service;
 
     public void setUpMethod() throws Exception {
-
-        rawSchema.put("verb", 0);
-        rawSchema.put("container", 1);
-        rawSchema.put("target", 2);
-        rawSchema.put("tag", 3);
-        rawSchema.put("author", 4);
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(8192);
@@ -102,7 +95,7 @@ public class ProfilebleMiruService {
         MiruHost miruHost = new MiruHost("logicalName", 1234);
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
 
         InMemorySetOfSortedMapsImplInitializer inMemorySetOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
@@ -120,11 +113,21 @@ public class ProfilebleMiruService {
 
         MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
         miruResourceLocatorProviderLifecyle.start();
+
+        this.fieldDefinitions = new MiruFieldDefinition[]{
+                new MiruFieldDefinition(0, "verb"),
+                new MiruFieldDefinition(1, "container"),
+                new MiruFieldDefinition(2, "target"),
+                new MiruFieldDefinition(3, "tag"),
+                new MiruFieldDefinition(4, "author")
+        };
+        this.miruSchema = new MiruSchema(fieldDefinitions);
+
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                new MiruSchema(ImmutableMap.copyOf(rawSchema)),
+                miruSchema,
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService());
@@ -138,10 +141,10 @@ public class ProfilebleMiruService {
         capacity = 10_000_000;
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(8192);
-        
+
         MiruHost miruHost = new MiruHost("logicalName", 1234);
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
 
         InMemorySetOfSortedMapsImplInitializer inMemorySetOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
@@ -163,7 +166,7 @@ public class ProfilebleMiruService {
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                new MiruSchema(ImmutableMap.copyOf(rawSchema)),
+                miruSchema,
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService());
@@ -193,7 +196,7 @@ public class ProfilebleMiruService {
             long seconds = e / 1000;
             int indexSize = (p + 1) * (capacity / passes);
             System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
-                + " millis ratePerSecond:" + formatter.format(activities.size() / (seconds < 1 ? 1 : seconds)));
+                    + " millis ratePerSecond:" + formatter.format(activities.size() / (seconds < 1 ? 1 : seconds)));
             System.out.println("\t\tIndexSize:" + formatter.format(indexSize) + " sizeInBytes:" + formatter.format(service.sizeInBytes()));
 
             for (int q = 0; q < 500; q++) {
@@ -204,19 +207,19 @@ public class ProfilebleMiruService {
                 fieldFilters.add(new MiruFieldFilter("target", ImmutableList.copyOf(following)));
 
                 MiruFilter filter = new MiruFilter(MiruFilterOperation.or,
-                    Optional.of(ImmutableList.copyOf(fieldFilters)),
-                    Optional.<ImmutableList<MiruFilter>>absent());
+                        Optional.of(ImmutableList.copyOf(fieldFilters)),
+                        Optional.<ImmutableList<MiruFilter>>absent());
                 MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(1));
                 AggregateCountsQuery query = new AggregateCountsQuery(tenant1,
-                    Optional.of(streamId),
-                    Optional.of(new MiruTimeRange(0, capacity)),
-                    Optional.of(new MiruTimeRange(0, capacity)),
-                    Optional.<MiruAuthzExpression>absent(),
-                    filter,
-                    Optional.<MiruFilter>absent(),
-                    "",
-                    "container",
-                    0, 50); //(q*10), (q*10)+10);
+                        Optional.of(streamId),
+                        Optional.of(new MiruTimeRange(0, capacity)),
+                        Optional.of(new MiruTimeRange(0, capacity)),
+                        Optional.<MiruAuthzExpression>absent(),
+                        filter,
+                        Optional.<MiruFilter>absent(),
+                        "",
+                        "container",
+                        0, 50); //(q*10), (q*10)+10);
 
                 long start = System.currentTimeMillis();
                 AggregateCountsResult results = service.filterInboxStreamAll(query);
@@ -228,9 +231,9 @@ public class ProfilebleMiruService {
                 }
                 */
                 System.out.println("\t\t\tQuery:" + (q + 1) + " latency:" + elapse
-                    + " count:" + results.results.size()
-                    + " all:" + formatter.format(count(results.results))
-                    + " indexSizeToLatencyRatio:" + ((double) indexSize / (double) elapse));
+                        + " count:" + results.results.size()
+                        + " all:" + formatter.format(count(results.results))
+                        + " indexSizeToLatencyRatio:" + ((double) indexSize / (double) elapse));
             }
         }
     }
@@ -253,16 +256,16 @@ public class ProfilebleMiruService {
      * schema.put("tag", 3); <br>
      * schema.put("author", 4); <br>
      */
-    private final int[] fieldCardinality = new int[] { 10, 10_000, 1_000_000, 10_000, 10_000 };
-    private final int[] fieldFrequency = new int[] { 1, 1, 1, 10, 1 };
+    private final int[] fieldCardinality = new int[]{10, 10_000, 1_000_000, 10_000, 10_000};
+    private final int[] fieldFrequency = new int[]{1, 1, 1, 10, 1};
 
     private MiruPartitionedActivity generateActivity(int time, Random rand) {
         Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
-        for (String fieldName : rawSchema.keySet()) {
-            int index = rawSchema.get(fieldName);
+        for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+            int index = fieldDefinition.fieldId;
             int count = 1 + rand.nextInt(fieldFrequency[index]);
             List<MiruTermId> terms = generateDisticts(rand, count, fieldCardinality[index]);
-            fieldsValues.put(fieldName, terms.toArray(new MiruTermId[0]));
+            fieldsValues.put(fieldDefinition.name, terms.toArray(new MiruTermId[0]));
         }
         MiruActivity activity = new MiruActivity.Builder(tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
         return partitionedActivityFactory.activity(1, MiruPartitionId.of(1), 1, activity); // HACK
