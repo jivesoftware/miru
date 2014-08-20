@@ -8,10 +8,16 @@ import static com.googlecode.javaewah.EWAHCompressedBitmap.WORD_IN_BITS;
  */
 
 /**
- * Implementation of an IntIterator over an IteratingRLW.
+ * This class is equivalent to IntIteratorImpl, except that it allows
+ * use to iterate over "clear" bits (bits set to 0).
+ *
+ * @author Gregory Ssi-Yan-Kai
  */
-public class IntIteratorOverIteratingRLW implements IntIterator {
-    final IteratingRLW parent;
+final class ClearIntIterator implements IntIterator {
+
+    private final EWAHIterator ewahIter;
+    private final int sizeInBits;
+    private final long[] ewahBuffer;
     private int position;
     private int runningLength;
     private long word;
@@ -20,26 +26,19 @@ public class IntIteratorOverIteratingRLW implements IntIterator {
     private int literalPosition;
     private boolean hasNext;
 
-    /**
-     * @param p iterator we wish to iterate over
-     */
-    public IntIteratorOverIteratingRLW(final IteratingRLW p) {
-        this.parent = p;
-        this.position = 0;
-        setupForCurrentRunningLengthWord();
-        this.hasNext = moveToNext();
+    ClearIntIterator(EWAHIterator ewahIter, int sizeInBits) {
+        this.ewahIter = ewahIter;
+        this.sizeInBits = sizeInBits;
+        this.ewahBuffer = ewahIter.buffer();
+        this.hasNext = this.moveToNext();
     }
 
-    /**
-     * @return whether we could find another set bit; don't move if there is
-     * an unprocessed value
-     */
-    private boolean moveToNext() {
+    public boolean moveToNext() {
         while (!runningHasNext() && !literalHasNext()) {
-            if (this.parent.next())
-                setupForCurrentRunningLengthWord();
-            else
+            if (!this.ewahIter.hasNext()) {
                 return false;
+            }
+            setRunningLengthWord(this.ewahIter.next());
         }
         return true;
     }
@@ -50,7 +49,7 @@ public class IntIteratorOverIteratingRLW implements IntIterator {
     }
 
     @Override
-    public final int next() {
+    public int next() {
         final int answer;
         if (runningHasNext()) {
             answer = this.position++;
@@ -63,14 +62,15 @@ public class IntIteratorOverIteratingRLW implements IntIterator {
         return answer;
     }
 
-    private void setupForCurrentRunningLengthWord() {
-        this.runningLength = WORD_IN_BITS * (int) this.parent.getRunningLength() + this.position;
-
-        if (!this.parent.getRunningBit()) {
+    private void setRunningLengthWord(RunningLengthWord rlw) {
+        this.runningLength = Math.min(this.sizeInBits,
+                                      WORD_IN_BITS * (int) rlw.getRunningLength() + this.position);
+        if (rlw.getRunningBit()) {
             this.position = this.runningLength;
         }
-        this.wordPosition = 0;
-        this.wordLength = this.parent.getNumberOfLiteralWords();
+
+        this.wordPosition = this.ewahIter.literalWords();
+        this.wordLength = this.wordPosition + rlw.getNumberOfLiteralWords();
     }
 
     private boolean runningHasNext() {
@@ -79,7 +79,13 @@ public class IntIteratorOverIteratingRLW implements IntIterator {
 
     private boolean literalHasNext() {
         while (this.word == 0 && this.wordPosition < this.wordLength) {
-            this.word = this.parent.getLiteralWordAt(this.wordPosition++);
+            this.word = ~this.ewahBuffer[this.wordPosition++];
+            if (this.wordPosition == this.wordLength && !this.ewahIter.hasNext()) {
+                final int usedBitsInLast = this.sizeInBits % WORD_IN_BITS;
+                if (usedBitsInLast > 0) {
+                    this.word &= ((~0l) >>> (WORD_IN_BITS - usedBitsInLast));
+                }
+            }
             this.literalPosition = this.position;
             this.position += WORD_IN_BITS;
         }

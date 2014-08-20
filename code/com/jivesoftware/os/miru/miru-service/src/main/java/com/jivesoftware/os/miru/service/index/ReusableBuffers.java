@@ -24,4 +24,12 @@ public class ReusableBuffers {
         buf.clear();
         return buf;
     }
+
+    public void retain(EWAHCompressedBitmap keep, EWAHCompressedBitmap replaceWith) {
+        for (int i = 0; i < bufs.length; i++) {
+            if (bufs[i] == keep) {
+                bufs[i] = replaceWith;
+            }
+        }
+    }
 }

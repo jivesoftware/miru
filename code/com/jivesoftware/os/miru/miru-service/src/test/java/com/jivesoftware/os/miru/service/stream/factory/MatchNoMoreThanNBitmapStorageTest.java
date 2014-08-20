@@ -78,8 +78,8 @@ public class MatchNoMoreThanNBitmapStorageTest {
         EWAHCompressedBitmap container = new EWAHCompressedBitmap();
         MatchNoMoreThanNBitmapStorage storage = new MatchNoMoreThanNBitmapStorage(container, n);
         storage.addStreamOfEmptyWords(true, 3);
-        assertEquals(container.sizeInBits(), EWAHCompressedBitmap.wordinbits * 3);
-        assertEquals(container.cardinality(), EWAHCompressedBitmap.wordinbits * 3);
+        assertEquals(container.sizeInBits(), EWAHCompressedBitmap.WORD_IN_BITS * 3);
+        assertEquals(container.cardinality(), EWAHCompressedBitmap.WORD_IN_BITS * 3);
     }
 
     @Test
@@ -90,7 +90,7 @@ public class MatchNoMoreThanNBitmapStorageTest {
         storage.addWord(~0l);
         storage.addStreamOfEmptyWords(false, 2);
         assertEquals(container.sizeInBits(), n);
-        assertEquals(container.cardinality(), EWAHCompressedBitmap.wordinbits);
+        assertEquals(container.cardinality(), EWAHCompressedBitmap.WORD_IN_BITS);
     }
 
     @Test
@@ -100,8 +100,8 @@ public class MatchNoMoreThanNBitmapStorageTest {
         MatchNoMoreThanNBitmapStorage storage = new MatchNoMoreThanNBitmapStorage(container, n);
         storage.addWord(~0l);
         storage.addStreamOfEmptyWords(false, 2);
-        assertEquals(container.sizeInBits(), EWAHCompressedBitmap.wordinbits * 3);
-        assertEquals(container.cardinality(), EWAHCompressedBitmap.wordinbits);
+        assertEquals(container.sizeInBits(), EWAHCompressedBitmap.WORD_IN_BITS * 3);
+        assertEquals(container.cardinality(), EWAHCompressedBitmap.WORD_IN_BITS);
     }
 
     @Test
@@ -121,16 +121,19 @@ public class MatchNoMoreThanNBitmapStorageTest {
         MatchNoMoreThanNBitmapStorage storage = new MatchNoMoreThanNBitmapStorage(container, n);
         storage.addWord(~0l);
         storage.addWord(~0l);
-        storage.setSizeInBits(n + 1);
+        storage.setSizeInBitsWithinLastWord(n + 1);
         assertEquals(container.sizeInBits(), n);
         assertEquals(container.cardinality(), n);
     }
 
-    private LongBuffer convert(long[] buffer) {
+    private long[] convert(long[] buffer) {
+        return buffer;
+        /*
         LongBuffer longBuffer = ByteBuffer.allocateDirect(4 * 8)
             .order(ByteOrder.nativeOrder())
             .asLongBuffer();
         longBuffer.put(buffer);
         return longBuffer;
+        */
     }
 }

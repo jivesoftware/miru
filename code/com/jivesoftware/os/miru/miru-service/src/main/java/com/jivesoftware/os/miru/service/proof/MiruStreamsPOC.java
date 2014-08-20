@@ -125,9 +125,9 @@ public class MiruStreamsPOC {
         }
 
         @Override
-        public void addStreamOfLiteralWords(LongBuffer data, int start, int number) {
+        public void addStreamOfLiteralWords(long[] data, int start, int number) {
             for (int i = start; i < start + number; i++) {
-                addWord(data.get(i));
+                addWord(data[i]);
             }
             delegateStoreage.addStreamOfLiteralWords(data, start, number);
         }
@@ -135,7 +135,7 @@ public class MiruStreamsPOC {
         @Override
         public void addStreamOfEmptyWords(boolean v, long number) {
             if (v) {
-                this.oneBitsHits += number * EWAHCompressedBitmap.wordinbits;
+                this.oneBitsHits += number * EWAHCompressedBitmap.WORD_IN_BITS;
                 if (oneBitsHits > maxHitCount) {
                     throw new StopCollecting();
                 }
@@ -144,9 +144,9 @@ public class MiruStreamsPOC {
         }
 
         @Override
-        public void addStreamOfNegatedLiteralWords(LongBuffer data, int start, int number) {
+        public void addStreamOfNegatedLiteralWords(long[] data, int start, int number) {
             for (int i = start; i < start + number; i++) {
-                addWord(~data.get(i));
+                addWord(~data[i]);
             }
             delegateStoreage.addStreamOfNegatedLiteralWords(data, start, number);
         }
@@ -156,8 +156,14 @@ public class MiruStreamsPOC {
         }
 
         @Override
-        public void setSizeInBits(int bits) {
-            delegateStoreage.setSizeInBits(bits);
+        public void setSizeInBitsWithinLastWord(int bits) {
+            delegateStoreage.setSizeInBitsWithinLastWord(bits);
+        }
+
+        @Override
+        public void clear() {
+            oneBitsHits = 0;
+            delegateStoreage.clear();
         }
     }
 

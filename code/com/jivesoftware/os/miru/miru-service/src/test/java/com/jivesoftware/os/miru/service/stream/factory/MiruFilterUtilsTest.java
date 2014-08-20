@@ -26,7 +26,7 @@ public class MiruFilterUtilsTest {
 
     @Test(dataProvider = "evenTimeIndexDataProvider")
     public void testBuildEvenTimeRangeMask(MiruFilterUtils utils, MiruTimeIndex miruTimeIndex) throws Exception {
-        final int size = (EWAHCompressedBitmap.wordinbits * 3) + 1;
+        final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
         for (int lower = 0; lower <= size / 2; lower++) {
             int upper = size - 1 - lower;
 
@@ -45,7 +45,7 @@ public class MiruFilterUtilsTest {
 
     @Test(dataProvider = "oddTimeIndexDataProvider")
     public void testBuildOddTimeRangeMask(MiruFilterUtils utils, MiruTimeIndex miruTimeIndex) throws Exception {
-        final int size = EWAHCompressedBitmap.wordinbits * 3;
+        final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         for (int lower = 0; lower < size / 2; lower++) {
             int upper = size - 1 - lower;
 
@@ -91,7 +91,7 @@ public class MiruFilterUtilsTest {
     public Object[][] evenTimeIndexDataProvider() throws Exception {
         MiruFilterUtils miruFilterUtils = new MiruFilterUtils();
 
-        final int size = (EWAHCompressedBitmap.wordinbits * 3) + 1;
+        final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
         final long[] timestamps = new long[size];
         for (int i = 0; i < size; i++) {
             timestamps[i] = i;
@@ -110,7 +110,7 @@ public class MiruFilterUtilsTest {
     public Object[][] oddTimeIndexDataProvider() throws Exception {
         MiruFilterUtils miruFilterUtils = new MiruFilterUtils();
 
-        final int size = EWAHCompressedBitmap.wordinbits * 3;
+        final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         final long[] timestamps = new long[size];
         for (int i = 0; i < size; i++) {
             timestamps[i] = i;

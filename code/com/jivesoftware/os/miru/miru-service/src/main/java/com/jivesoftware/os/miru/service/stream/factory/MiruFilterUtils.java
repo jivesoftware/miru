@@ -390,7 +390,7 @@ public class MiruFilterUtils {
             return mask;
         }
 
-        int initialZeroWords = smallestId / EWAHCompressedBitmap.wordinbits;
+        int initialZeroWords = smallestId / EWAHCompressedBitmap.WORD_IN_BITS;
         if (initialZeroWords > 0) {
             mask.addStreamOfEmptyWords(false, initialZeroWords);
         }
@@ -399,9 +399,9 @@ public class MiruFilterUtils {
         if (largestId == smallestId) {
             // one bit to set
             mask.set(smallestId);
-        } else if (largestId < (smallestId - smallestId % EWAHCompressedBitmap.wordinbits + EWAHCompressedBitmap.wordinbits)) {
+        } else if (largestId < (smallestId - smallestId % EWAHCompressedBitmap.WORD_IN_BITS + EWAHCompressedBitmap.WORD_IN_BITS)) {
             // start and stop in same word
-            int firstOne = smallestId - initialZeroWords * EWAHCompressedBitmap.wordinbits;
+            int firstOne = smallestId - initialZeroWords * EWAHCompressedBitmap.WORD_IN_BITS;
             int numberOfOnes = largestId - smallestId + 1;
             long word = 0;
             for (int i = 0; i < numberOfOnes; i++) {
@@ -410,8 +410,8 @@ public class MiruFilterUtils {
             mask.addWord(word);
         } else if (largestId > smallestId) {
             // start word, run of ones, stop word
-            int onesInStartWord = EWAHCompressedBitmap.wordinbits - smallestId % EWAHCompressedBitmap.wordinbits;
-            if (onesInStartWord == EWAHCompressedBitmap.wordinbits) {
+            int onesInStartWord = EWAHCompressedBitmap.WORD_IN_BITS - smallestId % EWAHCompressedBitmap.WORD_IN_BITS;
+            if (onesInStartWord == EWAHCompressedBitmap.WORD_IN_BITS) {
                 onesInStartWord = 0;
             }
             if (onesInStartWord > 0) {
@@ -422,12 +422,12 @@ public class MiruFilterUtils {
                 mask.addWord(startWord);
             }
 
-            int middleOneWords = (largestId - smallestId - onesInStartWord) / EWAHCompressedBitmap.wordinbits;
+            int middleOneWords = (largestId - smallestId - onesInStartWord) / EWAHCompressedBitmap.WORD_IN_BITS;
             if (middleOneWords > 0) {
                 mask.addStreamOfEmptyWords(true, middleOneWords);
             }
 
-            int bitsInStopWord = largestId - smallestId + 1 - onesInStartWord - middleOneWords * EWAHCompressedBitmap.wordinbits;
+            int bitsInStopWord = largestId - smallestId + 1 - onesInStartWord - middleOneWords * EWAHCompressedBitmap.WORD_IN_BITS;
             if (bitsInStopWord > 0) {
                 long stopWord = 0;
                 for (int i = 0; i < bitsInStopWord; i++) {
@@ -446,12 +446,12 @@ public class MiruFilterUtils {
             return mask;
         }
 
-        int words = largestIndex / EWAHCompressedBitmap.wordinbits;
+        int words = largestIndex / EWAHCompressedBitmap.WORD_IN_BITS;
         if (words > 0) {
             mask.addStreamOfEmptyWords(true, words);
         }
 
-        int remainingBits = largestIndex % EWAHCompressedBitmap.wordinbits + 1;
+        int remainingBits = largestIndex % EWAHCompressedBitmap.WORD_IN_BITS + 1;
         long lastWord = 0;
         for (int i = 0; i < remainingBits; i++) {
             lastWord |= (1l << i);
@@ -467,34 +467,10 @@ public class MiruFilterUtils {
         }
     }
 
-    // ~~concept~~
-    //
-    // d1-3, u1-3
-    //
-    // [u1->D] u1 -> [ 0, 0, 0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3) ] -> d1, d2, d3 (1,000 documents)
-    // [u2->D] u2 -> [ 0, 1(d1), 0, 1(d4), 0, 1(d5), 1(d2), 0, 0, 0 ] -> d1, d2, d4, d5
-    // [u3->D] u3 -> [ 0, 0, 0, 0, 1(d6), 0, 0, 1(d1), 1(d7) ] -> d1, d6, d7
-    //
-    // [d1->U] d1 -> [ 0, 0, 0, 1(u1), 0, 1(u2), 0, 0, 1(u3), 0 ] -> u1, u2, u3
-    // [d2->U] d2 -> [ 0, 1(u2), 0, 0, 0, 0, 1(u1), 0, 0, 0 ] -> u1, u2
-    // [d3->U] d3 -> [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1(u1) ] -> u1
-    // ...d1000
-    // [d*->U]: FastAggregation(r1, r2, r3...) -> [ 0, 1, 1, 0, 0, 1, 0, 1, 0 ]
-    //
-    // u2..u3
-    //
-    // [u2->D] & [d*->U] = [ 0, 1, 0, 0, 0, 0, 1, 0, 0, 0 ] -> d1, d2 = cardinality 2
-    // [u3->D] & [d*->U] = [ 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 ] -> d1 = cardinality 1
-    // [u2, u3...] -> heap
-    //
-    // heap:
-    // [u2->D] &~ [d*->U] = [ 0, 0, 0, 1, 0, 1, 0, 0, 0, 1 ] -> d4, d5 -> d4:2, d5:2, d8:2
-    // [u3->D] &~ [d*->U] = [ 0, 1, 0, 0, 0, 0, 0, 1, 0, 0 ] -> d6, d7 -> d6:1, d7:1, d8:1
-    // d4:2, d5:2, d6:1, d7:1, d8:3
-
     /*  I have viewd these thing who has also view these things and what other thing have the viewed that I have not.*/
     RecoResult collaborativeFiltering(MiruQueryStream stream, final RecoQuery query, Optional<RecoReport> report, EWAHCompressedBitmap answer, int bitsetBufferSize) throws Exception {
-        return collaborativeFilteringWithStreams(stream, query, report, answer, bitsetBufferSize);
+        //return collaborativeFilteringWithStreams(stream, query, report, answer, bitsetBufferSize);
+        return collaborativeFilteringMinusStreams(stream, query, report, answer, bitsetBufferSize);
     }
 
     RecoResult collaborativeFilteringWithStreams(MiruQueryStream stream, final RecoQuery query, Optional<RecoReport> report, EWAHCompressedBitmap answer, int bitsetBufferSize) throws Exception {
@@ -625,6 +601,8 @@ public class MiruFilterUtils {
 
 
         // feeds us our docIds
+        long startTime = System.currentTimeMillis();
+        final MutableLong countDocToUser = new MutableLong();
         final MutableObject<EWAHCompressedBitmap> join1 = new MutableObject<>(new EWAHCompressedBitmap());
         final List<EWAHCompressedBitmap> toBeORed = new ArrayList<>();
         IntIterator answerIterator = answer.intIterator();
@@ -633,15 +611,18 @@ public class MiruFilterUtils {
             MiruActivity activity = stream.activityIndex.get(id);
             MiruTermId[] fieldValues = activity.fieldsValues.get(query.aggregateFieldName1);
             if (fieldValues != null && fieldValues.length > 0) {
-                Optional<MiruInvertedIndex> invertedIndex = aggregateField1.getInvertedIndex(fieldValues[0]);
+                Optional<MiruInvertedIndex> invertedIndex = aggregateField1.getInvertedIndex(makeComposite(fieldValues[0], "^", query.aggregateFieldName2));
                 if (invertedIndex.isPresent()) {
-                    //join1.setValue(join1.getValue().or(invertedIndex.get().getIndex()));
                     toBeORed.add(invertedIndex.get().getIndex());
+                    countDocToUser.increment();
                 }
             }
         }
+        long timeDocToUser = System.currentTimeMillis() - startTime;
 
+        startTime = System.currentTimeMillis();
         join1.setValue(FastAggregation.bufferedor(bitsetBufferSize, toBeORed.toArray(new EWAHCompressedBitmap[toBeORed.size()])));
+        long timeJoin1 = System.currentTimeMillis() - startTime;
         // at this point have all activity for all my documents in join1.
 
         // feeds us all users
@@ -653,26 +634,35 @@ public class MiruFilterUtils {
             }
         }).maximumSize(query.resultCount).create(); // overloaded :(
 
+        final MutableLong countUserToHeap = new MutableLong();
+        final MutableLong sizeUserToHeap = new MutableLong();
+        startTime = System.currentTimeMillis();
         stream(stream, join1.getValue(), Optional.<EWAHCompressedBitmap>absent(), aggregateField2, query.retrieveFieldName2, new CallbackStream<TermCount>() {
 
             @Override
             public TermCount callback(TermCount v) throws Exception {
                 if (v != null) {
                     userHeap.add(v);
+                    countUserToHeap.increment();
+                    sizeUserToHeap.add(v.count);
                 }
                 return v;
             }
         });
+        long timeUserToHeap = System.currentTimeMillis() - startTime;
+
         final MutableObject<EWAHCompressedBitmap> join2 = new MutableObject<>(new EWAHCompressedBitmap());
         final BloomIndex bloomIndex = new BloomIndex(Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
         toBeORed.clear();
         for (TermCount tc : userHeap) {
-            Optional<MiruInvertedIndex> invertedIndex = lookupField2.getInvertedIndex(makeComposite(tc.termId, "^", "doc"));
+            Optional<MiruInvertedIndex> invertedIndex = lookupField2.getInvertedIndex(makeComposite(tc.termId, "^", query.aggregateFieldName3));
             if (invertedIndex.isPresent()) {
                 toBeORed.add(invertedIndex.get().getIndex());
             }
         }
+        startTime = System.currentTimeMillis();
         join2.setValue(FastAggregation.bufferedor(bitsetBufferSize, toBeORed.toArray(new EWAHCompressedBitmap[toBeORed.size()])));
+        long timeJoin2 = System.currentTimeMillis() - startTime;
 
         final List<TermCount> mostLike = new ArrayList<>(userHeap);
         final List<BloomIndex.Mights<TermCount>> wantBits = bloomIndex.wantBits(mostLike);
@@ -689,13 +679,14 @@ public class MiruFilterUtils {
             }
         }).maximumSize(query.resultCount).create();
         // feeds us all recommended documents
-        final MutableLong tested = new MutableLong();
+        final MutableLong countDocToBloom = new MutableLong();
+        startTime = System.currentTimeMillis();
 
         IntIterator join2iterator = join2.getValue().intIterator();
         while (join2iterator.hasNext()) {
             int id = join2iterator.next();
             MiruActivity activity = stream.activityIndex.get(id);
-            MiruTermId[] fieldValues = activity.fieldsValues.get(query.aggregateFieldName3);
+            MiruTermId[] fieldValues = activity.fieldsValues.get(query.retrieveFieldName3);
             if (fieldValues != null && fieldValues.length > 0) {
                 Optional<MiruInvertedIndex> invertedIndex = aggregateField3.getInvertedIndex(makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
                 if (invertedIndex.isPresent()) {
@@ -713,12 +704,60 @@ public class MiruFilterUtils {
                     for(BloomIndex.Mights<TermCount> boo:wantBits) {
                         boo.reset();
                     }
-                    tested.increment();
+                    countDocToBloom.increment();
                 }
             }
         }
 
-        System.out.println("Tested!="+tested.longValue());
+        long timeDocToBloom = System.currentTimeMillis() - startTime;
+
+        /*
+        int numberOfUsers = 10_000;
+        int numberOfDocument = 1_000;
+        int numberOfViewsPerUser = 100;
+        CountDocToUser=97 SizeJoin1=92316 CountUserToHeap=10001 SizeUserToHeap=92316 SizeJoin2=680 CountDocToBloom=680
+        TimeDocToUser=1 TimeJoin1=1 TimeUserToHeap=119 TimeJoin2=1 TimeDocToBloom=70
+        recoResult:TrendingResult{results=[Recommendation{, distinctValue=46, rank=81.0}, Recommendation{, distinctValue=46, rank=81.0}, Recommendation{, distinctValue=157, rank=81.0}, Recommendation{, distinctValue=157, rank=81.0}, Recommendation{, distinctValue=46, rank=81.0}, Recommendation{, distinctValue=46, rank=81.0}, Recommendation{, distinctValue=157, rank=81.0}, Recommendation{, distinctValue=157, rank=81.0}, Recommendation{, distinctValue=20, rank=80.0}, Recommendation{, distinctValue=20, rank=80.0}]}
+        Took:192
+        CountDocToUser=96 SizeJoin1=91435 CountUserToHeap=10002 SizeUserToHeap=91435 SizeJoin2=691 CountDocToBloom=691
+        TimeDocToUser=0 TimeJoin1=1 TimeUserToHeap=129 TimeJoin2=0 TimeDocToBloom=72
+        recoResult:TrendingResult{results=[Recommendation{, distinctValue=976, rank=79.0}, Recommendation{, distinctValue=976, rank=79.0}, Recommendation{, distinctValue=976, rank=79.0}, Recommendation{, distinctValue=976, rank=79.0}, Recommendation{, distinctValue=472, rank=78.0}, Recommendation{, distinctValue=472, rank=78.0}, Recommendation{, distinctValue=472, rank=78.0}, Recommendation{, distinctValue=472, rank=78.0}, Recommendation{, distinctValue=807, rank=77.0}, Recommendation{, distinctValue=807, rank=77.0}]}
+        Took:203
+        CountDocToUser=95 SizeJoin1=90765 CountUserToHeap=10001 SizeUserToHeap=90765 SizeJoin2=704 CountDocToBloom=704
+        TimeDocToUser=0 TimeJoin1=2 TimeUserToHeap=126 TimeJoin2=1 TimeDocToBloom=69
+        recoResult:TrendingResult{results=[Recommendation{, distinctValue=532, rank=76.0}, Recommendation{, distinctValue=532, rank=76.0}, Recommendation{, distinctValue=773, rank=76.0}, Recommendation{, distinctValue=73, rank=76.0}, Recommendation{, distinctValue=773, rank=76.0}, Recommendation{, distinctValue=73, rank=76.0}, Recommendation{, distinctValue=532, rank=76.0}, Recommendation{, distinctValue=773, rank=76.0}, Recommendation{, distinctValue=73, rank=76.0}, Recommendation{, distinctValue=532, rank=76.0}]}
+        Took:198
+         */
+        /*
+        int numberOfUsers = 10_000;
+        int numberOfDocument = 10_000;
+        int numberOfViewsPerUser = 100;
+        CountDocToUser=98 SizeJoin1=9809 CountUserToHeap=6285 SizeUserToHeap=9809 SizeJoin2=846 CountDocToBloom=846
+        TimeDocToUser=0 TimeJoin1=0 TimeUserToHeap=708 TimeJoin2=0 TimeDocToBloom=11
+        recoResult:TrendingResult{results=[Recommendation{, distinctValue=9004, rank=11.0}, Recommendation{, distinctValue=1782, rank=11.0}, Recommendation{, distinctValue=9181, rank=11.0}, Recommendation{, distinctValue=9181, rank=11.0}, Recommendation{, distinctValue=1782, rank=11.0}, Recommendation{, distinctValue=7494, rank=11.0}, Recommendation{, distinctValue=4514, rank=11.0}, Recommendation{, distinctValue=9004, rank=11.0}, Recommendation{, distinctValue=4514, rank=11.0}, Recommendation{, distinctValue=5246, rank=11.0}]}
+        Took:721
+        CountDocToUser=97 SizeJoin1=9765 CountUserToHeap=6263 SizeUserToHeap=9765 SizeJoin2=846 CountDocToBloom=846
+        TimeDocToUser=0 TimeJoin1=1 TimeUserToHeap=681 TimeJoin2=0 TimeDocToBloom=11
+        recoResult:TrendingResult{results=[Recommendation{, distinctValue=9795, rank=12.0}, Recommendation{, distinctValue=9795, rank=12.0}, Recommendation{, distinctValue=5473, rank=12.0}, Recommendation{, distinctValue=4813, rank=12.0}, Recommendation{, distinctValue=3923, rank=12.0}, Recommendation{, distinctValue=1418, rank=12.0}, Recommendation{, distinctValue=6381, rank=12.0}, Recommendation{, distinctValue=1418, rank=12.0}, Recommendation{, distinctValue=6381, rank=12.0}, Recommendation{, distinctValue=3923, rank=12.0}]}
+        Took:694
+        CountDocToUser=100 SizeJoin1=9941 CountUserToHeap=6272 SizeUserToHeap=9941 SizeJoin2=847 CountDocToBloom=847
+        TimeDocToUser=0 TimeJoin1=1 TimeUserToHeap=686 TimeJoin2=0 TimeDocToBloom=11
+        recoResult:TrendingResult{results=[Recommendation{, distinctValue=140, rank=13.0}, Recommendation{, distinctValue=140, rank=13.0}, Recommendation{, distinctValue=9723, rank=13.0}, Recommendation{, distinctValue=9723, rank=13.0}, Recommendation{, distinctValue=8578, rank=12.0}, Recommendation{, distinctValue=8578, rank=12.0}, Recommendation{, distinctValue=9535, rank=12.0}, Recommendation{, distinctValue=4960, rank=12.0}, Recommendation{, distinctValue=2243, rank=12.0}, Recommendation{, distinctValue=6065, rank=12.0}]}
+        Took:698
+         */
+
+        System.out.println("CountDocToUser=" + countDocToUser.longValue() +
+                " SizeJoin1=" + join1.getValue().cardinality() +
+                " CountUserToHeap=" + countUserToHeap.longValue() +
+                " SizeUserToHeap=" + sizeUserToHeap.longValue() +
+                " SizeJoin2=" + join2.getValue().cardinality() +
+                " CountDocToBloom=" + countDocToBloom.longValue());
+
+        System.out.println("TimeDocToUser=" + timeDocToUser +
+                " TimeJoin1=" + timeJoin1 +
+                " TimeUserToHeap=" + timeUserToHeap +
+                " TimeJoin2=" + timeJoin2 +
+                " TimeDocToBloom=" + timeDocToBloom);
 
         List<Recommendation> results = new ArrayList<>();
         for (TermCount result : heap) {

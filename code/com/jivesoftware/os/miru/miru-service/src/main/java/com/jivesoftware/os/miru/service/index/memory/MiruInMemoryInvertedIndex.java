@@ -15,7 +15,7 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
 
     private static final EWAHCompressedBitmap EMPTY = new EWAHCompressedBitmap();
 
-    private final ReusableBuffers reusable = new ReusableBuffers(4);
+    private final ReusableBuffers reusable = new ReusableBuffers(3);
     private final AtomicReference<EWAHCompressedBitmap> read;
     private final AtomicReference<EWAHCompressedBitmap> write;
     private final AtomicBoolean needsMerge;
@@ -44,6 +44,7 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
     private void merge() {
         EWAHCompressedBitmap writer = write.get();
         if (writer != null) {
+            reusable.retain(writer, read.get());
             read.set(writer);
             write.set(null);
         }
@@ -101,7 +102,7 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
             EWAHCompressedBitmap remove = reusable.next();
             remove.set(id);
             EWAHCompressedBitmap bitmap = writer();
-            EWAHCompressedBitmap r = MiruInMemoryInvertedIndex.this.andNotToSourceSize(bitmap, remove);
+            EWAHCompressedBitmap r = andNotToSourceSize(bitmap, remove);
             write.set(r);
             markForMerge();
         }
@@ -113,7 +114,8 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
             EWAHCompressedBitmap set = reusable.next();
             set.set(id);
             EWAHCompressedBitmap bitmap = writer();
-            EWAHCompressedBitmap r = bitmap.or(set);
+            EWAHCompressedBitmap r = reusable.next();
+            bitmap.orToContainer(set, r);
             write.set(r);
             markForMerge();
         }
@@ -126,7 +128,9 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
         }
         synchronized (write) {
             EWAHCompressedBitmap bitmap = writer();
-            write.set(bitmap.andNot(mask));
+            EWAHCompressedBitmap r = reusable.next();
+            bitmap.andNotToContainer(mask, r);
+            write.set(r);
             markForMerge();
         }
     }
@@ -138,7 +142,9 @@ public class MiruInMemoryInvertedIndex implements MiruInvertedIndex, BulkImport<
         }
         synchronized (write) {
             EWAHCompressedBitmap bitmap = writer();
-            write.set(bitmap.or(mask));
+            EWAHCompressedBitmap r = reusable.next();
+            bitmap.orToContainer(mask, r);
+            write.set(r);
             markForMerge();
         }
     }

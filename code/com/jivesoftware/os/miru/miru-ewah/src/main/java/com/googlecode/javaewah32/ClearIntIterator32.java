@@ -1,25 +1,24 @@
 package com.googlecode.javaewah32;
 
-/*
- * Copyright 2012, Google Inc.  
- * Licensed under the Apache License, Version 2.0.
- */
-
 import com.googlecode.javaewah.IntIterator;
 
 import static com.googlecode.javaewah32.EWAHCompressedBitmap32.WORD_IN_BITS;
 
-/**
- * The IntIteratorImpl32 is the 32 bit implementation of the IntIterator
- * interface, which efficiently returns the stream of integers represented by an
- * EWAHIterator32.
- *
- * @author Colby Ranger
- * @since 0.5.6
+/*
+ * Copyright 2009-2014, Daniel Lemire, Cliff Moon, David McIntosh, Robert Becho, Google Inc., Veronika Zenz, Owen Kaser, Gregory Ssi-Yan-Kai, Rory Graves
+ * Licensed under the Apache License, Version 2.0.
  */
-final class IntIteratorImpl32 implements IntIterator {
+
+/**
+ * This class is equivalent to IntIteratorImpl, except that it allows
+ * use to iterate over "clear" bits (bits set to 0).
+ *
+ * @author Gregory Ssi-Yan-Kai
+ */
+final class ClearIntIterator32 implements IntIterator {
 
     private final EWAHIterator32 ewahIter;
+    private final int sizeInBits;
     private final int[] ewahBuffer;
     private int position;
     private int runningLength;
@@ -27,12 +26,13 @@ final class IntIteratorImpl32 implements IntIterator {
     private int wordPosition;
     private int wordLength;
     private int literalPosition;
-    private boolean hasnext;
+    private boolean hasNext;
 
-    IntIteratorImpl32(EWAHIterator32 ewahIter) {
+    ClearIntIterator32(EWAHIterator32 ewahIter, int sizeInBits) {
         this.ewahIter = ewahIter;
+        this.sizeInBits = sizeInBits;
         this.ewahBuffer = ewahIter.buffer();
-        this.hasnext = this.moveToNext();
+        this.hasNext = this.moveToNext();
     }
 
     public boolean moveToNext() {
@@ -47,7 +47,7 @@ final class IntIteratorImpl32 implements IntIterator {
 
     @Override
     public boolean hasNext() {
-        return this.hasnext;
+        return this.hasNext;
     }
 
     @Override
@@ -60,14 +60,14 @@ final class IntIteratorImpl32 implements IntIterator {
             answer = this.literalPosition + Integer.bitCount(t - 1);
             this.word ^= t;
         }
-        this.hasnext = this.moveToNext();
+        this.hasNext = this.moveToNext();
         return answer;
     }
 
     private void setRunningLengthWord(RunningLengthWord32 rlw) {
-        this.runningLength = WORD_IN_BITS * rlw.getRunningLength()
-                + this.position;
-        if (!rlw.getRunningBit()) {
+        this.runningLength = Math.min(this.sizeInBits,
+                                      WORD_IN_BITS * rlw.getRunningLength() + this.position);
+        if (rlw.getRunningBit()) {
             this.position = this.runningLength;
         }
 
@@ -82,7 +82,13 @@ final class IntIteratorImpl32 implements IntIterator {
 
     private boolean literalHasNext() {
         while (this.word == 0 && this.wordPosition < this.wordLength) {
-            this.word = this.ewahBuffer[this.wordPosition++];
+            this.word = ~this.ewahBuffer[this.wordPosition++];
+            if (this.wordPosition == this.wordLength && !this.ewahIter.hasNext()) {
+                final int usedBitsInLast = this.sizeInBits % WORD_IN_BITS;
+                if (usedBitsInLast > 0) {
+                    this.word &= ((~0) >>> (WORD_IN_BITS - usedBitsInLast));
+                }
+            }
             this.literalPosition = this.position;
             this.position += WORD_IN_BITS;
         }

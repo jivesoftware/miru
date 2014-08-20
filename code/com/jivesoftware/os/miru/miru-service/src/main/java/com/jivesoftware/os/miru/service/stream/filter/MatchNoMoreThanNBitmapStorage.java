@@ -2,11 +2,10 @@ package com.jivesoftware.os.miru.service.stream.filter;
 
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import java.nio.LongBuffer;
 
 public class MatchNoMoreThanNBitmapStorage implements BitmapStorage {
 
-    private static final int oneLessBit = EWAHCompressedBitmap.wordinbits - 1;
+    private static final int oneLessBit = EWAHCompressedBitmap.WORD_IN_BITS - 1;
     private final EWAHCompressedBitmap container;
     private final int n;
 
@@ -23,28 +22,28 @@ public class MatchNoMoreThanNBitmapStorage implements BitmapStorage {
             return;
         }
 
-        if ((position + EWAHCompressedBitmap.wordinbits) > n) {
+        if ((position + EWAHCompressedBitmap.WORD_IN_BITS) > n) {
             int bitsToAdd = n - position;
-            for (int i = 0; i < (EWAHCompressedBitmap.wordinbits - bitsToAdd); i++) {
+            for (int i = 0; i < (EWAHCompressedBitmap.WORD_IN_BITS - bitsToAdd); i++) {
                 word &= ~(1l << oneLessBit - i);
             }
             position += bitsToAdd;
             container.addWord(word, bitsToAdd);
         } else {
-            position += EWAHCompressedBitmap.wordinbits;
+            position += EWAHCompressedBitmap.WORD_IN_BITS;
             container.addWord(word);
         }
     }
 
     @Override
-    public void addStreamOfLiteralWords(LongBuffer words, int start, int number) {
+    public void addStreamOfLiteralWords(long[] words, int start, int number) {
         if (position >= n) {
             return;
         }
 
         for (int i = start; i < start + number; i++) {
             int positionBefore = position;
-            addWord(words.get(i));
+            addWord(words[i]);
             if (positionBefore == position) {
                 break;
             }
@@ -57,9 +56,9 @@ public class MatchNoMoreThanNBitmapStorage implements BitmapStorage {
             return;
         }
 
-        int wordsRemaining = (n - position) / EWAHCompressedBitmap.wordinbits;
+        int wordsRemaining = (n - position) / EWAHCompressedBitmap.WORD_IN_BITS;
         if (number > wordsRemaining) {
-            position += wordsRemaining * EWAHCompressedBitmap.wordinbits;
+            position += wordsRemaining * EWAHCompressedBitmap.WORD_IN_BITS;
             container.addStreamOfEmptyWords(v, wordsRemaining);
 
             int bitsRemaining = n - position;
@@ -72,19 +71,19 @@ public class MatchNoMoreThanNBitmapStorage implements BitmapStorage {
             position += bitsRemaining;
             container.addWord(word, bitsRemaining);
         } else {
-            position += number * EWAHCompressedBitmap.wordinbits;
+            position += number * EWAHCompressedBitmap.WORD_IN_BITS;
             container.addStreamOfEmptyWords(v, number);
         }
     }
 
     @Override
-    public void addStreamOfNegatedLiteralWords(LongBuffer words, int start, int number) {
+    public void addStreamOfNegatedLiteralWords(long[] words, int start, int number) {
         if (position >= n) {
             return;
         }
 
         for (int i = start; i < start + number; i++) {
-            long d = ~words.get(i);
+            long d = ~words[i];
             int positionBefore = position;
             addWord(d);
             if (positionBefore == position) {
@@ -94,12 +93,17 @@ public class MatchNoMoreThanNBitmapStorage implements BitmapStorage {
     }
 
     @Override
-    public void setSizeInBits(int bits) {
+    public void setSizeInBitsWithinLastWord(int bits) {
         if (bits > n) {
             bits = n;
         }
         position = bits + 1;
-        container.setSizeInBits(bits);
+        container.setSizeInBitsWithinLastWord(bits);
     }
 
+    @Override
+    public void clear() {
+        position = 0;
+        container.clear();
+    }
 }

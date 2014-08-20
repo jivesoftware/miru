@@ -10,7 +10,7 @@ import java.nio.LongBuffer;
  */
 public class AnswerCardinalityLastSetBitmapStorage implements BitmapStorage {
 
-    private static final int oneLessBit = EWAHCompressedBitmap.wordinbits - 1;
+    private static final int oneLessBit = EWAHCompressedBitmap.WORD_IN_BITS - 1;
     private final EWAHCompressedBitmap container;
 
     private int oneBits;
@@ -35,15 +35,15 @@ public class AnswerCardinalityLastSetBitmapStorage implements BitmapStorage {
             oneBits += Long.bitCount(word);
             lastSetBit = position + (oneLessBit - Long.numberOfLeadingZeros(word));
         }
-        position += EWAHCompressedBitmap.wordinbits;
+        position += EWAHCompressedBitmap.WORD_IN_BITS;
         container.addWord(word);
     }
 
     @Override
-    public void addStreamOfLiteralWords(LongBuffer words, int start, int number) {
+    public void addStreamOfLiteralWords(long[] words, int start, int number) {
         int lastIndexWithBit = -1;
         for (int i = start; i < start + number; i++) {
-            long d = words.get(i);
+            long d = words[i];
             if (d != 0) {
                 oneBits += Long.bitCount(d);
                 lastIndexWithBit = i;
@@ -52,11 +52,11 @@ public class AnswerCardinalityLastSetBitmapStorage implements BitmapStorage {
 
         if (lastIndexWithBit > -1) {
             int offestInWords = (lastIndexWithBit - start);
-            position +=  offestInWords * EWAHCompressedBitmap.wordinbits;
-            lastSetBit = position + (oneLessBit - Long.numberOfLeadingZeros(words.get(lastIndexWithBit)));
-            position += EWAHCompressedBitmap.wordinbits * (number - offestInWords);
+            position +=  offestInWords * EWAHCompressedBitmap.WORD_IN_BITS;
+            lastSetBit = position + (oneLessBit - Long.numberOfLeadingZeros(words[lastIndexWithBit]));
+            position += EWAHCompressedBitmap.WORD_IN_BITS * (number - offestInWords);
         } else {
-            position += EWAHCompressedBitmap.wordinbits * number;
+            position += EWAHCompressedBitmap.WORD_IN_BITS * number;
         }
         container.addStreamOfLiteralWords(words, start, number);
     }
@@ -65,7 +65,7 @@ public class AnswerCardinalityLastSetBitmapStorage implements BitmapStorage {
     @Override
     public void addStreamOfEmptyWords(boolean v, long number) {
         if (number > 0) {
-            long numberOfBits = EWAHCompressedBitmap.wordinbits * number;
+            long numberOfBits = EWAHCompressedBitmap.WORD_IN_BITS * number;
             position += numberOfBits;
             if (v) {
                 oneBits += numberOfBits;
@@ -76,10 +76,10 @@ public class AnswerCardinalityLastSetBitmapStorage implements BitmapStorage {
     }
 
     @Override
-    public void addStreamOfNegatedLiteralWords(LongBuffer words, int start, int number) {
+    public void addStreamOfNegatedLiteralWords(long[] words, int start, int number) {
         int lastIndexWithBit = -1;
         for (int i = start; i < start + number; i++) {
-            long d = ~words.get(i);
+            long d = ~words[i];
             if (d != 0) {
                 oneBits += Long.bitCount(d);
                 lastIndexWithBit = i;
@@ -88,19 +88,26 @@ public class AnswerCardinalityLastSetBitmapStorage implements BitmapStorage {
 
         if (lastIndexWithBit > -1) {
             int offestInWords = (lastIndexWithBit - start);
-            position +=  offestInWords * EWAHCompressedBitmap.wordinbits;
-            lastSetBit = position + (oneLessBit - Long.numberOfLeadingZeros(~words.get(lastIndexWithBit)));
-            position += EWAHCompressedBitmap.wordinbits * (number - offestInWords);
+            position +=  offestInWords * EWAHCompressedBitmap.WORD_IN_BITS;
+            lastSetBit = position + (oneLessBit - Long.numberOfLeadingZeros(~words[lastIndexWithBit]));
+            position += EWAHCompressedBitmap.WORD_IN_BITS * (number - offestInWords);
         } else {
-            position += EWAHCompressedBitmap.wordinbits * number;
+            position += EWAHCompressedBitmap.WORD_IN_BITS * number;
         }
 
         container.addStreamOfNegatedLiteralWords(words, start, number);
     }
 
     @Override
-    public void setSizeInBits(int bits) {
-        container.setSizeInBits(bits);
+    public void setSizeInBitsWithinLastWord(int bits) {
+        container.setSizeInBitsWithinLastWord(bits);
     }
 
+    @Override
+    public void clear() {
+        oneBits = 0;
+        lastSetBit = -1;
+        position = 0;
+        container.clear();
+    }
 }
