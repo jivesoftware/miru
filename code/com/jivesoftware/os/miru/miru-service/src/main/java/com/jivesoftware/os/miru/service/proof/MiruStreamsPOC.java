@@ -4,7 +4,6 @@ import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
-import java.nio.LongBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

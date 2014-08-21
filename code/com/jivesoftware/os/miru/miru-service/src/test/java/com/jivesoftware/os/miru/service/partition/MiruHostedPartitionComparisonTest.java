@@ -44,12 +44,12 @@ public class MiruHostedPartitionComparisonTest {
         assertEquals(partitionComparison.getComparator().compare(p1, p2), 0);
 
         timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), FilterCustomExecuteQuery.class, 0)));
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), FilterCustomExecuteQuery.class.getCanonicalName(), 0)));
 
         assertEquals(partitionComparison.getComparator().compare(p1, p2), -1);
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), FilterCustomExecuteQuery.class, 0)));
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), FilterCustomExecuteQuery.class.getCanonicalName(), 0)));
         assertEquals(partitionComparison.getComparator().compare(p1, p2), 1);
     }
 
@@ -59,13 +59,13 @@ public class MiruHostedPartitionComparisonTest {
         MiruHostedPartition p2 = mockPartition(49602);
 
         timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), FilterCustomExecuteQuery.class, 0)));
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), FilterCustomExecuteQuery.class.getCanonicalName(), 0)));
 
         Comparator<MiruHostedPartition> comparator = partitionComparison.getComparator();
         assertEquals(comparator.compare(p1, p2), -1);
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), FilterCustomExecuteQuery.class, 0)));
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), FilterCustomExecuteQuery.class.getCanonicalName(), 0)));
         // comparator was built prior to p2 promotion, so p1 should still be sorted earlier
         assertEquals(comparator.compare(p1, p2), -1);
     }
@@ -75,10 +75,10 @@ public class MiruHostedPartitionComparisonTest {
         List<MiruSolution<Void>> solutions = Lists.newArrayList();
         for (int i = 1; i <= 100; i++) {
             MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49600 + i));
-            solutions.add(new MiruSolution<Void>(null, coord, FilterCustomExecuteQuery.class, i));
+            solutions.add(new MiruSolution<Void>(null, coord, FilterCustomExecuteQuery.class.getCanonicalName(), i));
         }
         partitionComparison.analyzeSolutions(solutions);
-        assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, FilterCustomExecuteQuery.class).get().longValue(), percentile);
+        assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, FilterCustomExecuteQuery.class.getCanonicalName()).get().longValue(), percentile);
     }
 
     private MiruHostedPartition mockPartition(int port) {

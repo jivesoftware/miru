@@ -3,8 +3,11 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.index.*;
-
+import com.jivesoftware.os.miru.service.index.BulkExport;
+import com.jivesoftware.os.miru.service.index.MiruField;
+import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
+import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
+import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

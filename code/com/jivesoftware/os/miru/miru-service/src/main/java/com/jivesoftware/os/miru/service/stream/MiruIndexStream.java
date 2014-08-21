@@ -9,25 +9,26 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BloomIndex;
+import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.MiruRemovalIndex;
-import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
-
 import java.util.List;
 import java.util.Set;
 
 /**
  * Handles indexing of activity, including repair and removal, with synchronization and attention to versioning.
  */
-public class MiruIndexStream {
+public class MiruIndexStream<BM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private final MiruBitmaps<BM> bitmaps;
     private final MiruSchema schema;
     private final MiruActivityIndex activityIndex;
     private final MiruFields fieldIndex;
@@ -37,12 +38,14 @@ public class MiruIndexStream {
 
     private final StripingLocksProvider<Integer> stripingLocksProvider = new StripingLocksProvider<>(64);
 
-    public MiruIndexStream(MiruSchema schema,
+    public MiruIndexStream(MiruBitmaps<BM> bitmaps,
+            MiruSchema schema,
             MiruActivityIndex activityIndex,
             MiruFields fieldIndex,
             MiruAuthzIndex authzIndex,
             MiruRemovalIndex removalIndex,
             MiruActivityInterner activityInterner) {
+        this.bitmaps = bitmaps;
         this.schema = schema;
         this.activityIndex = activityIndex;
         this.fieldIndex = fieldIndex;
@@ -148,7 +151,7 @@ public class MiruIndexStream {
     }
 
     private void indexBloomins(MiruActivity activity) throws Exception {
-        BloomIndex bloomIndex = new BloomIndex(Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
+        BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
 
 
         for (String fieldName : activity.fieldsValues.keySet()) {

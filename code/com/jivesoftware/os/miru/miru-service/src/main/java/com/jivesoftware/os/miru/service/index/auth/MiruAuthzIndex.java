@@ -1,15 +1,14 @@
 package com.jivesoftware.os.miru.service.index.auth;
 
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 
 /**
  *
  * @author jonathan
  */
-public interface MiruAuthzIndex {
+public interface MiruAuthzIndex<BM> {
 
-    EWAHCompressedBitmap getCompositeAuthz(MiruAuthzExpression authzExpression) throws Exception;
+    BM getCompositeAuthz(MiruAuthzExpression authzExpression) throws Exception;
 
     void index(String authz, int id) throws Exception;
 

@@ -4,16 +4,15 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
-        <artifactId>shared-lib-build-management</artifactId>
+        <artifactId>upena-deployable-management</artifactId>
         <version>0.7-SNAPSHOT</version>
-        <relativePath>../inheritance-poms/shared-lib-build-management/pom.xml</relativePath>
+        <relativePath>../inheritance-poms/upena-deployable-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-deployable</artifactId>
     <version>0.7-SNAPSHOT</version>
     <properties>
         <java.main>com.jivesoftware.os.miru.deployable.MiruMain</java.main>
-        <module.type>deployable</module.type>
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
     <dependencies>

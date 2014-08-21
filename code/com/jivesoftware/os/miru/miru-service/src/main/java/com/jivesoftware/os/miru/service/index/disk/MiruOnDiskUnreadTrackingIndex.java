@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
@@ -15,11 +15,13 @@ import java.io.File;
 import java.util.Map;
 
 /** @author jonathan */
-public class MiruOnDiskUnreadTrackingIndex implements MiruUnreadTrackingIndex, BulkImport<Map<MiruStreamId, MiruInvertedIndex>> {
+public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM>, BulkImport<Map<MiruStreamId, MiruInvertedIndex<BM>>> {
 
+    private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
 
-    public MiruOnDiskUnreadTrackingIndex(File mapDirectory, File swapDirectory, ChunkStore chunkStore) throws Exception {
+    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, ChunkStore chunkStore) throws Exception {
+        this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
         this.index = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 8, 100, chunkStore, 512);
     }
@@ -30,12 +32,12 @@ public class MiruOnDiskUnreadTrackingIndex implements MiruUnreadTrackingIndex, B
     }
 
     @Override
-    public Optional<EWAHCompressedBitmap> getUnread(MiruStreamId streamId) throws Exception {
+    public Optional<BM> getUnread(MiruStreamId streamId) throws Exception {
         SwappableFiler filer = index.get(streamId.getBytes(), false);
         if (filer == null) {
             return Optional.absent();
         }
-        return Optional.<EWAHCompressedBitmap>of(new MiruOnDiskInvertedIndex(filer).getIndex());
+        return Optional.<BM>of(new MiruOnDiskInvertedIndex<>(bitmaps, filer).getIndex());
     }
 
     @Override
@@ -43,20 +45,20 @@ public class MiruOnDiskUnreadTrackingIndex implements MiruUnreadTrackingIndex, B
         return getOrCreateUnread(streamId);
     }
 
-    private MiruInvertedIndex getOrCreateUnread(MiruStreamId streamId) throws Exception {
+    private MiruInvertedIndex<BM> getOrCreateUnread(MiruStreamId streamId) throws Exception {
         SwappableFiler filer = index.get(streamId.getBytes(), true);
-        return new MiruOnDiskInvertedIndex(filer);
+        return new MiruOnDiskInvertedIndex<>(bitmaps, filer);
     }
 
     @Override
-    public void applyRead(MiruStreamId streamId, EWAHCompressedBitmap readMask) throws Exception {
-        MiruInvertedIndex unread = getOrCreateUnread(streamId);
+    public void applyRead(MiruStreamId streamId, BM readMask) throws Exception {
+        MiruInvertedIndex<BM> unread = getOrCreateUnread(streamId);
         unread.andNotToSourceSize(readMask);
     }
 
     @Override
-    public void applyUnread(MiruStreamId streamId, EWAHCompressedBitmap unreadMask) throws Exception {
-        MiruInvertedIndex unread = getOrCreateUnread(streamId);
+    public void applyUnread(MiruStreamId streamId, BM unreadMask) throws Exception {
+        MiruInvertedIndex<BM> unread = getOrCreateUnread(streamId);
         unread.orToSourceSize(unreadMask);
     }
 
@@ -76,15 +78,15 @@ public class MiruOnDiskUnreadTrackingIndex implements MiruUnreadTrackingIndex, B
     }
 
     @Override
-    public void bulkImport(BulkExport<Map<MiruStreamId, MiruInvertedIndex>> importItems) throws Exception {
-        Map<MiruStreamId, MiruInvertedIndex> importIndex = importItems.bulkExport();
-        for (final Map.Entry<MiruStreamId, MiruInvertedIndex> entry : importIndex.entrySet()) {
+    public void bulkImport(BulkExport<Map<MiruStreamId, MiruInvertedIndex<BM>>> importItems) throws Exception {
+        Map<MiruStreamId, MiruInvertedIndex<BM>> importIndex = importItems.bulkExport();
+        for (final Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : importIndex.entrySet()) {
             SwappableFiler filer = index.get(entry.getKey().getBytes(), true);
 
-            MiruOnDiskInvertedIndex miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex(filer);
-            miruOnDiskInvertedIndex.bulkImport(new BulkExport<EWAHCompressedBitmap>() {
+            MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
+            miruOnDiskInvertedIndex.bulkImport(new BulkExport<BM>() {
                 @Override
-                public EWAHCompressedBitmap bulkExport() throws Exception {
+                public BM bulkExport() throws Exception {
                     return entry.getValue().getIndex();
                 }
             });

@@ -7,6 +7,8 @@ import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryUnreadTrackingIndex;
@@ -54,7 +56,7 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProvider")
-    public void testUnread(MiruUnreadTrackingIndex miruUnreadTrackingIndex, MiruStreamId streamId, MiruInvertedIndex invertedIndex) throws Exception {
+    public void testUnread(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex, MiruStreamId streamId, MiruInvertedIndex invertedIndex) throws Exception {
         EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).get();
         assertEquals(unread.cardinality(), 0);
 
@@ -82,7 +84,7 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")
-    public void testRead(MiruUnreadTrackingIndex miruUnreadTrackingIndex, MiruStreamId streamId, MiruInvertedIndex invertedIndex) throws Exception {
+    public void testRead(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex, MiruStreamId streamId, MiruInvertedIndex invertedIndex) throws Exception {
         EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).get();
         assertEquals(unread.cardinality(), 3);
 
@@ -120,14 +122,16 @@ public class MiruUnreadTrackingIndexTest {
 
     private Object[][] generateUnreadIndexes(EWAHCompressedBitmap bitmap, boolean autoCreate) throws Exception {
         final MiruStreamId streamId = new MiruStreamId(new Id(12345).toBytes());
-        MiruInMemoryUnreadTrackingIndex miruInMemoryUnreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex();
+        MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
+        MiruInMemoryUnreadTrackingIndex<EWAHCompressedBitmap> miruInMemoryUnreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex<>(bitmaps);
 
         MiruInvertedIndex miruInvertedIndex = null;
         if (autoCreate) {
-            final MiruInvertedIndex tempMiruInvertedIndex = new MiruInMemoryInvertedIndex(bitmap);
-            miruInMemoryUnreadTrackingIndex.bulkImport(new BulkExport<Map<MiruStreamId, MiruInvertedIndex>>() {
+            final MiruInvertedIndex<EWAHCompressedBitmap> tempMiruInvertedIndex = new MiruInMemoryInvertedIndex<>(bitmaps);
+            tempMiruInvertedIndex.or(bitmap);
+            miruInMemoryUnreadTrackingIndex.bulkImport(new BulkExport<Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
                 @Override
-                public Map<MiruStreamId, MiruInvertedIndex> bulkExport() throws Exception {
+                public Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport() throws Exception {
                     return ImmutableMap.of(
                         streamId, tempMiruInvertedIndex
                     );
@@ -141,7 +145,7 @@ public class MiruUnreadTrackingIndexTest {
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
-        MiruOnDiskUnreadTrackingIndex miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex(mapDir, swapDir, chunkStore);
+        MiruOnDiskUnreadTrackingIndex miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex(bitmaps, mapDir, swapDir, chunkStore);
         miruOnDiskUnreadTrackingIndex.bulkImport(miruInMemoryUnreadTrackingIndex);
 
         return new Object[][] {

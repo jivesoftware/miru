@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.memory.MiruInMemoryClusterRegistry;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
@@ -83,7 +84,7 @@ public class MiruLocalHostedPartitionTest {
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
 
-        streamFactory = new MiruStreamFactory(
+        streamFactory = new MiruStreamFactory(new MiruBitmapsEWAH(2), // TODO consider feed wth data provider
             schema,
             Executors.newSingleThreadExecutor(),
             new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),

@@ -1,5 +1,5 @@
 package com.jivesoftware.os.miru.service.index;
 
-public interface MiruRemovalIndex extends MiruInvertedIndex {
+public interface MiruRemovalIndex<BM> extends MiruInvertedIndex<BM> {
 
 }

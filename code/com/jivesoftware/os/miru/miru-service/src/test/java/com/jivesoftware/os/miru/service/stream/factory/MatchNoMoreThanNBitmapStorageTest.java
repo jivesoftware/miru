@@ -2,9 +2,6 @@ package com.jivesoftware.os.miru.service.stream.factory;
 
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.service.stream.filter.MatchNoMoreThanNBitmapStorage;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.LongBuffer;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;

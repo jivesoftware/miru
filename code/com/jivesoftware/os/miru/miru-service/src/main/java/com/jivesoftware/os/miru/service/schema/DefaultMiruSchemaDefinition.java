@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.schema;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 

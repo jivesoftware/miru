@@ -26,7 +26,7 @@ public class TrendingExecuteQueryCallableFactory implements ExecuteQueryCallable
                 return replica.createTrendingCollector(executeQuery).collect(result);
             }
         };
-        return new MiruSolvable<>(replica.getCoord(), tracedCallable, (Class<ExecuteQuery<?, ?>>) executeQuery.getClass());
+        return new MiruSolvable<>(replica.getCoord(), tracedCallable, executeQuery.getClass().getCanonicalName());
     }
 
     @Override

@@ -31,18 +31,19 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.service.reader.MiruReaderImpl;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
-import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.endpoint.MiruConfigEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
+import com.jivesoftware.os.miru.service.reader.MiruReaderImpl;
 import com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProviderInitializer;
+import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
@@ -94,6 +95,7 @@ public class MiruMain {
                 .initialize(miruServiceConfig);
 
         miruResourceLocatorProviderLifecyle.start();
+        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(miruServiceConfig.getBitsetBufferSize());
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                 registryStore,
                 clusterRegistry,
@@ -101,7 +103,8 @@ public class MiruMain {
                 new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA),
                 wal,
                 httpClientFactory,
-                miruResourceLocatorProviderLifecyle.getService());
+                miruResourceLocatorProviderLifecyle.getService(),
+                bitmaps);
 
         miruServiceLifecyle.start();
         MiruService miruService = miruServiceLifecyle.getService();

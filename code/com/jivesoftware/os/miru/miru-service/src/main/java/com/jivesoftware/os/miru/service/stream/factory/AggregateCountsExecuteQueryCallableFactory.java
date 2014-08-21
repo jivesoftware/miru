@@ -25,7 +25,7 @@ public class AggregateCountsExecuteQueryCallableFactory implements ExecuteQueryC
                 return replica.createFilterCollector(executeQuery).collect(result);
             }
         };
-        return new MiruSolvable<>(replica.getCoord(), tracedCallable, (Class<? extends ExecuteQuery<?, ?>>) executeQuery.getClass());
+        return new MiruSolvable<>(replica.getCoord(), tracedCallable, executeQuery.getClass().getCanonicalName());
     }
 
     @Override

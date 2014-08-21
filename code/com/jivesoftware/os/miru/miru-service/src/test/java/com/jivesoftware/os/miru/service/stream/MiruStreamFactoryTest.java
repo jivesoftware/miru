@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.RowColumnValueStoreImpl;
@@ -15,6 +16,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
@@ -37,7 +39,7 @@ import static org.testng.Assert.assertEquals;
 public class MiruStreamFactoryTest {
 
     private MiruSchema schema;
-    private MiruStreamFactory streamFactory;
+    private MiruStreamFactory<EWAHCompressedBitmap> streamFactory;
     private MiruHost host = new MiruHost("localhost", 49600);
 
     @BeforeMethod
@@ -52,7 +54,7 @@ public class MiruStreamFactoryTest {
             new RowColumnValueStoreImpl<>();
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
-        streamFactory = new MiruStreamFactory(
+        streamFactory = new MiruStreamFactory<>(new MiruBitmapsEWAH(4),
                 schema,
                 Executors.newSingleThreadExecutor(),
                 new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
@@ -72,7 +74,7 @@ public class MiruStreamFactoryTest {
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, host);
 
-        MiruStream inMemoryStream = streamFactory.allocate(coord, MiruBackingStorage.memory);
+        MiruStream<EWAHCompressedBitmap> inMemoryStream = streamFactory.allocate(coord, MiruBackingStorage.memory);
 
         for (int i = 0; i < numberOfActivities; i++) {
             String[] authz = { "aaaabbbbcccc" };
@@ -84,7 +86,7 @@ public class MiruStreamFactoryTest {
             inMemoryStream.getIndexStream().remove(activity, id);
         }
 
-        MiruStream onDiskStream = streamFactory.copyToDisk(coord, inMemoryStream);
+        MiruStream<EWAHCompressedBitmap> onDiskStream = streamFactory.copyToDisk(coord, inMemoryStream);
 
         assertEquals(onDiskStream.getQueryStream().timeIndex.getSmallestTimestamp(), inMemoryStream.getQueryStream().timeIndex.getSmallestTimestamp());
         assertEquals(onDiskStream.getQueryStream().timeIndex.getLargestTimestamp(), inMemoryStream.getQueryStream().timeIndex.getLargestTimestamp());

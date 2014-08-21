@@ -4,8 +4,8 @@ import com.google.common.cache.Cache;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -14,14 +14,16 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  *
  */
-public class MiruAuthzCache {
+public class MiruAuthzCache<BM> {
 
-    private final Cache<VersionedAuthzExpression, EWAHCompressedBitmap> cache;
+    private final MiruBitmaps<BM> bitmaps;
+    private final Cache<VersionedAuthzExpression, BM> cache;
     private final ConcurrentMap<String, VersionableAuthz> versionables = Maps.newConcurrentMap();
     private final Interner<String> interner;
-    private final MiruAuthzUtils utils;
+    private final MiruAuthzUtils<BM> utils;
 
-    public MiruAuthzCache(Cache<VersionedAuthzExpression, EWAHCompressedBitmap> cache, Interner<String> interner, MiruAuthzUtils utils) {
+    public MiruAuthzCache(MiruBitmaps<BM> bitmaps, Cache<VersionedAuthzExpression, BM> cache, Interner<String> interner, MiruAuthzUtils<BM> utils) {
+        this.bitmaps = bitmaps;
         this.cache = cache;
         this.interner = interner;
         this.utils = utils;
@@ -29,8 +31,8 @@ public class MiruAuthzCache {
 
     public long sizeInBytes() {
         long sizeInBytes = 0;
-        for (Map.Entry<VersionedAuthzExpression, EWAHCompressedBitmap> entry : cache.asMap().entrySet()) {
-            sizeInBytes += entry.getKey().sizeInBytes() + entry.getValue().sizeInBytes();
+        for (Map.Entry<VersionedAuthzExpression, BM> entry : cache.asMap().entrySet()) {
+            sizeInBytes += entry.getKey().sizeInBytes() + bitmaps.sizeInBytes(entry.getValue());
         }
         for (String key : versionables.keySet()) {
             sizeInBytes += key.length() * 2;
@@ -43,9 +45,9 @@ public class MiruAuthzCache {
         currentVersion(authz).increment();
     }
 
-    public EWAHCompressedBitmap getOrCompose(MiruAuthzExpression authzExpression, MiruAuthzUtils.IndexRetriever indexRetriever) throws Exception {
+    public BM getOrCompose(MiruAuthzExpression authzExpression, MiruAuthzUtils.IndexRetriever<BM> indexRetriever) throws Exception {
         VersionedAuthzExpression key = new VersionedAuthzExpression(currentVersions(authzExpression));
-        EWAHCompressedBitmap got = cache.getIfPresent(key);
+        BM got = cache.getIfPresent(key);
         if (got == null) {
             got = utils.getCompositeAuthz(authzExpression, indexRetriever);
             cache.put(key, got);

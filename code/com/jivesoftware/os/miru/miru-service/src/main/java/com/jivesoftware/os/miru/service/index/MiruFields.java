@@ -1,17 +1,17 @@
 package com.jivesoftware.os.miru.service.index;
 
 /** @author jonathan */
-public class MiruFields {
+public class MiruFields<BM> {
 
-    private final MiruField[] fields;
+    private final MiruField<BM>[] fields;
     private final MiruIndex index;
 
-    public MiruFields(MiruField[] fields, MiruIndex index) {
+    public MiruFields(MiruField<BM>[] fields, MiruIndex index) {
         this.fields = fields;
         this.index = index;
     }
 
-    public MiruField getField(int fieldId) {
+    public MiruField<BM> getField(int fieldId) {
         return fields[fieldId];
     }
 

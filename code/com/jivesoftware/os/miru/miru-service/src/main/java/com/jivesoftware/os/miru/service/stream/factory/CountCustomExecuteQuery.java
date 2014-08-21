@@ -2,8 +2,6 @@ package com.jivesoftware.os.miru.service.stream.factory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.googlecode.javaewah.BitmapStorage;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
 import com.jivesoftware.os.miru.api.query.MiruTimeRange;
@@ -11,6 +9,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruQueryHandle;
 import com.jivesoftware.os.miru.service.partition.MiruRemoteHostedPartition;
@@ -21,25 +20,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** @author jonathan */
-public class CountCustomExecuteQuery implements ExecuteQuery<DistinctCountResult, DistinctCountReport> {
+public class CountCustomExecuteQuery<BM> implements ExecuteQuery<DistinctCountResult, DistinctCountReport> {
 
-    private final MiruFilterUtils utils;
+    private final MiruBitmaps<BM> bitmaps;
+    private final MiruFilterUtils<BM> utils;
     private final DistinctCountQuery query;
-    private final int bitsetBufferSize;
 
-    public CountCustomExecuteQuery(MiruFilterUtils utils,
-        DistinctCountQuery query,
-        int bitsetBufferSize) {
+    public CountCustomExecuteQuery(MiruBitmaps<BM> bitmaps,
+            MiruFilterUtils<BM> utils,
+        DistinctCountQuery query) {
+        this.bitmaps = bitmaps;
         this.utils = utils;
         this.query = query;
-        this.bitsetBufferSize = bitsetBufferSize;
     }
 
     @Override
     public DistinctCountResult executeLocal(MiruLocalHostedPartition partition, Optional<DistinctCountReport> report) throws Exception {
         try (MiruQueryHandle handle = partition.getQueryHandle()) {
 
-            MiruQueryStream stream = handle.getQueryStream();
+            MiruQueryStream<BM> stream = handle.getQueryStream();
 
             // First grab the stream filter (required)
             MiruFilter combinedFilter = query.streamFilter;
@@ -51,11 +50,11 @@ public class CountCustomExecuteQuery implements ExecuteQuery<DistinctCountResult
             }
 
             // Start building up list of bitmap operations to run
-            List<EWAHCompressedBitmap> ands = new ArrayList<>();
+            List<BM> ands = new ArrayList<>();
 
             // 1) Execute the combined filter above on the given stream, add the bitmap
-            ExecuteMiruFilter executeMiruFilter = new ExecuteMiruFilter(stream.schema, stream.fieldIndex, stream.executorService,
-                combinedFilter, Optional.<BitmapStorage>absent(), -1, bitsetBufferSize);
+            ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
+                combinedFilter, Optional.<BM>absent(), -1);
             ands.add(executeMiruFilter.call());
 
             // 2) Add in the authz check if we have it
@@ -66,14 +65,17 @@ public class CountCustomExecuteQuery implements ExecuteQuery<DistinctCountResult
             // 3) Add in a time-range mask if we have it
             if (query.timeRange.isPresent()) {
                 MiruTimeRange timeRange = query.timeRange.get();
-                ands.add(utils.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
+                ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
             }
 
             // 4) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
-            ands.add(utils.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
+
+            ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
             // AND it all together and return the results
-            EWAHCompressedBitmap answer = utils.bufferedAnd(ands, bitsetBufferSize);
+            BM answer = bitmaps.create();
+            bitmaps.and(answer, ands);
+
             DistinctCountResult numberOfDistincts = utils.numberOfDistincts(stream, query, report, answer);
 
             return numberOfDistincts;

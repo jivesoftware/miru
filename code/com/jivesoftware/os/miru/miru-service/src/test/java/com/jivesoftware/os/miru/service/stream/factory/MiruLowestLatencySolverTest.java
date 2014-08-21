@@ -44,7 +44,7 @@ public class MiruLowestLatencySolverTest {
                         Thread.sleep(id * 1000); // Fake latency for each callable, 0 should always win
                         return id;
                     }
-                }, FilterCustomExecuteQuery.class));
+                }, FilterCustomExecuteQuery.class.getCanonicalName()));
         }
         List<MiruSolvable<Integer>> solvables = Lists.newArrayList(solvableBuilder.build());
         Collections.shuffle(solvables); // randomize the solvers

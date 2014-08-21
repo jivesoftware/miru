@@ -39,13 +39,18 @@ import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.MiruTempResourceLocatorProviderInitializer;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
@@ -130,7 +135,8 @@ public class ProfilebleMiruService {
                 miruSchema,
                 wal,
                 httpClientFactory,
-                miruResourceLocatorProviderLifecyle.getService());
+                miruResourceLocatorProviderLifecyle.getService(),
+                new MiruBitmapsEWAH(2)); // TODO consider feed wth data provider
 
         miruServiceLifecyle.start();
         this.service = miruServiceLifecyle.getService();
@@ -169,7 +175,8 @@ public class ProfilebleMiruService {
                 miruSchema,
                 wal,
                 httpClientFactory,
-                miruResourceLocatorProviderLifecyle.getService());
+                miruResourceLocatorProviderLifecyle.getService(),
+                new MiruBitmapsEWAH(2)); // TODO consider feed wth data provider
 
         miruServiceLifecyle.start();
         this.service = miruServiceLifecyle.getService();

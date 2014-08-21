@@ -1,9 +1,5 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
@@ -14,6 +10,12 @@ import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
+import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskAuthzIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryAuthzIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
@@ -30,7 +32,7 @@ import static org.testng.Assert.assertEquals;
 public class MiruAuthzIndexTest {
 
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
-    public void storeAndGetAuthz(MiruAuthzIndex miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<Integer, EWAHCompressedBitmap> bitsIn) throws Exception {
+    public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<Integer, EWAHCompressedBitmap> bitsIn) throws Exception {
         for (Map.Entry<Integer, EWAHCompressedBitmap> entry : bitsIn.entrySet()) {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) entry.getKey()));
             MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(ImmutableList.of(authz));
@@ -43,27 +45,28 @@ public class MiruAuthzIndexTest {
 
     @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
-        MiruAuthzUtils miruAuthzUtils = new MiruAuthzUtils(8192);
+        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8192);
+        MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         final Map<Integer, EWAHCompressedBitmap> smallBitsIn = Maps.newHashMap();
         final Map<Integer, EWAHCompressedBitmap> largeBitsIn = Maps.newHashMap();
-        final InvertedIndexData smallInvertedIndexData = buildInMemoryInvertedIndexes(smallBitsIn, miruAuthzUtils, 10);
-        final InvertedIndexData largeInvertedIndexData = buildInMemoryInvertedIndexes(largeBitsIn, miruAuthzUtils, 100);
+        final InvertedIndexData<EWAHCompressedBitmap> smallInvertedIndexData = buildInMemoryInvertedIndexes(bitmaps, smallBitsIn, miruAuthzUtils, 10);
+        final InvertedIndexData<EWAHCompressedBitmap> largeInvertedIndexData = buildInMemoryInvertedIndexes(bitmaps, largeBitsIn, miruAuthzUtils, 100);
 
         // Create in-memory authz index
-        MiruInMemoryAuthzIndex smallMiruInMemoryAuthzIndex = new MiruInMemoryAuthzIndex(cache(miruAuthzUtils, 10));
-        MiruInMemoryAuthzIndex largeMiruInMemoryAuthzIndex = new MiruInMemoryAuthzIndex(cache(miruAuthzUtils, 10));
+        MiruInMemoryAuthzIndex<EWAHCompressedBitmap> smallMiruInMemoryAuthzIndex = new MiruInMemoryAuthzIndex<>(bitmaps, cache(bitmaps, miruAuthzUtils, 10));
+        MiruInMemoryAuthzIndex<EWAHCompressedBitmap> largeMiruInMemoryAuthzIndex = new MiruInMemoryAuthzIndex<>(bitmaps, cache(bitmaps, miruAuthzUtils, 10));
 
         // Import items for test
-        smallMiruInMemoryAuthzIndex.bulkImport(new BulkExport<Map<String, MiruInvertedIndex>>() {
+        smallMiruInMemoryAuthzIndex.bulkImport(new BulkExport<Map<String, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
             @Override
-            public Map<String, MiruInvertedIndex> bulkExport() throws Exception {
+            public Map<String, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport() throws Exception {
                 return smallInvertedIndexData.getImportItems();
             }
         });
-        largeMiruInMemoryAuthzIndex.bulkImport(new BulkExport<Map<String, MiruInvertedIndex>>() {
+        largeMiruInMemoryAuthzIndex.bulkImport(new BulkExport<Map<String, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
             @Override
-            public Map<String, MiruInvertedIndex> bulkExport() throws Exception {
+            public Map<String, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport() throws Exception {
                 return largeInvertedIndexData.getImportItems();
             }
         });
@@ -73,7 +76,7 @@ public class MiruAuthzIndexTest {
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 16384, false);
-        MiruOnDiskAuthzIndex smallMiruOnDiskAuthzIndex = new MiruOnDiskAuthzIndex(mapDir, swapDir, chunkStore, cache(miruAuthzUtils, 10));
+        MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex = new MiruOnDiskAuthzIndex<>(bitmaps, mapDir, swapDir, chunkStore, cache(bitmaps, miruAuthzUtils, 10));
         smallMiruOnDiskAuthzIndex.bulkImport(smallMiruInMemoryAuthzIndex);
 
         return new Object[][] {
@@ -83,49 +86,51 @@ public class MiruAuthzIndexTest {
         };
     }
 
-    private MiruAuthzCache cache(MiruAuthzUtils miruAuthzUtils, int maximumSize) {
-        Cache<VersionedAuthzExpression, EWAHCompressedBitmap> cache = CacheBuilder.newBuilder()
+    private <BM> MiruAuthzCache<BM> cache(MiruBitmaps<BM> bitmaps, MiruAuthzUtils<BM> miruAuthzUtils, int maximumSize) {
+        Cache<VersionedAuthzExpression, BM> cache = CacheBuilder.newBuilder()
             .maximumSize(maximumSize)
             .expireAfterAccess(1, TimeUnit.MINUTES)
             .build();
-        return new MiruAuthzCache(cache, Interners.<String>newWeakInterner(), miruAuthzUtils);
+        return new MiruAuthzCache<BM>(bitmaps, cache, Interners.<String>newWeakInterner(), miruAuthzUtils);
     }
 
-    private InvertedIndexData buildInMemoryInvertedIndexes(Map<Integer, EWAHCompressedBitmap> bitsIn, MiruAuthzUtils miruAuthzUtils, int size) {
+    private <BM> InvertedIndexData<BM> buildInMemoryInvertedIndexes(MiruBitmaps<BM> bitmaps, Map<Integer, BM> bitsIn, MiruAuthzUtils<BM> miruAuthzUtils, int size) throws Exception {
         Map<String, MiruInvertedIndex> importItems = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
-            EWAHCompressedBitmap bits = new EWAHCompressedBitmap();
-            bits.set(i);
-            bits.set(10 * i);
-            bits.set(100 * i);
-            bits.set(1_000 * i);
-            bits.set(10_000 * i);
-            bits.set(100_000 * i);
-            bits.set(1_000_000 * i);
-
+            BM bits = bitmaps.create();
+            bitmaps.set(bits, i);
+            bitmaps.set(bits, 10 * i);
+            bitmaps.set(bits, 100 * i);
+            bitmaps.set(bits, 1_000 * i);
+            bitmaps.set(bits, 10_000 * i);
+            bitmaps.set(bits, 100_000 * i);
+            bitmaps.set(bits, 1_000_000 * i);
             bitsIn.put(i, bits);
-            importItems.put(authz, new MiruInMemoryInvertedIndex(bits));
+
+            MiruInvertedIndex<BM> index = new MiruInMemoryInvertedIndex(bitmaps);
+            index.or(bits);
+            importItems.put(authz, index);
         }
 
         return new InvertedIndexData(bitsIn, importItems);
     }
 
-    private class InvertedIndexData {
-        private final Map<Integer, EWAHCompressedBitmap> bitsIn;
-        private final Map<String, MiruInvertedIndex> importItems;
+    private static class InvertedIndexData<BM2> {
+        private final Map<Integer, BM2> bitsIn;
+        private final Map<String, MiruInvertedIndex<BM2>> importItems;
 
-        private InvertedIndexData(Map<Integer, EWAHCompressedBitmap> bitsIn, Map<String, MiruInvertedIndex> importItems) {
+        private InvertedIndexData(Map<Integer, BM2> bitsIn, Map<String, MiruInvertedIndex<BM2>> importItems) {
             this.bitsIn = bitsIn;
             this.importItems = importItems;
         }
 
-        public Map<Integer, EWAHCompressedBitmap> getBitsIn() {
+        public Map<Integer, BM2> getBitsIn() {
             return bitsIn;
         }
 
-        public Map<String, MiruInvertedIndex> getImportItems() {
+        public Map<String, MiruInvertedIndex<BM2>> getImportItems() {
             return importItems;
         }
     }

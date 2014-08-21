@@ -1,10 +1,11 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import java.util.List;
 import java.util.Map;
 import org.testng.annotations.BeforeMethod;
@@ -19,7 +20,7 @@ import static org.testng.Assert.assertEquals;
 public class MiruAuthzUtilsTest {
 
     Map<String, EWAHCompressedBitmap> authzIndexes = Maps.newHashMap();
-    MiruAuthzUtils utils = new MiruAuthzUtils(1024);
+    MiruAuthzUtils<EWAHCompressedBitmap> utils = new MiruAuthzUtils<>(new MiruBitmapsEWAH(4));
 
     @BeforeMethod
     public void setUp() throws Exception {

@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.stream.filter;
 
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import java.nio.LongBuffer;
 
 /**
  *

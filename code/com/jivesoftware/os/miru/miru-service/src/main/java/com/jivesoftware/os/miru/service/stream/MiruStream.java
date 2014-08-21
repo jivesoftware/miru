@@ -13,11 +13,11 @@ import java.util.Map;
  *
  * @author jonathan
  */
-public class MiruStream {
+public class MiruStream<BM> {
 
-    private final MiruIndexStream indexStream;
-    private final MiruQueryStream queryStream;
-    private final MiruReadTrackStream readTrackStream;
+    private final MiruIndexStream <BM>indexStream;
+    private final MiruQueryStream<BM> queryStream;
+    private final MiruReadTrackStream<BM> readTrackStream;
     private final MiruTimeIndex timeIndex;
     private final Optional<ChunkStore> chunkStore;
 
@@ -25,7 +25,7 @@ public class MiruStream {
     private Map<String, BulkImport<?>> importHandles;
     private Optional<? extends MiruResourcePartitionIdentifier> transientResource;
 
-    public MiruStream(MiruIndexStream indexStream, MiruQueryStream queryStream, MiruReadTrackStream readTrackStream, MiruTimeIndex timeIndex,
+    public MiruStream(MiruIndexStream<BM> indexStream, MiruQueryStream<BM> queryStream, MiruReadTrackStream<BM> readTrackStream, MiruTimeIndex timeIndex,
         Optional<ChunkStore> chunkStore) {
         this.indexStream = indexStream;
         this.queryStream = queryStream;
@@ -35,17 +35,17 @@ public class MiruStream {
         this.transientResource = Optional.absent();
     }
 
-    public MiruStream exportable(Map<String, BulkExport<?>> exportHandles) {
+    public MiruStream<BM> exportable(Map<String, BulkExport<?>> exportHandles) {
         this.exportHandles = exportHandles;
         return this;
     }
 
-    public MiruStream importable(Map<String, BulkImport<?>> importHandles) {
+    public MiruStream<BM> importable(Map<String, BulkImport<?>> importHandles) {
         this.importHandles = importHandles;
         return this;
     }
 
-    public <T extends MiruResourcePartitionIdentifier> MiruStream withTransientResource(T identifier) {
+    public <T extends MiruResourcePartitionIdentifier> MiruStream<BM> withTransientResource(T identifier) {
         this.transientResource = Optional.of(identifier);
         return this;
     }
@@ -77,15 +77,15 @@ public class MiruStream {
         return sizeInBytes;
     }
 
-    public MiruIndexStream getIndexStream() {
+    public MiruIndexStream<BM> getIndexStream() {
         return indexStream;
     }
 
-    public MiruQueryStream getQueryStream() {
+    public MiruQueryStream<BM> getQueryStream() {
         return queryStream;
     }
 
-    public MiruReadTrackStream getReadTrackStream() {
+    public MiruReadTrackStream<BM> getReadTrackStream() {
         return readTrackStream;
     }
 

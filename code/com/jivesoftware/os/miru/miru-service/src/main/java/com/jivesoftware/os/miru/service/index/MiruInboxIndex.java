@@ -7,11 +7,10 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 
 /** @author jonathan */
-public interface MiruInboxIndex {
+public interface MiruInboxIndex<BM> {
 
     /**
      * Get the inbox index for a given streamId. If the inbox doesn't exist then we will
@@ -20,7 +19,7 @@ public interface MiruInboxIndex {
      * @param streamId the streamId that represents a given inbox
      * @return the index representing this inbox or Optional.absent() if it doesn't exist
      */
-    Optional<EWAHCompressedBitmap> getInbox(MiruStreamId streamId) throws Exception;
+    Optional<BM> getInbox(MiruStreamId streamId) throws Exception;
 
     /**
      * Get the inbox index for a given streamId, creating if it doesn't already exist.

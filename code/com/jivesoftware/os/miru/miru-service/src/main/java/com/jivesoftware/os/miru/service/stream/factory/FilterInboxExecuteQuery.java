@@ -2,12 +2,11 @@ package com.jivesoftware.os.miru.service.stream.factory;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.googlecode.javaewah.BitmapStorage;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.MiruTimeRange;
 import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruQueryHandle;
@@ -19,94 +18,95 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** @author jonathan */
-public class FilterInboxExecuteQuery implements ExecuteQuery<AggregateCountsResult, AggregateCountsReport> {
+public class FilterInboxExecuteQuery<BM> implements ExecuteQuery<AggregateCountsResult, AggregateCountsReport> {
 
-    private final MiruFilterUtils utils;
-    private final MiruJustInTimeBackfillerizer backfillerizer;
+    private final MiruBitmaps<BM> bitmaps;
+    private final MiruFilterUtils<BM> utils;
+    private final MiruJustInTimeBackfillerizer<BM> backfillerizer;
     private final AggregateCountsQuery query;
     private final boolean unreadOnly;
-    private final int bitsetBufferSize;
 
-    public FilterInboxExecuteQuery(MiruFilterUtils utils,
-        MiruJustInTimeBackfillerizer backfillerizer,
+    public FilterInboxExecuteQuery(MiruBitmaps<BM> bitmaps,
+            MiruFilterUtils<BM> utils,
+        MiruJustInTimeBackfillerizer<BM> backfillerizer,
         AggregateCountsQuery query,
-        boolean unreadOnly,
-        int bitsetBufferSize) {
+        boolean unreadOnly) {
+
+        this.bitmaps = bitmaps;
         Preconditions.checkArgument(query.streamId.isPresent(), "Inbox queries require a streamId");
         this.utils = utils;
         this.backfillerizer = backfillerizer;
         this.query = query;
         this.unreadOnly = unreadOnly;
-        this.bitsetBufferSize = bitsetBufferSize;
     }
 
     @Override
     public AggregateCountsResult executeLocal(MiruLocalHostedPartition partition, Optional<AggregateCountsReport> report) throws Exception {
         try (MiruQueryHandle handle = partition.getQueryHandle()) {
 
-            MiruQueryStream stream = handle.getQueryStream();
+            MiruQueryStream<BM> stream = handle.getQueryStream();
 
             if (handle.canBackfill()) {
-                backfillerizer.backfill(stream, query.streamFilter, query.tenantId, handle.getPartitionId(), query.streamId.get(), bitsetBufferSize);
+                backfillerizer.backfill(stream, query.streamFilter, query.tenantId, handle.getPartitionId(), query.streamId.get());
             }
 
-            List<EWAHCompressedBitmap> ands = new ArrayList<>();
-            List<EWAHCompressedBitmap> counterAnds = new ArrayList<>();
+            List<BM> ands = new ArrayList<>();
+            List<BM> counterAnds = new ArrayList<>();
 
             if (query.answerTimeRange.isPresent()) {
                 MiruTimeRange timeRange = query.answerTimeRange.get();
 
                 // Short-circuit if the time range doesn't live here
                 if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
-                    return utils.getAggregateCounts(stream, query, report, new EWAHCompressedBitmap(), Optional.of(new EWAHCompressedBitmap()));
+                    return utils.getAggregateCounts(stream, query, report, bitmaps.create(), Optional.of(bitmaps.create()));
                 }
-                ands.add(utils.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
+                ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
             }
             if (query.countTimeRange.isPresent()) {
                 MiruTimeRange timeRange = query.countTimeRange.get();
 
                 // Short-circuit if the time range doesn't live here
                 if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
-                    return utils.getAggregateCounts(stream, query, report, new EWAHCompressedBitmap(), Optional.of(new EWAHCompressedBitmap()));
+                    return utils.getAggregateCounts(stream, query, report, bitmaps.create(), Optional.of(bitmaps.create()));
                 }
-                counterAnds.add(utils.buildTimeRangeMask(
+                counterAnds.add(bitmaps.buildTimeRangeMask(
                     stream.timeIndex, query.countTimeRange.get().smallestTimestamp, query.countTimeRange.get().largestTimestamp));
             }
 
-            Optional<EWAHCompressedBitmap> inbox = stream.inboxIndex.getInbox(query.streamId.get());
+            Optional<BM> inbox = stream.inboxIndex.getInbox(query.streamId.get());
             if (inbox.isPresent()) {
                 ands.add(inbox.get());
             } else {
                 // Short-circuit if the user doesn't have an inbox here
-                return utils.getAggregateCounts(stream, query, report, new EWAHCompressedBitmap(), Optional.of(new EWAHCompressedBitmap()));
+                return utils.getAggregateCounts(stream, query, report, bitmaps.create(), Optional.of(bitmaps.create()));
             }
 
             if (query.constraintsFilter.isPresent()) {
-                ExecuteMiruFilter executeMiruFilter = new ExecuteMiruFilter(stream.schema, stream.fieldIndex, stream.executorService,
-                    query.constraintsFilter.get(), Optional.<BitmapStorage>absent(), -1, bitsetBufferSize);
+                ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
+                    query.constraintsFilter.get(), Optional.<BM>absent(), -1);
                 ands.add(executeMiruFilter.call());
             }
             if (query.authzExpression.isPresent()) {
                 ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression.get()));
             }
             if (unreadOnly) {
-                Optional<EWAHCompressedBitmap> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId.get());
+                Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId.get());
                 if (unreadIndex.isPresent()) {
                     ands.add(unreadIndex.get());
                 }
             }
-            ands.add(utils.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
-            EWAHCompressedBitmap answer = utils.bufferedAnd(ands, bitsetBufferSize);
+            ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
+            BM answer = utils.bufferedAnd(ands);
 
             counterAnds.add(answer);
             if (!unreadOnly) {
                 // if unreadOnly is true, the read-tracking index would already be applied to the answer
-                Optional<EWAHCompressedBitmap> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId.get());
+                Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId.get());
                 if (unreadIndex.isPresent()) {
                     counterAnds.add(unreadIndex.get());
                 }
             }
-            EWAHCompressedBitmap counter = utils.bufferedAnd(counterAnds, bitsetBufferSize);
+            BM counter = utils.bufferedAnd(counterAnds);
 
             AggregateCountsResult aggregateCounts = utils.getAggregateCounts(stream, query, report, answer, Optional.of(counter));
 

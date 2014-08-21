@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruIndex;
@@ -15,19 +15,21 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * @author jonathan
  */
-public class MiruInMemoryIndex implements MiruIndex, BulkImport<Map<Long, MiruInvertedIndex>>, BulkExport<Map<Long, MiruInvertedIndex>> {
+public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Map<Long, MiruInvertedIndex<BM>>>, BulkExport<Map<Long, MiruInvertedIndex<BM>>> {
 
-    private final ConcurrentMap<Long, MiruInvertedIndex> index;
+    private final MiruBitmaps<BM> bitmaps;
+    private final ConcurrentMap<Long, MiruInvertedIndex<BM>> index;
 
-    public MiruInMemoryIndex() {
+    public MiruInMemoryIndex(MiruBitmaps<BM> bitmaps) {
+        this.bitmaps = bitmaps;
         this.index = new ConcurrentHashMap<>();
     }
 
     @Override
     public long sizeInMemory() throws Exception {
         long sizeInBytes = 0;
-        for (MiruInvertedIndex i : index.values()) {
-            sizeInBytes += i.getIndex().sizeInBytes();
+        for (MiruInvertedIndex<BM> i : index.values()) {
+            sizeInBytes += bitmaps.sizeInBytes(i.getIndex());
         }
         return sizeInBytes;
     }
@@ -38,7 +40,7 @@ public class MiruInMemoryIndex implements MiruIndex, BulkImport<Map<Long, MiruIn
     }
 
     @Override
-    public MiruInvertedIndex allocate(int fieldId, int termId) throws Exception {
+    public MiruInvertedIndex<BM> allocate(int fieldId, int termId) throws Exception {
         return getOrAllocate(fieldId, termId);
     }
 
@@ -49,37 +51,37 @@ public class MiruInMemoryIndex implements MiruIndex, BulkImport<Map<Long, MiruIn
 
     @Override
     public void remove(int fieldId, int termId, int id) throws Exception {
-        Optional<MiruInvertedIndex> got = get(fieldId, termId);
+        Optional<MiruInvertedIndex<BM>> got = get(fieldId, termId);
         if (got.isPresent()) {
             got.get().remove(id);
         }
     }
 
     @Override
-    public Optional<MiruInvertedIndex> get(int fieldId, int termId) {
+    public Optional<MiruInvertedIndex<BM>> get(int fieldId, int termId) {
         long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[]{fieldId, termId}));
-        return Optional.<MiruInvertedIndex>fromNullable(index.get(fieldTermId));
+        return Optional.<MiruInvertedIndex<BM>>fromNullable(index.get(fieldTermId));
     }
 
-    private MiruInvertedIndex getOrAllocate(int fieldId, int termId) {
-        Optional<MiruInvertedIndex> got = get(fieldId, termId);
+    private MiruInvertedIndex<BM> getOrAllocate(int fieldId, int termId) {
+        Optional<MiruInvertedIndex<BM>> got = get(fieldId, termId);
         if (!got.isPresent()) {
             long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[]{fieldId, termId}));
-            MiruInMemoryInvertedIndex miruInvertedIndex = new MiruInMemoryInvertedIndex(new EWAHCompressedBitmap());
+            MiruInMemoryInvertedIndex<BM> miruInvertedIndex = new MiruInMemoryInvertedIndex<>(bitmaps);
 
-            got = Optional.<MiruInvertedIndex>of(miruInvertedIndex);
+            got = Optional.<MiruInvertedIndex<BM>>of(miruInvertedIndex);
             index.put(fieldTermId, miruInvertedIndex);
         }
         return got.get();
     }
 
     @Override
-    public Map<Long, MiruInvertedIndex> bulkExport() throws Exception {
+    public Map<Long, MiruInvertedIndex<BM>> bulkExport() throws Exception {
         return ImmutableMap.copyOf(index);
     }
 
     @Override
-    public void bulkImport(BulkExport<Map<Long, MiruInvertedIndex>> importItems) throws Exception {
+    public void bulkImport(BulkExport<Map<Long, MiruInvertedIndex<BM>>> importItems) throws Exception {
         index.putAll(importItems.bulkExport());
     }
 }

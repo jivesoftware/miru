@@ -36,6 +36,7 @@ import com.jivesoftware.os.miru.service.benchmark.caliper.Run;
 import com.jivesoftware.os.miru.service.benchmark.caliper.Scenario;
 import com.jivesoftware.os.miru.service.benchmark.caliper.Trial;
 import com.jivesoftware.os.miru.service.benchmark.caliper.Value;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
@@ -170,7 +171,8 @@ public class MiruStreamServiceBenchmarkTest {
                 new MiruSchema(SCHEMA),
                 wal,
                 httpClientFactory,
-                miruResourceLocatorProviderLifecyle.getService());
+                miruResourceLocatorProviderLifecyle.getService(),
+                new MiruBitmapsEWAH(2)); // TODO consider feed wth data provider
 
         miruServiceLifecyle.start();
         this.miruService = miruServiceLifecyle.getService();

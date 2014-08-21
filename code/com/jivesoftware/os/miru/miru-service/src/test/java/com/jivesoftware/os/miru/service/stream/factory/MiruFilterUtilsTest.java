@@ -2,9 +2,11 @@ package com.jivesoftware.os.miru.service.stream.factory;
 
 import com.google.common.base.Optional;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.googlecode.javaewah.IntIterator;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
@@ -25,54 +27,54 @@ import static org.testng.Assert.fail;
 public class MiruFilterUtilsTest {
 
     @Test(dataProvider = "evenTimeIndexDataProvider")
-    public void testBuildEvenTimeRangeMask(MiruFilterUtils utils, MiruTimeIndex miruTimeIndex) throws Exception {
+    public <BM> void testBuildEvenTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruFilterUtils utils, MiruTimeIndex miruTimeIndex) throws Exception {
         final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
         for (int lower = 0; lower <= size / 2; lower++) {
             int upper = size - 1 - lower;
 
-            EWAHCompressedBitmap bitmap = utils.buildTimeRangeMask(miruTimeIndex, lower, upper);
+            BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper);
             if (lower == 0) {
                 // 0 case is inclusive due to ambiguity
-                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmap, lower, size - 2 * lower);
+                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, lower, size - 2 * lower);
             } else if (lower == upper) {
                 // the lower and upper are the same so there should be nothing left
-                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmap, -1, 0);
+                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, -1, 0);
             } else {
-                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmap, lower + 1, size - 1 - 2 * lower);
+                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, lower + 1, size - 1 - 2 * lower);
             }
         }
     }
 
     @Test(dataProvider = "oddTimeIndexDataProvider")
-    public void testBuildOddTimeRangeMask(MiruFilterUtils utils, MiruTimeIndex miruTimeIndex) throws Exception {
+    public <BM> void testBuildOddTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruFilterUtils utils, MiruTimeIndex miruTimeIndex) throws Exception {
         final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         for (int lower = 0; lower < size / 2; lower++) {
             int upper = size - 1 - lower;
 
-            EWAHCompressedBitmap bitmap = utils.buildTimeRangeMask(miruTimeIndex, lower, upper);
+            BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper);
             if (lower == 0) {
                 // 0 case is inclusive due to ambiguity
-                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmap, lower, size - 2 * lower);
+                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, lower, size - 2 * lower);
             } else if (lower == upper) {
                 fail();
             } else {
-                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmap, lower + 1, size - 1 - 2 * lower);
+                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, lower + 1, size - 1 - 2 * lower);
             }
         }
     }
 
     @Test(dataProvider = "singleEntryTimeIndexDataProvider")
-    public void testSingleBitTimeRange(MiruFilterUtils utils, MiruTimeIndex miruTimeIndex) {
-        EWAHCompressedBitmap bitmap = utils.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE);
+    public <BM> void testSingleBitTimeRange(MiruBitmaps<BM> bitmaps, MiruFilterUtils utils, MiruTimeIndex miruTimeIndex) {
+        BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE);
 
-        assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmap, 0, 1);
+        assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, 0, 1);
     }
 
-    private void assertExpectedNumberOfConsecutiveBitsStartingFromN(EWAHCompressedBitmap bitmap, int expectedStartingFrom, int expectedCardinality) {
+    private <BM> void assertExpectedNumberOfConsecutiveBitsStartingFromN(MiruBitmaps<BM> bitmaps, BM bitmap, int expectedStartingFrom, int expectedCardinality) {
         int last = -1;
         int cardinality = 0;
         int startingFrom = -1;
-        IntIterator iter = bitmap.intIterator();
+        MiruIntIterator iter = bitmaps.intIterator(bitmap);
         while (iter.hasNext()) {
             int current = iter.next();
             if (last < 0) {
@@ -89,7 +91,7 @@ public class MiruFilterUtilsTest {
 
     @DataProvider(name = "evenTimeIndexDataProvider")
     public Object[][] evenTimeIndexDataProvider() throws Exception {
-        MiruFilterUtils miruFilterUtils = new MiruFilterUtils();
+        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2));
 
         final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
         final long[] timestamps = new long[size];
@@ -101,14 +103,14 @@ public class MiruFilterUtilsTest {
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(miruInMemoryTimeIndex);
 
         return new Object[][] {
-            { miruFilterUtils, miruInMemoryTimeIndex },
-            { miruFilterUtils, miruOnDiskTimeIndex },
+            { new MiruBitmapsEWAH(2), miruFilterUtils, miruInMemoryTimeIndex },
+            { new MiruBitmapsEWAH(2), miruFilterUtils, miruOnDiskTimeIndex },
         };
     }
 
     @DataProvider(name = "oddTimeIndexDataProvider")
-    public Object[][] oddTimeIndexDataProvider() throws Exception {
-        MiruFilterUtils miruFilterUtils = new MiruFilterUtils();
+    public <BM> Object[][] oddTimeIndexDataProvider(MiruBitmaps<BM> bitmaps) throws Exception {
+        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(bitmaps);
 
         final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         final long[] timestamps = new long[size];
@@ -127,15 +129,15 @@ public class MiruFilterUtilsTest {
 
     @DataProvider(name = "singleEntryTimeIndexDataProvider")
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
-        MiruFilterUtils miruFilterUtils = new MiruFilterUtils();
+        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2));
 
         final long[] timestamps = new long[] { System.currentTimeMillis() };
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(timestamps);
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(miruInMemoryTimeIndex);
 
         return new Object[][] {
-            { miruFilterUtils, miruInMemoryTimeIndex },
-            { miruFilterUtils, miruOnDiskTimeIndex },
+            { new MiruBitmapsEWAH(2), miruFilterUtils, miruInMemoryTimeIndex },
+            { new MiruBitmapsEWAH(2), miruFilterUtils, miruOnDiskTimeIndex },
         };
     }
 

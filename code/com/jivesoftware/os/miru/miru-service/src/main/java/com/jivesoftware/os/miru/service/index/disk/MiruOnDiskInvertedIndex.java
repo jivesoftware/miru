@@ -1,56 +1,58 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.stream.filter.MatchNoMoreThanNBitmapStorage;
 import java.io.DataInput;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /** @author jonathan */
-public class MiruOnDiskInvertedIndex implements MiruInvertedIndex, BulkImport<EWAHCompressedBitmap> {
+public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkImport<BM> {
 
+    private final MiruBitmaps<BM> bitmaps;
     private final SwappableFiler filer;
     private final int startPosition;
 
-    public MiruOnDiskInvertedIndex(SwappableFiler filer) {
-        this(filer, 0);
+    public MiruOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps, SwappableFiler filer) {
+        this(bitmaps, filer, 0);
     }
 
-    public MiruOnDiskInvertedIndex(SwappableFiler filer, int startPosition) {
+    public MiruOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps, SwappableFiler filer, int startPosition) {
+        this.bitmaps = bitmaps;
         this.filer = filer;
         this.startPosition = startPosition;
     }
 
     @Override
-    public EWAHCompressedBitmap getIndex() throws Exception {
-        EWAHCompressedBitmap index = new EWAHCompressedBitmap();
+    public BM getIndex() throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
             filer.seek(startPosition);
             DataInput dataInput = FilerIO.asDataInput(filer);
             if (dataInput.readInt() > 0) {
                 filer.seek(startPosition);
-                index.deserialize(dataInput);
+                return bitmaps.deserialize(dataInput);
             }
         }
-        return index;
+        return bitmaps.create();
     }
 
     @Override
     public void append(int id) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            EWAHCompressedBitmap index = getIndex();
-            if (!index.set(id)) {
+            BM index = getIndex();
+            if (!bitmaps.set(index, id)) {
                 throw new RuntimeException("id must be in increasing order"
                     + ", id = " + id
-                    + ", cardinality = " + index.cardinality()
-                    + ", size in bits = " + index.sizeInBits());
+                    + ", cardinality = " + bitmaps.cardinality(index)
+                    + ", size in bits = " + bitmaps.sizeInBits(index));
             }
             setIndex(index);
         }
@@ -60,75 +62,83 @@ public class MiruOnDiskInvertedIndex implements MiruInvertedIndex, BulkImport<EW
     public void appendAndExtend(List<Integer> ids, int lastId) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            EWAHCompressedBitmap index = getIndex();
-            if (ids.isEmpty() && index.sizeInBits() == lastId + 1) {
+            BM index = getIndex();
+            if (ids.isEmpty() && bitmaps.sizeInBits(index) == lastId + 1) {
                 return;
             }
             for (int id : ids) {
-                if (!index.set(id)) {
+                if (!bitmaps.set(index, id)) {
                     throw new RuntimeException("id must be in increasing order"
                         + ", id = " + id
-                        + ", cardinality = " + index.cardinality()
-                        + ", size in bits = " + index.sizeInBits());
+                        + ", cardinality = " + bitmaps.cardinality(index)
+                        + ", size in bits = " + bitmaps.sizeInBits(index));
                 }
             }
-            index.setSizeInBits(lastId + 1, false);
+            bitmaps.extend(index, lastId + 1);
             setIndex(index);
         }
     }
 
     @Override
     public void remove(int id) throws Exception { // Kinda crazy expensive way to remove an intermediary bit.
-        EWAHCompressedBitmap remove = new EWAHCompressedBitmap();
-        remove.set(id);
+        BM remove= bitmaps.create();
+        bitmaps.set(remove, id);
         synchronized (filer.lock()) {
             filer.sync();
-            EWAHCompressedBitmap r = andNotToSourceSize(getIndex(), remove);
+            BM r = bitmaps.create();
+            bitmaps.andNot(r, getIndex(), Collections.singletonList(remove));
             setIndex(r);
         }
     }
 
     @Override
     public void set(int id) throws Exception { // Kinda crazy expensive way to set an intermediary bit.
-        EWAHCompressedBitmap set = new EWAHCompressedBitmap();
-        set.set(id);
+        BM set = bitmaps.create();
+        bitmaps.set(set, id);
         synchronized (filer.lock()) {
             filer.sync();
-            EWAHCompressedBitmap r = getIndex().or(set);
+            BM r= bitmaps.create();
+            bitmaps.or(r, Arrays.asList(getIndex(), set));
             setIndex(r);
         }
     }
 
     @Override
-    public void andNot(EWAHCompressedBitmap mask) throws Exception {
+    public void andNot(BM mask) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            setIndex(getIndex().andNot(mask));
+            BM r= bitmaps.create();
+            bitmaps.andNot(r, getIndex(), Collections.singletonList(mask));
+            setIndex(r);
         }
     }
 
     @Override
-    public void or(EWAHCompressedBitmap mask) throws Exception {
+    public void or(BM mask) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            setIndex(getIndex().or(mask));
+            BM r= bitmaps.create();
+            bitmaps.or(r, Arrays.asList(getIndex(), mask));
+            setIndex(r);
         }
     }
 
     @Override
-    public void andNotToSourceSize(EWAHCompressedBitmap mask) throws Exception {
+    public void andNotToSourceSize(BM mask) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            EWAHCompressedBitmap andNot = andNotToSourceSize(getIndex(), mask);
+            BM andNot = bitmaps.create();
+            bitmaps.andNotToSourceSize(andNot, getIndex(), mask);
             setIndex(andNot);
         }
     }
 
     @Override
-    public void orToSourceSize(EWAHCompressedBitmap mask) throws Exception {
+    public void orToSourceSize(BM mask) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            EWAHCompressedBitmap or = orToSourceSize(getIndex(), mask);
+            BM or = bitmaps.create();
+            bitmaps.orToSourceSize(or, getIndex(), mask);
             setIndex(or);
         }
     }
@@ -143,36 +153,22 @@ public class MiruOnDiskInvertedIndex implements MiruInvertedIndex, BulkImport<EW
         return filer.length();
     }
 
-    private void setIndex(EWAHCompressedBitmap index) throws Exception {
+    private void setIndex(BM index) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
             filer.seek(0);
             byte[] initialBytes = new byte[startPosition];
             FilerIO.read(filer, initialBytes);
 
-            SwappingFiler swap = filer.swap(startPosition + index.serializedSizeInBytes());
+            SwappingFiler swap = filer.swap(startPosition + bitmaps.serializedSizeInBytes(index));
             FilerIO.write(swap, initialBytes);
-            index.serialize(FilerIO.asDataOutput(swap));
+            bitmaps.serialize(index, FilerIO.asDataOutput(swap));
             swap.commit();
         }
     }
 
-    private EWAHCompressedBitmap orToSourceSize(EWAHCompressedBitmap source, EWAHCompressedBitmap mask) {
-        EWAHCompressedBitmap result = new EWAHCompressedBitmap();
-        MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(result, source.sizeInBits());
-        source.orToContainer(mask, matchNoMoreThanNBitmapStorage);
-        return result;
-    }
-
-    private EWAHCompressedBitmap andNotToSourceSize(EWAHCompressedBitmap source, EWAHCompressedBitmap mask) {
-        EWAHCompressedBitmap result = new EWAHCompressedBitmap();
-        MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(result, source.sizeInBits());
-        source.andNotToContainer(mask, matchNoMoreThanNBitmapStorage);
-        return result;
-    }
-
     @Override
-    public void bulkImport(BulkExport<EWAHCompressedBitmap> importItems) throws Exception {
+    public void bulkImport(BulkExport<BM> importItems) throws Exception {
         setIndex(importItems.bulkExport());
     }
 }

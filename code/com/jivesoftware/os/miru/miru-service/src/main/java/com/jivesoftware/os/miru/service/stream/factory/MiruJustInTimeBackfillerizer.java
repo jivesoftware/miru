@@ -2,9 +2,6 @@ package com.jivesoftware.os.miru.service.stream.factory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import com.googlecode.javaewah.BitmapStorage;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.googlecode.javaewah.IntIterator;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -17,6 +14,8 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.property.MiruPropertyName;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.service.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.query.base.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
@@ -30,20 +29,23 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** @author jonathan */
-public class MiruJustInTimeBackfillerizer {
+public class MiruJustInTimeBackfillerizer<BM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+
     private final MiruHost localHost;
+    private final MiruBitmaps<BM> bitmaps;
     private final ExecutorService backfillExecutor;
 
-    public MiruJustInTimeBackfillerizer(MiruHost localHost, ExecutorService backfillExecutor) {
+    public MiruJustInTimeBackfillerizer(MiruHost localHost, MiruBitmaps<BM> bitmaps, ExecutorService backfillExecutor) {
         this.localHost = localHost;
+        this.bitmaps = bitmaps;
         this.backfillExecutor = backfillExecutor;
     }
 
     public void backfill(final MiruQueryStream stream, final MiruFilter streamFilter, final MiruTenantId tenantId,
-        final MiruPartitionId partitionId, final MiruStreamId streamId, final int bitsetBufferSize) throws Exception {
+        final MiruPartitionId partitionId, final MiruStreamId streamId) throws Exception {
 
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
         Future<?> future = backfillExecutor.submit(new Callable<Void>() {
@@ -54,8 +56,8 @@ public class MiruJustInTimeBackfillerizer {
                     synchronized (stream.streamLocks.lock(streamId)) {
                         int lastActivityIndex = stream.inboxIndex.getLastActivityIndex(streamId);
                         int lastId = Math.min(stream.timeIndex.lastId(), stream.activityIndex.lastId());
-                        EWAHCompressedBitmap answer = new ExecuteMiruFilter(stream.schema, stream.fieldIndex, stream.executorService,
-                            streamFilter, Optional.<BitmapStorage>absent(), lastActivityIndex, bitsetBufferSize).call();
+                        BM answer = new ExecuteMiruFilter<BM>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
+                            streamFilter, Optional.<BM>absent(), lastActivityIndex).call();
 
                         MiruInvertedIndexAppender inbox = stream.inboxIndex.getAppender(streamId);
                         MiruInvertedIndexAppender unread = stream.unreadTrackingIndex.getAppender(streamId);
@@ -69,7 +71,7 @@ public class MiruJustInTimeBackfillerizer {
 
                         long oldestBackfilledEventId = Long.MAX_VALUE;
                         //TODO more efficient way to merge answer into inbox and unread
-                        IntIterator intIterator = answer.intIterator();
+                        MiruIntIterator intIterator = bitmaps.intIterator(answer);
                         List<Integer> inboxIds = Lists.newLinkedList();
                         List<Integer> unreadIds = Lists.newLinkedList();
                         while (intIterator.hasNext()) {

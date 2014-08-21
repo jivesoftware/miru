@@ -10,9 +10,9 @@ public class MiruSolvable<R> implements Callable<R> {
 
     private final MiruPartitionCoord coord;
     private final Callable<R> callable;
-    private final Class<? extends ExecuteQuery<?, ?>> queryClass;
+    private final String queryClass;
 
-    public MiruSolvable(MiruPartitionCoord coord, Callable<R> callable, Class<? extends ExecuteQuery<?, ?>> queryClass) {
+    public MiruSolvable(MiruPartitionCoord coord, Callable<R> callable, String queryClass) {
         this.coord = coord;
         this.callable = callable;
         this.queryClass = queryClass;
@@ -22,7 +22,7 @@ public class MiruSolvable<R> implements Callable<R> {
         return coord;
     }
 
-    public Class<? extends ExecuteQuery<?, ?>> getQueryClass() {
+    public String getQueryClass() {
         return queryClass;
     }
 

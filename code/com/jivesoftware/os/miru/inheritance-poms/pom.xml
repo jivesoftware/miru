@@ -18,5 +18,6 @@
         <module>global-version-management</module>
         <module>shared-lib-build-management</module>
         <module>shared-lib-version-management</module>
+        <module>upena-deployable-management</module>
     </modules>
 </project>

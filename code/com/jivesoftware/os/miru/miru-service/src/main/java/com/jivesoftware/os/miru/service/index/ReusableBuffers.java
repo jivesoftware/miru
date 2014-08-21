@@ -1,31 +1,30 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 
 /**
- * Cycles between buffers with the expectation that each buffer is derived from no more than "size - 1" previous buffers. For example, to aggregate a
- * previous reusable answer plus an additional reusable bitmap into a new answer, "size" must be at least 3. However, if the previous answer is reusable but
- * the additional bitmap is non-reusable, then "size" need only be 2.
+ * Cycles between buffers with the expectation that each buffer is derived from no more than "size - 1" previous buffers. For example, to aggregate a previous
+ * reusable answer plus an additional reusable bitmap into a new answer, "size" must be at least 3. However, if the previous answer is reusable but the
+ * additional bitmap is non-reusable, then "size" need only be 2.
  */
-public class ReusableBuffers {
+public class ReusableBuffers<BM> {
 
     private int index = 0;
-    private final EWAHCompressedBitmap[] bufs;
+    private final MiruBitmaps<BM> bitmaps;
+    private final BM[] bufs;
 
-    public ReusableBuffers(int size) {
-        this.bufs = new EWAHCompressedBitmap[size];
-        for (int i = 0; i < size; i++) {
-            bufs[i] = new EWAHCompressedBitmap();
-        }
+    public ReusableBuffers(MiruBitmaps<BM> bitmaps, int size) {
+        this.bitmaps = bitmaps;
+        this.bufs = bitmaps.createArrayOf(size);
     }
 
-    public EWAHCompressedBitmap next() {
-        EWAHCompressedBitmap buf = bufs[index++ % bufs.length];
-        buf.clear();
+    public BM next() {
+        BM buf = bufs[index++ % bufs.length];
+        bitmaps.clear(buf);
         return buf;
     }
 
-    public void retain(EWAHCompressedBitmap keep, EWAHCompressedBitmap replaceWith) {
+    public void retain(BM keep, BM replaceWith) {
         for (int i = 0; i < bufs.length; i++) {
             if (bufs[i] == keep) {
                 bufs[i] = replaceWith;

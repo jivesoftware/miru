@@ -18,9 +18,9 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.hash.HashFunction;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.googlecode.javaewah.IntIterator;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.service.bitmap.MiruIntIterator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,7 +29,7 @@ import java.util.List;
  *
  * @author jonathan
  */
-public class BloomIndex {
+public class BloomIndex<BM> {
 
     static public interface HasValue {
 
@@ -41,11 +41,13 @@ public class BloomIndex {
         void mightContain(V value);
     }
 
+    private final MiruBitmaps<BM> bitmaps;
     private final HashFunction hashFunction;
     private final int numBits;
     private final int numHashFunctions;
 
-    public BloomIndex(HashFunction hashFunction, int expectedInsertions, float falsePositiveProbability) {
+    public BloomIndex(MiruBitmaps<BM> bitmaps,HashFunction hashFunction, int expectedInsertions, float falsePositiveProbability) {
+        this.bitmaps = bitmaps;
         this.hashFunction = hashFunction;
 
         long disiredBits = optimalNumOfBits(expectedInsertions, falsePositiveProbability);
@@ -75,9 +77,9 @@ public class BloomIndex {
             createBitIndexesForValue(key.getBytes(), numHashFunctions, bitIndexes);
         }
         Collections.sort(bitIndexes);
-        EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap(bitIndexes.size());
+        BM bitmap = bitmaps.create();
         for (Integer bitIndex : bitIndexes) {
-            bitmap.set(bitIndex);
+            bitmaps.set(bitmap, bitIndex);
         }
         bloomIndex.or(bitmap);
     }
@@ -102,10 +104,10 @@ public class BloomIndex {
     }
 
 
-    public <V extends HasValue> void mightContain(MiruInvertedIndex bloomIndex, List<Mights<V>> mights, MightContain<V> contains) throws Exception {
+    public <V extends HasValue> void mightContain(MiruInvertedIndex<BM> bloomIndex, List<Mights<V>> mights, MightContain<V> contains) throws Exception {
 
-        EWAHCompressedBitmap bloomEWAH = bloomIndex.getIndex();
-        IntIterator setBits = bloomEWAH.intIterator();
+        BM bloomBitmap = bloomIndex.getIndex();
+        MiruIntIterator setBits = bitmaps.intIterator(bloomBitmap);
         if (setBits.hasNext()) {
             int cursor = setBits.next();
             for (Mights<V> e : mights) {
@@ -131,7 +133,7 @@ public class BloomIndex {
 
     }
 
-    public final class Mights<K extends HasValue> implements Comparable<Mights<K>>{
+    public static  final class Mights<K extends HasValue> implements Comparable<Mights<K>>{
         final int bitIndex;
         final List<Might<K>> mights;
 

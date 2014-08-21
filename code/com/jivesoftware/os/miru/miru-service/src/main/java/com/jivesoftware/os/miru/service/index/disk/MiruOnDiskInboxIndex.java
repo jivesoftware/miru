@@ -1,13 +1,13 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInboxIndex;
@@ -18,11 +18,13 @@ import java.io.File;
 import java.util.Map;
 
 /** @author jonathan */
-public class MiruOnDiskInboxIndex implements MiruInboxIndex, BulkImport<InboxAndLastActivityIndex> {
+public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<InboxAndLastActivityIndex<BM>> {
 
+    private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
 
-    public MiruOnDiskInboxIndex(File mapDirectory, File swapDirectory, ChunkStore chunkStore) throws Exception {
+    public MiruOnDiskInboxIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, ChunkStore chunkStore) throws Exception {
+        this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
         this.index = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 8, 100, chunkStore, 512);
     }
@@ -33,12 +35,12 @@ public class MiruOnDiskInboxIndex implements MiruInboxIndex, BulkImport<InboxAnd
     }
 
     @Override
-    public Optional<EWAHCompressedBitmap> getInbox(MiruStreamId streamId) throws Exception {
+    public Optional<BM> getInbox(MiruStreamId streamId) throws Exception {
         SwappableFiler filer = index.get(streamId.getBytes(), false);
         if (filer == null) {
             return Optional.absent();
         }
-        return Optional.<EWAHCompressedBitmap>of(new MiruOnDiskInvertedIndex(filer, 4).getIndex());
+        return Optional.<BM>of(new MiruOnDiskInvertedIndex<>(bitmaps, filer, 4).getIndex());
     }
 
     @Override
@@ -48,7 +50,7 @@ public class MiruOnDiskInboxIndex implements MiruInboxIndex, BulkImport<InboxAnd
             filer = index.get(streamId.getBytes(), true);
             setLastActivityIndex(streamId, -1); // Initialize lastActivityIndex to -1 when we create the on-disk index
         }
-        return new MiruOnDiskInvertedIndex(filer, 4);
+        return new MiruOnDiskInvertedIndex<>(bitmaps, filer, 4);
     }
 
     @Override
@@ -90,10 +92,10 @@ public class MiruOnDiskInboxIndex implements MiruInboxIndex, BulkImport<InboxAnd
     }
 
     @Override
-    public void bulkImport(BulkExport<InboxAndLastActivityIndex> importItems) throws Exception {
-        InboxAndLastActivityIndex bulkImport = importItems.bulkExport();
+    public void bulkImport(BulkExport<InboxAndLastActivityIndex<BM>> importItems) throws Exception {
+        InboxAndLastActivityIndex<BM> bulkImport = importItems.bulkExport();
 
-        for (final Map.Entry<MiruStreamId, MiruInvertedIndex> entry : bulkImport.index.entrySet()) {
+        for (final Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : bulkImport.index.entrySet()) {
             SwappableFiler filer = index.get(entry.getKey().getBytes(), true);
 
             synchronized (filer.lock()) {
@@ -106,10 +108,10 @@ public class MiruOnDiskInboxIndex implements MiruInboxIndex, BulkImport<InboxAnd
                 }
             }
 
-            MiruOnDiskInvertedIndex miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex(filer, 4);
-            miruOnDiskInvertedIndex.bulkImport(new BulkExport<EWAHCompressedBitmap>() {
+            MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer, 4);
+            miruOnDiskInvertedIndex.bulkImport(new BulkExport<BM>() {
                 @Override
-                public EWAHCompressedBitmap bulkExport() throws Exception {
+                public BM bulkExport() throws Exception {
                     return entry.getValue().getIndex();
                 }
             });

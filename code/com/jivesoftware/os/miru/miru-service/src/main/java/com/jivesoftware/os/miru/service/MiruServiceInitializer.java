@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.partition.MiruLocalPartitionFactory;
@@ -39,7 +40,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public final class MiruServiceInitializer {
+public final class MiruServiceInitializer<BM> {
 
     public MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
             MiruRegistryStore registryStore,
@@ -48,7 +49,8 @@ public final class MiruServiceInitializer {
             MiruSchema miruSchema,
             MiruWAL wal,
             HttpClientFactory httpClientFactory,
-            MiruResourceLocatorProvider resourceLocatorProvider) throws IOException {
+            MiruResourceLocatorProvider resourceLocatorProvider,
+            MiruBitmaps<BM> bitmaps) throws IOException {
 
         final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(6);//TODO expose to config
 
@@ -59,7 +61,7 @@ public final class MiruServiceInitializer {
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount());
-        MiruStreamFactory streamFactory = new MiruStreamFactory(
+        MiruStreamFactory<BM> streamFactory = new MiruStreamFactory<>(bitmaps,
                 miruSchema,
                 streamFactoryExecutor,
                 readTrackingWALReader,
@@ -108,9 +110,9 @@ public final class MiruServiceInitializer {
                 config.getDefaultFailAfterNMillis());
 
         final ExecutorService backfillExecutor = Executors.newFixedThreadPool(10);//TODO expose to config
-        MiruJustInTimeBackfillerizer backfillerizer = new MiruJustInTimeBackfillerizer(miruHost, backfillExecutor);
+        MiruJustInTimeBackfillerizer<BM> backfillerizer = new MiruJustInTimeBackfillerizer<>(miruHost, bitmaps, backfillExecutor);
 
-        final MiruService miruService = new MiruService(
+        final MiruService<BM> miruService = new MiruService<>(
                 miruHost,
                 serviceExecutor,
                 scheduledExecutor,
@@ -120,7 +122,7 @@ public final class MiruServiceInitializer {
                 activityWALWriter,
                 activityLookupTable,
                 solver,
-                config.getBitsetBufferSize());
+                bitmaps);
 
         return new MiruLifecyle() {
 

@@ -105,12 +105,12 @@ public class MiruHostedPartitionComparison {
         }
     }
 
-    public <T extends ExecuteQuery<?, ?>> Optional<Long> suggestTimeout(MiruTenantId tenantId, MiruPartitionId partitionId, Class<T> queryClass) {
+    public <T extends ExecuteQuery<?, ?>> Optional<Long> suggestTimeout(MiruTenantId tenantId, MiruPartitionId partitionId, String queryClass) {
         RunningPercentile runningPercentile = queryPercentile.get(new TenantPartitionAndQuery(tenantId, partitionId, queryClass));
         if (runningPercentile != null) {
             long suggestion = runningPercentile.get();
             if (suggestion > 0) {
-                log.debug("Suggested {} for {} {} {}", suggestion, tenantId, partitionId, queryClass.getSimpleName());
+                log.debug("Suggested {} for {} {} {}", suggestion, tenantId, partitionId, queryClass);
                 return Optional.of(suggestion);
             }
         }
@@ -121,9 +121,9 @@ public class MiruHostedPartitionComparison {
 
         private final MiruTenantId tenantId;
         private final MiruPartitionId partitionId;
-        private final Class<? extends ExecuteQuery<?, ?>> queryClass;
+        private final String queryClass;
 
-        private TenantPartitionAndQuery(MiruTenantId tenantId, MiruPartitionId partitionId, Class<? extends ExecuteQuery<?, ?>> queryClass) {
+        private TenantPartitionAndQuery(MiruTenantId tenantId, MiruPartitionId partitionId, String queryClass) {
             this.tenantId = tenantId;
             this.partitionId = partitionId;
             this.queryClass = queryClass;

@@ -38,17 +38,18 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.service.reader.MiruReaderImpl;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.MiruTempResourceLocatorProviderInitializer;
-import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
+import com.jivesoftware.os.miru.service.reader.MiruReaderImpl;
 import com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
+import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import java.util.Collections;
 import java.util.HashSet;
@@ -115,7 +116,8 @@ public class InMemoryMiruReaderWriterEndpointsTest {
                 new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA),
                 wal,
                 httpClientFactory,
-                miruResourceLocatorProviderLifecyle.getService());
+                miruResourceLocatorProviderLifecyle.getService(),
+                new MiruBitmapsEWAH(2)); // TODO consider feed wth data provider
 
         miruServiceLifecyle.start();
         MiruService miruService = miruServiceLifecyle.getService();

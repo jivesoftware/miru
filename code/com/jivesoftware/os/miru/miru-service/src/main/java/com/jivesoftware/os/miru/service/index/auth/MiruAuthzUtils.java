@@ -2,36 +2,35 @@ package com.jivesoftware.os.miru.service.index.auth;
 
 import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.googlecode.javaewah.FastAggregation;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import java.util.List;
 
 /**
  *
  */
-public class MiruAuthzUtils {
+public class MiruAuthzUtils<BM> {
 
     private static final BaseEncoding coder = BaseEncoding.base32().lowerCase().omitPadding();
 
-    private final int bitsetBufferSize;
+    private final MiruBitmaps<BM> bitmaps;
 
-    public MiruAuthzUtils(int bitsetBufferSize) {
-        this.bitsetBufferSize = bitsetBufferSize;
+    public MiruAuthzUtils(MiruBitmaps<BM> bitmaps) {
+        this.bitmaps = bitmaps;
     }
 
-    public EWAHCompressedBitmap getCompositeAuthz(MiruAuthzExpression authzExpression, IndexRetriever retriever) throws Exception {
-        List<EWAHCompressedBitmap> orClauses = Lists.newArrayList();
+    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, IndexRetriever<BM> retriever) throws Exception {
+        List<BM> orClauses = Lists.newArrayList();
         for (String value : authzExpression.values) {
-            EWAHCompressedBitmap valueIndex = retriever.getIndex(value);
+            BM valueIndex = retriever.getIndex(value);
 
             if (valueIndex != null) {
                 orClauses.add(valueIndex);
             }
         }
-        EWAHCompressedBitmap got = new EWAHCompressedBitmap();
+        BM got = bitmaps.create();
         if (!orClauses.isEmpty()) {
-            FastAggregation.bufferedorWithContainer(got, bitsetBufferSize, orClauses.toArray(new EWAHCompressedBitmap[orClauses.size()]));
+            bitmaps.or(got, orClauses);
         }
         return got;
     }
@@ -44,8 +43,8 @@ public class MiruAuthzUtils {
         return coder.decode(chars);
     }
 
-    public static interface IndexRetriever {
+    public static interface IndexRetriever<BM2> {
 
-        EWAHCompressedBitmap getIndex(String authz) throws Exception;
+        BM2 getIndex(String authz) throws Exception;
     }
 }

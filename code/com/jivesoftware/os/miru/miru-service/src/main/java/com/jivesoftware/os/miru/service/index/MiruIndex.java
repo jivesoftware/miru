@@ -6,11 +6,11 @@ import com.google.common.base.Optional;
  *
  * @author jonathan
  */
-public interface MiruIndex {
+public interface MiruIndex<BM> {
 
-    Optional<MiruInvertedIndex> get(int fieldId, int termId) throws Exception;
+    Optional<MiruInvertedIndex<BM>> get(int fieldId, int termId) throws Exception;
 
-    MiruInvertedIndex allocate(int fieldId, int termId) throws Exception;
+    MiruInvertedIndex<BM> allocate(int fieldId, int termId) throws Exception;
 
     void index(int fieldId, int termId, int id) throws Exception;
 

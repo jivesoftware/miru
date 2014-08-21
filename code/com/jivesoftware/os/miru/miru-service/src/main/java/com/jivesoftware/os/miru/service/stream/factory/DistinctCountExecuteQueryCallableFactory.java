@@ -25,7 +25,7 @@ public class DistinctCountExecuteQueryCallableFactory implements ExecuteQueryCal
                 return replica.createCountCollector(executeQuery).collect(result);
             }
         };
-        return new MiruSolvable<>(replica.getCoord(), tracedCallable, (Class<ExecuteQuery<?, ?>>) executeQuery.getClass());
+        return new MiruSolvable<>(replica.getCoord(), tracedCallable, executeQuery.getClass().getCanonicalName());
     }
 
     @Override
