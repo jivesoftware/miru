@@ -53,8 +53,19 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public boolean extend(EWAHCompressedBitmap bitmap, int i) {
-        return bitmap.setSizeInBits(i, false);
+    public void extend(EWAHCompressedBitmap bitmap, List<Integer> indexes, int extendToIndex) {
+        if (indexes.isEmpty() && bitmap.sizeInBits() == extendToIndex + 1) {
+            return;
+        }
+        for (int index : indexes) {
+            if (!bitmap.set(index)) {
+                throw new RuntimeException("id must be in increasing order"
+                        + ", index = " + index
+                        + ", cardinality = " + bitmap.cardinality()
+                        + ", size in bits = " + bitmap.sizeInBits());
+            }
+        }
+        bitmap.setSizeInBits(extendToIndex, false);
     }
 
     @Override

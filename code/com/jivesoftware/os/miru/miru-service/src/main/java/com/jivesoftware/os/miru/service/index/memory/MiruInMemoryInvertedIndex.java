@@ -82,18 +82,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     public void appendAndExtend(List<Integer> ids, int lastId) throws Exception {
         synchronized (write) {
             BM bitmap = writer();
-            if (ids.isEmpty() && bitmaps.sizeInBits(bitmap) == lastId + 1) {
-                return;
-            }
-            for (int id : ids) {
-                if (!bitmaps.set(bitmap, id)) {
-                    throw new RuntimeException("id must be in increasing order"
-                        + ", id = " + id
-                        + ", cardinality = " + bitmaps.cardinality(bitmap)
-                        + ", size in bits = " + bitmaps.sizeInBits(bitmap));
-                }
-            }
-            bitmaps.extend(bitmap, lastId + 1);
+            bitmaps.extend(bitmap, ids, lastId + 1);
             markForMerge();
         }
     }

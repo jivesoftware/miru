@@ -36,7 +36,7 @@ public interface MiruBitmaps<BM> {
 
     boolean isSet(BM bitmap, int i);
 
-    boolean extend(BM bitmap, int i);
+    void extend(BM bitmap, List<Integer> indexes, int extendToIndex);
 
     void clear(BM bitmap);
 
@@ -79,8 +79,8 @@ public interface MiruBitmaps<BM> {
         public long cardinality;
         public int lastSetBit;
 
-        public CardinalityAndLastSetBit(long cardintality, int lastSetBit) {
-            this.cardinality = cardintality;
+        public CardinalityAndLastSetBit(long cardinality, int lastSetBit) {
+            this.cardinality = cardinality;
             this.lastSetBit = lastSetBit;
         }
     }

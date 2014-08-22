@@ -27,7 +27,7 @@ public class RecoResult {
 
     @Override
     public String toString() {
-        return "TrendingResult{"
+        return "RecoResult{"
                 + "results=" + results
                 + '}';
     }

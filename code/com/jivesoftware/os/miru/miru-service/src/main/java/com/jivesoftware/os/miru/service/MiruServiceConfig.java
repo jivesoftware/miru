@@ -42,6 +42,7 @@ public interface MiruServiceConfig extends Config {
 
     @LongDefault(3000)
     long getDefaultFailAfterNMillis();
+    void setDefaultFailAfterNMillis(long millis);
 
     @IntDefault(1000)
     int getPartitionRebuildBatchSize();

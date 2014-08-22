@@ -42,6 +42,7 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
 import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
@@ -82,6 +83,7 @@ public class MiruCollaborativeFilterNGTest {
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultStorage(disiredStorage.name());
+        config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
 
         MiruHost miruHost = new MiruHost("logicalName", 1234);
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
@@ -116,7 +118,8 @@ public class MiruCollaborativeFilterNGTest {
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
-                new MiruBitmapsEWAH(4));
+                //new MiruBitmapsRoaring());
+                new MiruBitmapsEWAH(config.getBitsetBufferSize()));
 
         miruServiceLifecyle.start();
         MiruService miruService = miruServiceLifecyle.getService();
@@ -139,6 +142,11 @@ public class MiruCollaborativeFilterNGTest {
         return (long) (-n * Math.log(p) / (Math.log(2) * Math.log(2)));
     }
 
+
+    //recoResult:RecoResult{results=[Recommendation{, distinctValue=939, rank=57.0}, Recommendation{, distinctValue=776, rank=55.0}, Recommendation{, distinctValue=713, rank=46.0}, Recommendation{, distinctValue=576, rank=45.0}, Recommendation{, distinctValue=147, rank=44.0}, Recommendation{, distinctValue=746, rank=44.0}, Recommendation{, distinctValue=74, rank=44.0}, Recommendation{, distinctValue=412, rank=43.0}, Recommendation{, distinctValue=363, rank=43.0}, Recommendation{, distinctValue=582, rank=42.0}]}
+    //recoResult:RecoResult{results=[Recommendation{, distinctValue=939, rank=57.0}, Recommendation{, distinctValue=776, rank=55.0}, Recommendation{, distinctValue=713, rank=46.0}, Recommendation{, distinctValue=576, rank=45.0}, Recommendation{, distinctValue=147, rank=44.0}, Recommendation{, distinctValue=746, rank=44.0}, Recommendation{, distinctValue=74, rank=44.0}, Recommendation{, distinctValue=412, rank=43.0}, Recommendation{, distinctValue=363, rank=43.0}, Recommendation{, distinctValue=582, rank=42.0}]}
+
+
     @Test(enabled = true)
     public void basicTest() throws Exception {
 
@@ -146,10 +154,10 @@ public class MiruCollaborativeFilterNGTest {
         AtomicInteger time = new AtomicInteger();
         List<MiruPartitionedActivity> activities = new ArrayList<>();
         Random rand = new Random(1234);
-        int numqueries = 100;
-        int numberOfUsers = 1;
-        int numberOfDocument = 1000;
-        int numberOfViewsPerUser = 1;
+        int numqueries = 1_000;
+        int numberOfUsers = 10_000;
+        int numberOfDocument = 10_000;
+        int numberOfViewsPerUser = 100;
         System.out.println("Building activities....");
         long start = System.currentTimeMillis();
         for (int i = 0; i < numberOfUsers; i++) {

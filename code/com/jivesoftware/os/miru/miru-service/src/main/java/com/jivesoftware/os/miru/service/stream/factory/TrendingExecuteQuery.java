@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.service.stream.factory;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.query.TrendingQuery;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
@@ -18,6 +20,8 @@ import java.util.List;
  *
  */
 public class TrendingExecuteQuery<BM> implements ExecuteQuery<TrendingResult, TrendingReport> {
+
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruBitmaps<BM> bitmaps;
     private final MiruFilterUtils<BM> utils;
@@ -59,6 +63,7 @@ public class TrendingExecuteQuery<BM> implements ExecuteQuery<TrendingResult, Tr
 
             return trending;
         } catch (Exception e) {
+            log.error("Trending query failed", e);
             throw e;
         }
     }

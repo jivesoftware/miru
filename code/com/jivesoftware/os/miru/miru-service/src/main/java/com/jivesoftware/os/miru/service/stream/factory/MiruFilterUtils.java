@@ -458,41 +458,45 @@ public class MiruFilterUtils<BM> {
     private RecoResult score(final RecoQuery query, BM join2, MiruQueryStream<BM> stream,
             final BloomIndex<BM> bloomIndex, final List<BloomIndex.Mights<TermCount>> wantBits) throws Exception {
 
-        final MiruField aggregateField3 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName3));
+        final MiruField<BM> aggregateField3 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName3));
 
         final MinMaxPriorityQueue<TermCount> heap = MinMaxPriorityQueue.orderedBy(new Comparator<TermCount>() {
 
             @Override
             public int compare(TermCount o1, TermCount o2) {
-                return -Long.compare(o1.count, o2.count); // mimus to reverse :)
+                return -Long.compare(o1.count, o2.count); // minus to reverse :)
             }
         }).maximumSize(query.resultCount).create();
         // feeds us all recommended documents
-        MiruIntIterator join2iterator = bitmaps.intIterator(join2);
-        while (join2iterator.hasNext()) {
-            int id = join2iterator.next();
-            MiruActivity activity = stream.activityIndex.get(id);
-            MiruTermId[] fieldValues = activity.fieldsValues.get(query.retrieveFieldName3);
-            if (fieldValues != null && fieldValues.length > 0) {
-                Optional<MiruInvertedIndex> invertedIndex = aggregateField3.getInvertedIndex(makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
-                if (invertedIndex.isPresent()) {
-                    MiruInvertedIndex index = invertedIndex.get();
-                    final MutableInt count = new MutableInt(0);
-                    bloomIndex.mightContain(index, wantBits, new BloomIndex.MightContain<TermCount>() {
+        stream(stream, join2, Optional.<BM>absent(), aggregateField3, query.retrieveFieldName3, new CallbackStream<TermCount>() {
 
-                        @Override
-                        public void mightContain(TermCount value) {
-                            count.add(value.count);
+            @Override
+            public TermCount callback(TermCount v) throws Exception {
+                if (v != null) {
+                    MiruTermId[] fieldValues = v.mostRecent.fieldsValues.get(query.retrieveFieldName3);
+                    if (fieldValues != null && fieldValues.length > 0) {
+                        Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField3.getInvertedIndex(makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
+                        if (invertedIndex.isPresent()) {
+                            MiruInvertedIndex index = invertedIndex.get();
+                            final MutableInt count = new MutableInt(0);
+                            bloomIndex.mightContain(index, wantBits, new BloomIndex.MightContain<TermCount>() {
+
+                                @Override
+                                public void mightContain(TermCount value) {
+                                    count.add(value.count);
+                                }
+                            });
+                            heap.add(new TermCount(fieldValues[0], null, count.longValue()));
+
+                            for (BloomIndex.Mights<TermCount> boo : wantBits) {
+                                boo.reset();
+                            }
                         }
-                    });
-                    heap.add(new TermCount(fieldValues[0], null, count.longValue()));
-
-                    for (BloomIndex.Mights<TermCount> boo : wantBits) {
-                        boo.reset();
                     }
                 }
+                return v;
             }
-        }
+        });
 
         List<Recommendation> results = new ArrayList<>();
         for (TermCount result : heap) {
