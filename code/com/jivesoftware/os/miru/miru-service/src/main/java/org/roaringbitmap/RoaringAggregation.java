@@ -1,5 +1,7 @@
 package org.roaringbitmap;
 
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -94,31 +96,29 @@ public class RoaringAggregation {
     public static void andNot(final RoaringBitmap answer, final RoaringBitmap x1,
             final RoaringBitmap x2) {
         int pos1 = 0, pos2 = 0;
-        final int length1 = x1.highLowContainer.size(), length2 = x2.highLowContainer
-                .size();
+        final int length1 = x1.highLowContainer.size(), length2 = x2.highLowContainer.size();
         main:
         if (pos1 < length1 && pos2 < length2) {
-            short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
-            short s2 = x2.highLowContainer.getKeyAtIndex(pos2);
+            RoaringArray.Element[] xa1 = x1.highLowContainer.array;
+            RoaringArray.Element[] xa2 = x2.highLowContainer.array;
+            short s1 = xa1[pos1].key;
+            short s2 = xa2[pos2].key;
             do {
                 if (s1 < s2) {
-                    answer.highLowContainer.appendCopy(
-                            x1.highLowContainer, pos1);
+                    answer.highLowContainer.appendCopy(x1.highLowContainer, pos1);
                     pos1++;
                     if (pos1 == length1) {
                         break main;
                     }
-                    s1 = x1.highLowContainer.getKeyAtIndex(pos1);
+                    s1 = xa1[pos1].key;
                 } else if (s1 > s2) {
                     pos2++;
                     if (pos2 == length2) {
                         break main;
                     }
-                    s2 = x2.highLowContainer.getKeyAtIndex(pos2);
+                    s2 = xa2[pos2].key;
                 } else {
-                    final Container c = x1.highLowContainer
-                            .getContainerAtIndex(pos1)
-                            .andNot(x2.highLowContainer.getContainerAtIndex(pos2));
+                    final Container c = xa1[pos1].value.andNot(xa2[pos2].value);
                     if (c.getCardinality() > 0) {
                         answer.highLowContainer.append(s1, c);
                     }
@@ -127,8 +127,8 @@ public class RoaringAggregation {
                     if ((pos1 == length1) || (pos2 == length2)) {
                         break main;
                     }
-                    s1 = x1.highLowContainer.getKeyAtIndex(pos1);
-                    s2 = x2.highLowContainer.getKeyAtIndex(pos2);
+                    s1 = xa1[pos1].key;
+                    s2 = xa2[pos2].key;
                 }
             }
             while (true);

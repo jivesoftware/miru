@@ -23,15 +23,12 @@ import com.googlecode.javaewah.IntIterator;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.stream.filter.AnswerCardinalityLastSetBitmapStorage;
 import com.jivesoftware.os.miru.service.stream.filter.MatchNoMoreThanNBitmapStorage;
+
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
+import java.util.*;
 
 /**
- *
  * @author jonathan
  */
 public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
@@ -45,6 +42,16 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     @Override
     public boolean set(EWAHCompressedBitmap bitmap, int i) {
         return bitmap.set(i);
+    }
+
+    @Override
+    public EWAHCompressedBitmap setIntermediate(EWAHCompressedBitmap bitmap, int... indexes) {
+        Arrays.sort(indexes);
+        EWAHCompressedBitmap or = new EWAHCompressedBitmap();
+        for (int bitIndex : indexes) {
+            or.set(bitIndex);
+        }
+        return bitmap.or(or);
     }
 
     @Override
@@ -142,7 +149,8 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(EWAHCompressedBitmap container, EWAHCompressedBitmap original, EWAHCompressedBitmap not) {
+    public CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(EWAHCompressedBitmap container, EWAHCompressedBitmap original,
+            EWAHCompressedBitmap not) {
         AnswerCardinalityLastSetBitmapStorage storage = new AnswerCardinalityLastSetBitmapStorage(container);
         original.andNotToContainer(not, storage);
         return new CardinalityAndLastSetBit(storage.getCount(), storage.getLastSetBit());

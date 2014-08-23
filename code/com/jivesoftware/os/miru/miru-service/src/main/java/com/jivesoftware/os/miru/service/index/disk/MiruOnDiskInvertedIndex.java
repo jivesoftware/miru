@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import java.io.DataInput;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -86,8 +87,17 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
         bitmaps.set(set, id);
         synchronized (filer.lock()) {
             filer.sync();
-            BM r= bitmaps.create();
+            BM r = bitmaps.create();
             bitmaps.or(r, Arrays.asList(getIndex(), set));
+            setIndex(r);
+        }
+    }
+
+    @Override
+    public void setIntermediate(int... ids) throws Exception {
+        synchronized (filer.lock()) {
+            filer.sync();
+            BM r = bitmaps.setIntermediate(getIndex(), ids);
             setIndex(r);
         }
     }

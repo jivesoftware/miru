@@ -1,5 +1,8 @@
 package com.jivesoftware.os.miru.service.index;
 
+import java.io.IOException;
+import java.util.List;
+
 /**
  *
  * @author jonathan
@@ -12,6 +15,8 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
 
     void set(int id) throws Exception;
 
+    void setIntermediate(int... ids) throws Exception;
+
     void andNotToSourceSize(BM mask) throws Exception;
 
     void orToSourceSize(BM mask) throws Exception;
@@ -23,5 +28,4 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
     long sizeInMemory() throws Exception;
 
     long sizeOnDisk() throws Exception;
-
 }

@@ -229,6 +229,6 @@ public class MiruIndexStream<BM> {
     }
 
     private MiruTermId makeComposite(MiruTermId fieldValue, String separator, String fieldName) {
-        return new MiruTermId(Bytes.concat(fieldValue.getBytes(), separator.getBytes(), fieldName.getBytes()));
+        return activityInterner.internTermId(new MiruTermId(Bytes.concat(fieldValue.getBytes(), separator.getBytes(), fieldName.getBytes())));
     }
 }

@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruIntIterator;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -70,26 +71,23 @@ public class BloomIndex<BM> {
         return Math.max(1, (int) Math.round(m / n * Math.log(2)));
     }
 
-    public void put(MiruInvertedIndex bloomIndex, MiruTermId[] keys) throws Exception {
+    public void put(MiruInvertedIndex<BM> bloomIndex, MiruTermId[] keys) throws Exception {
 
-        List<Integer> bitIndexes = new ArrayList<>();
-        for (MiruTermId key : keys) {
-            createBitIndexesForValue(key.getBytes(), numHashFunctions, bitIndexes);
+        int[] bitIndexes = new int[keys.length * numHashFunctions];
+        for (int i = 0; i < keys.length; i++) {
+            MiruTermId key = keys[i];
+            createBitIndexesForValue(key.getBytes(), numHashFunctions, bitIndexes, i * numHashFunctions);
         }
-        Collections.sort(bitIndexes);
-        BM bitmap = bitmaps.create();
-        for (Integer bitIndex : bitIndexes) {
-            bitmaps.set(bitmap, bitIndex);
-        }
-        bloomIndex.or(bitmap);
+        bloomIndex.setIntermediate(bitIndexes);
     }
 
     public <V extends HasValue> List<Mights<V>> wantBits(List<V> keys) {
         ListMultimap<Integer, Might<V>> valueBitIndexes = ArrayListMultimap.create();
         for (V key : keys) {
             Might<V> might = new Might<>(key, numHashFunctions);
-            List<Integer> bitIndexes = createBitIndexesForValue(key.getValue(), numHashFunctions, null);
-            Collections.sort(bitIndexes);
+            int[] bitIndexes = new int[numHashFunctions];
+            createBitIndexesForValue(key.getValue(), numHashFunctions, bitIndexes, 0);
+            Arrays.sort(bitIndexes);
             for (Integer bitIndex : bitIndexes) {
                 valueBitIndexes.put(bitIndex, might);
             }
@@ -97,7 +95,7 @@ public class BloomIndex<BM> {
 
         List<Mights<V>> mights = new ArrayList<>();
         for(Integer key:valueBitIndexes.keySet()) {
-            mights.add(new Mights(key, valueBitIndexes.get(key)));
+            mights.add(new Mights<>(key, valueBitIndexes.get(key)));
         }
         Collections.sort(mights);
         return mights;
@@ -194,10 +192,7 @@ public class BloomIndex<BM> {
 
     }
 
-    private List<Integer> createBitIndexesForValue(byte[] value, int numHashFunctions, List<Integer> bitIndexes) {
-        if (bitIndexes == null) {
-            bitIndexes = new ArrayList<>();
-        }
+    private void createBitIndexesForValue(byte[] value, int numHashFunctions, int[] bitIndexes, int offset) {
         long hash64 = hashFunction.hashBytes(value).asLong();
         int hash1 = (int) hash64;
         int hash2 = (int) (hash64 >>> 32);
@@ -206,9 +201,8 @@ public class BloomIndex<BM> {
             if (nextHash < 0) {
                 nextHash = ~nextHash;
             }
-            bitIndexes.add(nextHash % numBits);
+            bitIndexes[offset + i - 1] = nextHash % numBits;
         }
-        return bitIndexes;
     }
 
 }

@@ -18,19 +18,19 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     private final ReusableBuffers<BM> reusable;
     private final AtomicReference<BM> read;
     private final AtomicReference<BM> write;
-    private final AtomicBoolean needsMerge;
+    private volatile boolean needsMerge;
 
     public MiruInMemoryInvertedIndex(MiruBitmaps<BM> bitmaps) {
         this.bitmaps = bitmaps;
         this.reusable = new ReusableBuffers<>(bitmaps, 3); // screw you not exposing to config!
         this.read = new AtomicReference<>(bitmaps.create());
         this.write = new AtomicReference<>();
-        this.needsMerge = new AtomicBoolean();
+        this.needsMerge = false;
     }
 
     @Override
     public BM getIndex() throws Exception {
-        if (needsMerge.get()) {
+        if (needsMerge) {
             synchronized (write) {
                 merge();
             }
@@ -39,7 +39,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     }
 
     private void markForMerge() {
-        needsMerge.set(true);
+        needsMerge = true;
     }
 
     /* Synchronize externally */
@@ -51,7 +51,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
             write.set(null);
         }
         // flip the flag last, since we don't want getIndex() calls to slip through before the merge is finished
-        needsMerge.set(false);
+        needsMerge = false;
     }
 
     /* Synchronize externally */
@@ -108,6 +108,16 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
             BM bitmap = writer();
             BM r = reusable.next();
             bitmaps.or(r, Arrays.asList(bitmap, set));
+            write.set(r);
+            markForMerge();
+        }
+    }
+
+    @Override
+    public void setIntermediate(int... ids) {
+        synchronized (write) {
+            BM bitmap = writer();
+            BM r = bitmaps.setIntermediate(bitmap, ids);
             write.set(r);
             markForMerge();
         }

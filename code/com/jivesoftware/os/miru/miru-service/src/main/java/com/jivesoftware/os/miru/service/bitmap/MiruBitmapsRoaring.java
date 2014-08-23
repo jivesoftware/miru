@@ -41,6 +41,14 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
+    public RoaringBitmap setIntermediate(RoaringBitmap bitmap, int... indexes) {
+        for (int index : indexes) {
+            bitmap.add(index);
+        }
+        return bitmap;
+    }
+
+    @Override
     public boolean isSet(RoaringBitmap bitmap, int i) {
         return bitmap.contains(i);
     }

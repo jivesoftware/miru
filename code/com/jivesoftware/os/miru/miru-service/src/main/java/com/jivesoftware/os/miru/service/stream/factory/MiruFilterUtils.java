@@ -59,7 +59,7 @@ public class MiruFilterUtils<BM> {
         this.bitmaps = bitmaps;
     }
 
-    public AggregateCountsResult getAggregateCounts(MiruQueryStream stream, AggregateCountsQuery query, Optional<AggregateCountsReport> lastReport,
+    public AggregateCountsResult getAggregateCounts(MiruQueryStream<BM> stream, AggregateCountsQuery query, Optional<AggregateCountsReport> lastReport,
             BM answer, Optional<BM> counter) throws Exception {
 
         log.debug("Get aggregate counts for answer {}", answer);
@@ -197,7 +197,7 @@ public class MiruFilterUtils<BM> {
         return new AggregateCountsResult(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
     }
 
-    public DistinctCountResult numberOfDistincts(MiruQueryStream stream, DistinctCountQuery query, Optional<DistinctCountReport> lastReport,
+    public DistinctCountResult numberOfDistincts(MiruQueryStream<BM> stream, DistinctCountQuery query, Optional<DistinctCountReport> lastReport,
             BM answer) throws Exception {
 
         log.debug("Get number of distincts for answer {}", answer);
@@ -268,7 +268,7 @@ public class MiruFilterUtils<BM> {
         return new DistinctCountResult(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
     }
 
-    public TrendingResult trending(MiruQueryStream stream, TrendingQuery query, Optional<TrendingReport> lastReport, BM answer)
+    public TrendingResult trending(MiruQueryStream<BM> stream, TrendingQuery query, Optional<TrendingReport> lastReport, BM answer)
             throws Exception {
 
         log.debug("Get trending for answer {}", answer);
@@ -285,7 +285,7 @@ public class MiruFilterUtils<BM> {
         List<Trendy> trendies = new ArrayList<>();
         int fieldId = stream.schema.getFieldId(query.aggregateCountAroundField);
         if (fieldId >= 0) {
-            MiruField aggregateField = stream.fieldIndex.getField(fieldId);
+            MiruField<BM> aggregateField = stream.fieldIndex.getField(fieldId);
 
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
             for (MiruTermId aggregateTermId : aggregateTerms) { // Consider
@@ -377,12 +377,14 @@ public class MiruFilterUtils<BM> {
         }
     }
 
-    /*  I have viewd these thing who has also view these things and what other thing have the viewed that I have not.*/
-    RecoResult collaborativeFiltering(MiruQueryStream stream, final RecoQuery query, Optional<RecoReport> report, BM answer) throws Exception {
+    /** I have viewed these things; among others who have also viewed these things, what have they viewed that I have not? */
+    RecoResult collaborativeFiltering(MiruQueryStream<BM> stream, final RecoQuery query, Optional<RecoReport> report, BM answer) throws Exception {
 
         BM contributors = possibleContributors(stream, query, answer);
-        // at this point have all activity for all my documents in join1.
-        MinMaxPriorityQueue<TermCount> contributorHeap = rankContributors(query, stream, contributors);
+        BM otherContributors = bitmaps.create();
+        bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
+        // at this point we have all activity for all my viewed documents in 'contributors', and all activity not my own in 'otherContributors'.
+        MinMaxPriorityQueue<TermCount> contributorHeap = rankContributors(query, stream, otherContributors);
 
         BM contributions = contributions(contributorHeap, stream, query);
 
@@ -391,13 +393,13 @@ public class MiruFilterUtils<BM> {
         final List<BloomIndex.Mights<TermCount>> wantBits = bloomIndex.wantBits(mostLike);
         // TODO handle authz
         BM othersContributions = bitmaps.create();
-        bitmaps.andNot(othersContributions, contributions, Collections.<BM>singletonList(contributors));// remove my activity from all activity around said documents
+        bitmaps.andNot(othersContributions, contributions, Collections.singletonList(contributors)); // remove activity for my viewed documents
         return score(query, othersContributions, stream, bloomIndex, wantBits);
 
     }
 
-    private BM contributions(MinMaxPriorityQueue<TermCount> userHeap, MiruQueryStream stream, RecoQuery query) throws Exception {
-        final MiruField lookupField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.lookupFieldNamed2));
+    private BM contributions(MinMaxPriorityQueue<TermCount> userHeap, MiruQueryStream<BM> stream, RecoQuery query) throws Exception {
+        final MiruField<BM> lookupField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.lookupFieldNamed2));
 
         List<BM> toBeORed = new ArrayList<>();
         for (TermCount tc : userHeap) {
@@ -411,14 +413,14 @@ public class MiruFilterUtils<BM> {
         return r;
     }
 
-    private MinMaxPriorityQueue<TermCount> rankContributors(final RecoQuery query, MiruQueryStream stream, BM join1) throws Exception {
-        MiruField aggregateField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName2));
+    private MinMaxPriorityQueue<TermCount> rankContributors(final RecoQuery query, MiruQueryStream<BM> stream, BM join1) throws Exception {
+        MiruField<BM> aggregateField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName2));
 
         final MinMaxPriorityQueue<TermCount> userHeap = MinMaxPriorityQueue.orderedBy(new Comparator<TermCount>() {
 
             @Override
             public int compare(TermCount o1, TermCount o2) {
-                return -Long.compare(o1.count, o2.count); // mimus to reverse :)
+                return -Long.compare(o1.count, o2.count); // minus to reverse :)
             }
         }).maximumSize(query.resultCount).create(); // overloaded :(
         stream(stream, join1, Optional.<BM>absent(), aggregateField2, query.retrieveFieldName2, new CallbackStream<TermCount>() {
@@ -434,8 +436,8 @@ public class MiruFilterUtils<BM> {
         return userHeap;
     }
 
-    public BM possibleContributors(MiruQueryStream stream, final RecoQuery query, BM answer) throws Exception {
-        MiruField aggregateField1 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName1));
+    public BM possibleContributors(MiruQueryStream<BM> stream, final RecoQuery query, BM answer) throws Exception {
+        MiruField<BM> aggregateField1 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName1));
         // feeds us our docIds
         List<BM> toBeORed = new ArrayList<>();
         MiruIntIterator answerIterator = bitmaps.intIterator(answer);
@@ -477,7 +479,7 @@ public class MiruFilterUtils<BM> {
                     if (fieldValues != null && fieldValues.length > 0) {
                         Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField3.getInvertedIndex(makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
                         if (invertedIndex.isPresent()) {
-                            MiruInvertedIndex index = invertedIndex.get();
+                            MiruInvertedIndex<BM> index = invertedIndex.get();
                             final MutableInt count = new MutableInt(0);
                             bloomIndex.mightContain(index, wantBits, new BloomIndex.MightContain<TermCount>() {
 
@@ -511,7 +513,7 @@ public class MiruFilterUtils<BM> {
 
     private void stream(MiruQueryStream stream, BM answer,
             Optional<BM> counter,
-            MiruField pivotField, String streamField, CallbackStream<TermCount> terms) throws Exception {
+            MiruField<BM> pivotField, String streamField, CallbackStream<TermCount> terms) throws Exception {
 
         final AtomicLong bytesTraversed = new AtomicLong();
         bytesTraversed.addAndGet(bitmaps.sizeInBytes(answer));

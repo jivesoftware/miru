@@ -15,20 +15,25 @@ public class ReusableBuffers<BM> {
 
     public ReusableBuffers(MiruBitmaps<BM> bitmaps, int size) {
         this.bitmaps = bitmaps;
-        this.bufs = bitmaps.createArrayOf(size);
+        this.bufs = null;// bitmaps.createArrayOf(size);
     }
 
     public BM next() {
+        return bitmaps.create();
+        /*
         BM buf = bufs[index++ % bufs.length];
         bitmaps.clear(buf);
         return buf;
+        */
     }
 
     public void retain(BM keep, BM replaceWith) {
+        /*
         for (int i = 0; i < bufs.length; i++) {
             if (bufs[i] == keep) {
                 bufs[i] = replaceWith;
             }
         }
+        */
     }
 }

@@ -127,6 +127,11 @@
             <artifactId>http-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.sf.trove4j</groupId>
+            <artifactId>trove4j</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
             <artifactId>row-column-value-store-inmemory</artifactId>
             <scope>test</scope>

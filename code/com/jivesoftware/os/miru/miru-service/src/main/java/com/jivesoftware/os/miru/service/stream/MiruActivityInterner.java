@@ -67,4 +67,8 @@ public class MiruActivityInterner {
         }
         return termsValues;
     }
+
+    public MiruTermId internTermId(MiruTermId termId) {
+        return termInterner.intern(termId);
+    }
 }

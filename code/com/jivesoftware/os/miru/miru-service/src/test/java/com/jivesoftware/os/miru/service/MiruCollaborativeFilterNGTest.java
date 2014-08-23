@@ -118,8 +118,8 @@ public class MiruCollaborativeFilterNGTest {
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
-                //new MiruBitmapsRoaring());
-                new MiruBitmapsEWAH(config.getBitsetBufferSize()));
+                new MiruBitmapsRoaring());
+                //new MiruBitmapsEWAH(config.getBitsetBufferSize()));
 
         miruServiceLifecyle.start();
         MiruService miruService = miruServiceLifecyle.getService();
@@ -152,73 +152,49 @@ public class MiruCollaborativeFilterNGTest {
 
 
         AtomicInteger time = new AtomicInteger();
-        List<MiruPartitionedActivity> activities = new ArrayList<>();
         Random rand = new Random(1234);
         int numqueries = 1_000;
-        int numberOfUsers = 10_000;
-        int numberOfDocument = 10_000;
-        int numberOfViewsPerUser = 100;
+        int numberOfUsers = 1_000;
+        int numberOfDocument = 300_000;
+        int numberOfViewsPerUser = 3_000;
         System.out.println("Building activities....");
         long start = System.currentTimeMillis();
+        int count = 0;
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
             for (int d = 0; d < numberOfViewsPerUser; d++) {
-                activities.add(viewActivity(time.incrementAndGet(), user, String.valueOf(rand.nextInt(numberOfDocument))));
+                service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), user, String.valueOf(rand.nextInt(numberOfDocument)))));
+                count++;
+                if (count % 10_000 == 0) {
+                    System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
+                }
             }
         }
-        System.out.println("Built " + activities.size() + " in " + (System.currentTimeMillis() - start) + "millis");
+        System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
 
-        activities.add(viewActivity(time.incrementAndGet(), "bob0", "1"));
-        activities.add(viewActivity(time.incrementAndGet(), "bob0", "2"));
-        activities.add(viewActivity(time.incrementAndGet(), "bob0", "3"));
-        activities.add(viewActivity(time.incrementAndGet(), "bob0", "4"));
-        activities.add(viewActivity(time.incrementAndGet(), "bob0", "9"));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "bob0", "1")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "bob0", "2")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "bob0", "3")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "bob0", "4")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "bob0", "9")));
 
-        activities.add(viewActivity(time.incrementAndGet(), "frank", "1"));
-        activities.add(viewActivity(time.incrementAndGet(), "frank", "2"));
-        activities.add(viewActivity(time.incrementAndGet(), "frank", "3"));
-        activities.add(viewActivity(time.incrementAndGet(), "frank", "4"));
-        activities.add(viewActivity(time.incrementAndGet(), "frank", "10"));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "frank", "1")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "frank", "2")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "frank", "3")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "frank", "4")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "frank", "10")));
 
-        activities.add(viewActivity(time.incrementAndGet(), "jane", "2"));
-        activities.add(viewActivity(time.incrementAndGet(), "jane", "3"));
-        activities.add(viewActivity(time.incrementAndGet(), "jane", "4"));
-        activities.add(viewActivity(time.incrementAndGet(), "jane", "11"));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "jane", "2")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "jane", "3")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "jane", "4")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "jane", "11")));
 
-        activities.add(viewActivity(time.incrementAndGet(), "liz", "3"));
-        activities.add(viewActivity(time.incrementAndGet(), "liz", "4"));
-        activities.add(viewActivity(time.incrementAndGet(), "liz", "12"));
-        activities.add(viewActivity(time.incrementAndGet(), "liz", "12"));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "liz", "3")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "liz", "4")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "liz", "12")));
+        service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "liz", "12")));
 
-        System.out.println("Indexing...");
-        start = System.currentTimeMillis();
-
-//        int numPartitions = 8;
-//        ExecutorService indexThread = Executors.newFixedThreadPool(numPartitions);
-//        final CountDownLatch latch = new CountDownLatch(numPartitions);
-        int activitiesPerPartition = 10_000;
-        int count = 0;
-        for (final List<MiruPartitionedActivity> partition : Lists.partition(activities, activitiesPerPartition)) { // activities.size() / numPartitions)) {
-//
-//            indexThread.submit(new Runnable() {
-//
-//                @Override
-//                public void run() {
-//                    try {
-            service.writeToIndex(partition);
-            count += activitiesPerPartition;
-            System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
-//                    } catch (Exception x) {
-//                        x.printStackTrace();
-//                    } finally {
-//                        latch.countDown();
-//                    }
-//                }
-//            });
-        }
-//        latch.await();
-
-        System.out.println("Indexed " + activities.size() + " in " + (System.currentTimeMillis() - start) + " ms");
+        System.out.println("Running queries...");
 
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + rand.nextInt(numberOfUsers);
