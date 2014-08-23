@@ -135,7 +135,7 @@ public class MiruFilterUtils<BM> {
                 }
 
                 MiruActivity activity = stream.activityIndex.get(lastSetBit);
-                MiruTermId[] fieldValues = activity.fieldsValues.get(query.aggregateCountAroundField);
+                MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -237,7 +237,7 @@ public class MiruFilterUtils<BM> {
                 }
                 MiruActivity activity = stream.activityIndex.get(lastSetBit);
 
-                MiruTermId[] fieldValues = activity.fieldsValues.get(query.aggregateCountAroundField);
+                MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -317,7 +317,7 @@ public class MiruFilterUtils<BM> {
                 }
 
                 MiruActivity activity = stream.activityIndex.get(lastSetBit);
-                MiruTermId[] fieldValues = activity.fieldsValues.get(query.aggregateCountAroundField);
+                MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -441,10 +441,11 @@ public class MiruFilterUtils<BM> {
         // feeds us our docIds
         List<BM> toBeORed = new ArrayList<>();
         MiruIntIterator answerIterator = bitmaps.intIterator(answer);
+        int fieldId = stream.schema.getFieldId(query.aggregateFieldName1);
         while (answerIterator.hasNext()) {
             int id = answerIterator.next();
             MiruActivity activity = stream.activityIndex.get(id);
-            MiruTermId[] fieldValues = activity.fieldsValues.get(query.aggregateFieldName1);
+            MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
             if (fieldValues != null && fieldValues.length > 0) {
                 Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField1.getInvertedIndex(makeComposite(fieldValues[0], "^", query.aggregateFieldName2));
                 if (invertedIndex.isPresent()) {
@@ -470,12 +471,13 @@ public class MiruFilterUtils<BM> {
             }
         }).maximumSize(query.resultCount).create();
         // feeds us all recommended documents
+        final int fieldId = stream.schema.getFieldId(query.retrieveFieldName3);
         stream(stream, join2, Optional.<BM>absent(), aggregateField3, query.retrieveFieldName3, new CallbackStream<TermCount>() {
 
             @Override
             public TermCount callback(TermCount v) throws Exception {
                 if (v != null) {
-                    MiruTermId[] fieldValues = v.mostRecent.fieldsValues.get(query.retrieveFieldName3);
+                    MiruTermId[] fieldValues = v.mostRecent.fieldsValues[fieldId];
                     if (fieldValues != null && fieldValues.length > 0) {
                         Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField3.getInvertedIndex(makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
                         if (invertedIndex.isPresent()) {
@@ -519,6 +521,7 @@ public class MiruFilterUtils<BM> {
         bytesTraversed.addAndGet(bitmaps.sizeInBytes(answer));
         CardinalityAndLastSetBit answerCollector = null;
         ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
+        int fieldId = stream.schema.getFieldId(streamField);
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
         while (true) {
             int lastSetBit = answerCollector == null ? lastSetBit(answer) : answerCollector.lastSetBit;
@@ -527,7 +530,7 @@ public class MiruFilterUtils<BM> {
             }
 
             MiruActivity activity = stream.activityIndex.get(lastSetBit);
-            MiruTermId[] fieldValues = activity.fieldsValues.get(streamField);
+            MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                 BM removeUnknownField = bitmaps.create();

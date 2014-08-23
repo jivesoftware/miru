@@ -1,8 +1,8 @@
-package com.jivesoftware.os.miru.service.schema;
+package com.jivesoftware.os.miru.api.activity;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
+
 import java.util.Map;
 
 /**

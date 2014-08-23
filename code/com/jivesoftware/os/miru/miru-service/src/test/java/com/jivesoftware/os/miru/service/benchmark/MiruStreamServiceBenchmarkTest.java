@@ -37,7 +37,7 @@ import com.jivesoftware.os.miru.service.benchmark.caliper.Scenario;
 import com.jivesoftware.os.miru.service.benchmark.caliper.Trial;
 import com.jivesoftware.os.miru.service.benchmark.caliper.Value;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
@@ -52,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition.SCHEMA;
+import static com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition.SCHEMA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

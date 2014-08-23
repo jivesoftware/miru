@@ -8,7 +8,6 @@ package com.jivesoftware.os.miru.service;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
@@ -16,18 +15,8 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.miru.api.MiruBackingStorage;
-import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.*;
+import com.jivesoftware.os.miru.api.activity.*;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.RecoQuery;
@@ -41,30 +30,30 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
-import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
  * @author jonathan
  */
 public class MiruCollaborativeFilterNGTest {
+
+    MiruSchema miruSchema = new MiruSchema(
+            new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
+            new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
 
@@ -74,10 +63,6 @@ public class MiruCollaborativeFilterNGTest {
 
     @BeforeMethod
     public void setUpMethod() throws Exception {
-
-        MiruSchema miruSchema = new MiruSchema(
-                new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
-                new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
 
         MiruBackingStorage disiredStorage = MiruBackingStorage.memory;
 
@@ -154,9 +139,9 @@ public class MiruCollaborativeFilterNGTest {
         AtomicInteger time = new AtomicInteger();
         Random rand = new Random(1234);
         int numqueries = 1_000;
-        int numberOfUsers = 1_000;
-        int numberOfDocument = 300_000;
-        int numberOfViewsPerUser = 3_000;
+        int numberOfUsers = 10_000;
+        int numberOfDocument = 1_000;
+        int numberOfViewsPerUser = 100;
         System.out.println("Building activities....");
         long start = System.currentTimeMillis();
         int count = 0;
@@ -228,7 +213,7 @@ public class MiruCollaborativeFilterNGTest {
         fieldsValues.put("user", new MiruTermId[]{new MiruTermId(user.getBytes())});
         fieldsValues.put("doc", new MiruTermId[]{new MiruTermId(doc.getBytes())});
 
-        MiruActivity activity = new MiruActivity.Builder(tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
+        MiruActivity activity = new MiruActivity.Builder(miruSchema, tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }
 

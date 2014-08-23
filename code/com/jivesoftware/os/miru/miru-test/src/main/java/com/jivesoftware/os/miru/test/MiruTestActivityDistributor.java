@@ -4,10 +4,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.id.Id;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.*;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +66,7 @@ public class MiruTestActivityDistributor {
                         .add(featureSupplier.authz(featureSupplier.oldContainers(2).toArray(new Id[0])))
                         .build()
                         .toArray(new String[0]);
-                    MiruActivity repairedActivity = new MiruActivity.Builder(oldActivity.tenantId, oldActivity.time, repairedAuthz, oldActivity.version + 1)
+                    MiruActivity repairedActivity = new MiruActivity.Builder(featureSupplier.miruSchema(), oldActivity.tenantId, oldActivity.time, repairedAuthz, oldActivity.version + 1)
                         .putFieldsValues(oldActivity.fieldsValues)
                         .build();
                     return factory.repair(writerId, partitionedActivity.partitionId, partitionedActivity.index, repairedActivity);
@@ -79,7 +77,7 @@ public class MiruTestActivityDistributor {
                 if (partitionedActivity.activity.isPresent()) {
                     MiruActivity oldActivity = partitionedActivity.activity.get();
 
-                    MiruActivity removedActivity = new MiruActivity.Builder(oldActivity.tenantId, oldActivity.time, oldActivity.authz, oldActivity.version + 1)
+                    MiruActivity removedActivity = new MiruActivity.Builder(featureSupplier.miruSchema(), oldActivity.tenantId, oldActivity.time, oldActivity.authz, oldActivity.version + 1)
                         .putFieldsValues(oldActivity.fieldsValues)
                         .build();
                     return factory.remove(writerId, partitionedActivity.partitionId, partitionedActivity.index, removedActivity);

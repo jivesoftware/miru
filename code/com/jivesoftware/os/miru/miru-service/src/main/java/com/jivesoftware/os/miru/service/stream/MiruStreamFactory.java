@@ -51,7 +51,7 @@ import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruTransientActivityIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruTransientField;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import com.jivesoftware.os.miru.service.stream.locator.MiruDiskResourceAnalyzer;
 import com.jivesoftware.os.miru.service.stream.locator.MiruPartitionCoordIdentifier;
@@ -86,15 +86,8 @@ public class MiruStreamFactory<BM> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Interner<String> stringInterner = Interners.newWeakInterner();
-    private final MiruActivityInterner activityInterner = new MiruActivityInterner(
-            Interners.<MiruIBA>newWeakInterner(),
-            Interners.<MiruTermId>newWeakInterner(),
-            // tenants are strongly interned
-            Interners.<MiruTenantId>newStrongInterner(),
-            // makes sense to share string internment as this is authz in both cases
-            stringInterner);
+    private final MiruActivityInterner activityInterner;
 
-    private final int bitsetBufferSize;
     private final int partitionAuthzCacheSize;
     private final MiruBackingStorage defaultStorage;
 
@@ -104,7 +97,6 @@ public class MiruStreamFactory<BM> {
             MiruReadTrackingWALReader readTrackingWALReader,
             MiruResourceLocator diskResourceLocator,
             MiruTransientResourceLocator transientResourceLocator,
-            int bitsetBufferSize,
             int partitionAuthzCacheSize,
             MiruBackingStorage defaultStorage) {
         this.bitmaps = bitmaps;
@@ -113,7 +105,14 @@ public class MiruStreamFactory<BM> {
         this.readTrackingWALReader = readTrackingWALReader;
         this.diskResourceLocator = diskResourceLocator;
         this.transientResourceLocator = transientResourceLocator;
-        this.bitsetBufferSize = bitsetBufferSize;
+        this.activityInterner = new MiruActivityInterner(
+                schema,
+                Interners.<MiruIBA>newWeakInterner(),
+                Interners.<MiruTermId>newWeakInterner(),
+                // tenants are strongly interned
+                Interners.<MiruTenantId>newStrongInterner(),
+                // makes sense to share string internment as this is authz in both cases
+                stringInterner);
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.defaultStorage = defaultStorage;
     }

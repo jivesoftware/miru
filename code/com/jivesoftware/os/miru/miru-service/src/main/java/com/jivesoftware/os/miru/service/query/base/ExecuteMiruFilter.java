@@ -9,7 +9,7 @@ import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;

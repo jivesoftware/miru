@@ -17,7 +17,8 @@ import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
+
 import java.util.List;
 import java.util.Set;
 
@@ -31,7 +32,7 @@ public class MiruIndexStream<BM> {
     private final MiruBitmaps<BM> bitmaps;
     private final MiruSchema schema;
     private final MiruActivityIndex activityIndex;
-    private final MiruFields fieldIndex;
+    private final MiruFields<BM> fieldIndex;
     private final MiruAuthzIndex authzIndex;
     private final MiruRemovalIndex removalIndex;
     private final MiruActivityInterner activityInterner;
@@ -41,7 +42,7 @@ public class MiruIndexStream<BM> {
     public MiruIndexStream(MiruBitmaps<BM> bitmaps,
             MiruSchema schema,
             MiruActivityIndex activityIndex,
-            MiruFields fieldIndex,
+            MiruFields<BM> fieldIndex,
             MiruAuthzIndex authzIndex,
             MiruRemovalIndex removalIndex,
             MiruActivityInterner activityInterner) {
@@ -127,11 +128,10 @@ public class MiruIndexStream<BM> {
     }
 
     private void indexFieldValues(final MiruActivity activity, final int id) throws Exception {
-        for (String fieldName : activity.fieldsValues.keySet()) {
-            int fieldId = schema.getFieldId(fieldName);
-            if (fieldId >= 0) {
+        for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
+            if (activity.fieldsValues[fieldId] != null) {
                 MiruField miruField = fieldIndex.getField(fieldId);
-                for (MiruTermId term : activity.fieldsValues.get(fieldName)) {
+                for (MiruTermId term : activity.fieldsValues[fieldId]) {
                     miruField.index(term, id);
                 }
             }
@@ -153,22 +153,19 @@ public class MiruIndexStream<BM> {
     private void indexBloomins(MiruActivity activity) throws Exception {
         BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
 
-
-        for (String fieldName : activity.fieldsValues.keySet()) {
-            int fieldId = schema.getFieldId(fieldName);
-            if (fieldId >= 0) {
-                MiruField miruField = fieldIndex.getField(fieldId);
-                List<String> bloomsFieldNames = miruField.getFieldDefinition().bloomFieldNames;
-                MiruTermId[] fieldValues = activity.fieldsValues.get(fieldName);
-                if (fieldValues != null && fieldValues.length > 0) {
-                    for (String bloomsFieldName : bloomsFieldNames) {
-                        MiruTermId[] bloomFieldValues = activity.fieldsValues.get(bloomsFieldName);
-                        if (bloomFieldValues != null && bloomFieldValues.length > 0) {
-                            for (MiruTermId fieldValue : fieldValues) {
-                                MiruTermId compositeBloomId = makeComposite(fieldValue, "|", bloomsFieldName);
-                                MiruInvertedIndex invertedIndex = miruField.getOrCreateInvertedIndex(compositeBloomId);
-                                bloomIndex.put(invertedIndex, bloomFieldValues);
-                            }
+        for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
+            MiruField<BM> miruField = fieldIndex.getField(fieldId);
+            List<String> bloomsFieldNames = miruField.getFieldDefinition().bloomFieldNames;
+            MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+            if (fieldValues != null && fieldValues.length > 0) {
+                for (String bloomsFieldName : bloomsFieldNames) {
+                    int bloomsFieldId = schema.getFieldId(bloomsFieldName);
+                    MiruTermId[] bloomFieldValues = activity.fieldsValues[bloomsFieldId];
+                    if (bloomFieldValues != null && bloomFieldValues.length > 0) {
+                        for (MiruTermId fieldValue : fieldValues) {
+                            MiruTermId compositeBloomId = makeComposite(fieldValue, "|", bloomsFieldName);
+                            MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeBloomId);
+                            bloomIndex.put(invertedIndex, bloomFieldValues);
                         }
                     }
                 }
@@ -178,47 +175,44 @@ public class MiruIndexStream<BM> {
     }
 
     private void indexWriteTimeAggregates(MiruActivity activity, int id) throws Exception {
-        for (String fieldName : activity.fieldsValues.keySet()) {
-            int fieldId = schema.getFieldId(fieldName);
-            if (fieldId >= 0) {
-                MiruField miruField = fieldIndex.getField(fieldId);
-                MiruTermId[] fieldValues = activity.fieldsValues.get(fieldName);
-                if (fieldValues != null && fieldValues.length > 0) {
-                    // Answers the question,
-                    // "What is the latest activity against each distinct value of this field?"
-                    boolean writeTimeAggregate = miruField.getFieldDefinition().writeTimeAggregate;
-                    if (writeTimeAggregate) {
-                        MiruTermId miruTermId = makeComposite(new MiruTermId(MiruSchema.RESERVED_AGGREGATE.getBytes()), "~", MiruSchema.RESERVED_AGGREGATE);
-                        MiruInvertedIndex aggregateIndex = miruField.getOrCreateInvertedIndex(miruTermId);
+        for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
+            MiruField<BM> miruField = fieldIndex.getField(fieldId);
+            MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+            if (fieldValues != null && fieldValues.length > 0) {
+                // Answers the question,
+                // "What is the latest activity against each distinct value of this field?"
+                boolean writeTimeAggregate = miruField.getFieldDefinition().writeTimeAggregate;
+                if (writeTimeAggregate) {
+                    MiruTermId miruTermId = makeComposite(new MiruTermId(MiruSchema.RESERVED_AGGREGATE.getBytes()), "~", MiruSchema.RESERVED_AGGREGATE);
+                    MiruInvertedIndex<BM> aggregateIndex = miruField.getOrCreateInvertedIndex(miruTermId);
 
-                        // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
-                        for (MiruTermId fieldValue : fieldValues) {
-                            Optional<MiruInvertedIndex> optionalFieldValueIndex = miruField.getInvertedIndex(fieldValue);
-                            if (optionalFieldValueIndex.isPresent()) {
-                                MiruInvertedIndex fieldValueIndex = optionalFieldValueIndex.get();
-                                aggregateIndex.andNotToSourceSize(fieldValueIndex.getIndex());
-                            }
+                    // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
+                    for (MiruTermId fieldValue : fieldValues) {
+                        Optional<MiruInvertedIndex<BM>> optionalFieldValueIndex = miruField.getInvertedIndex(fieldValue);
+                        if (optionalFieldValueIndex.isPresent()) {
+                            MiruInvertedIndex<BM> fieldValueIndex = optionalFieldValueIndex.get();
+                            aggregateIndex.andNotToSourceSize(fieldValueIndex.getIndex());
                         }
-                        miruField.index(miruTermId, id);
                     }
+                    miruField.index(miruTermId, id);
+                }
 
-                    // Answers the question,
-                    // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
-                    for (String aggregateFieldName : miruField.getFieldDefinition().aggregateFieldNames) {
-                        int aggregateFieldId = schema.getFieldId(aggregateFieldName);
-                        if (aggregateFieldId >= 0) {
-                            MiruField aggregateField = fieldIndex.getField(aggregateFieldId);
-                            MiruTermId[] aggregateFieldValues = activity.fieldsValues.get(aggregateFieldName);
-                            if (aggregateFieldValues != null && aggregateFieldValues.length > 0) {
-                                for (MiruTermId aggregateFieldValue : aggregateFieldValues) {
-                                    MiruInvertedIndex aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
-                                    for (MiruTermId fieldValue : fieldValues) {
-                                        MiruTermId compositeAggregateId = makeComposite(fieldValue, "^", aggregateFieldName);
-                                        MiruInvertedIndex invertedIndex = miruField.getOrCreateInvertedIndex(compositeAggregateId);
+                // Answers the question,
+                // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
+                for (String aggregateFieldName : miruField.getFieldDefinition().aggregateFieldNames) {
+                    int aggregateFieldId = schema.getFieldId(aggregateFieldName);
+                    if (aggregateFieldId >= 0) {
+                        MiruField<BM> aggregateField = fieldIndex.getField(aggregateFieldId);
+                        MiruTermId[] aggregateFieldValues = activity.fieldsValues[aggregateFieldId];
+                        if (aggregateFieldValues != null && aggregateFieldValues.length > 0) {
+                            for (MiruTermId aggregateFieldValue : aggregateFieldValues) {
+                                MiruInvertedIndex<BM> aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
+                                for (MiruTermId fieldValue : fieldValues) {
+                                    MiruTermId compositeAggregateId = makeComposite(fieldValue, "^", aggregateFieldName);
+                                    MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeAggregateId);
 
-                                        invertedIndex.andNotToSourceSize(aggregateInvertedIndex.getIndex());
-                                        miruField.index(compositeAggregateId, id);
-                                    }
+                                    invertedIndex.andNotToSourceSize(aggregateInvertedIndex.getIndex());
+                                    miruField.index(compositeAggregateId, id);
                                 }
                             }
                         }

@@ -1,22 +1,16 @@
 package com.jivesoftware.os.miru.test;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.ordered.id.IdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -29,6 +23,7 @@ public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureS
     private final Random random;
     private final float publicContainerPercent;
 
+    private final MiruSchema miruSchema;
     private final MiruTenantId miruTenantId;
     private final TenantId tenantId;
 
@@ -51,11 +46,12 @@ public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureS
     private final TimestampSequence timestampSequence;
 
     public MiruTestCollectionBackedFeatureSupplier(Random random, float publicContainerPercent, String tenant,
-        int preUsers, int preContainers, int preContentItems, int preComments, WeightedRandomNumber participation, int totalActivities) {
+            int preUsers, int preContainers, int preContentItems, int preComments, WeightedRandomNumber participation, int totalActivities) {
 
         this.random = random;
         this.publicContainerPercent = publicContainerPercent;
 
+        this.miruSchema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
         this.miruTenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
         this.tenantId = new TenantId(tenant);
 
@@ -82,7 +78,7 @@ public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureS
             this.contentAuthor.put(id, userId);
             List<Id> containerIds = oldContainers(2);
             this.contentItemContainers.put(id, containerIds);
-            this.userAuthz.putAll(userId, Arrays.asList(authz(containerIds.toArray(new Id[0]))));
+            this.userAuthz.putAll(userId, Arrays.asList(authz(containerIds.toArray(new Id[containerIds.size()]))));
         }
 
         for (Id id : this.comments) {
@@ -91,7 +87,7 @@ public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureS
             Id contentItemId = oldContentItem();
             Collection<Id> containerIds = containersForContentItem(contentItemId);
             this.commentContentItem.put(id, contentItemId);
-            this.userAuthz.putAll(userId, Arrays.asList(authz(containerIds.toArray(new Id[0]))));
+            this.userAuthz.putAll(userId, Arrays.asList(authz(containerIds.toArray(new Id[containerIds.size()]))));
         }
 
         this.timestampSequence = new TimestampSequence(totalActivities, 5_000); //TODO config millis between activity
@@ -107,6 +103,11 @@ public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureS
             ids.add(generateId());
         }
         return ids;
+    }
+
+    @Override
+    public MiruSchema miruSchema() {
+        return miruSchema;
     }
 
     @Override
@@ -135,7 +136,7 @@ public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureS
 
     @Override
     public String[] globalAuthz() {
-        return new String[] { globalAuthz };
+        return new String[]{globalAuthz};
     }
 
     @Override

@@ -40,8 +40,8 @@ import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.MiruTempResourceLocatorProviderInitializer;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import java.text.DecimalFormat;
@@ -274,7 +274,7 @@ public class ProfilebleMiruService {
             List<MiruTermId> terms = generateDisticts(rand, count, fieldCardinality[index]);
             fieldsValues.put(fieldDefinition.name, terms.toArray(new MiruTermId[0]));
         }
-        MiruActivity activity = new MiruActivity.Builder(tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
+        MiruActivity activity = new MiruActivity.Builder(miruSchema, tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
         return partitionedActivityFactory.activity(1, MiruPartitionId.of(1), 1, activity); // HACK
     }
 

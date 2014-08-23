@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.activity.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 
 /** @author jonathan */

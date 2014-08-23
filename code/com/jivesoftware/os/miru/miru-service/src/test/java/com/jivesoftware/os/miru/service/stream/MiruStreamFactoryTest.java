@@ -17,8 +17,8 @@ import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
@@ -60,7 +60,6 @@ public class MiruStreamFactoryTest {
                 new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
                 new MiruTempDirectoryResourceLocator(),
                 new MiruTempDirectoryResourceLocator(),
-                32,
                 20,
                 MiruBackingStorage.memory);
 
@@ -78,7 +77,7 @@ public class MiruStreamFactoryTest {
 
         for (int i = 0; i < numberOfActivities; i++) {
             String[] authz = { "aaaabbbbcccc" };
-            MiruActivity activity = new MiruActivity.Builder(tenantId, (long) i, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(schema, tenantId, (long) i, authz, 0)
                 .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
                 .build();
             int id = inMemoryStream.getTimeIndex().nextId((long) i);
@@ -142,7 +141,7 @@ public class MiruStreamFactoryTest {
 
     private MiruStream minimalInMemory(MiruPartitionCoord coord) throws Exception {
         //TODO detecting backing storage fails if we haven't indexed at least 1 term for every field, 1 inbox, 1 unread
-        MiruActivity.Builder builder = new MiruActivity.Builder(coord.tenantId, 0, new String[] { "abcd" }, 0);
+        MiruActivity.Builder builder = new MiruActivity.Builder(schema, coord.tenantId, 0, new String[] { "abcd" }, 0);
         for (MiruFieldName fieldName : MiruFieldName.values()) {
             builder.putFieldValue(fieldName.getFieldName(), "defg");
         }

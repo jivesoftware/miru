@@ -15,8 +15,8 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.memory.MiruInMemoryClusterRegistry;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
@@ -90,7 +90,6 @@ public class MiruLocalHostedPartitionTest {
             new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
             new MiruTempDirectoryResourceLocator(),
             new MiruTempDirectoryResourceLocator(),
-            32,
             20,
             MiruBackingStorage.memory);
         clusterRegistry = new MiruInMemoryClusterRegistry();

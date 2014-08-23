@@ -15,16 +15,8 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.miru.api.MiruBackingStorage;
-import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.*;
+import com.jivesoftware.os.miru.api.activity.*;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -45,22 +37,15 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import java.text.DecimalFormat;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -263,7 +248,7 @@ public class MiruStreamServiceNGTest {
             List<MiruTermId> terms = generateDisticts(rand, count, fieldCardinality[index]);
             fieldsValues.put(fieldDefinition.name, terms.toArray(new MiruTermId[0]));
         }
-        MiruActivity activity = new MiruActivity.Builder(tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
+        MiruActivity activity = new MiruActivity.Builder(miruSchema, tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }
 
@@ -399,7 +384,7 @@ public class MiruStreamServiceNGTest {
         }
         fieldsValues.put("author", new MiruTermId[]{new MiruTermId(FilerIO.intBytes(author))});
         String[] authz = new String[]{"aaabbbcccddd"};
-        MiruActivity activity = new MiruActivity.Builder(tenant1, time, authz, 0).putFieldsValues(fieldsValues).build();
+        MiruActivity activity = new MiruActivity.Builder(miruSchema, tenant1, time, authz, 0).putFieldsValues(fieldsValues).build();
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }
 

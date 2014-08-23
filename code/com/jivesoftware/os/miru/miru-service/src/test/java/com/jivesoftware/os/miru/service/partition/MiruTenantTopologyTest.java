@@ -5,10 +5,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.*;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import java.util.Iterator;
@@ -136,10 +133,11 @@ public class MiruTenantTopologyTest {
         };
         when(localPartitionFactory.create(any(MiruPartitionCoord.class))).thenAnswer(answer);
 
+        MiruSchema schema = new MiruSchema(new MiruFieldDefinition(0, "f"));
         tenantTopology.index(Lists.newArrayList(
-            factory.activity(0, p0, 0, new MiruActivity.Builder(tenantId, 0, new String[] { "authz" }, 1111).build()),
-            factory.activity(0, p1, 0, new MiruActivity.Builder(tenantId, 1, new String[] { "authz" }, 2222).build()),
-            factory.activity(0, p2, 0, new MiruActivity.Builder(tenantId, 2, new String[] { "authz" }, 3333).build())));
+            factory.activity(0, p0, 0, new MiruActivity.Builder(schema, tenantId, 0, new String[] { "authz" }, 1111).build()),
+            factory.activity(0, p1, 0, new MiruActivity.Builder(schema, tenantId, 1, new String[] { "authz" }, 2222).build()),
+            factory.activity(0, p2, 0, new MiruActivity.Builder(schema, tenantId, 2, new String[] { "authz" }, 3333).build())));
 
         verify(localPartitionFactory).create(eq(new MiruPartitionCoord(tenantId, p0, localhost)));
         verify(localPartitionFactory).create(eq(new MiruPartitionCoord(tenantId, p1, localhost)));

@@ -6,21 +6,18 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.*;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
-import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import static com.jivesoftware.os.miru.service.schema.DefaultMiruSchemaDefinition.SCHEMA;
+import static com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition.SCHEMA;
 
 public class MiruStreamServiceBenchmarkUtils {
 
@@ -45,7 +42,7 @@ public class MiruStreamServiceBenchmarkUtils {
         }
 
         long time = orderIdProvider.nextId();
-        MiruActivity activity = new MiruActivity.Builder(new MiruTenantId(tenantId.toStringForm().getBytes(Charsets.UTF_8)), time, authz, 0)
+        MiruActivity activity = new MiruActivity.Builder(new MiruSchema(SCHEMA), new MiruTenantId(tenantId.toStringForm().getBytes(Charsets.UTF_8)), time, authz, 0)
                 .putFieldsValues(fieldsValues)
                 .build();
         return partitionedActivityFactory.activity(1, MiruPartitionId.of(1), 1, activity); // HACK

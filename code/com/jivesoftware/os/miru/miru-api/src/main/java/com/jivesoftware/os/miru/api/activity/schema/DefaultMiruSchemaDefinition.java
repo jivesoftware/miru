@@ -1,8 +1,8 @@
-package com.jivesoftware.os.miru.service.schema;
+package com.jivesoftware.os.miru.api.activity.schema;
 
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
-import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.MiruFieldDefinition;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 

@@ -13,6 +13,8 @@ import com.jivesoftware.os.miru.api.MiruDistinctCountQueryCriteria;
 import com.jivesoftware.os.miru.api.MiruDistinctCountQueryParams;
 import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -379,8 +381,8 @@ public class MiruReaderEndpointsTest {
     }
 
     private MiruActivity generateRandomMiruActivity(byte[] tenantIdBytes) {
-        return new MiruActivity.Builder(new MiruTenantId(tenantIdBytes), System.currentTimeMillis(), new String[] { "aaabbbccc" }, 0)
-            .putFieldValue(RandomStringUtils.randomAlphabetic(10), RandomStringUtils.randomAlphabetic(5))
+        return new MiruActivity.Builder(new MiruSchema(new MiruFieldDefinition(0, "f")), new MiruTenantId(tenantIdBytes), System.currentTimeMillis(), new String[] { "aaabbbccc" }, 0)
+            .putFieldValue("f", RandomStringUtils.randomAlphabetic(5))
             .build();
     }
 

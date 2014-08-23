@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.stream;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -13,13 +14,18 @@ import java.util.Map;
  */
 public class MiruActivityInterner {
 
+    private final MiruSchema schema;
     private final Interner<MiruIBA> ibaInterner;
     private final Interner<MiruTermId> termInterner;
     private final Interner<MiruTenantId> tenantInterner;
     private final Interner<String> stringInterner;
 
-    public MiruActivityInterner(Interner<MiruIBA> ibaInterner,
-        Interner<MiruTermId> termInterner, Interner<MiruTenantId> tenantInterner, Interner<String> stringInterner) {
+    public MiruActivityInterner(MiruSchema schema,
+            Interner<MiruIBA> ibaInterner,
+            Interner<MiruTermId> termInterner,
+            Interner<MiruTenantId> tenantInterner,
+            Interner<String> stringInterner) {
+        this.schema = schema;
         this.ibaInterner = ibaInterner;
         this.termInterner = termInterner;
         this.tenantInterner = tenantInterner;
@@ -27,7 +33,7 @@ public class MiruActivityInterner {
     }
 
     public MiruActivity intern(MiruActivity activity) {
-        return new MiruActivity.Builder(tenantInterner.intern(activity.tenantId), activity.time, internAuthz(activity.authz), activity.version)
+        return new MiruActivity.Builder(schema, tenantInterner.intern(activity.tenantId), activity.time, internAuthz(activity.authz), activity.version)
             .putFieldsValues(internFields(activity.fieldsValues))
             .putPropsValues(internProps(activity.propsValues))
             .build();
@@ -37,21 +43,19 @@ public class MiruActivityInterner {
         if (activityAuthz == null) {
             return null;
         }
-        String[] authz = new String[activityAuthz.length];
-        for (int i = 0; i < authz.length; i++) {
-            authz[i] = stringInterner.intern(activityAuthz[i]);
+        for (int i = 0; i < activityAuthz.length; i++) {
+            activityAuthz[i] = stringInterner.intern(activityAuthz[i]);
         }
-        return authz;
+        return activityAuthz;
     }
 
-    private Map<String, MiruTermId[]> internFields(Map<String, MiruTermId[]> keyValuesMap) {
-        Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
-        for (Map.Entry<String, MiruTermId[]> entry : keyValuesMap.entrySet()) {
-            MiruTermId[] terms = new MiruTermId[entry.getValue().length];
-            for (int i = 0; i < terms.length; i++) {
-                terms[i] = termInterner.intern(entry.getValue()[i]);
+    private MiruTermId[][] internFields(MiruTermId[][] fieldsValues) {
+        for (int i = 0; i < fieldsValues.length; i++) {
+            if (fieldsValues[i] != null) {
+                for (int j = 0; j < fieldsValues[i].length; j++) {
+                    fieldsValues[i][j] = termInterner.intern(fieldsValues[i][j]);
+                }
             }
-            fieldsValues.put(stringInterner.intern(entry.getKey()), terms);
         }
         return fieldsValues;
     }

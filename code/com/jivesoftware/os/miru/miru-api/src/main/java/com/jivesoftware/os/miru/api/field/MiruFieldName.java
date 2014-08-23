@@ -7,7 +7,7 @@ public enum MiruFieldName {
     VERB_SUBJECT_CLASS_NAME("verbSubjectClassName"),
     META_CLASS_NAME("metaClassName"),
     META_ID("metaId"),
-    AUTHZ("authz"),
+    //AUTHZ("authz"), // not a field
     AUTHOR_ID("authorId"),
     CONTAINER_ID("containerId"),
     CONTAINER_IDS("containerIds"),

@@ -5,6 +5,8 @@ import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.index.disk.MiruMemMappedActivityIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskActivityIndex;
@@ -16,11 +18,16 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
+import static org.testng.Assert.*;
 
 public class MiruActivityIndexTest {
+
+    MiruSchema schema = new MiruSchema(
+            new MiruFieldDefinition(0, "a"),
+            new MiruFieldDefinition(1, "b"),
+            new MiruFieldDefinition(2, "c"),
+            new MiruFieldDefinition(3, "d"),
+            new MiruFieldDefinition(4, "d"));
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) {
@@ -172,9 +179,11 @@ public class MiruActivityIndexTest {
     }
 
     private MiruActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfRandomFields) {
-        MiruActivity.Builder builder = new MiruActivity.Builder(tenantId, time, authz, 0);
+        assertTrue(numberOfRandomFields <= schema.fieldCount());
+        MiruActivity.Builder builder = new MiruActivity.Builder(schema, tenantId, time, authz, 0);
+
         for (int i = 0; i < numberOfRandomFields; i++) {
-            builder.putFieldValue(RandomStringUtils.randomAlphabetic(5), RandomStringUtils.randomAlphanumeric(5));
+            builder.putFieldValue(schema.getFieldDefinition(i).name, RandomStringUtils.randomAlphanumeric(5));
         }
         return builder.build();
     }

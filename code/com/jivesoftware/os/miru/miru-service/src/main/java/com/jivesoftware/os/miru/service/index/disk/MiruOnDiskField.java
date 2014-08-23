@@ -7,7 +7,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruField;
-import com.jivesoftware.os.miru.service.index.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.MiruFieldDefinition;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import java.io.File;
@@ -18,16 +18,16 @@ import java.util.Map;
 /**
  * Persistent impl. Term dictionary is mem-mapped. Does not support index(), so no next term id.
  */
-public class MiruOnDiskField implements MiruField, BulkImport<Map<MiruTermId, MiruFieldIndexKey>> {
+public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Map<MiruTermId, MiruFieldIndexKey>> {
 
     private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1024 }; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
 
     private final MiruFieldDefinition fieldDefinition;
-    private final MiruOnDiskIndex index;
+    private final MiruOnDiskIndex<BM> index;
     private final VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
 
-    public MiruOnDiskField(MiruFieldDefinition fieldDefinition, MiruOnDiskIndex index, File mapDirectory) {
+    public MiruOnDiskField(MiruFieldDefinition fieldDefinition, MiruOnDiskIndex<BM> index, File mapDirectory) {
         this.fieldDefinition = fieldDefinition;
         this.index = index;
 
@@ -101,19 +101,19 @@ public class MiruOnDiskField implements MiruField, BulkImport<Map<MiruTermId, Mi
 
     @Override
     public void remove(MiruTermId term, int id) throws Exception {
-        Optional<MiruInvertedIndex> index = getInvertedIndex(term);
+        Optional<MiruInvertedIndex<BM>> index = getInvertedIndex(term);
         if (index.isPresent()) {
             index.get().remove(id);
         }
     }
 
     @Override
-    public MiruInvertedIndex getOrCreateInvertedIndex(MiruTermId term) throws Exception {
+    public MiruInvertedIndex<BM> getOrCreateInvertedIndex(MiruTermId term) throws Exception {
         throw new UnsupportedOperationException("On disk index is read only");
     }
 
     @Override
-    public Optional<MiruInvertedIndex> getInvertedIndex(MiruTermId term, int considerIfIndexIdGreaterThanN) throws Exception {
+    public Optional<MiruInvertedIndex<BM>> getInvertedIndex(MiruTermId term, int considerIfIndexIdGreaterThanN) throws Exception {
         Optional<MiruFieldIndexKey> indexKey = getTermId(term);
         if (indexKey.isPresent() && indexKey.get().getMaxId() > considerIfIndexIdGreaterThanN) {
             return getInvertedIndex(term);
@@ -122,7 +122,7 @@ public class MiruOnDiskField implements MiruField, BulkImport<Map<MiruTermId, Mi
     }
 
     @Override
-    public Optional<MiruInvertedIndex> getInvertedIndex(MiruTermId term) throws Exception {
+    public Optional<MiruInvertedIndex<BM>> getInvertedIndex(MiruTermId term) throws Exception {
         Optional<MiruFieldIndexKey> indexKey = getTermId(term);
         if (indexKey.isPresent()) {
             return getInvertedIndex(indexKey.get());
@@ -134,7 +134,7 @@ public class MiruOnDiskField implements MiruField, BulkImport<Map<MiruTermId, Mi
         return index;
     }
 
-    private Optional<MiruInvertedIndex> getInvertedIndex(MiruFieldIndexKey indexKey) throws Exception {
+    private Optional<MiruInvertedIndex<BM>> getInvertedIndex(MiruFieldIndexKey indexKey) throws Exception {
         if (indexKey != null) {
             return index.get(fieldDefinition.fieldId, indexKey.getId());
         }

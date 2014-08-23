@@ -192,9 +192,9 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<long[]>,
 
         @Override
         public Entry next() {
+            iter.advance();
             long key = iter.key();
             int value = iter.value();
-            iter.advance();
             return new Entry(key, value);
         }
 

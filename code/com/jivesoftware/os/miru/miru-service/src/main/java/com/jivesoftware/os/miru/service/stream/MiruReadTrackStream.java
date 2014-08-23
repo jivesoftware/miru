@@ -9,7 +9,7 @@ import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.query.base.ExecuteMiruFilter;
-import com.jivesoftware.os.miru.service.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
