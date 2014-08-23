@@ -6,7 +6,7 @@ import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.ordered.id.IdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 
@@ -51,7 +51,7 @@ public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureS
         this.random = random;
         this.publicContainerPercent = publicContainerPercent;
 
-        this.miruSchema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
+        this.miruSchema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
         this.miruTenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
         this.tenantId = new TenantId(tenant);
 

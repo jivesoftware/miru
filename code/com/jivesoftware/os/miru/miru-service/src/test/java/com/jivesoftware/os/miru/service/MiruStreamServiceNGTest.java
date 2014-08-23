@@ -17,6 +17,8 @@ import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.miru.api.*;
 import com.jivesoftware.os.miru.api.activity.*;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;

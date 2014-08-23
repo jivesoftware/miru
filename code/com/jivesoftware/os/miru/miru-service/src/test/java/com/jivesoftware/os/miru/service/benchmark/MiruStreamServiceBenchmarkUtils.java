@@ -7,6 +7,8 @@ import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.*;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
@@ -17,7 +19,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import static com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition.SCHEMA;
+import static com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition.FIELDS;
 
 public class MiruStreamServiceBenchmarkUtils {
 
@@ -27,7 +29,7 @@ public class MiruStreamServiceBenchmarkUtils {
             MiruFieldCardinality fieldCardinality, Map<MiruFieldName, Integer> fieldNameToTotalCount) {
 
         Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
-        for (MiruFieldDefinition fieldDefinition : SCHEMA) {
+        for (MiruFieldDefinition fieldDefinition : FIELDS) {
             int termFrequency = 1; // TODO - Figure out if we need come up with real term frequencies
 
             MiruFieldName miruFieldName = MiruFieldName.fieldNameToMiruFieldName(fieldDefinition.name);
@@ -42,7 +44,7 @@ public class MiruStreamServiceBenchmarkUtils {
         }
 
         long time = orderIdProvider.nextId();
-        MiruActivity activity = new MiruActivity.Builder(new MiruSchema(SCHEMA), new MiruTenantId(tenantId.toStringForm().getBytes(Charsets.UTF_8)), time, authz, 0)
+        MiruActivity activity = new MiruActivity.Builder(new MiruSchema(FIELDS), new MiruTenantId(tenantId.toStringForm().getBytes(Charsets.UTF_8)), time, authz, 0)
                 .putFieldsValues(fieldsValues)
                 .build();
         return partitionedActivityFactory.activity(1, MiruPartitionId.of(1), 1, activity); // HACK

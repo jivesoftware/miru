@@ -28,7 +28,7 @@ public class MiruStreamServiceBenchmark {
 
         // Initialize the MiruService
         log.info(currentProfile + " = Initializing MiruService");
-        MiruStreamFactory factory = new MiruStreamFactory(new MiruSchema(SCHEMA), Executors.newCachedThreadPool(), customerSize.getCapacity(), 1024);
+        MiruStreamFactory factory = new MiruStreamFactory(new MiruSchema(FIELDS), Executors.newCachedThreadPool(), customerSize.getCapacity(), 1024);
         this.miruService = new MiruService(new MiruTenantPartitioner(factory), 1024);
         this.orderIdProvider = new OrderIdProviderImpl(311);
         log.info(currentProfile + " = Initialized MiruService");

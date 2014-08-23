@@ -18,7 +18,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
@@ -53,7 +53,7 @@ public class MiruStreamFactoryTest {
         RowColumnValueStoreImpl<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> readTrackingSipWAL =
             new RowColumnValueStoreImpl<>();
 
-        schema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
+        schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
         streamFactory = new MiruStreamFactory<>(new MiruBitmapsEWAH(4),
                 schema,
                 Executors.newSingleThreadExecutor(),

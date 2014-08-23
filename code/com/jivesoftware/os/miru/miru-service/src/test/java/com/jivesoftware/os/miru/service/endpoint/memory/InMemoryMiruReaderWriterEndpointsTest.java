@@ -14,6 +14,7 @@ import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySe
 import com.jivesoftware.os.miru.api.*;
 import com.jivesoftware.os.miru.api.activity.*;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -60,7 +61,7 @@ public class InMemoryMiruReaderWriterEndpointsTest {
     MiruTenantId tenantId = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
 
-    private final MiruSchema schema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
+    private final MiruSchema schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
     private final MiruPartitionedActivityFactory activityFactory = new MiruPartitionedActivityFactory();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -183,10 +184,10 @@ public class InMemoryMiruReaderWriterEndpointsTest {
             new MiruAggregateCountsQueryCriteria.Builder()
                 .setAggregateCountAroundField(OBJECT_ID.getFieldName())
                 .setStreamFilter(new MiruFilter(MiruFilterOperation.or,
-                    Optional.of(ImmutableList.<MiruFieldFilter>of(
-                        new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of(new MiruTermId("value2".getBytes(Charsets.UTF_8)))),
-                        new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of(new MiruTermId("value2".getBytes(Charsets.UTF_8)))))),
-                    Optional.<ImmutableList<MiruFilter>>absent()
+                        Optional.of(ImmutableList.<MiruFieldFilter>of(
+                                new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of(new MiruTermId("value2".getBytes(Charsets.UTF_8)))),
+                                new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of(new MiruTermId("value2".getBytes(Charsets.UTF_8)))))),
+                        Optional.<ImmutableList<MiruFilter>>absent()
                 ))
                 .build()
         ));

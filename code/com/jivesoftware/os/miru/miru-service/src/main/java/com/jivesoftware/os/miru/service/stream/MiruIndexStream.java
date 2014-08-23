@@ -17,7 +17,7 @@ import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 
 import java.util.List;
 import java.util.Set;

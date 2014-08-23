@@ -7,9 +7,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -27,16 +26,15 @@ public class MiruActivity {
     public final String[] authz; // same entitlement foo as in Sensei
     public final long version;
     public final MiruTermId[][] fieldsValues;
-    public final Map<String, MiruIBA[]> propsValues;
+    public final MiruIBA[][] propsValues;
 
-    private MiruActivity(MiruTenantId tenantId, long time, String[] authz, long version, MiruTermId[][] fieldsValues,
-            Map<String, MiruIBA[]> propsValues) {
+    private MiruActivity(MiruTenantId tenantId, long time, String[] authz, long version, MiruTermId[][] fieldsValues, MiruIBA[][] propsValues) {
         this.tenantId = tenantId;
         this.time = time;
         this.authz = authz;
         this.version = version;
         this.fieldsValues = fieldsValues;
-        this.propsValues = Collections.unmodifiableMap(propsValues);
+        this.propsValues = propsValues;
     }
 
     @JsonCreator
@@ -46,22 +44,13 @@ public class MiruActivity {
             @JsonProperty("authz") String[] authz,
             @JsonProperty("version") long version,
             @JsonProperty("fieldsValues") MiruTermId[][] fieldsValues,
-            @JsonProperty("propsValues") Map<String, MiruIBA[]> propsValues) {
+            @JsonProperty("propsValues") MiruIBA[][] propsValues) {
         return new MiruActivity(new MiruTenantId(tenantId), time, authz, version, fieldsValues, propsValues);
     }
 
     @JsonGetter("tenantId")
     public byte[] getTenantIdAsBytes() {
         return tenantId.getBytes();
-    }
-
-    public Map<String, List<MiruIBA>> getPropsValues() {
-        return Maps.transformValues(propsValues, new Function<MiruIBA[], List<MiruIBA>>() {
-            @Override
-            public List<MiruIBA> apply(MiruIBA[] input) {
-                return Lists.newArrayList(input);
-            }
-        });
     }
 
     public long sizeInBytes() {
@@ -106,7 +95,7 @@ public class MiruActivity {
         if (!Arrays.deepEquals(fieldsValues, activity.fieldsValues)) {
             return false;
         }
-        if (!getPropsValues().equals(activity.getPropsValues())) {
+        if (!Arrays.deepEquals(propsValues, activity.propsValues)) {
             return false;
         }
         if (tenantId != null ? !tenantId.equals(activity.tenantId) : activity.tenantId != null) {
@@ -134,38 +123,20 @@ public class MiruActivity {
                 ", time=" + time +
                 ", authz=" + Arrays.toString(authz) +
                 ", version=" + version +
-                ", fieldsValues=" + fieldsAsString() +
-                ", propsValues=" + propsAsString() +
+                ", fieldsValues=" + valuesAsString(fieldsValues) +
+                ", propsValues=" + valuesAsString(propsValues) +
                 '}';
     }
 
-    public String fieldsAsString() {
+    public <T extends MiruIBA> String valuesAsString(T[][] values) {
         StringBuilder sb = new StringBuilder();
         sb.append('[');
-        for (int i = 0; i < fieldsValues.length; i++) {
-            if (fieldsValues[i] == null || fieldsValues[i].length == 0) {
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == null || values[i].length == 0) {
                 continue;
             }
             sb.append(i).append("=[");
-            for (MiruIBA value : fieldsValues[i]) {
-                byte[] byteValue = value.getBytes();
-                String v = (byteValue.length == 4)
-                        ? String.valueOf(FilerIO.bytesInt(byteValue)) : (byteValue.length == 8)
-                        ? String.valueOf(FilerIO.bytesLong(byteValue)) : new String(byteValue, Charsets.UTF_8);
-                sb.append(v).append(", ");
-            }
-            sb.append("], ");
-        }
-        sb.append(']');
-        return sb.toString();
-    }
-
-    public String propsAsString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append('[');
-        for (Map.Entry<String, MiruIBA[]> entry : propsValues.entrySet()) {
-            sb.append(entry.getKey()).append("=[");
-            for (MiruIBA value : entry.getValue()) {
+            for (MiruIBA value : values[i]) {
                 byte[] byteValue = value.getBytes();
                 String v = (byteValue.length == 4)
                         ? String.valueOf(FilerIO.bytesInt(byteValue)) : (byteValue.length == 8)
@@ -186,7 +157,7 @@ public class MiruActivity {
         private final String[] authz;
         private final long version;
         private final MiruTermId[][] fieldsValues;
-        private final Map<String, List<MiruIBA>> propsValues = Maps.newHashMap();
+        private final MiruIBA[][] propsValues;
 
         public Builder(MiruSchema schema, MiruTenantId tenantId, long time, String[] authz, long version) {
             this.schema = schema;
@@ -195,6 +166,7 @@ public class MiruActivity {
             this.authz = authz;
             this.version = version;
             this.fieldsValues = new MiruTermId[schema.fieldCount()][];
+            this.propsValues = new MiruIBA[schema.propertyCount()][];
         }
 
         public Builder putFieldValue(String field, String value) {
@@ -241,41 +213,52 @@ public class MiruActivity {
             return this;
         }
 
-        public Builder putPropValue(String prop, byte[] value) {
-            getPropValues(prop).add(BYTES_TO_IBA.apply(value));
+        public Builder putPropValue(String prop, String value) {
+            int propId = schema.getPropertyId(prop);
+            MiruIBA[] oldValues = this.propsValues[propId];
+            if (oldValues == null || oldValues.length == 0) {
+                this.propsValues[propId] = new MiruIBA[]{STRING_TO_IBA.apply(value)};
+            } else {
+                MiruIBA[] newValues = new MiruIBA[oldValues.length + 1];
+                System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
+                newValues[newValues.length - 1] = STRING_TO_IBA.apply(value);
+                this.propsValues[propId] = newValues;
+            }
             return this;
         }
 
-        public Builder putAllPropValues(String prop, Collection<byte[]> values) {
-            getPropValues(prop).addAll(Collections2.transform(values, BYTES_TO_IBA));
+        public Builder putAllPropValues(String prop, MiruIBA[] values) {
+            int propId = schema.getPropertyId(prop);
+            MiruIBA[] oldValues = this.propsValues[propId];
+            if (oldValues == null || oldValues.length == 0) {
+                this.propsValues[propId] = values;
+            } else {
+                MiruIBA[] newValues = new MiruIBA[oldValues.length + values.length];
+                System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
+                System.arraycopy(values, 0, newValues, oldValues.length, values.length);
+                this.propsValues[propId] = newValues;
+            }
+            return this;
+        }
+
+        public Builder putAllPropValues(String field, Collection<String> values) {
+            return putAllPropValues(field, Collections2.transform(values, STRING_TO_IBA).toArray(new MiruIBA[values.size()]));
+        }
+
+        public Builder putPropsValues(MiruIBA[][] propsValues) {
+            System.arraycopy(propsValues, 0, this.propsValues, 0, propsValues.length);
             return this;
         }
 
         public Builder putPropsValues(Map<String, MiruIBA[]> propsValues) {
             for (Map.Entry<String, MiruIBA[]> entry : propsValues.entrySet()) {
-                getPropValues(entry.getKey()).addAll(Arrays.asList(entry.getValue()));
+                putAllPropValues(entry.getKey(), entry.getValue());
             }
             return this;
         }
 
-        private List<MiruIBA> getPropValues(String prop) {
-            List<MiruIBA> propValues = propsValues.get(prop);
-            if (propValues == null) {
-                // most have 1 entry, far less expensive overall
-                propValues = Lists.newArrayListWithCapacity(1);
-                propsValues.put(prop, propValues);
-            }
-            return propValues;
-        }
-
         public MiruActivity build() {
-            return new MiruActivity(tenantId, time, authz, version, fieldsValues,
-                    Maps.newHashMap(Maps.transformValues(propsValues, new Function<List<MiruIBA>, MiruIBA[]>() {
-                        @Override
-                        public MiruIBA[] apply(List<MiruIBA> input) {
-                            return input.toArray(new MiruIBA[input.size()]);
-                        }
-                    })));
+            return new MiruActivity(tenantId, time, authz, version, fieldsValues, propsValues);
         }
 
         private static final Function<String, MiruTermId> STRING_TO_TERMID = new Function<String, MiruTermId>() {
@@ -285,10 +268,10 @@ public class MiruActivity {
             }
         };
 
-        private static final Function<byte[], MiruIBA> BYTES_TO_IBA = new Function<byte[], MiruIBA>() {
+        private static final Function<String, MiruIBA> STRING_TO_IBA = new Function<String, MiruIBA>() {
             @Override
-            public MiruIBA apply(byte[] input) {
-                return input != null ? new MiruIBA(input) : null;
+            public MiruIBA apply(String input) {
+                return input != null ? new MiruIBA(input.getBytes(Charsets.UTF_8)) : null;
             }
         };
     }

@@ -70,6 +70,7 @@ public class MiruJustInTimeBackfillerizer<BM> {
                         MiruIBA streamIdAsIBA = new MiruIBA(streamId.getBytes());
 
                         long oldestBackfilledEventId = Long.MAX_VALUE;
+                        int propId = stream.schema.getPropertyId(MiruPropertyName.READ_STREAMIDS.getPropertyName());
                         //TODO more efficient way to merge answer into inbox and unread
                         MiruIntIterator intIterator = bitmaps.intIterator(answer);
                         List<Integer> inboxIds = Lists.newLinkedList();
@@ -87,7 +88,7 @@ public class MiruJustInTimeBackfillerizer<BM> {
 
                                 inboxIds.add(i);
 
-                                MiruIBA[] readStreamIds = miruActivity.propsValues.get(MiruPropertyName.READ_STREAMIDS.getPropertyName());
+                                MiruIBA[] readStreamIds = miruActivity.propsValues[propId];
                                 if (readStreamIds == null || !Arrays.asList(readStreamIds).contains(streamIdAsIBA)) {
                                     unreadIds.add(i);
                                 }

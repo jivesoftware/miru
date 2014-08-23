@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.api.activity;
+package com.jivesoftware.os.miru.api.activity.schema;
 
 import java.util.Collections;
 import java.util.List;

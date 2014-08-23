@@ -9,7 +9,7 @@ import com.jivesoftware.os.miru.service.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import java.util.concurrent.ExecutorService;
 

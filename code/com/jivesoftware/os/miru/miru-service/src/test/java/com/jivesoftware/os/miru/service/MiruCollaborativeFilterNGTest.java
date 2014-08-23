@@ -17,6 +17,8 @@ import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMaps
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.miru.api.*;
 import com.jivesoftware.os.miru.api.activity.*;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.RecoQuery;
@@ -139,9 +141,9 @@ public class MiruCollaborativeFilterNGTest {
         AtomicInteger time = new AtomicInteger();
         Random rand = new Random(1234);
         int numqueries = 1_000;
-        int numberOfUsers = 10_000;
-        int numberOfDocument = 1_000;
-        int numberOfViewsPerUser = 100;
+        int numberOfUsers = 1_000;
+        int numberOfDocument = 300_000;
+        int numberOfViewsPerUser = 3_000;
         System.out.println("Building activities....");
         long start = System.currentTimeMillis();
         int count = 0;

@@ -51,7 +51,7 @@ import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruTransientActivityIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruTransientField;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import com.jivesoftware.os.miru.service.stream.locator.MiruDiskResourceAnalyzer;
 import com.jivesoftware.os.miru.service.stream.locator.MiruPartitionCoordIdentifier;

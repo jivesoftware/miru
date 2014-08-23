@@ -40,7 +40,7 @@ import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.reader.MiruReaderImpl;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProviderInitializer;
 import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
@@ -100,7 +100,7 @@ public class MiruMain {
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA),
+                new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),

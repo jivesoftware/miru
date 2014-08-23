@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.service.util;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.activity.*;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import java.util.Random;

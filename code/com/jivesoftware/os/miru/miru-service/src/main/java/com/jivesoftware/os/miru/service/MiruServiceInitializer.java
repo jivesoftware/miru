@@ -21,7 +21,7 @@ import com.jivesoftware.os.miru.service.partition.MiruRemotePartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
 import com.jivesoftware.os.miru.service.partition.cluster.CachedClusterPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
 import com.jivesoftware.os.miru.service.stream.factory.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.service.stream.factory.MiruLowestLatencySolver;

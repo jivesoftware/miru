@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service.stream;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -60,16 +60,15 @@ public class MiruActivityInterner {
         return fieldsValues;
     }
 
-    private Map<String, MiruIBA[]> internProps(Map<String, MiruIBA[]> termValuesMap) {
-        Map<String, MiruIBA[]> termsValues = Maps.newHashMap();
-        for (Map.Entry<String, MiruIBA[]> entry : termValuesMap.entrySet()) {
-            MiruIBA[] terms = new MiruIBA[entry.getValue().length];
-            for (int i = 0; i < terms.length; i++) {
-                terms[i] = ibaInterner.intern(entry.getValue()[i]);
+    private MiruIBA[][] internProps(MiruIBA[][] propsValues) {
+        for (int i = 0; i < propsValues.length; i++) {
+            if (propsValues[i] != null) {
+                for (int j = 0; j < propsValues[i].length; j++) {
+                    propsValues[i][j] = ibaInterner.intern(propsValues[i][j]);
+                }
             }
-            termsValues.put(stringInterner.intern(entry.getKey()), terms);
         }
-        return termsValues;
+        return propsValues;
     }
 
     public MiruTermId internTermId(MiruTermId termId) {

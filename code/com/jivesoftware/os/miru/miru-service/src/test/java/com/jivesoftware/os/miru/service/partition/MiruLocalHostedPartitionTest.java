@@ -16,7 +16,7 @@ import com.jivesoftware.os.miru.cluster.memory.MiruInMemoryClusterRegistry;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.api.activity.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
@@ -82,7 +82,7 @@ public class MiruLocalHostedPartitionTest {
         RowColumnValueStoreImpl<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> readTrackingSipWAL =
             new RowColumnValueStoreImpl<>();
 
-        schema = new MiruSchema(DefaultMiruSchemaDefinition.SCHEMA);
+        schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
 
         streamFactory = new MiruStreamFactory(new MiruBitmapsEWAH(2), // TODO consider feed wth data provider
             schema,
