@@ -62,14 +62,16 @@ public class MatchNoMoreThanNBitmapStorage implements BitmapStorage {
             container.addStreamOfEmptyWords(v, wordsRemaining);
 
             int bitsRemaining = n - position;
-            long word = 0;
-            if (v) {
-                for (int i = 0; i < bitsRemaining; i++) {
-                    word |= (1l << i);
+            if (bitsRemaining > 0) {
+                long word = 0;
+                if (v) {
+                    for (int i = 0; i < bitsRemaining; i++) {
+                        word |= (1l << i);
+                    }
                 }
+                position += bitsRemaining;
+                container.addWord(word, bitsRemaining);
             }
-            position += bitsRemaining;
-            container.addWord(word, bitsRemaining);
         } else {
             position += number * EWAHCompressedBitmap.WORD_IN_BITS;
             container.addStreamOfEmptyWords(v, number);

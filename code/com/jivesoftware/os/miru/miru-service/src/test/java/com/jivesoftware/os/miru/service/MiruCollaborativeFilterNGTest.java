@@ -32,6 +32,7 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
@@ -105,8 +106,8 @@ public class MiruCollaborativeFilterNGTest {
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
-                new MiruBitmapsRoaring());
-                //new MiruBitmapsEWAH(config.getBitsetBufferSize()));
+                //new MiruBitmapsRoaring());
+                new MiruBitmapsEWAH(config.getBitsetBufferSize()));
 
         miruServiceLifecyle.start();
         MiruService miruService = miruServiceLifecyle.getService();
@@ -140,17 +141,24 @@ public class MiruCollaborativeFilterNGTest {
 
         AtomicInteger time = new AtomicInteger();
         Random rand = new Random(1234);
-        int numqueries = 1_000;
-        int numberOfUsers = 1_000;
-        int numberOfDocument = 300_000;
-        int numberOfViewsPerUser = 3_000;
+        int numqueries = 5_000;
+        int numberOfUsers = 10_000;
+        int numberOfDocument = 500_000;
+        int numberOfViewsPerUser = 500;
         System.out.println("Building activities....");
         long start = System.currentTimeMillis();
         int count = 0;
+        int numGroups = 10;
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
+            int randSeed = i % numGroups;
+            Random userRand = new Random(randSeed * 137);
+            for (int r = 0; r < 2 * (i / numGroups); r++) {
+                userRand.nextInt(numberOfDocument);
+            }
             for (int d = 0; d < numberOfViewsPerUser; d++) {
-                service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), user, String.valueOf(rand.nextInt(numberOfDocument)))));
+                int docId = userRand.nextInt(numberOfDocument);
+                service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), user, String.valueOf(docId))));
                 count++;
                 if (count % 10_000 == 0) {
                     System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
