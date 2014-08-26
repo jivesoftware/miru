@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
@@ -133,7 +134,7 @@ public class MiruUnreadTrackingIndexTest {
                 @Override
                 public Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport() throws Exception {
                     return ImmutableMap.of(
-                        streamId, tempMiruInvertedIndex
+                            streamId, tempMiruInvertedIndex
                     );
                 }
             });
@@ -145,12 +146,13 @@ public class MiruUnreadTrackingIndexTest {
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
-        MiruOnDiskUnreadTrackingIndex miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex(bitmaps, mapDir, swapDir, chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        MiruOnDiskUnreadTrackingIndex miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex(bitmaps, mapDir, swapDir, multiChunkStore);
         miruOnDiskUnreadTrackingIndex.bulkImport(miruInMemoryUnreadTrackingIndex);
 
-        return new Object[][] {
-            { miruInMemoryUnreadTrackingIndex, streamId, miruInvertedIndex },
-            { miruOnDiskUnreadTrackingIndex, streamId, miruInvertedIndex }
+        return new Object[][]{
+            {miruInMemoryUnreadTrackingIndex, streamId, miruInvertedIndex},
+            {miruOnDiskUnreadTrackingIndex, streamId, miruInvertedIndex}
         };
     }
 }

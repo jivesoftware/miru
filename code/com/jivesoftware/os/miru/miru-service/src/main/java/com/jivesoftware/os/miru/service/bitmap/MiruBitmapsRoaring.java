@@ -17,17 +17,16 @@ package com.jivesoftware.os.miru.service.bitmap;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
-import org.roaringbitmap.IntIterator;
-import org.roaringbitmap.RoaringAggregation;
-import org.roaringbitmap.RoaringBitmap;
-import org.roaringbitmap.RoaringInspection;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.RoaringAggregation;
+import org.roaringbitmap.RoaringBitmap;
+import org.roaringbitmap.RoaringInspection;
 
 /**
  * @author jonathan

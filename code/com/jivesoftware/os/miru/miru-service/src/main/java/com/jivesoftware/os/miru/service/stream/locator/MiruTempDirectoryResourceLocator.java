@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentMap;
 /**
  *
  */
-public class MiruTempDirectoryResourceLocator implements MiruTransientResourceLocator {
+public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocator {
 
     private final ConcurrentMap<MiruResourcePartitionIdentifier, File> partitionPaths = Maps.newConcurrentMap();
     private final Random random = new Random();
@@ -25,7 +25,7 @@ public class MiruTempDirectoryResourceLocator implements MiruTransientResourceLo
     public MiruResourcePartitionIdentifier acquire() throws IOException {
         byte[] bytes = new byte[12];
         random.nextBytes(bytes);
-        return new MiruTransientTokenIdentifier(BaseEncoding.base64Url().omitPadding().encode(bytes));
+        return new MiruHybridTokenIdentifier(BaseEncoding.base64Url().omitPadding().encode(bytes));
     }
 
     @Override

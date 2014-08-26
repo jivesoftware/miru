@@ -238,9 +238,7 @@ public class MiruFilterUtils<BM> {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruInternalActivity activity = stream.activityIndex.get(lastSetBit);
-
-                MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+                MiruTermId[] fieldValues = stream.activityIndex.get(lastSetBit, fieldId);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -309,7 +307,7 @@ public class MiruFilterUtils<BM> {
                     long timestamp = stream.timeIndex.getTimestamp(index);
                     trend.add(timestamp, 1d);
                 }
-                trendies.add(new Trendy(null, aggregateTermId.getBytes(), trend, trend.getRank(trend.getCurrentT())));
+                trendies.add(new Trendy(aggregateTermId.getBytes(), trend, trend.getRank(trend.getCurrentT())));
             }
 
             CardinalityAndLastSetBit answerCollector = null;
@@ -319,8 +317,7 @@ public class MiruFilterUtils<BM> {
                     break;
                 }
 
-                MiruInternalActivity activity = stream.activityIndex.get(lastSetBit);
-                MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+                MiruTermId[] fieldValues = stream.activityIndex.get(lastSetBit, fieldId);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -352,7 +349,7 @@ public class MiruFilterUtils<BM> {
                         long timestamp = stream.timeIndex.getTimestamp(index);
                         trend.add(timestamp, 1d);
                     }
-                    Trendy trendy = new Trendy(activityInternExtern.extern(activity), aggregateValue, trend, trend.getRank(trend.getCurrentT()));
+                    Trendy trendy = new Trendy(aggregateValue, trend, trend.getRank(trend.getCurrentT()));
                     trendies.add(trendy);
 
                     //TODO desiredNumberOfDistincts is used to truncate the final list. Do we need a maxDistincts of some sort?
@@ -447,8 +444,7 @@ public class MiruFilterUtils<BM> {
         int fieldId = stream.schema.getFieldId(query.aggregateFieldName1);
         while (answerIterator.hasNext()) {
             int id = answerIterator.next();
-            MiruInternalActivity activity = stream.activityIndex.get(id);
-            MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+            MiruTermId[] fieldValues = stream.activityIndex.get(id, fieldId);
             if (fieldValues != null && fieldValues.length > 0) {
                 Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField1.getInvertedIndex(makeComposite(fieldValues[0], "^", query.aggregateFieldName2));
                 if (invertedIndex.isPresent()) {
@@ -474,13 +470,12 @@ public class MiruFilterUtils<BM> {
             }
         }).maximumSize(query.resultCount).create();
         // feeds us all recommended documents
-        final int fieldId = stream.schema.getFieldId(query.retrieveFieldName3);
         stream(stream, join2, Optional.<BM>absent(), aggregateField3, query.retrieveFieldName3, new CallbackStream<TermCount>() {
 
             @Override
             public TermCount callback(TermCount v) throws Exception {
                 if (v != null) {
-                    MiruTermId[] fieldValues = v.mostRecent.fieldsValues[fieldId];
+                    MiruTermId[] fieldValues = v.mostRecent;
                     if (fieldValues != null && fieldValues.length > 0) {
                         Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField3.getInvertedIndex(makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
                         if (invertedIndex.isPresent()) {
@@ -532,8 +527,7 @@ public class MiruFilterUtils<BM> {
                 break;
             }
 
-            MiruInternalActivity activity = stream.activityIndex.get(lastSetBit);
-            MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+            MiruTermId[] fieldValues = stream.activityIndex.get(lastSetBit, fieldId);
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                 BM removeUnknownField = bitmaps.create();
@@ -567,7 +561,7 @@ public class MiruFilterUtils<BM> {
                     afterCount = answerCollector.cardinality;
                 }
 
-                TermCount termCount = new TermCount(pivotTerm, activity, beforeCount - afterCount);
+                TermCount termCount = new TermCount(pivotTerm, fieldValues, beforeCount - afterCount);
                 if (termCount != terms.callback(termCount)) { // Stop stream
                     return;
                 }
@@ -592,10 +586,10 @@ public class MiruFilterUtils<BM> {
     static class TermCount implements BloomIndex.HasValue {
 
         public final MiruTermId termId;
-        public MiruInternalActivity mostRecent;
+        public MiruTermId[] mostRecent;
         public final long count;
 
-        public TermCount(MiruTermId termId, MiruInternalActivity mostRecent, long count) {
+        public TermCount(MiruTermId termId, MiruTermId[] mostRecent, long count) {
             this.termId = termId;
             this.mostRecent = mostRecent;
             this.count = count;

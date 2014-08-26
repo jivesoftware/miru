@@ -42,8 +42,8 @@ public class MiruResourceLocatorProviderInitializer {
 
         File transientPath = new File(config.getTransientResourceLocatorPath());
         FileUtils.forceMkdir(transientPath);
-        final MiruTransientResourceCleaner cleaner = new MiruTransientResourceCleaner(transientPath);
-        final MiruTransientResourceLocator transientResourceLocator = new TransientIdentifierPartResourceLocator(
+        final MiruHybridResourceCleaner cleaner = new MiruHybridResourceCleaner(transientPath);
+        final MiruHybridResourceLocator transientResourceLocator = new HybridIdentifierPartResourceLocator(
                 transientPath,
                 config.getTransientResourceInitialChunkSize(),
                 cleaner);
@@ -56,7 +56,7 @@ public class MiruResourceLocatorProviderInitializer {
                     }
 
                     @Override
-                    public MiruTransientResourceLocator getTransientResourceLocator() {
+                    public MiruHybridResourceLocator getTransientResourceLocator() {
                         return transientResourceLocator;
                     }
                 };

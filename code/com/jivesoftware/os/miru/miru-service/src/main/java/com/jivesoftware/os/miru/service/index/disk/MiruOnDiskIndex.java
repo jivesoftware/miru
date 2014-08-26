@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
@@ -19,7 +19,7 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Map<Long, 
     private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
 
-    public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, ChunkStore chunkStore) throws Exception {
+    public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore) throws Exception {
         this.bitmaps = bitmaps;
         this.index = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 8, 100, chunkStore, 512);
     }

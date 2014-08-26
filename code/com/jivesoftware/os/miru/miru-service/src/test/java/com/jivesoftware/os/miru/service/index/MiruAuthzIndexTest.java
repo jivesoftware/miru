@@ -8,6 +8,7 @@ import com.google.common.collect.Maps;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
@@ -33,7 +34,9 @@ import static org.testng.Assert.assertEquals;
 public class MiruAuthzIndexTest {
 
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
-    public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<Integer, EWAHCompressedBitmap> bitsIn) throws Exception {
+    public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<Integer, EWAHCompressedBitmap> bitsIn)
+            throws Exception {
+
         for (Map.Entry<Integer, EWAHCompressedBitmap> entry : bitsIn.entrySet()) {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) entry.getKey()));
             MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(ImmutableList.of(authz));
@@ -77,26 +80,29 @@ public class MiruAuthzIndexTest {
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 16384, false);
-        MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex = new MiruOnDiskAuthzIndex<>(bitmaps, mapDir, swapDir, chunkStore, cache(bitmaps, miruAuthzUtils, 10));
+        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex
+                = new MiruOnDiskAuthzIndex<>(bitmaps, mapDir, swapDir, multiChunkStore, cache(bitmaps, miruAuthzUtils, 10));
         smallMiruOnDiskAuthzIndex.bulkImport(smallMiruInMemoryAuthzIndex);
 
-        return new Object[][] {
-            { smallMiruInMemoryAuthzIndex, miruAuthzUtils, smallBitsIn },
-            { largeMiruInMemoryAuthzIndex, miruAuthzUtils, largeBitsIn },
-            { smallMiruOnDiskAuthzIndex, miruAuthzUtils, smallBitsIn }
+        return new Object[][]{
+            {smallMiruInMemoryAuthzIndex, miruAuthzUtils, smallBitsIn},
+            {largeMiruInMemoryAuthzIndex, miruAuthzUtils, largeBitsIn},
+            {smallMiruOnDiskAuthzIndex, miruAuthzUtils, smallBitsIn}
         };
     }
 
     private <BM> MiruAuthzCache<BM> cache(MiruBitmaps<BM> bitmaps, MiruAuthzUtils<BM> miruAuthzUtils, int maximumSize) {
         Cache<VersionedAuthzExpression, BM> cache = CacheBuilder.newBuilder()
-            .maximumSize(maximumSize)
-            .expireAfterAccess(1, TimeUnit.MINUTES)
-            .build();
+                .maximumSize(maximumSize)
+                .expireAfterAccess(1, TimeUnit.MINUTES)
+                .build();
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(null, null, null, null, Interners.<String>newWeakInterner());
         return new MiruAuthzCache<BM>(bitmaps, cache, activityInternExtern, miruAuthzUtils);
     }
 
-    private <BM> InvertedIndexData<BM> buildInMemoryInvertedIndexes(MiruBitmaps<BM> bitmaps, Map<Integer, BM> bitsIn, MiruAuthzUtils<BM> miruAuthzUtils, int size) throws Exception {
+    private <BM> InvertedIndexData<BM> buildInMemoryInvertedIndexes(MiruBitmaps<BM> bitmaps, Map<Integer, BM> bitsIn, MiruAuthzUtils<BM> miruAuthzUtils,
+            int size) throws Exception {
         Map<String, MiruInvertedIndex> importItems = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {
@@ -120,6 +126,7 @@ public class MiruAuthzIndexTest {
     }
 
     private static class InvertedIndexData<BM2> {
+
         private final Map<Integer, BM2> bitsIn;
         private final Map<String, MiruInvertedIndex<BM2>> importItems;
 

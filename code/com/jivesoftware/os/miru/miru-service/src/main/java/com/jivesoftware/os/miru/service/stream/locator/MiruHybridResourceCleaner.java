@@ -9,14 +9,14 @@ import java.util.Set;
 /**
  *
  */
-public class MiruTransientResourceCleaner {
+public class MiruHybridResourceCleaner {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final File basePath;
     private final Set<String> acquired = Sets.newHashSet();
 
-    public MiruTransientResourceCleaner(final File basePath) {
+    public MiruHybridResourceCleaner(final File basePath) {
         this.basePath = basePath;
     }
 

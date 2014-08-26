@@ -30,7 +30,7 @@ import static org.testng.Assert.assertTrue;
 public class MiruInvertedIndexTest {
 
     @Test(dataProvider = "miruInvertedIndexDataProvider",
-        groups = "slow", enabled = false, description = "Performance test")
+            groups = "slow", enabled = false, description = "Performance test")
     public void testSetId(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, int appends, int sets) throws Exception {
         Random r = new Random(1234);
         int id = 0;
@@ -60,7 +60,7 @@ public class MiruInvertedIndexTest {
             if (i % 1000 == 0) {
                 //System.out.println("set " + i);
                 System.out.println(String.format("set 1000, elapsed = %s, max id = %s, bitmap size = %s",
-                    (System.currentTimeMillis() - subTimestamp), id, miruInvertedIndex.getIndex().sizeInBytes()));
+                        (System.currentTimeMillis() - subTimestamp), id, miruInvertedIndex.getIndex().sizeInBytes()));
                 subTimestamp = System.currentTimeMillis();
             }
         }
@@ -75,11 +75,11 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.append(3);
         miruInvertedIndex.append(5);
         miruInvertedIndex.append(8);
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 2));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 3));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 5));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 8));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 2));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 3));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 5));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 8));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProvider", expectedExceptions = RuntimeException.class)
@@ -112,9 +112,9 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.append(1);
         miruInvertedIndex.append(5);
         miruInvertedIndex.set(3);
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 5));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 3));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 5));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 3));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProvider")
@@ -123,8 +123,8 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.append(1);
         miruInvertedIndex.set(2);
 
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 2));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 2));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProvider")
@@ -139,9 +139,9 @@ public class MiruInvertedIndexTest {
         bitmap.set(3);
         miruInvertedIndex.andNotToSourceSize(bitmap);
 
-        assertFalse( bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 2));
-        assertFalse( bitmaps.isSet(miruInvertedIndex.getIndex(), 3));
+        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 2));
+        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(), 3));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProvider")
@@ -157,16 +157,16 @@ public class MiruInvertedIndexTest {
         bitmap.set(5);
         miruInvertedIndex.orToSourceSize(bitmap);
 
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 2));
-        assertTrue( bitmaps.isSet(miruInvertedIndex.getIndex(), 3));
-        assertFalse( bitmaps.isSet(miruInvertedIndex.getIndex(), 4));
-        assertFalse( bitmaps.isSet(miruInvertedIndex.getIndex(), 5)); // extra bit is ignored
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 2));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 3));
+        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(), 4));
+        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(), 5)); // extra bit is ignored
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithOverhead")
     public void testSizeInBytes(MiruInvertedIndex miruInvertedIndex, int overhead) throws Exception {
-        System.out.println(miruInvertedIndex+" "+overhead);
+        System.out.println(miruInvertedIndex + " " + overhead);
         miruInvertedIndex.append(1);
         miruInvertedIndex.getIndex(); // force merge
         assertEquals(miruInvertedIndex.sizeInMemory() + miruInvertedIndex.sizeOnDisk(), 16 + overhead);
@@ -185,26 +185,28 @@ public class MiruInvertedIndexTest {
         int diskAppends = 100;
         int diskSets = 1_000;
 
-        return new Object[][] {
-            { new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(100)), memoryAppends, memorySets },
-            { new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), diskAppends, diskSets }
+        return new Object[][]{
+            {new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(100)), memoryAppends, memorySets},
+            {new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), diskAppends, diskSets}
         };
     }
 
     @DataProvider(name = "miruInvertedIndexDataProvider")
     public Object[][] miruInvertedIndexDataProvider() throws Exception {
-        return new Object[][] {
-            { new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(100)) },
-            { new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))) }
+        return new Object[][]{
+            {new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(100))},
+            {new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")))}
         };
     }
 
     @DataProvider(name = "miruInvertedIndexDataProviderWithOverhead")
     public Object[][] miruInvertedIndexDataProviderWithOverhead() throws Exception {
-        return new Object[][] {
-            { new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(4)), 0 },
-            { new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(4), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), 12 }
-            /** @see com.googlecode.javaewah.EWAHCompressedBitmap#serializedSizeInBytes() */
+        return new Object[][]{
+            {new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(4)), 0},
+            {new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(4), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), 12}
+        /**
+         * @see com.googlecode.javaewah.EWAHCompressedBitmap#serializedSizeInBytes()
+         */
         };
     }
 
@@ -224,12 +226,12 @@ public class MiruInvertedIndexTest {
         });
 
         MiruOnDiskInvertedIndex<EWAHCompressedBitmap> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(100),
-            new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")));
+                new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")));
         miruOnDiskInvertedIndex.bulkImport(miruInMemoryInvertedIndex);
 
-        return new Object[][] {
-            { miruInMemoryInvertedIndex, Sets.newHashSet(1, 2, 3) },
-            { miruOnDiskInvertedIndex, Sets.newHashSet(1, 2, 3) }
+        return new Object[][]{
+            {miruInMemoryInvertedIndex, Sets.newHashSet(1, 2, 3)},
+            {miruOnDiskInvertedIndex, Sets.newHashSet(1, 2, 3)}
         };
     }
 

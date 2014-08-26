@@ -50,6 +50,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -76,7 +79,7 @@ public class MiruCollaborativeFilterNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
 
-        MiruBackingStorage disiredStorage = MiruBackingStorage.memory;
+        MiruBackingStorage disiredStorage = MiruBackingStorage.hybrid;
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultStorage(disiredStorage.name());
@@ -147,33 +150,52 @@ public class MiruCollaborativeFilterNGTest {
     @Test(enabled = true)
     public void basicTest() throws Exception {
 
+        ExecutorService indexerThread = Executors.newFixedThreadPool(16);
 
         AtomicInteger time = new AtomicInteger();
         Random rand = new Random(1234);
-        int numqueries = 1;
-        int numberOfUsers = 1;
+        int numqueries = 2;
+        int numberOfUsers = 2;
         int numberOfDocument = 500_000;
-        int numberOfViewsPerUser = 1;
+        int numberOfViewsPerUser = 2;
         System.out.println("Building activities....");
-        long start = System.currentTimeMillis();
-        int count = 0;
+        final long start = System.currentTimeMillis();
+        final AtomicInteger count = new AtomicInteger();
         int numGroups = 10;
+        final CountDownLatch latch = new CountDownLatch(numberOfUsers * numberOfViewsPerUser);
         for (int i = 0; i < numberOfUsers; i++) {
-            String user = "bob" + i;
+            final String user = "bob" + i;
             int randSeed = i % numGroups;
             Random userRand = new Random(randSeed * 137);
             for (int r = 0; r < 2 * (i / numGroups); r++) {
                 userRand.nextInt(numberOfDocument);
             }
             for (int d = 0; d < numberOfViewsPerUser; d++) {
-                int docId = userRand.nextInt(numberOfDocument);
-                service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), user, String.valueOf(docId))));
-                count++;
-                if (count % 10_000 == 0) {
-                    System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
-                }
+                final int docId = userRand.nextInt(numberOfDocument);
+                final long activityTime = time.incrementAndGet();
+                indexerThread.submit(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        try {
+                            service.writeToIndex(Collections.singletonList(viewActivity(activityTime, user, String.valueOf(docId))));
+                            if (count.incrementAndGet() % 10_000 == 0) {
+                                System.out.println("Finished " + count.get() + " in " + (System.currentTimeMillis() - start) + " ms");
+                            }
+                        } catch(Exception x) {
+                            x.printStackTrace();
+                        } finally {
+                            latch.countDown();
+                        }
+                    }
+                });
+
+
             }
         }
+        latch.await();
+        indexerThread.shutdown();
+
         System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
 
         service.writeToIndex(Collections.singletonList(viewActivity(time.incrementAndGet(), "bob0", "1")));
@@ -208,7 +230,7 @@ public class MiruCollaborativeFilterNGTest {
                     Optional.of(ImmutableList.of(miruFieldFilter)),
                     Optional.<ImmutableList<MiruFilter>>absent());
 
-            start = System.currentTimeMillis();
+            long s = System.currentTimeMillis();
             RecoResult recoResult = service.collaborativeFilteringRecommendations(new RecoQuery(tenant1,
                     Optional.<MiruAuthzExpression>absent(),
                     filter,
@@ -218,7 +240,7 @@ public class MiruCollaborativeFilterNGTest {
                     10));
 
             System.out.println("recoResult:" + recoResult);
-            System.out.println("Took:" + (System.currentTimeMillis() - start));
+            System.out.println("Took:" + (System.currentTimeMillis() - s));
         }
 
     }
@@ -227,7 +249,7 @@ public class MiruCollaborativeFilterNGTest {
         return Joiner.on("").join(fieldValue, separator, fieldName);
     }
 
-    private MiruPartitionedActivity viewActivity(int time, String user, String doc) {
+    private MiruPartitionedActivity viewActivity(long time, String user, String doc) {
         Map<String, List<String>> fieldsValues = Maps.newHashMap();
         fieldsValues.put("user", Arrays.asList(user));
         fieldsValues.put("doc", Arrays.asList(doc));

@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -20,7 +20,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
 
-    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, ChunkStore chunkStore) throws Exception {
+    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore) throws Exception {
         this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
         this.index = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 8, 100, chunkStore, 512);

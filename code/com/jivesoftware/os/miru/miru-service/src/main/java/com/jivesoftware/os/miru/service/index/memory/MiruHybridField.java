@@ -5,10 +5,10 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruField;
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import java.io.File;
@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Short-lived (transient) impl. Term dictionary is mem-mapped. Supports index().
  * Next term id is held in memory.
  */
-public class MiruTransientField implements MiruField, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> {
+public class MiruHybridField implements MiruField, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> {
 
     private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1024 }; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
@@ -31,7 +31,7 @@ public class MiruTransientField implements MiruField, BulkExport<Map<MiruTermId,
     private final AtomicInteger nextTermId;
     private final VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
 
-    public MiruTransientField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex index, File mapDirectory) {
+    public MiruHybridField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex index, File mapDirectory) {
         this.fieldDefinition = fieldDefinition;
         this.index = index;
         this.nextTermId = new AtomicInteger();

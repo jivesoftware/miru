@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
@@ -9,7 +10,6 @@ import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.query.base.ExecuteMiruFilter;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;

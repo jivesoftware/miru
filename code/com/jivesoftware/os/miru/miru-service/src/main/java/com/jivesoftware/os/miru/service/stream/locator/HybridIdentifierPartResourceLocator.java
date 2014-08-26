@@ -9,25 +9,25 @@ import javax.inject.Singleton;
  *
  */
 @Singleton
-public class TransientIdentifierPartResourceLocator extends AbstractIdentifierPartResourceLocator implements MiruTransientResourceLocator {
+public class HybridIdentifierPartResourceLocator extends AbstractIdentifierPartResourceLocator implements MiruHybridResourceLocator {
 
-    private final MiruTransientResourceCleaner cleaner;
+    private final MiruHybridResourceCleaner cleaner;
     private final Random random = new Random();
 
-    public TransientIdentifierPartResourceLocator(File path,
+    public HybridIdentifierPartResourceLocator(File path,
         long initialChunkSize,
-        MiruTransientResourceCleaner cleaner) {
+        MiruHybridResourceCleaner cleaner) {
         super(path, initialChunkSize);
         this.cleaner = cleaner;
     }
 
     @Override
     public MiruResourcePartitionIdentifier acquire() {
-        MiruTransientTokenIdentifier identifier = null;
+        MiruHybridTokenIdentifier identifier = null;
         while (identifier == null || getPartitionPath(identifier).exists()) {
             byte[] bytes = new byte[12];
             random.nextBytes(bytes);
-            identifier = new MiruTransientTokenIdentifier(BaseEncoding.base64Url().omitPadding().encode(bytes));
+            identifier = new MiruHybridTokenIdentifier(BaseEncoding.base64Url().omitPadding().encode(bytes));
         }
         cleaner.acquired(identifier.getToken());
         return identifier;
@@ -35,10 +35,10 @@ public class TransientIdentifierPartResourceLocator extends AbstractIdentifierPa
 
     @Override
     public void release(MiruResourcePartitionIdentifier identifier) {
-        if (!(identifier instanceof MiruTransientTokenIdentifier)) {
+        if (!(identifier instanceof MiruHybridTokenIdentifier)) {
             throw new IllegalArgumentException("Unknown identifier type");
         }
 
-        cleaner.released(((MiruTransientTokenIdentifier) identifier).getToken());
+        cleaner.released(((MiruHybridTokenIdentifier) identifier).getToken());
     }
 }

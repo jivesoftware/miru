@@ -19,7 +19,7 @@ import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
-import com.jivesoftware.os.miru.service.stream.locator.MiruTransientResourceLocator;
+import com.jivesoftware.os.miru.service.stream.locator.MiruHybridResourceLocator;
 import java.io.IOException;
 
 /**
@@ -31,7 +31,7 @@ public class MiruTempResourceLocatorProviderInitializer {
     public MiruLifecyle<MiruResourceLocatorProvider> initialize() throws IOException {
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
-        final MiruTransientResourceLocator transientResourceLocator = new MiruTempDirectoryResourceLocator();
+        final MiruHybridResourceLocator transientResourceLocator = new MiruTempDirectoryResourceLocator();
 
         return new MiruLifecyle<MiruResourceLocatorProvider>() {
 
@@ -45,7 +45,7 @@ public class MiruTempResourceLocatorProviderInitializer {
                     }
 
                     @Override
-                    public MiruTransientResourceLocator getTransientResourceLocator() {
+                    public MiruHybridResourceLocator getTransientResourceLocator() {
                         return transientResourceLocator;
                     }
                 };

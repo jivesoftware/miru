@@ -12,8 +12,9 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * @author jonathan
@@ -28,7 +29,7 @@ public class MiruInternalActivity {
     public final MiruTermId[][] fieldsValues;
     public final MiruIBA[][] propsValues;
 
-    private MiruInternalActivity(MiruTenantId tenantId, long time, String[] authz, long version, MiruTermId[][] fieldsValues, MiruIBA[][] propsValues) {
+    public MiruInternalActivity(MiruTenantId tenantId, long time, String[] authz, long version, MiruTermId[][] fieldsValues, MiruIBA[][] propsValues) {
         this.tenantId = tenantId;
         this.time = time;
         this.authz = authz;

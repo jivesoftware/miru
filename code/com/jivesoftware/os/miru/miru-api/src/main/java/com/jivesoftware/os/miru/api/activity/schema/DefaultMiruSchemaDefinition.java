@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.api.activity.schema;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.property.MiruPropertyName;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -14,7 +13,7 @@ public class DefaultMiruSchemaDefinition {
     static {
         AtomicInteger fieldIndex = new AtomicInteger();
         List<MiruFieldDefinition> fieldDefinitions = Lists.newArrayList();
-        
+
         fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.OBJECT_ID.getFieldName()));
         fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.VIEW_CLASS_NAME.getFieldName()));
         fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName()));
@@ -38,7 +37,7 @@ public class DefaultMiruSchemaDefinition {
 
         FIELDS = fieldDefinitions.toArray(new MiruFieldDefinition[fieldDefinitions.size()]);
     }
-    
+
     public static final MiruPropertyDefinition[] PROPERTIES;
 
     static {

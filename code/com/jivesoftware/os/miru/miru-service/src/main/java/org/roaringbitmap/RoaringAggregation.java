@@ -1,7 +1,5 @@
 package org.roaringbitmap;
 
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;

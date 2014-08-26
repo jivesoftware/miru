@@ -60,14 +60,14 @@ public class MergeTrendingResults implements MiruResultMerger<TrendingResult> {
                     SimpleRegressionTrend merged = new SimpleRegressionTrend();
                     merged.merge(trendy.trend);
                     merged.merge(had.trend);
-                    mergedResults.add(new TrendingResult.Trendy(trendy.mostRecentActivity, trendy.distinctValue, merged, merged.getRank(merged.getCurrentT())));
+                    mergedResults.add(new TrendingResult.Trendy(trendy.distinctValue, merged, merged.getRank(merged.getCurrentT())));
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to merge", e);
                 }
             }
         }
         for (TrendingResult.Trendy trendy : currentResult.results) {
-            if (carryOverCounts.containsKey(new MiruIBA(trendy.distinctValue)) && trendy.mostRecentActivity != null) {
+            if (carryOverCounts.containsKey(new MiruIBA(trendy.distinctValue))) {
                 mergedResults.add(trendy);
             }
         }

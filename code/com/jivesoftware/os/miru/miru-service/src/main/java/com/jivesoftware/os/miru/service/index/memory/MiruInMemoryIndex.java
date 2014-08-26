@@ -11,10 +11,7 @@ import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import gnu.trove.impl.Constants;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import gnu.trove.procedure.TLongObjectProcedure;
-
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * @author jonathan

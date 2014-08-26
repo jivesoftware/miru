@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
@@ -59,7 +60,7 @@ public class MiruFieldTest {
         MiruInMemoryField miruInMemoryField = new MiruInMemoryField(fieldDefinition,
                 Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(),
                 new MiruInMemoryIndex(new MiruBitmapsEWAH(2)));
-        
+
         for (int id = 0; id < 10; id++) {
             ids.add(id);
             miruInMemoryField.index(new MiruTermId(new byte[]{(byte) id}), id);
@@ -72,17 +73,18 @@ public class MiruFieldTest {
         File fieldMapDirectory = Files.createTempDirectory(getClass().getSimpleName()).toFile();
 
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), 5120, false); // 512 min size, times 10 field indexes
+        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskField miruOnDiskField = new MiruOnDiskField(
                 fieldDefinition,
-                new MiruOnDiskIndex(new MiruBitmapsEWAH(2), indexMapDirectory, indexSwapDirectory, chunkStore),
+                new MiruOnDiskIndex(new MiruBitmapsEWAH(2), indexMapDirectory, indexSwapDirectory, multiChunkStore),
                 fieldMapDirectory);
         // need to export/import both the field and its index (a little strange)
         miruOnDiskField.bulkImport(miruInMemoryField);
         miruOnDiskField.getIndex().bulkImport(miruInMemoryField.getIndex());
 
         return new Object[][]{
-                {new MiruBitmapsEWAH(2), miruInMemoryField, ids},
-                {new MiruBitmapsEWAH(2), miruOnDiskField, ids}
+            {new MiruBitmapsEWAH(2), miruInMemoryField, ids},
+            {new MiruBitmapsEWAH(2), miruOnDiskField, ids}
         };
     }
 }

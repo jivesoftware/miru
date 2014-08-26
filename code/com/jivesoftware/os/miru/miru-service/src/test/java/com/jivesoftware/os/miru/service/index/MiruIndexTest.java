@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
@@ -54,12 +55,12 @@ public class MiruIndexTest {
         Optional<MiruInvertedIndex<BM>> invertedIndex = miruIndex.get(1, 2);
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.isPresent());
-        assertTrue(bitmaps.isSet(invertedIndex.get().getIndex(),3));
+        assertTrue(bitmaps.isSet(invertedIndex.get().getIndex(), 3));
     }
 
     @Test(dataProvider = "miruIndexDataProviderWithData")
     public void testExpectedData(MiruIndex miruIndex, Map<Long, MiruInvertedIndex> importData, MiruBackingStorage miruBackingStorage) throws Exception {
-        long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { 1, 2 }));
+        long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[]{1, 2}));
         MiruInvertedIndex expected = importData.get(fieldTermId);
 
         long sizeInBytes = miruIndex.sizeInMemory() + miruIndex.sizeOnDisk();
@@ -90,11 +91,12 @@ public class MiruIndexTest {
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), initialChunkStoreSizeInBytes, false);
-        MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, multiChunkStore);
 
-        return new Object[][] {
-            { new MiruBitmapsEWAH(4), miruInMemoryIndex, MiruBackingStorage.memory },
-            { new MiruBitmapsEWAH(4), miruOnDiskIndex, MiruBackingStorage.disk }
+        return new Object[][]{
+            {new MiruBitmapsEWAH(4), miruInMemoryIndex, MiruBackingStorage.memory},
+            {new MiruBitmapsEWAH(4), miruOnDiskIndex, MiruBackingStorage.disk}
         };
     }
 
@@ -109,9 +111,9 @@ public class MiruIndexTest {
         MiruInvertedIndex invertedIndex = new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(4));
         invertedIndex.or(bitmap);
 
-        long key = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { 1, 2 }));
+        long key = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[]{1, 2}));
         final Map<Long, MiruInvertedIndex> importData = ImmutableMap.of(
-            key, invertedIndex
+                key, invertedIndex
         );
         miruInMemoryIndex.bulkImport(new BulkExport<Map<Long, MiruInvertedIndex>>() {
             @Override
@@ -125,12 +127,13 @@ public class MiruIndexTest {
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), initialChunkStoreSizeInBytes, false);
-        MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, multiChunkStore);
         miruOnDiskIndex.bulkImport(miruInMemoryIndex);
 
-        return new Object[][] {
-            { miruInMemoryIndex, importData, MiruBackingStorage.memory },
-            { miruOnDiskIndex, importData, MiruBackingStorage.disk }
+        return new Object[][]{
+            {miruInMemoryIndex, importData, MiruBackingStorage.memory},
+            {miruOnDiskIndex, importData, MiruBackingStorage.disk}
         };
     }
 }

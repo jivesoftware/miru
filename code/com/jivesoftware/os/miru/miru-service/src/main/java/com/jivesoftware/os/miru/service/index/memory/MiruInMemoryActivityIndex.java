@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
@@ -28,6 +29,12 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
         int capacity = activities.length;
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
         return index < activities.length ? activities[index] : null;
+    }
+
+    @Override
+    public MiruTermId[] get(int index, int fieldId) {
+        MiruInternalActivity activity = get(index);
+        return activity.fieldsValues[fieldId];
     }
 
     @Override

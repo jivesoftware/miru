@@ -47,7 +47,7 @@ public class BloomIndex<BM> {
     private final int numBits;
     private final int numHashFunctions;
 
-    public BloomIndex(MiruBitmaps<BM> bitmaps,HashFunction hashFunction, int expectedInsertions, float falsePositiveProbability) {
+    public BloomIndex(MiruBitmaps<BM> bitmaps, HashFunction hashFunction, int expectedInsertions, float falsePositiveProbability) {
         this.bitmaps = bitmaps;
         this.hashFunction = hashFunction;
 
@@ -56,7 +56,7 @@ public class BloomIndex<BM> {
             throw new IllegalArgumentException("expectedInsertions=" + expectedInsertions + " falsePositiveProbability=" + falsePositiveProbability
                     + " exceeds the capacity of an ewah.");
         }
-        this.numBits = (int)disiredBits;
+        this.numBits = (int) disiredBits;
         this.numHashFunctions = optimalNumOfHashFunctions(expectedInsertions, this.numBits);
     }
 
@@ -94,13 +94,12 @@ public class BloomIndex<BM> {
         }
 
         List<Mights<V>> mights = new ArrayList<>();
-        for(Integer key:valueBitIndexes.keySet()) {
+        for (Integer key : valueBitIndexes.keySet()) {
             mights.add(new Mights<>(key, valueBitIndexes.get(key)));
         }
         Collections.sort(mights);
         return mights;
     }
-
 
     public <V extends HasValue> void mightContain(MiruInvertedIndex<BM> bloomIndex, List<Mights<V>> mights, MightContain<V> contains) throws Exception {
 
@@ -131,7 +130,8 @@ public class BloomIndex<BM> {
 
     }
 
-    public static  final class Mights<K extends HasValue> implements Comparable<Mights<K>>{
+    public static final class Mights<K extends HasValue> implements Comparable<Mights<K>> {
+
         final int bitIndex;
         final List<Might<K>> mights;
 
@@ -146,7 +146,7 @@ public class BloomIndex<BM> {
         }
 
         public void reset() {
-            for(Might<K> might:mights) {
+            for (Might<K> might : mights) {
                 might.reset();
             }
         }
@@ -155,8 +155,6 @@ public class BloomIndex<BM> {
         public String toString() {
             return "Mights{" + "bitIndex=" + bitIndex + ", mights=" + mights + '}';
         }
-
-
 
     }
 
@@ -188,7 +186,6 @@ public class BloomIndex<BM> {
         public String toString() {
             return "Might{" + "key=" + key + ", numBits=" + numBits + ", contains=" + contains + '}';
         }
-
 
     }
 

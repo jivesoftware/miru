@@ -7,7 +7,6 @@ import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import gnu.trove.impl.Constants;
 import gnu.trove.iterator.TLongIntIterator;
 import gnu.trove.map.hash.TLongIntHashMap;
-
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;

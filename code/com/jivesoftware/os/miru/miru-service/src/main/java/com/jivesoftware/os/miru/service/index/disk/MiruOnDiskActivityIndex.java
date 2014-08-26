@@ -6,6 +6,7 @@ import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
@@ -61,6 +62,12 @@ public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<Mi
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public MiruTermId[] get(int index, int fieldId) {
+        MiruInternalActivity activity = get(index);
+        return activity.fieldsValues[fieldId];
     }
 
     @Override

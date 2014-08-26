@@ -23,10 +23,13 @@ import com.googlecode.javaewah.IntIterator;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.stream.filter.AnswerCardinalityLastSetBitmapStorage;
 import com.jivesoftware.os.miru.service.stream.filter.MatchNoMoreThanNBitmapStorage;
-
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.PriorityQueue;
 
 /**
  * @author jonathan

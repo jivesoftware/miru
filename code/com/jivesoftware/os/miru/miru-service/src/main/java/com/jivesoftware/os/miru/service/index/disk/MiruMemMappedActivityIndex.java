@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
@@ -10,6 +10,7 @@ import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
@@ -36,7 +37,7 @@ public class MiruMemMappedActivityIndex implements MiruActivityIndex, BulkImport
 
     private Filer filer;
 
-    public MiruMemMappedActivityIndex(MiruFilerProvider filerProvider, File mapDirectory, File swapDirectory, ChunkStore chunkStore, ObjectMapper objectMapper)
+    public MiruMemMappedActivityIndex(MiruFilerProvider filerProvider, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore, ObjectMapper objectMapper)
         throws Exception {
 
         this.filerProvider = filerProvider;
@@ -68,6 +69,12 @@ public class MiruMemMappedActivityIndex implements MiruActivityIndex, BulkImport
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public MiruTermId[] get(int index, int fieldId) {
+        MiruInternalActivity activity = get(index);
+        return activity.fieldsValues[fieldId];
     }
 
     @Override

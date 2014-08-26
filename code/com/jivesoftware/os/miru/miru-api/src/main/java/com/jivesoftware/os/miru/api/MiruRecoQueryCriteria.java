@@ -83,7 +83,18 @@ public class MiruRecoQueryCriteria {
 
     @Override
     public String toString() {
-        return "MiruRecoQueryCriteria{" + "constraintsFilter=" + constraintsFilter + ", aggregateFieldName1=" + aggregateFieldName1 + ", retrieveFieldName1=" + retrieveFieldName1 + ", lookupFieldNamed1=" + lookupFieldNamed1 + ", aggregateFieldName2=" + aggregateFieldName2 + ", retrieveFieldName2=" + retrieveFieldName2 + ", lookupFieldNamed2=" + lookupFieldNamed2 + ", aggregateFieldName3=" + aggregateFieldName3 + ", retrieveFieldName3=" + retrieveFieldName3 + ", desiredNumberOfDistincts=" + desiredNumberOfDistincts + '}';
+        return "MiruRecoQueryCriteria{"
+                + "constraintsFilter=" + constraintsFilter
+                + ", aggregateFieldName1=" + aggregateFieldName1
+                + ", retrieveFieldName1=" + retrieveFieldName1
+                + ", lookupFieldNamed1=" + lookupFieldNamed1
+                + ", aggregateFieldName2=" + aggregateFieldName2
+                + ", retrieveFieldName2=" + retrieveFieldName2
+                + ", lookupFieldNamed2=" + lookupFieldNamed2
+                + ", aggregateFieldName3=" + aggregateFieldName3
+                + ", retrieveFieldName3=" + retrieveFieldName3
+                + ", desiredNumberOfDistincts=" + desiredNumberOfDistincts
+                + '}';
     }
 
 }

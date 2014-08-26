@@ -23,5 +23,5 @@ public interface MiruResourceLocatorProvider {
 
     MiruResourceLocator getDiskResourceLocator();
 
-    MiruTransientResourceLocator getTransientResourceLocator();
+    MiruHybridResourceLocator getTransientResourceLocator();
 }

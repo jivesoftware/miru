@@ -5,7 +5,7 @@ import java.io.IOException;
 /**
  *
  */
-public interface MiruTransientResourceLocator extends MiruResourceLocator {
+public interface MiruHybridResourceLocator extends MiruResourceLocator {
 
     MiruResourcePartitionIdentifier acquire() throws IOException;
 

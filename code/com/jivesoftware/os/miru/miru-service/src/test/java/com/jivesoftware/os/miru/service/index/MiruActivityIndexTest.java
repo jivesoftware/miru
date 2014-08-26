@@ -2,12 +2,13 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
-import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.disk.MiruMemMappedActivityIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskActivityIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryActivityIndex;
@@ -18,7 +19,9 @@ import org.apache.commons.lang.RandomStringUtils;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public class MiruActivityIndexTest {
 
@@ -81,21 +84,21 @@ public class MiruActivityIndexTest {
 
         final File memMap = File.createTempFile("memmap", "activityindex");
         MiruMemMappedActivityIndex miruMemMappedActivityIndex = new MiruMemMappedActivityIndex(
-            new MiruFilerProvider() {
-                @Override
-                public File getBackingFile() {
-                    return memMap;
-                }
+                new MiruFilerProvider() {
+                    @Override
+                    public File getBackingFile() {
+                        return memMap;
+                    }
 
-                @Override
-                public Filer getFiler(long length) throws IOException {
-                    return new RandomAccessFiler(memMap, "rw");
-                }
-            },
-            Files.createTempDirectory("memmap").toFile(),
-            Files.createTempDirectory("memmap").toFile(),
-            new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true),
-            new ObjectMapper());
+                    @Override
+                    public Filer getFiler(long length) throws IOException {
+                        return new RandomAccessFiler(memMap, "rw");
+                    }
+                },
+                Files.createTempDirectory("memmap").toFile(),
+                Files.createTempDirectory("memmap").toFile(),
+                new MultiChunkStore(new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true)),
+                new ObjectMapper());
         miruMemMappedActivityIndex.bulkImport(miruInMemoryActivityIndex);
 
         final File onDisk = File.createTempFile("ondisk", "activityindex");
@@ -112,10 +115,10 @@ public class MiruActivityIndexTest {
         }, new ObjectMapper());
         miruOnDiskActivityIndex.bulkImport(miruInMemoryActivityIndex);
 
-        return new Object[][] {
-            { miruInMemoryActivityIndex, false },
-            { miruMemMappedActivityIndex, false },
-            { miruOnDiskActivityIndex, true }
+        return new Object[][]{
+            {miruInMemoryActivityIndex, false},
+            {miruMemMappedActivityIndex, false},
+            {miruOnDiskActivityIndex, true}
         };
     }
 
@@ -124,8 +127,8 @@ public class MiruActivityIndexTest {
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
         MiruInternalActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[0], 3);
         MiruInternalActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[0], 4);
-        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" }, 1);
-        final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
+        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[]{"abcde"}, 1);
+        final MiruInternalActivity[] miruActivities = new MiruInternalActivity[]{miruActivity1, miruActivity2, miruActivity3};
 
         // Add activities to in-memory index
         MiruInMemoryActivityIndex miruInMemoryActivityIndex = new MiruInMemoryActivityIndex();
@@ -139,21 +142,21 @@ public class MiruActivityIndexTest {
         // Add activities to mem-mapped index
         final File memMap = File.createTempFile("memmap", "activityindex");
         MiruMemMappedActivityIndex miruMemMappedActivityIndex = new MiruMemMappedActivityIndex(
-            new MiruFilerProvider() {
-                @Override
-                public File getBackingFile() {
-                    return memMap;
-                }
+                new MiruFilerProvider() {
+                    @Override
+                    public File getBackingFile() {
+                        return memMap;
+                    }
 
-                @Override
-                public Filer getFiler(long length) throws IOException {
-                    return new RandomAccessFiler(memMap, "rw");
-                }
-            },
-            Files.createTempDirectory("memmap").toFile(),
-            Files.createTempDirectory("memmap").toFile(),
-            new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true),
-            new ObjectMapper());
+                    @Override
+                    public Filer getFiler(long length) throws IOException {
+                        return new RandomAccessFiler(memMap, "rw");
+                    }
+                },
+                Files.createTempDirectory("memmap").toFile(),
+                Files.createTempDirectory("memmap").toFile(),
+                new MultiChunkStore(new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true)),
+                new ObjectMapper());
         miruMemMappedActivityIndex.bulkImport(miruInMemoryActivityIndex);
 
         // Add activities to on-disk index
@@ -171,10 +174,10 @@ public class MiruActivityIndexTest {
         }, new ObjectMapper());
         miruOnDiskActivityIndex.bulkImport(miruInMemoryActivityIndex);
 
-        return new Object[][] {
-            { miruInMemoryActivityIndex, miruActivities },
-            { miruMemMappedActivityIndex, miruActivities },
-            { miruOnDiskActivityIndex, miruActivities }
+        return new Object[][]{
+            {miruInMemoryActivityIndex, miruActivities},
+            {miruMemMappedActivityIndex, miruActivities},
+            {miruOnDiskActivityIndex, miruActivities}
         };
     }
 

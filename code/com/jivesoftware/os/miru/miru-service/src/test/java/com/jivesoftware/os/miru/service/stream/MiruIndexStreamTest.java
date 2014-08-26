@@ -10,6 +10,7 @@ import com.google.common.collect.Maps;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
@@ -234,7 +235,7 @@ public class MiruIndexStreamTest {
                 },
                 Files.createTempDirectory("memmap").toFile(),
                 Files.createTempDirectory("memmap").toFile(),
-                new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true),
+                new MultiChunkStore(new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true)),
                 new ObjectMapper());
         miruMemMappedActivityIndex.bulkImport(miruInMemoryActivityIndex);
 
@@ -244,17 +245,17 @@ public class MiruIndexStreamTest {
         Path chunksDir = Files.createTempDirectory("chunksAuthz");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), initialChunkStoreSizeInBytes, false);
-
+        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         // Miru on-disk authz index
         File authzMapDir = Files.createTempDirectory("mapAuthz").toFile();
         File authzSwapDir = Files.createTempDirectory("swapAuthz").toFile();
-        MiruOnDiskAuthzIndex<EWAHCompressedBitmap> miruOnDiskAuthzIndex = new MiruOnDiskAuthzIndex<>(new MiruBitmapsEWAH(4), authzMapDir, authzSwapDir, chunkStore, cache(miruAuthzUtils, 10));
+        MiruOnDiskAuthzIndex<EWAHCompressedBitmap> miruOnDiskAuthzIndex = new MiruOnDiskAuthzIndex<>(new MiruBitmapsEWAH(4), authzMapDir, authzSwapDir, multiChunkStore, cache(miruAuthzUtils, 10));
         miruOnDiskAuthzIndex.bulkImport(miruInMemoryAuthzIndex);
 
         // Miru on-disk removal index
         File removalMapDir = Files.createTempDirectory("mapRemoval").toFile();
         File removalSwapDir = Files.createTempDirectory("swapRemoval").toFile();
-        FileBackedKeyedStore removalStore = new FileBackedKeyedStore(removalMapDir.getAbsolutePath(), removalSwapDir.getAbsolutePath(), 1, 32, chunkStore, 32);
+        FileBackedKeyedStore removalStore = new FileBackedKeyedStore(removalMapDir.getAbsolutePath(), removalSwapDir.getAbsolutePath(), 1, 32, multiChunkStore, 32);
         MiruOnDiskRemovalIndex<EWAHCompressedBitmap> miruOnDiskRemovalIndex = new MiruOnDiskRemovalIndex<>(new MiruBitmapsEWAH(4), removalStore.get(new byte[]{0}));
 
         // Build on-disk index stream object
@@ -301,7 +302,8 @@ public class MiruIndexStreamTest {
         Path chunksDir = Files.createTempDirectory("chunksFields");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), initialChunkStoreSizeInBytes, false);
-        MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, multiChunkStore);
         miruOnDiskIndex.bulkImport(miruInMemoryIndex);
 
         MiruField[] miruFieldArray = new MiruField[3];

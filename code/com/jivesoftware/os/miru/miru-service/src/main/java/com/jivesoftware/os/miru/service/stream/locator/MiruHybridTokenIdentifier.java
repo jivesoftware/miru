@@ -3,11 +3,11 @@ package com.jivesoftware.os.miru.service.stream.locator;
 /**
  *
  */
-public class MiruTransientTokenIdentifier implements MiruResourcePartitionIdentifier {
+public class MiruHybridTokenIdentifier implements MiruResourcePartitionIdentifier {
 
     private final String token;
 
-    public MiruTransientTokenIdentifier(String token) {
+    public MiruHybridTokenIdentifier(String token) {
         this.token = token;
     }
 
@@ -29,7 +29,7 @@ public class MiruTransientTokenIdentifier implements MiruResourcePartitionIdenti
             return false;
         }
 
-        MiruTransientTokenIdentifier that = (MiruTransientTokenIdentifier) o;
+        MiruHybridTokenIdentifier that = (MiruHybridTokenIdentifier) o;
 
         if (token != null ? !token.equals(that.token) : that.token != null) {
             return false;

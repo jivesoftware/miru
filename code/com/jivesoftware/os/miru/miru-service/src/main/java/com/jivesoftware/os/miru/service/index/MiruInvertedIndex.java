@@ -1,8 +1,5 @@
 package com.jivesoftware.os.miru.service.index;
 
-import java.io.IOException;
-import java.util.List;
-
 /**
  *
  * @author jonathan

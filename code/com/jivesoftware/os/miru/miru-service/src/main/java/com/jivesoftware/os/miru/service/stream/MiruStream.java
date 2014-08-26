@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
+import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
@@ -19,7 +19,7 @@ public class MiruStream<BM> {
     private final MiruQueryStream<BM> queryStream;
     private final MiruReadTrackStream<BM> readTrackStream;
     private final MiruTimeIndex timeIndex;
-    private final Optional<ChunkStore> chunkStore;
+    private final Optional<MultiChunkStore> chunkStore;
 
     private Map<String, BulkExport<?>> exportHandles;
     private Map<String, BulkImport<?>> importHandles;
@@ -29,7 +29,7 @@ public class MiruStream<BM> {
             MiruQueryStream<BM> queryStream,
             MiruReadTrackStream<BM> readTrackStream,
             MiruTimeIndex timeIndex,
-            Optional<ChunkStore> chunkStore) {
+            Optional<MultiChunkStore> chunkStore) {
         this.indexStream = indexStream;
         this.queryStream = queryStream;
         this.readTrackStream = readTrackStream;

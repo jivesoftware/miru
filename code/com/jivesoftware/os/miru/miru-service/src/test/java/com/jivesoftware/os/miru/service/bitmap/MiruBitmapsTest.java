@@ -1,13 +1,14 @@
 package com.jivesoftware.os.miru.service.bitmap;
 
 import com.google.common.collect.Lists;
+import java.util.Collections;
+import java.util.List;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.util.Collections;
-import java.util.List;
-
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 public class MiruBitmapsTest {
 
