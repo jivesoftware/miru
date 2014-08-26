@@ -6,7 +6,7 @@ import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
@@ -25,7 +25,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * @deprecated Activity index needs to support set() for repairs/removals.
  */
 @Deprecated
-public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<MiruActivity[]> {
+public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<MiruInternalActivity[]> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -47,7 +47,7 @@ public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<Mi
     }
 
     @Override
-    public MiruActivity get(int index) {
+    public MiruInternalActivity get(int index) {
         checkArgument(index >= 0 && index < capacity(), "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity());
         try {
             byte[] rawActivity;
@@ -57,7 +57,7 @@ public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<Mi
                 filer.seek(beginningOfActivity);
                 rawActivity = FilerIO.readByteArray(filer, "activity");
             }
-            return objectMapper.readValue(rawActivity, MiruActivity.class);
+            return objectMapper.readValue(rawActivity, MiruInternalActivity.class);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -70,7 +70,7 @@ public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<Mi
     }
 
     @Override
-    public void set(int index, MiruActivity activity) {
+    public void set(int index, MiruInternalActivity activity) {
         throw new UnsupportedOperationException("On disk indexes are readOnly");
     }
 
@@ -110,9 +110,9 @@ public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<Mi
     }
 
     @Override
-    public void bulkImport(BulkExport<MiruActivity[]> bulkExport) throws Exception {
+    public void bulkImport(BulkExport<MiruInternalActivity[]> bulkExport) throws Exception {
         //TODO this should ignore null elements in the tail to save space
-        MiruActivity[] importActivities = bulkExport.bulkExport();
+        MiruInternalActivity[] importActivities = bulkExport.bulkExport();
         int indexSize = importActivities.length;
 
         long length;
@@ -126,7 +126,7 @@ public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<Mi
                 // First, skip to where activity starts and start streaming the activities in
                 filer.seek(4 + (indexSize * 8));
                 for (int i = 0; i < indexSize; i++) {
-                    MiruActivity miruActivity = importActivities[i];
+                    MiruInternalActivity miruActivity = importActivities[i];
                     byte[] miruActivityBytes = objectMapper.writeValueAsBytes(miruActivity);
 
                     // Record the current location of this activity for backfilling

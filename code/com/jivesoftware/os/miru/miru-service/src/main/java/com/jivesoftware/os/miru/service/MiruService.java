@@ -88,13 +88,14 @@ public class MiruService<BM> {
         MiruActivityWALWriter activityWALWriter,
         MiruActivityLookupTable activityLookupTable,
         MiruSolver solver,
-        MiruBitmaps<BM> bitmaps) {
+        MiruBitmaps<BM> bitmaps,
+        MiruFilterUtils miruFilterUtils) {
         this.localhost = localhost;
         this.partitionDirector = partitionDirector;
         this.partitionComparison = partitionComparison;
         this.activityWALWriter = activityWALWriter;
         this.activityLookupTable = activityLookupTable;
-        this.filterUtils = new MiruFilterUtils(bitmaps);
+        this.filterUtils = miruFilterUtils;
         this.backfillerizer = backfillerizer;
         this.solver = solver;
         this.bitmaps = bitmaps;

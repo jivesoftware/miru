@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 
 public class MiruClientInitializer {
 
-    public static MiruClient initialize(MiruClientConfig config,
+    public MiruClient initialize(MiruClientConfig config,
             MiruClusterRegistry clusterRegistry,
             MiruRegistryStore registryStore,
             MiruWAL miruWAL,

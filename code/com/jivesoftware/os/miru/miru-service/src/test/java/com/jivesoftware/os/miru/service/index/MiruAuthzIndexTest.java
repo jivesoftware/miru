@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskAuthzIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryAuthzIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
+import com.jivesoftware.os.miru.service.stream.MiruActivityInternExtern;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -91,7 +92,8 @@ public class MiruAuthzIndexTest {
             .maximumSize(maximumSize)
             .expireAfterAccess(1, TimeUnit.MINUTES)
             .build();
-        return new MiruAuthzCache<BM>(bitmaps, cache, Interners.<String>newWeakInterner(), miruAuthzUtils);
+        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(null, null, null, null, Interners.<String>newWeakInterner());
+        return new MiruAuthzCache<BM>(bitmaps, cache, activityInternExtern, miruAuthzUtils);
     }
 
     private <BM> InvertedIndexData<BM> buildInMemoryInvertedIndexes(MiruBitmaps<BM> bitmaps, Map<Integer, BM> bitsIn, MiruAuthzUtils<BM> miruAuthzUtils, int size) throws Exception {

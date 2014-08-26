@@ -1,9 +1,15 @@
 package com.jivesoftware.os.miru.service.stream.factory;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Interners;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.bitmap.MiruIntIterator;
@@ -12,6 +18,7 @@ import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
+import com.jivesoftware.os.miru.service.stream.MiruActivityInternExtern;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -91,7 +98,11 @@ public class MiruFilterUtilsTest {
 
     @DataProvider(name = "evenTimeIndexDataProvider")
     public Object[][] evenTimeIndexDataProvider() throws Exception {
-        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2));
+
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
+                Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
+                Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2), activityInterner);
 
         final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
         final long[] timestamps = new long[size];
@@ -110,7 +121,10 @@ public class MiruFilterUtilsTest {
 
     @DataProvider(name = "oddTimeIndexDataProvider")
     public <BM> Object[][] oddTimeIndexDataProvider(MiruBitmaps<BM> bitmaps) throws Exception {
-        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(bitmaps);
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
+                Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
+                Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(bitmaps, activityInterner);
 
         final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         final long[] timestamps = new long[size];
@@ -129,7 +143,10 @@ public class MiruFilterUtilsTest {
 
     @DataProvider(name = "singleEntryTimeIndexDataProvider")
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
-        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2));
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
+                Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
+                Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2), activityInterner);
 
         final long[] timestamps = new long[] { System.currentTimeMillis() };
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(timestamps);

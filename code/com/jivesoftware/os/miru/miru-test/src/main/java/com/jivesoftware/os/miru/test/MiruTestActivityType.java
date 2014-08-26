@@ -7,10 +7,9 @@ import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.ObjectId;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
-
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
+import javax.annotation.Nullable;
 
 /**
  *
@@ -24,7 +23,7 @@ public enum MiruTestActivityType {
             Id containerId = supplier.newContainer();
             ObjectId verbSubject = new ObjectId("Place", containerId);
             String[] authz = supplier.authz(containerId);
-            MiruActivity activity = new MiruActivity.Builder(supplier.miruSchema(), supplier.miruTenantId(), time, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "SocialNewsParent_ABC")
                     .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), "SocialNewsContainer_ABC")
                     .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
@@ -47,7 +46,7 @@ public enum MiruTestActivityType {
             Id contentItemId = supplier.newContentItem(authorId, containerIds.toArray(new Id[0]));
             ObjectId verbSubject = new ObjectId("PostVersion", supplier.newContentVersion(contentItemId));
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
-            MiruActivity activity = new MiruActivity.Builder(supplier.miruSchema(), supplier.miruTenantId(), time, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), contentItemId.toStringForm())
                     .putAllFieldValues(MiruFieldName.CONTAINER_IDS.getFieldName(), Lists.transform(containerIds, ID_TO_STRING_FORM))
                     .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
@@ -75,7 +74,7 @@ public enum MiruTestActivityType {
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
             ObjectId verbSubject = new ObjectId("CommentVersion", supplier.newCommentVersion(commentId));
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
-            MiruActivity activity = new MiruActivity.Builder(supplier.miruSchema(), supplier.miruTenantId(), time, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), contentItemId.toStringForm())
                     .putAllFieldValues(MiruFieldName.CONTAINER_IDS.getFieldName(), Collections2.transform(containerIds, ID_TO_STRING_FORM))
                     .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
@@ -105,7 +104,7 @@ public enum MiruTestActivityType {
 
             ObjectId verbSubject = new ObjectId("UserFollow", userFollowId);
             String[] authz = supplier.globalAuthz();
-            MiruActivity activity = new MiruActivity.Builder(supplier.miruSchema(), supplier.miruTenantId(), time, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "SocialNewsParent_ABC")
                     .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), "SocialNewsContainer_ABC")
                     .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
@@ -127,7 +126,7 @@ public enum MiruTestActivityType {
 
             ObjectId verbSubject = new ObjectId("Membership", membershipId);
             String[] authz = supplier.authz(containerId);
-            MiruActivity activity = new MiruActivity.Builder(supplier.miruSchema(), supplier.miruTenantId(), time, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "SocialNewsParent_ABC")
                     .putFieldValue(MiruFieldName.CONTAINER_ID.getFieldName(), "SocialNewsContainer_ABC")
                     .putFieldValue(MiruFieldName.AUTHOR_ID.getFieldName(), authorId.toStringForm())
@@ -149,7 +148,7 @@ public enum MiruTestActivityType {
             ObjectId verbSubject = new ObjectId("Like", likeId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
-            MiruActivity activity = new MiruActivity.Builder(supplier.miruSchema(), supplier.miruTenantId(), time, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "AcclaimParent_ABC")
                     .putFieldValue(MiruFieldName.CONTAINER_IDS.getFieldName(), "AcclaimContainer_ABC")
                     .putFieldValue(MiruFieldName.META_ID.getFieldName(), contentItemId.toStringForm())
@@ -174,7 +173,7 @@ public enum MiruTestActivityType {
             Id contentItemId = supplier.contentItemForComment(commentId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
             String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
-            MiruActivity activity = new MiruActivity.Builder(supplier.miruSchema(), supplier.miruTenantId(), time, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "AcclaimParent_ABC")
                     .putFieldValue(MiruFieldName.CONTAINER_IDS.getFieldName(), "AcclaimContainer_ABC")
                     .putFieldValue(MiruFieldName.META_ID.getFieldName(), commentId.toStringForm())

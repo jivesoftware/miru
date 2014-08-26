@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.RowColumnValueStoreImpl;
@@ -11,13 +12,17 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.memory.MiruInMemoryClusterRegistry;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.service.stream.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
+import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
@@ -84,14 +89,26 @@ public class MiruLocalHostedPartitionTest {
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
 
-        streamFactory = new MiruStreamFactory(new MiruBitmapsEWAH(2), // TODO consider feed wth data provider
+        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(2);
+        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(schema,
+                Interners.<MiruIBA>newWeakInterner(),
+                Interners.<MiruTermId>newWeakInterner(),
+                Interners.<MiruTenantId>newStrongInterner(),
+                // makes sense to share string internment as this is authz in both cases
+                Interners.<String>newWeakInterner());
+
+        MiruFilterUtils filterUtils = new MiruFilterUtils(bitmaps, activityInternExtern);
+
+        streamFactory = new MiruStreamFactory(bitmaps,
             schema,
             Executors.newSingleThreadExecutor(),
             new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
             new MiruTempDirectoryResourceLocator(),
             new MiruTempDirectoryResourceLocator(),
             20,
-            MiruBackingStorage.memory);
+            MiruBackingStorage.memory,
+            filterUtils,
+            activityInternExtern);
         clusterRegistry = new MiruInMemoryClusterRegistry();
 
         activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);

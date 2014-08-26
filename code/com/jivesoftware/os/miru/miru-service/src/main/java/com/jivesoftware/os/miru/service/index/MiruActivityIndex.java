@@ -6,7 +6,7 @@
 
 package com.jivesoftware.os.miru.service.index;
 
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 
 /** @author jonathan */
 public interface MiruActivityIndex {
@@ -17,7 +17,7 @@ public interface MiruActivityIndex {
      * @param index the index of the activity
      * @return the activity at the given index
      */
-    MiruActivity get(int index);
+    MiruInternalActivity get(int index);
 
     /**
      * Returns the index of the last activity.
@@ -32,7 +32,7 @@ public interface MiruActivityIndex {
      * @param index the index to store the activity at
      * @param activity the activity
      */
-    void set(int index, MiruActivity activity);
+    void set(int index, MiruInternalActivity activity);
 
     /**
      * Total size in bytes of this index in memory.

@@ -25,8 +25,11 @@ public class MiruStream<BM> {
     private Map<String, BulkImport<?>> importHandles;
     private Optional<? extends MiruResourcePartitionIdentifier> transientResource;
 
-    public MiruStream(MiruIndexStream<BM> indexStream, MiruQueryStream<BM> queryStream, MiruReadTrackStream<BM> readTrackStream, MiruTimeIndex timeIndex,
-        Optional<ChunkStore> chunkStore) {
+    public MiruStream(MiruIndexStream<BM> indexStream,
+            MiruQueryStream<BM> queryStream,
+            MiruReadTrackStream<BM> readTrackStream,
+            MiruTimeIndex timeIndex,
+            Optional<ChunkStore> chunkStore) {
         this.indexStream = indexStream;
         this.queryStream = queryStream;
         this.readTrackStream = readTrackStream;

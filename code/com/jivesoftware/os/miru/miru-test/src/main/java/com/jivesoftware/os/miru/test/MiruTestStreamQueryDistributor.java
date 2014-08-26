@@ -1,23 +1,24 @@
 package com.jivesoftware.os.miru.test;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.ObjectId;
-import com.jivesoftware.os.miru.api.*;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryCriteria;
+import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryParams;
+import com.jivesoftware.os.miru.api.MiruDistinctCountQueryCriteria;
+import com.jivesoftware.os.miru.api.MiruDistinctCountQueryParams;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.MiruTimeRange;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-
-import javax.annotation.Nullable;
 import java.util.Random;
+import javax.annotation.Nullable;
 
 /**
  *
@@ -128,21 +129,19 @@ public class MiruTestStreamQueryDistributor {
     }
 
     private MiruFieldFilter viewClassesFilter() {
-        return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.copyOf(Lists.transform(
-                Lists.<String>newArrayList(
+        return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.of(
                         "ContentVersionActivitySearchView",
                         "CommentVersionActivitySearchView",
                         "LikeActivitySearchView",
                         "UserFollowActivitySearchView",
                         "MembershipActivitySearchView",
-                        "PlaceActivitySearchView"),
-                CLASS_NAME_TO_TERMID)));
+                        "PlaceActivitySearchView"));
     }
 
     private ImmutableList<MiruFieldFilter> buildFieldFilters(boolean inbox, Id userId) {
         if (inbox) {
             return ImmutableList.of(new MiruFieldFilter(MiruFieldName.PARTICIPANT_IDS.getFieldName(),
-                    ImmutableList.of(ID_TO_TERMID.apply(userId))));
+                    ImmutableList.of(userId.toStringForm())));
         } else {
             int numUsers = random.nextInt(queryUsers);
             int numContainers = random.nextInt(queryContainers);
@@ -188,19 +187,11 @@ public class MiruTestStreamQueryDistributor {
         }
     }
 
-    private static final Function<String, MiruTermId> CLASS_NAME_TO_TERMID = new Function<String, MiruTermId>() {
+    private static final Function<Id, String> ID_TO_TERMID = new Function<Id, String>() {
         @Nullable
         @Override
-        public MiruTermId apply(@Nullable String input) {
-            return input != null ? new MiruTermId(input.getBytes(Charsets.UTF_8)) : null;
-        }
-    };
-
-    private static final Function<Id, MiruTermId> ID_TO_TERMID = new Function<Id, MiruTermId>() {
-        @Nullable
-        @Override
-        public MiruTermId apply(@Nullable Id input) {
-            return input != null ? new MiruTermId(input.toStringForm().getBytes(Charsets.UTF_8)) : null;
+        public String apply(@Nullable Id input) {
+            return input != null ? input.toStringForm() : null;
         }
     };
 }

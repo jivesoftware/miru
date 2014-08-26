@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
@@ -20,9 +18,8 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -51,7 +48,6 @@ import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruTransientActivityIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruTransientField;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import com.jivesoftware.os.miru.service.stream.locator.MiruDiskResourceAnalyzer;
 import com.jivesoftware.os.miru.service.stream.locator.MiruPartitionCoordIdentifier;
@@ -85,8 +81,8 @@ public class MiruStreamFactory<BM> {
     private final MiruDiskResourceAnalyzer diskResourceAnalyzer = new MiruDiskResourceAnalyzer();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Interner<String> stringInterner = Interners.newWeakInterner();
-    private final MiruActivityInterner activityInterner;
+    private final MiruFilterUtils<BM> filterUtils;
+    private final MiruActivityInternExtern activityInternExtern;
 
     private final int partitionAuthzCacheSize;
     private final MiruBackingStorage defaultStorage;
@@ -98,21 +94,17 @@ public class MiruStreamFactory<BM> {
             MiruResourceLocator diskResourceLocator,
             MiruTransientResourceLocator transientResourceLocator,
             int partitionAuthzCacheSize,
-            MiruBackingStorage defaultStorage) {
+            MiruBackingStorage defaultStorage,
+            MiruFilterUtils<BM> filterUtils,
+            MiruActivityInternExtern activityInternExtern) {
         this.bitmaps = bitmaps;
         this.schema = schema;
         this.executorService = executorService;
         this.readTrackingWALReader = readTrackingWALReader;
         this.diskResourceLocator = diskResourceLocator;
         this.transientResourceLocator = transientResourceLocator;
-        this.activityInterner = new MiruActivityInterner(
-                schema,
-                Interners.<MiruIBA>newWeakInterner(),
-                Interners.<MiruTermId>newWeakInterner(),
-                // tenants are strongly interned
-                Interners.<MiruTenantId>newStrongInterner(),
-                // makes sense to share string internment as this is authz in both cases
-                stringInterner);
+        this.filterUtils = filterUtils;
+        this.activityInternExtern = activityInternExtern;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.defaultStorage = defaultStorage;
     }
@@ -160,14 +152,13 @@ public class MiruStreamFactory<BM> {
 
         MiruFields fieldIndex = new MiruFields(fields, index);
         MiruAuthzUtils authzUtils = new MiruAuthzUtils(bitmaps);
-        MiruFilterUtils filterUtils = new MiruFilterUtils(bitmaps);
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> authzCache = CacheBuilder.newBuilder()
                 .maximumSize(partitionAuthzCacheSize)
                 .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
                 .build();
-        MiruInMemoryAuthzIndex authzIndex = new MiruInMemoryAuthzIndex(bitmaps,new MiruAuthzCache(bitmaps, authzCache, stringInterner, authzUtils));
+        MiruInMemoryAuthzIndex authzIndex = new MiruInMemoryAuthzIndex(bitmaps,new MiruAuthzCache(bitmaps, authzCache, activityInternExtern, authzUtils));
         exportHandles.put("authzIndex", authzIndex);
 
         MiruInMemoryRemovalIndex removalIndex = new MiruInMemoryRemovalIndex(bitmaps);
@@ -179,7 +170,7 @@ public class MiruStreamFactory<BM> {
         MiruInMemoryInboxIndex inboxIndex = new MiruInMemoryInboxIndex(bitmaps);
         exportHandles.put("inboxIndex", inboxIndex);
 
-        MiruIndexStream indexStream = new MiruIndexStream(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInterner);
+        MiruIndexStream indexStream = new MiruIndexStream(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackStream readTrackStream = new MiruReadTrackStream(bitmaps, filterUtils, schema, fieldIndex, timeIndex, unreadTrackingIndex,
@@ -224,14 +215,13 @@ public class MiruStreamFactory<BM> {
 
         MiruFields fieldIndex = new MiruFields(fields, index);
         MiruAuthzUtils authzUtils = new MiruAuthzUtils(bitmaps);
-        MiruFilterUtils filterUtils = new MiruFilterUtils(bitmaps);
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> authzCache = CacheBuilder.newBuilder()
                 .maximumSize(partitionAuthzCacheSize)
                 .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
                 .build();
-        MiruInMemoryAuthzIndex authzIndex = new MiruInMemoryAuthzIndex(bitmaps,new MiruAuthzCache(bitmaps, authzCache, stringInterner, authzUtils));
+        MiruInMemoryAuthzIndex authzIndex = new MiruInMemoryAuthzIndex(bitmaps,new MiruAuthzCache(bitmaps, authzCache, activityInternExtern, authzUtils));
         exportHandles.put("authzIndex", authzIndex);
 
         MiruInMemoryRemovalIndex removalIndex = new MiruInMemoryRemovalIndex(bitmaps);
@@ -243,7 +233,7 @@ public class MiruStreamFactory<BM> {
         MiruInMemoryInboxIndex inboxIndex = new MiruInMemoryInboxIndex(bitmaps);
         exportHandles.put("inboxIndex", inboxIndex);
 
-        MiruIndexStream indexStream = new MiruIndexStream(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInterner);
+        MiruIndexStream indexStream = new MiruIndexStream(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackStream readTrackStream = new MiruReadTrackStream(bitmaps, filterUtils, schema, fieldIndex, timeIndex, unreadTrackingIndex,
@@ -301,7 +291,6 @@ public class MiruStreamFactory<BM> {
 
         MiruFields fieldIndex = new MiruFields(fields, index);
         MiruAuthzUtils authzUtils = new MiruAuthzUtils(bitmaps);
-        MiruFilterUtils filterUtils = new MiruFilterUtils(bitmaps);
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> authzCache = CacheBuilder.newBuilder()
@@ -312,7 +301,7 @@ public class MiruStreamFactory<BM> {
                 diskResourceLocator.getMapDirectory(identifier, "authz"),
                 diskResourceLocator.getSwapDirectory(identifier, "authz"),
                 chunkStore,
-                new MiruAuthzCache(bitmaps, authzCache, stringInterner, authzUtils));
+                new MiruAuthzCache(bitmaps, authzCache, activityInternExtern, authzUtils));
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex removalIndex = new MiruOnDiskRemovalIndex(bitmaps, new RandomAccessSwappableFiler(
@@ -331,7 +320,7 @@ public class MiruStreamFactory<BM> {
                 chunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
-        MiruIndexStream indexStream = new MiruIndexStream(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInterner);
+        MiruIndexStream indexStream = new MiruIndexStream(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackStream readTrackStream = new MiruReadTrackStream(bitmaps, filterUtils, schema, fieldIndex, timeIndex, unreadTrackingIndex,
@@ -385,7 +374,6 @@ public class MiruStreamFactory<BM> {
 
         MiruFields fieldIndex = new MiruFields(fields, index);
         MiruAuthzUtils authzUtils = new MiruAuthzUtils(bitmaps);
-        MiruFilterUtils filterUtils = new MiruFilterUtils(bitmaps);
 
         Cache<VersionedAuthzExpression, EWAHCompressedBitmap> authzCache = CacheBuilder.newBuilder()
                 .maximumSize(partitionAuthzCacheSize)
@@ -395,7 +383,7 @@ public class MiruStreamFactory<BM> {
                 diskResourceLocator.getMapDirectory(identifier, "authz"),
                 diskResourceLocator.getSwapDirectory(identifier, "authz"),
                 chunkStore,
-                new MiruAuthzCache(bitmaps,authzCache, stringInterner, authzUtils));
+                new MiruAuthzCache(bitmaps,authzCache, activityInternExtern, authzUtils));
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex removalIndex = new MiruOnDiskRemovalIndex(bitmaps,new RandomAccessSwappableFiler(
@@ -414,7 +402,7 @@ public class MiruStreamFactory<BM> {
                 chunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
-        MiruIndexStream indexStream = new MiruIndexStream(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInterner);
+        MiruIndexStream indexStream = new MiruIndexStream(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackStream readTrackStream = new MiruReadTrackStream(bitmaps, filterUtils, schema, fieldIndex, timeIndex, unreadTrackingIndex,

@@ -1,20 +1,20 @@
 package com.jivesoftware.os.miru.test;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
-import com.jivesoftware.os.miru.api.*;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.MiruRecoQueryCriteria;
+import com.jivesoftware.os.miru.api.MiruRecoQueryParams;
+import com.jivesoftware.os.miru.api.MiruTrendingQueryCriteria;
+import com.jivesoftware.os.miru.api.MiruTrendingQueryParams;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-
-import javax.annotation.Nullable;
+import java.util.Arrays;
 
 /**
  *
@@ -57,8 +57,7 @@ public class MiruTestRecoQueryDistributor {
     public MiruRecoQueryParams collaborativeFiltering() {
         Id userId = featureSupplier.oldUsers(1).get(0);
         MiruFieldFilter miruFieldFilter = new MiruFieldFilter(
-                MiruFieldName.AUTHOR_ID.getFieldName(),
-                ImmutableList.of(new MiruTermId(userId.toStringForm().getBytes(Charsets.UTF_8))));
+                MiruFieldName.AUTHOR_ID.getFieldName(), Arrays.asList(userId.toStringForm()));
         MiruFilter filter = new MiruFilter(MiruFilterOperation.or, Optional.of(ImmutableList.of(miruFieldFilter)),
                 Optional.<ImmutableList<MiruFilter>>absent());
         MiruRecoQueryCriteria criteria = new MiruRecoQueryCriteria(
@@ -81,22 +80,13 @@ public class MiruTestRecoQueryDistributor {
     }
 
     private MiruFieldFilter viewClassesFilter() {
-        return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.copyOf(Lists.transform(
-                Lists.newArrayList(
+        return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.of(
                         "ContentVersionActivitySearchView",
                         "CommentVersionActivitySearchView",
                         "LikeActivitySearchView",
                         "UserFollowActivitySearchView",
                         "MembershipActivitySearchView",
-                        "PlaceActivitySearchView"),
-                CLASS_NAME_TO_TERMID)));
+                        "PlaceActivitySearchView"));
     }
 
-    private static final Function<String, MiruTermId> CLASS_NAME_TO_TERMID = new Function<String, MiruTermId>() {
-        @Nullable
-        @Override
-        public MiruTermId apply(@Nullable String input) {
-            return input != null ? new MiruTermId(input.getBytes(Charsets.UTF_8)) : null;
-        }
-    };
 }

@@ -20,9 +20,10 @@ import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.MiruTimeRange;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -40,8 +41,6 @@ import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.MiruTempResourceLocatorProviderInitializer;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import java.text.DecimalFormat;
@@ -209,7 +208,7 @@ public class ProfilebleMiruService {
             for (int q = 0; q < 500; q++) {
                 List<MiruFieldFilter> fieldFilters = new ArrayList<>();
                 //fieldFilters.add(new MiruFieldFilter("author", ImmutableList.of(FilerIO.intBytes(rand.nextInt(1000)))));
-                List<MiruTermId> following = generateDisticts(rand, 2000, 1_000_000);
+                List<String> following = generateDisticts(rand, 2000, 1_000_000);
                 //System.out.println("Following:"+new MiruFieldFilter("target", ImmutableList.copyOf(following)));
                 fieldFilters.add(new MiruFieldFilter("target", ImmutableList.copyOf(following)));
 
@@ -267,25 +266,24 @@ public class ProfilebleMiruService {
     private final int[] fieldFrequency = new int[]{1, 1, 1, 10, 1};
 
     private MiruPartitionedActivity generateActivity(int time, Random rand) {
-        Map<String, MiruTermId[]> fieldsValues = Maps.newHashMap();
+        Map<String, List<String>> fieldsValues = Maps.newHashMap();
         for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
             int index = fieldDefinition.fieldId;
             int count = 1 + rand.nextInt(fieldFrequency[index]);
-            List<MiruTermId> terms = generateDisticts(rand, count, fieldCardinality[index]);
-            fieldsValues.put(fieldDefinition.name, terms.toArray(new MiruTermId[0]));
+            List<String> terms = generateDisticts(rand, count, fieldCardinality[index]);
+            fieldsValues.put(fieldDefinition.name, terms);
         }
-        MiruActivity activity = new MiruActivity.Builder(miruSchema, tenant1, time, new String[0], 0).putFieldsValues(fieldsValues).build();
+        MiruActivity activity = new MiruActivity(tenant1, time, new String[0], 0, fieldsValues, Collections.EMPTY_MAP);
         return partitionedActivityFactory.activity(1, MiruPartitionId.of(1), 1, activity); // HACK
     }
 
-    private List<MiruTermId> generateDisticts(Random rand, int count, int cardinality) {
-        Set<MiruTermId> usedTerms = Sets.newHashSet();
-        List<MiruTermId> distincts = new ArrayList<>();
+    private List<String> generateDisticts(Random rand, int count, int cardinality) {
+        Set<String> usedTerms = Sets.newHashSet();
+        List<String> distincts = new ArrayList<>();
         while (distincts.size() < count) {
-            int term = rand.nextInt(cardinality);
-            byte[] termBytes = FilerIO.intBytes(term);
-            if (usedTerms.add(new MiruTermId(termBytes))) {
-                distincts.add(new MiruTermId(termBytes));
+            String term = String.valueOf(rand.nextInt(cardinality));
+            if (usedTerms.add(term)) {
+                distincts.add(term);
             }
         }
         return distincts;

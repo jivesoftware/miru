@@ -3,18 +3,17 @@ package com.jivesoftware.os.miru.api.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.List;
 
 /** @author jonathan */
 public class MiruFieldFilter {
 
     public final String fieldName;
-    public final ImmutableList<MiruTermId> values;
+    public final List<String> values;
 
     public MiruFieldFilter(
         String fieldName,
-        ImmutableList<MiruTermId> values) {
+        List<String> values) {
         this.fieldName = fieldName;
         this.values = values;
     }
@@ -22,7 +21,7 @@ public class MiruFieldFilter {
     @JsonCreator
     public static MiruFieldFilter fromJson(
         @JsonProperty("fieldName") String fieldName,
-        @JsonProperty("values") List<MiruTermId> values) {
+        @JsonProperty("values") List<String> values) {
         return new MiruFieldFilter(fieldName, ImmutableList.copyOf(values));
     }
 

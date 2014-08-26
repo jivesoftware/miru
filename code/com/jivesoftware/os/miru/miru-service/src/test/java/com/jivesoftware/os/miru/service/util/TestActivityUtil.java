@@ -2,9 +2,11 @@ package com.jivesoftware.os.miru.service.util;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.api.activity.*;
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import java.util.Random;
@@ -45,7 +47,7 @@ public class TestActivityUtil {
 
     private static MiruActivity mockActivity() {
         String[] authz = { RandomStringUtils.randomAlphanumeric(10) };
-        return new MiruActivity.Builder(new MiruSchema(new MiruFieldDefinition(0, "field1")), new MiruTenantId("tenant1".getBytes(Charsets.UTF_8)), time.incrementAndGet(), authz, 0)
+        return new MiruActivity.Builder(new MiruTenantId("tenant1".getBytes(Charsets.UTF_8)), time.incrementAndGet(), authz, 0)
             .putFieldValue("field1", "value1")
             .build();
     }

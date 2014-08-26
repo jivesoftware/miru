@@ -8,7 +8,7 @@ import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
@@ -21,7 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * Short-lived (transient) impl. Like the mem-mapped impl, activity data is mem-mapped. However, set() is supported.
  * The last index is only held in memory (not stored on disk).
  */
-public class MiruTransientActivityIndex implements MiruActivityIndex, BulkImport<MiruActivity[]>, BulkExport<MiruActivity[]> {
+public class MiruTransientActivityIndex implements MiruActivityIndex, BulkImport<MiruInternalActivity[]>, BulkExport<MiruInternalActivity[]> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -35,7 +35,7 @@ public class MiruTransientActivityIndex implements MiruActivityIndex, BulkImport
     }
 
     @Override
-    public MiruActivity get(int index) {
+    public MiruInternalActivity get(int index) {
         int capacity = indexSize.get();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
         try {
@@ -47,7 +47,7 @@ public class MiruTransientActivityIndex implements MiruActivityIndex, BulkImport
                     swappableFiler.seek(0);
                     bytes = FilerIO.readByteArray(swappableFiler, "activity");
                 }
-                return objectMapper.readValue(bytes, MiruActivity.class);
+                return objectMapper.readValue(bytes, MiruInternalActivity.class);
             }
             return null;
         } catch (Exception e) {
@@ -61,7 +61,7 @@ public class MiruTransientActivityIndex implements MiruActivityIndex, BulkImport
     }
 
     @Override
-    public void set(int index, MiruActivity activity) {
+    public void set(int index, MiruInternalActivity activity) {
         checkArgument(index >= 0, "Index parameter is out of bounds. The value " + index + " must be >=0");
         try {
             byte[] bytes = objectMapper.writeValueAsBytes(activity);
@@ -103,8 +103,8 @@ public class MiruTransientActivityIndex implements MiruActivityIndex, BulkImport
     }
 
     @Override
-    public void bulkImport(BulkExport<MiruActivity[]> bulkExport) throws Exception {
-        MiruActivity[] importActivities = bulkExport.bulkExport();
+    public void bulkImport(BulkExport<MiruInternalActivity[]> bulkExport) throws Exception {
+        MiruInternalActivity[] importActivities = bulkExport.bulkExport();
 
         int lastIndex;
         for (lastIndex = importActivities.length - 1; lastIndex >= 0 && importActivities[lastIndex] == null; lastIndex--) {
@@ -112,7 +112,7 @@ public class MiruTransientActivityIndex implements MiruActivityIndex, BulkImport
         }
 
         for (int index = 0; index <= lastIndex; index++) {
-            MiruActivity activity = importActivities[index];
+            MiruInternalActivity activity = importActivities[index];
             if (activity != null) {
                 set(index, activity);
             }
@@ -120,12 +120,12 @@ public class MiruTransientActivityIndex implements MiruActivityIndex, BulkImport
     }
 
     @Override
-    public MiruActivity[] bulkExport() throws Exception {
+    public MiruInternalActivity[] bulkExport() throws Exception {
         int capacity = indexSize.get();
 
         //TODO all activities need to fit in memory... sigh.
         //TODO need to "stream" this export/import.
-        MiruActivity[] activities = new MiruActivity[capacity];
+        MiruInternalActivity[] activities = new MiruInternalActivity[capacity];
         for (int i = 0; i < activities.length; i++) {
             activities[i] = get(i);
         }

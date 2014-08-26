@@ -1,11 +1,9 @@
 package com.jivesoftware.os.miru.service.benchmark;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -55,7 +53,7 @@ public enum MiruCustomerSize {
         }
 
         @Override
-        long generateAndIndexActivities(MiruService miruService, OrderIdProvider orderIdProvider, Random random, TenantId tenantId,
+        long generateAndIndexActivities(MiruService miruService, OrderIdProvider orderIdProvider, Random random, MiruTenantId tenantId,
             MiruFieldCardinality fieldCardinality) throws Exception {
             List<MiruPartitionedActivity> miruActivities = Lists.newArrayListWithExpectedSize(500);
 
@@ -74,7 +72,7 @@ public enum MiruCustomerSize {
         }
 
         @Override
-        List<AggregateCountsQuery> generateInboxAggregateCountsQueries(Random random, TenantId tenantId, int distinctQueries,
+        List<AggregateCountsQuery> generateInboxAggregateCountsQueries(Random random, MiruTenantId tenantId, int distinctQueries,
             MiruFieldCardinality fieldCardinality, MiruFollowables followables, long maxOrderId) {
 
             return doGenerateInboxAggregateCountsQueries(random, tenantId, distinctQueries, this, followables, maxOrderId);
@@ -111,7 +109,7 @@ public enum MiruCustomerSize {
         }
 
         @Override
-        long generateAndIndexActivities(MiruService miruService, OrderIdProvider orderIdProvider, Random random, TenantId tenantId,
+        long generateAndIndexActivities(MiruService miruService, OrderIdProvider orderIdProvider, Random random, MiruTenantId tenantId,
             MiruFieldCardinality fieldCardinality) throws Exception {
             List<MiruPartitionedActivity> miruActivities = Lists.newArrayListWithExpectedSize(500);
 
@@ -130,7 +128,7 @@ public enum MiruCustomerSize {
         }
 
         @Override
-        List<AggregateCountsQuery> generateInboxAggregateCountsQueries(Random random, TenantId tenantId, int distinctQueries,
+        List<AggregateCountsQuery> generateInboxAggregateCountsQueries(Random random, MiruTenantId tenantId, int distinctQueries,
             MiruFieldCardinality fieldCardinality, MiruFollowables followables, long maxOrderId) {
 
             return doGenerateInboxAggregateCountsQueries(random, tenantId, distinctQueries, this, followables, maxOrderId);
@@ -167,7 +165,7 @@ public enum MiruCustomerSize {
         }
 
         @Override
-        long generateAndIndexActivities(MiruService miruService, OrderIdProvider orderIdProvider, Random random, TenantId tenantId,
+        long generateAndIndexActivities(MiruService miruService, OrderIdProvider orderIdProvider, Random random, MiruTenantId tenantId,
             MiruFieldCardinality fieldCardinality) throws Exception {
             List<MiruPartitionedActivity> miruActivities = Lists.newArrayListWithExpectedSize(500);
 
@@ -186,18 +184,17 @@ public enum MiruCustomerSize {
         }
 
         @Override
-        List<AggregateCountsQuery> generateInboxAggregateCountsQueries(Random random, TenantId tenantId, int distinctQueries,
+        List<AggregateCountsQuery> generateInboxAggregateCountsQueries(Random random, MiruTenantId tenantId, int distinctQueries,
             MiruFieldCardinality fieldCardinality, MiruFollowables followables, long maxOrderId) {
 
             return doGenerateInboxAggregateCountsQueries(random, tenantId, distinctQueries, this, followables, maxOrderId);
         }
     };
 
-    private static List<AggregateCountsQuery> doGenerateInboxAggregateCountsQueries(Random random, TenantId tenantId, int distinctQueries,
+    private static List<AggregateCountsQuery> doGenerateInboxAggregateCountsQueries(Random random, MiruTenantId miruTenantId, int distinctQueries,
         MiruCustomerSize miruCustomerSize, MiruFollowables followables, long maxOrderId) {
         List<AggregateCountsQuery> aggregateCountsQueries = Lists.newArrayListWithExpectedSize(distinctQueries);
 
-        MiruTenantId miruTenantId = new MiruTenantId(tenantId.toStringForm().getBytes(Charsets.UTF_8));
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(1));
         for (int i = 0; i < distinctQueries; i++) {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or,
@@ -224,9 +221,9 @@ public enum MiruCustomerSize {
 
     abstract Map<MiruFieldName, Integer> getFieldNameToTotalCount();
 
-    abstract long generateAndIndexActivities(MiruService miruService, OrderIdProvider orderIdProvider, Random random, TenantId tenantId,
+    abstract long generateAndIndexActivities(MiruService miruService, OrderIdProvider orderIdProvider, Random random, MiruTenantId tenantId,
         MiruFieldCardinality fieldCardinality) throws Exception;
 
-    abstract List<AggregateCountsQuery> generateInboxAggregateCountsQueries(Random random, TenantId tenantId, int distinctQueries,
+    abstract List<AggregateCountsQuery> generateInboxAggregateCountsQueries(Random random, MiruTenantId tenantId, int distinctQueries,
         MiruFieldCardinality fieldCardinality, MiruFollowables followables, long maxOrderId);
 }

@@ -13,7 +13,6 @@
         <dependency>
             <groupId>com.jivesoftware.os.upena</groupId>
             <artifactId>upena-scripts</artifactId>
-            <version>0.5-SNAPSHOT</version>
             <type>tar.gz</type>
             <classifier>bin</classifier>
             <scope>runtime</scope>
@@ -34,7 +33,6 @@
                     <plugin>
                         <groupId>com.jivesoftware.os.upena</groupId>
                         <artifactId>upena-deployer-plugin</artifactId>
-                        <version>0.4</version>
                         <executions>
                             <execution>
                                 <phase>validate</phase>
@@ -54,7 +52,6 @@
                     <plugin>
                         <groupId>com.jivesoftware.os.upena</groupId>
                         <artifactId>upena-deployer-plugin</artifactId>
-                        <version>0.4</version>
                         <executions>
                             <execution>
                                 <phase>validate</phase>
@@ -165,7 +162,6 @@
                     <plugin>
                         <groupId>com.jivesoftware.os.upena</groupId>
                         <artifactId>upena-deployer-plugin</artifactId>
-                        <version>0.4</version>
                         <executions>
                             <execution>
                                 <phase>install</phase>

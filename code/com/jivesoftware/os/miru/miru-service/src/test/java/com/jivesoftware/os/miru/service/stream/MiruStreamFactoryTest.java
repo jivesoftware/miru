@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.google.common.collect.Interners;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
@@ -10,15 +11,18 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
@@ -54,15 +58,20 @@ public class MiruStreamFactoryTest {
             new RowColumnValueStoreImpl<>();
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
-        streamFactory = new MiruStreamFactory<>(new MiruBitmapsEWAH(4),
-                schema,
-                Executors.newSingleThreadExecutor(),
+        MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(4);
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(schema, Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
+                Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+        MiruFilterUtils<EWAHCompressedBitmap> miruFilterUtils = new MiruFilterUtils<>(bitmaps, activityInterner);
+
+        streamFactory = new MiruStreamFactory<>(bitmaps, schema, Executors.newSingleThreadExecutor(),
                 new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
                 new MiruTempDirectoryResourceLocator(),
                 new MiruTempDirectoryResourceLocator(),
                 20,
-                MiruBackingStorage.memory);
-
+                MiruBackingStorage.memory,
+                miruFilterUtils,
+                activityInterner);
+      
     }
 
     @Test(enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
@@ -77,7 +86,7 @@ public class MiruStreamFactoryTest {
 
         for (int i = 0; i < numberOfActivities; i++) {
             String[] authz = { "aaaabbbbcccc" };
-            MiruActivity activity = new MiruActivity.Builder(schema, tenantId, (long) i, authz, 0)
+            MiruActivity activity = new MiruActivity.Builder(tenantId, (long) i, authz, 0)
                 .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
                 .build();
             int id = inMemoryStream.getTimeIndex().nextId((long) i);
@@ -141,7 +150,7 @@ public class MiruStreamFactoryTest {
 
     private MiruStream minimalInMemory(MiruPartitionCoord coord) throws Exception {
         //TODO detecting backing storage fails if we haven't indexed at least 1 term for every field, 1 inbox, 1 unread
-        MiruActivity.Builder builder = new MiruActivity.Builder(schema, coord.tenantId, 0, new String[] { "abcd" }, 0);
+        MiruActivity.Builder builder = new MiruActivity.Builder(coord.tenantId, 0, new String[] { "abcd" }, 0);
         for (MiruFieldName fieldName : MiruFieldName.values()) {
             builder.putFieldValue(fieldName.getFieldName(), "defg");
         }

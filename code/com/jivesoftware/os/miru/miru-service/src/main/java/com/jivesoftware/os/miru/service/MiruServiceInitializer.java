@@ -2,10 +2,15 @@ package com.jivesoftware.os.miru.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.collect.Interners;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
@@ -21,8 +26,9 @@ import com.jivesoftware.os.miru.service.partition.MiruRemotePartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
 import com.jivesoftware.os.miru.service.partition.cluster.CachedClusterPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.service.stream.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
+import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import com.jivesoftware.os.miru.service.stream.factory.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.service.stream.factory.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolver;
@@ -60,6 +66,16 @@ public final class MiruServiceInitializer<BM> {
 
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
+        MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
+                miruSchema,
+                Interners.<MiruIBA>newWeakInterner(),
+                Interners.<MiruTermId>newWeakInterner(),
+                Interners.<MiruTenantId>newStrongInterner(),
+                // makes sense to share string internment as this is authz in both cases
+                Interners.<String>newWeakInterner());
+
+        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(bitmaps, internExtern);
+
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount());
         MiruStreamFactory<BM> streamFactory = new MiruStreamFactory<>(bitmaps,
                 miruSchema,
@@ -68,7 +84,9 @@ public final class MiruServiceInitializer<BM> {
                 resourceLocatorProvider.getDiskResourceLocator(),
                 resourceLocatorProvider.getTransientResourceLocator(),
                 config.getPartitionAuthzCacheSize(),
-                MiruBackingStorage.valueOf(config.getDefaultStorage()));
+                MiruBackingStorage.valueOf(config.getDefaultStorage()),
+                miruFilterUtils,
+                internExtern);
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
@@ -111,6 +129,7 @@ public final class MiruServiceInitializer<BM> {
         final ExecutorService backfillExecutor = Executors.newFixedThreadPool(10);//TODO expose to config
         MiruJustInTimeBackfillerizer<BM> backfillerizer = new MiruJustInTimeBackfillerizer<>(miruHost, bitmaps, backfillExecutor);
 
+
         final MiruService<BM> miruService = new MiruService<>(
                 miruHost,
                 serviceExecutor,
@@ -121,7 +140,8 @@ public final class MiruServiceInitializer<BM> {
                 activityWALWriter,
                 activityLookupTable,
                 solver,
-                bitmaps);
+                bitmaps,
+                miruFilterUtils);
 
         return new MiruLifecyle() {
 

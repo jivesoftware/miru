@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.service.index.auth;
 
 import com.google.common.cache.Cache;
-import com.google.common.collect.Interner;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.service.stream.MiruActivityInternExtern;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -19,10 +19,10 @@ public class MiruAuthzCache<BM> {
     private final MiruBitmaps<BM> bitmaps;
     private final Cache<VersionedAuthzExpression, BM> cache;
     private final ConcurrentMap<String, VersionableAuthz> versionables = Maps.newConcurrentMap();
-    private final Interner<String> interner;
+    private final MiruActivityInternExtern interner;
     private final MiruAuthzUtils<BM> utils;
 
-    public MiruAuthzCache(MiruBitmaps<BM> bitmaps, Cache<VersionedAuthzExpression, BM> cache, Interner<String> interner, MiruAuthzUtils<BM> utils) {
+    public MiruAuthzCache(MiruBitmaps<BM> bitmaps, Cache<VersionedAuthzExpression, BM> cache, MiruActivityInternExtern interner, MiruAuthzUtils<BM> utils) {
         this.bitmaps = bitmaps;
         this.cache = cache;
         this.interner = interner;
@@ -63,7 +63,7 @@ public class MiruAuthzCache<BM> {
     private Set<VersionedAuthz> currentVersions(MiruAuthzExpression authzExpression) {
         Set<VersionedAuthz> versions = Sets.newHashSet();
         for (String authz : authzExpression.values) {
-            versions.add(currentVersion(interner.intern(authz)).getLatest());
+            versions.add(currentVersion(interner.internString(authz)).getLatest());
         }
         return versions;
     }

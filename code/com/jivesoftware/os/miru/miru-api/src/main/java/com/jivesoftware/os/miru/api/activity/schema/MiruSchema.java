@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.api.activity.schema;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-
 import java.util.Map;
 
 /**
@@ -16,6 +15,7 @@ public class MiruSchema {
     private final Map<String, Integer> propNameToId;
     private final MiruFieldDefinition[] fieldDefinitions;
     private final MiruPropertyDefinition[] propertyDefinitions;
+
 
     public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
         this(fieldDefinitions, new MiruPropertyDefinition[0]);

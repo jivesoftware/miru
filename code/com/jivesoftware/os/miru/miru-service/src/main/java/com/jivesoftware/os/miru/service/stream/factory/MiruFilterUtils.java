@@ -10,7 +10,6 @@ import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
@@ -24,6 +23,7 @@ import com.jivesoftware.os.miru.api.query.result.RecoResult.Recommendation;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.service.bitmap.MiruIntIterator;
@@ -35,6 +35,7 @@ import com.jivesoftware.os.miru.service.query.AggregateCountsReport;
 import com.jivesoftware.os.miru.service.query.DistinctCountReport;
 import com.jivesoftware.os.miru.service.query.RecoReport;
 import com.jivesoftware.os.miru.service.query.TrendingReport;
+import com.jivesoftware.os.miru.service.stream.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,9 +55,11 @@ public class MiruFilterUtils<BM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
     private final MiruBitmaps<BM> bitmaps;
+    private final MiruActivityInternExtern activityInternExtern;
 
-    public MiruFilterUtils(MiruBitmaps<BM> bitmaps) {
+    public MiruFilterUtils(MiruBitmaps<BM> bitmaps, MiruActivityInternExtern activityInternExtern) {
         this.bitmaps = bitmaps;
+        this.activityInternExtern = activityInternExtern;
     }
 
     public AggregateCountsResult getAggregateCounts(MiruQueryStream<BM> stream, AggregateCountsQuery query, Optional<AggregateCountsReport> lastReport,
@@ -134,7 +137,7 @@ public class MiruFilterUtils<BM> {
                     break;
                 }
 
-                MiruActivity activity = stream.activityIndex.get(lastSetBit);
+                MiruInternalActivity activity = stream.activityIndex.get(lastSetBit);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -180,7 +183,7 @@ public class MiruFilterUtils<BM> {
                             }
                         }
 
-                        AggregateCount aggregateCount = new AggregateCount(activity, aggregateValue, beforeCount - afterCount, unread);
+                        AggregateCount aggregateCount = new AggregateCount(activityInternExtern.extern(activity), aggregateValue, beforeCount - afterCount, unread);
                         aggregateCounts.add(aggregateCount);
 
                         if (aggregateCounts.size() >= query.desiredNumberOfDistincts) {
@@ -235,7 +238,7 @@ public class MiruFilterUtils<BM> {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruActivity activity = stream.activityIndex.get(lastSetBit);
+                MiruInternalActivity activity = stream.activityIndex.get(lastSetBit);
 
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 if (fieldValues == null || fieldValues.length == 0) {
@@ -316,7 +319,7 @@ public class MiruFilterUtils<BM> {
                     break;
                 }
 
-                MiruActivity activity = stream.activityIndex.get(lastSetBit);
+                MiruInternalActivity activity = stream.activityIndex.get(lastSetBit);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -349,7 +352,7 @@ public class MiruFilterUtils<BM> {
                         long timestamp = stream.timeIndex.getTimestamp(index);
                         trend.add(timestamp, 1d);
                     }
-                    Trendy trendy = new Trendy(activity, aggregateValue, trend, trend.getRank(trend.getCurrentT()));
+                    Trendy trendy = new Trendy(activityInternExtern.extern(activity), aggregateValue, trend, trend.getRank(trend.getCurrentT()));
                     trendies.add(trendy);
 
                     //TODO desiredNumberOfDistincts is used to truncate the final list. Do we need a maxDistincts of some sort?
@@ -444,7 +447,7 @@ public class MiruFilterUtils<BM> {
         int fieldId = stream.schema.getFieldId(query.aggregateFieldName1);
         while (answerIterator.hasNext()) {
             int id = answerIterator.next();
-            MiruActivity activity = stream.activityIndex.get(id);
+            MiruInternalActivity activity = stream.activityIndex.get(id);
             MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
             if (fieldValues != null && fieldValues.length > 0) {
                 Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField1.getInvertedIndex(makeComposite(fieldValues[0], "^", query.aggregateFieldName2));
@@ -529,7 +532,7 @@ public class MiruFilterUtils<BM> {
                 break;
             }
 
-            MiruActivity activity = stream.activityIndex.get(lastSetBit);
+            MiruInternalActivity activity = stream.activityIndex.get(lastSetBit);
             MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -589,10 +592,10 @@ public class MiruFilterUtils<BM> {
     static class TermCount implements BloomIndex.HasValue {
 
         public final MiruTermId termId;
-        public MiruActivity mostRecent;
+        public MiruInternalActivity mostRecent;
         public final long count;
 
-        public TermCount(MiruTermId termId, MiruActivity mostRecent, long count) {
+        public TermCount(MiruTermId termId, MiruInternalActivity mostRecent, long count) {
             this.termId = termId;
             this.mostRecent = mostRecent;
             this.count = count;

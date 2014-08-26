@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import java.util.Map;
@@ -16,10 +15,10 @@ public enum MiruFollowables {
         ImmutableList<MiruFieldFilter> getFieldFilters(Random random, MiruCustomerSize customerSize) {
             Map<MiruFieldName, Integer> fieldNameToTotalCount = customerSize.getFieldNameToTotalCount();
 
-            ImmutableList<MiruTermId> authorValues = getFilterValues(fieldNameToTotalCount, random, 0.05, MiruFieldName.AUTHOR_ID);
-            ImmutableList<MiruTermId> containerValues = getFilterValues(fieldNameToTotalCount, random, 0.01, MiruFieldName.CONTAINER_ID);
-            ImmutableList<MiruTermId> activityParentValues = getFilterValues(fieldNameToTotalCount, random, 0.10, MiruFieldName.ACTIVITY_PARENT);
-            ImmutableList<MiruTermId> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.01, MiruFieldName.TAG_IDS);
+            ImmutableList<String> authorValues = getFilterValues(fieldNameToTotalCount, random, 0.05, MiruFieldName.AUTHOR_ID);
+            ImmutableList<String> containerValues = getFilterValues(fieldNameToTotalCount, random, 0.01, MiruFieldName.CONTAINER_ID);
+            ImmutableList<String> activityParentValues = getFilterValues(fieldNameToTotalCount, random, 0.10, MiruFieldName.ACTIVITY_PARENT);
+            ImmutableList<String> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.01, MiruFieldName.TAG_IDS);
 
             return ImmutableList.of(
                 new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
@@ -34,10 +33,10 @@ public enum MiruFollowables {
         ImmutableList<MiruFieldFilter> getFieldFilters(Random random, MiruCustomerSize customerSize) {
             Map<MiruFieldName, Integer> fieldNameToTotalCount = customerSize.getFieldNameToTotalCount();
 
-            ImmutableList<MiruTermId> authorValues = getFilterValues(fieldNameToTotalCount, random, 0.1, MiruFieldName.AUTHOR_ID);
-            ImmutableList<MiruTermId> containerValues = getFilterValues(fieldNameToTotalCount, random, 0.5, MiruFieldName.CONTAINER_ID);
-            ImmutableList<MiruTermId> activityParentValues = getFilterValues(fieldNameToTotalCount, random, 0.20, MiruFieldName.ACTIVITY_PARENT);
-            ImmutableList<MiruTermId> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.05, MiruFieldName.TAG_IDS);
+            ImmutableList<String> authorValues = getFilterValues(fieldNameToTotalCount, random, 0.1, MiruFieldName.AUTHOR_ID);
+            ImmutableList<String> containerValues = getFilterValues(fieldNameToTotalCount, random, 0.5, MiruFieldName.CONTAINER_ID);
+            ImmutableList<String> activityParentValues = getFilterValues(fieldNameToTotalCount, random, 0.20, MiruFieldName.ACTIVITY_PARENT);
+            ImmutableList<String> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.05, MiruFieldName.TAG_IDS);
 
             return ImmutableList.of(
                 new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
@@ -52,10 +51,10 @@ public enum MiruFollowables {
         ImmutableList<MiruFieldFilter> getFieldFilters(Random random, MiruCustomerSize customerSize) {
             Map<MiruFieldName, Integer> fieldNameToTotalCount = customerSize.getFieldNameToTotalCount();
 
-            ImmutableList<MiruTermId> authorValues = getFilterValues(fieldNameToTotalCount, random, 0.25, MiruFieldName.AUTHOR_ID);
-            ImmutableList<MiruTermId> containerValues = getFilterValues(fieldNameToTotalCount, random, 0.10, MiruFieldName.CONTAINER_ID);
-            ImmutableList<MiruTermId> activityParentValues = getFilterValues(fieldNameToTotalCount, random, 0.30, MiruFieldName.ACTIVITY_PARENT);
-            ImmutableList<MiruTermId> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.1, MiruFieldName.TAG_IDS);
+            ImmutableList<String> authorValues = getFilterValues(fieldNameToTotalCount, random, 0.25, MiruFieldName.AUTHOR_ID);
+            ImmutableList<String> containerValues = getFilterValues(fieldNameToTotalCount, random, 0.10, MiruFieldName.CONTAINER_ID);
+            ImmutableList<String> activityParentValues = getFilterValues(fieldNameToTotalCount, random, 0.30, MiruFieldName.ACTIVITY_PARENT);
+            ImmutableList<String> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.1, MiruFieldName.TAG_IDS);
 
             return ImmutableList.of(
                 new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
@@ -66,7 +65,7 @@ public enum MiruFollowables {
         }
     };
 
-    private static ImmutableList<MiruTermId> getFilterValues(Map<MiruFieldName, Integer> fieldNameToTotalCount,
+    private static ImmutableList<String> getFilterValues(Map<MiruFieldName, Integer> fieldNameToTotalCount,
         Random random, double termFrequencyPercentage, MiruFieldName fieldName) {
 
         int cardinality = fieldNameToTotalCount.get(fieldName);

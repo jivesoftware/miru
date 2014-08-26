@@ -1,6 +1,9 @@
 package com.jivesoftware.os.miru.client;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -11,9 +14,6 @@ import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;

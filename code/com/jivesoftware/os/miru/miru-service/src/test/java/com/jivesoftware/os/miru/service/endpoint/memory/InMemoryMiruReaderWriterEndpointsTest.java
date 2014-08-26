@@ -11,12 +11,24 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.miru.api.*;
-import com.jivesoftware.os.miru.api.activity.*;
+import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryCriteria;
+import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryParams;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruLifecyle;
+import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.MiruReader;
+import com.jivesoftware.os.miru.api.MiruWriter;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -38,18 +50,17 @@ import com.jivesoftware.os.miru.service.reader.MiruReaderImpl;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import org.merlin.config.BindInterfaceToConfiguration;
-import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
-import javax.ws.rs.core.Response;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.ws.rs.core.Response;
+import org.merlin.config.BindInterfaceToConfiguration;
+import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
 import static com.jivesoftware.os.miru.api.field.MiruFieldName.AUTHOR_ID;
 import static com.jivesoftware.os.miru.api.field.MiruFieldName.OBJECT_ID;
@@ -61,7 +72,6 @@ public class InMemoryMiruReaderWriterEndpointsTest {
     MiruTenantId tenantId = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
 
-    private final MiruSchema schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
     private final MiruPartitionedActivityFactory activityFactory = new MiruPartitionedActivityFactory();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -102,7 +112,7 @@ public class InMemoryMiruReaderWriterEndpointsTest {
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                schema,
+                new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
@@ -137,20 +147,20 @@ public class InMemoryMiruReaderWriterEndpointsTest {
 
         miruWriterEndpoints.addActivities(Lists.newArrayList(
             activityFactory.activity(1, MiruPartitionId.of(0), index.incrementAndGet(),
-                new MiruActivity.Builder(schema, tenantId, time.incrementAndGet(), new String[] { }, 0)
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
                     .putFieldValue(OBJECT_ID.getFieldName(), "value1")
                     .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
                     .build())));
 
         List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(
             activityFactory.activity(1, MiruPartitionId.of(0), index.incrementAndGet(),
-                new MiruActivity.Builder(schema, tenantId, time.incrementAndGet(), new String[] { }, 0)
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
                     .putFieldValue(OBJECT_ID.getFieldName(), "value1")
                     .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
                     .build()
             ),
             activityFactory.activity(1, MiruPartitionId.of(0), index.incrementAndGet(),
-                new MiruActivity.Builder(schema, tenantId, time.incrementAndGet(), new String[] { }, 0)
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
                     .putFieldValue(OBJECT_ID.getFieldName(), "value2")
                     .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
                     .build()
@@ -168,7 +178,7 @@ public class InMemoryMiruReaderWriterEndpointsTest {
                 .setAggregateCountAroundField(OBJECT_ID.getFieldName())
                 .setStreamFilter(new MiruFilter(MiruFilterOperation.or,
                     Optional.of(ImmutableList.<MiruFieldFilter>of(
-                        new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.<MiruTermId>of(new MiruTermId("value2".getBytes(Charsets.UTF_8)))))),
+                        new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.<String>of("value2")))),
                     Optional.<ImmutableList<MiruFilter>>absent()
                 ))
                 .build()
@@ -184,10 +194,10 @@ public class InMemoryMiruReaderWriterEndpointsTest {
             new MiruAggregateCountsQueryCriteria.Builder()
                 .setAggregateCountAroundField(OBJECT_ID.getFieldName())
                 .setStreamFilter(new MiruFilter(MiruFilterOperation.or,
-                        Optional.of(ImmutableList.<MiruFieldFilter>of(
-                                new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of(new MiruTermId("value2".getBytes(Charsets.UTF_8)))),
-                                new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of(new MiruTermId("value2".getBytes(Charsets.UTF_8)))))),
-                        Optional.<ImmutableList<MiruFilter>>absent()
+                    Optional.of(ImmutableList.<MiruFieldFilter>of(
+                        new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.<String>of("value2")),
+                        new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.<String>of("value2")))),
+                    Optional.<ImmutableList<MiruFilter>>absent()
                 ))
                 .build()
         ));

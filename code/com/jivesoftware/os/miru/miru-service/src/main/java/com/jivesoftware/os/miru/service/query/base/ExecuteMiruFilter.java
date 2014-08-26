@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.query.base;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -9,11 +10,11 @@ import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import org.apache.commons.io.Charsets;
 
 /** @author jonathan */
 public class ExecuteMiruFilter<BM> implements Callable<BM> {
@@ -52,8 +53,8 @@ public class ExecuteMiruFilter<BM> implements Callable<BM> {
                 if (fieldId >= 0) {
                     MiruField field = fieldIndex.getField(fieldId);
                     List<BM> fieldBitmaps = new ArrayList<>();
-                    for (MiruTermId term : fieldFilter.values) {
-                        Optional<MiruInvertedIndex<BM>> got = field.getInvertedIndex(term, considerIfIndexIdGreaterThanN);
+                    for (String term : fieldFilter.values) {
+                        Optional<MiruInvertedIndex<BM>> got = field.getInvertedIndex(new MiruTermId(term.getBytes(Charsets.UTF_8)), considerIfIndexIdGreaterThanN);
                         if (got.isPresent()) {
                             fieldBitmaps.add(got.get().getIndex());
                         }

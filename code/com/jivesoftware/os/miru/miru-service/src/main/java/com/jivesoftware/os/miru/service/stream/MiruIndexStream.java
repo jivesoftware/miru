@@ -8,7 +8,9 @@ import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BloomIndex;
 import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
@@ -17,8 +19,6 @@ import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-
 import java.util.List;
 import java.util.Set;
 
@@ -35,7 +35,7 @@ public class MiruIndexStream<BM> {
     private final MiruFields<BM> fieldIndex;
     private final MiruAuthzIndex authzIndex;
     private final MiruRemovalIndex removalIndex;
-    private final MiruActivityInterner activityInterner;
+    private final MiruActivityInternExtern activityInterner;
 
     private final StripingLocksProvider<Integer> stripingLocksProvider = new StripingLocksProvider<>(64);
 
@@ -45,7 +45,7 @@ public class MiruIndexStream<BM> {
             MiruFields<BM> fieldIndex,
             MiruAuthzIndex authzIndex,
             MiruRemovalIndex removalIndex,
-            MiruActivityInterner activityInterner) {
+            MiruActivityInternExtern activityInterner) {
         this.bitmaps = bitmaps;
         this.schema = schema;
         this.activityIndex = activityIndex;
@@ -56,33 +56,33 @@ public class MiruIndexStream<BM> {
     }
 
     public void index(MiruActivity activity, int id) throws Exception {
-        activity = activityInterner.intern(activity);
-        indexFieldValues(activity, id);
-        indexAuthz(activity, id);
-        indexBloomins(activity);
-        indexWriteTimeAggregates(activity, id);
+        MiruInternalActivity internalActivity = activityInterner.intern(activity);
+        indexFieldValues(internalActivity, id);
+        indexAuthz(internalActivity, id);
+        indexBloomins(internalActivity);
+        indexWriteTimeAggregates(internalActivity, id);
         // add to the activity index last, and use it as the ultimate indicator of whether an activity is fully indexed
-        set(activity, id);
+        activityIndex.set(id, internalActivity);
     }
 
     public void set(MiruActivity activity, int id) {
-        activity = activityInterner.intern(activity);
-        activityIndex.set(id, activity);
+        MiruInternalActivity internalActivity = activityInterner.intern(activity);
+        activityIndex.set(id, internalActivity);
     }
 
     public void repair(MiruActivity activity, int id) throws Exception {
         synchronized (stripingLocksProvider.lock(id)) {
-            MiruActivity existing = activityIndex.get(id);
+            MiruInternalActivity existing = activityIndex.get(id);
             if (existing == null) {
                 log.debug("Can't repair nonexistent activity at {}\n- offered: {}", id, activity);
             } else if (activity.version <= existing.version) {
                 log.debug("Declined to repair old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
             } else {
                 log.debug("Repairing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
-                activity = activityInterner.intern(activity);
+                MiruInternalActivity internalActivity = activityInterner.intern(activity);
 
                 Set<String> existingAuthz = existing.authz != null ? Sets.newHashSet(existing.authz) : Sets.<String>newHashSet();
-                Set<String> repairedAuthz = activity.authz != null ? Sets.newHashSet(activity.authz) : Sets.<String>newHashSet();
+                Set<String> repairedAuthz = internalActivity.authz != null ? Sets.newHashSet(internalActivity.authz) : Sets.<String>newHashSet();
 
                 for (String authz : existingAuthz) {
                     if (!repairedAuthz.contains(authz)) {
@@ -101,33 +101,33 @@ public class MiruIndexStream<BM> {
                 removalIndex.remove(id);
 
                 // finally, update the activity index
-                activityIndex.set(id, activity);
+                activityIndex.set(id, internalActivity);
             }
         }
     }
 
     public void remove(MiruActivity activity, int id) throws Exception {
         synchronized (stripingLocksProvider.lock(id)) {
-            MiruActivity existing = activityIndex.get(id);
+            MiruInternalActivity existing = activityIndex.get(id);
             if (existing == null) {
                 log.debug("Can't remove nonexistent activity at {}\n- offered: {}", id, activity);
             } else if (activity.version <= existing.version) {
                 log.debug("Declined to remove old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
             } else {
                 log.debug("Removing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
-                activity = activityInterner.intern(activity);
+                MiruInternalActivity internalActivity = activityInterner.intern(activity);
 
                 //TODO apply field changes?
                 // hide (add to removal)
                 removalIndex.set(id);
 
                 // finally, update the activity index
-                activityIndex.set(id, activity);
+                activityIndex.set(id, internalActivity);
             }
         }
     }
 
-    private void indexFieldValues(final MiruActivity activity, final int id) throws Exception {
+    private void indexFieldValues(final MiruInternalActivity activity, final int id) throws Exception {
         for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
             if (activity.fieldsValues[fieldId] != null) {
                 MiruField miruField = fieldIndex.getField(fieldId);
@@ -138,7 +138,7 @@ public class MiruIndexStream<BM> {
         }
     }
 
-    private void indexAuthz(MiruActivity activity, int id) throws Exception {
+    private void indexAuthz(MiruInternalActivity activity, int id) throws Exception {
         if (activity.authz != null) {
             for (String authz : activity.authz) {
                 authzIndex.index(authz, id);
@@ -150,7 +150,7 @@ public class MiruIndexStream<BM> {
         authzIndex.repair(authz, id, value);
     }
 
-    private void indexBloomins(MiruActivity activity) throws Exception {
+    private void indexBloomins(MiruInternalActivity activity) throws Exception {
         BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
 
         for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
@@ -174,7 +174,7 @@ public class MiruIndexStream<BM> {
 
     }
 
-    private void indexWriteTimeAggregates(MiruActivity activity, int id) throws Exception {
+    private void indexWriteTimeAggregates(MiruInternalActivity activity, int id) throws Exception {
         for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
             MiruField<BM> miruField = fieldIndex.getField(fieldId);
             MiruTermId[] fieldValues = activity.fieldsValues[fieldId];

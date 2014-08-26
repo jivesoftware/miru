@@ -83,5 +83,9 @@
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>http-client-rest</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>jaxrs-util</artifactId>
+        </dependency>
     </dependencies>
 </project>

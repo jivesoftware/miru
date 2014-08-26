@@ -9,10 +9,10 @@
         <relativePath>../inheritance-poms/upena-deployable-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
-    <artifactId>miru-deployable</artifactId>
+    <artifactId>miru-reader-deployable</artifactId>
     <version>0.7-SNAPSHOT</version>
     <properties>
-        <java.main>com.jivesoftware.os.miru.deployable.MiruMain</java.main>
+        <java.main>com.jivesoftware.os.miru.reader.deployable.MiruReaderMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
     <dependencies>

@@ -5,7 +5,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
@@ -78,7 +78,7 @@ public class MiruJustInTimeBackfillerizer<BM> {
                         while (intIterator.hasNext()) {
                             int i = intIterator.next();
                             if (i > lastActivityIndex && i <= lastId) {
-                                MiruActivity miruActivity = stream.activityIndex.get(i);
+                                MiruInternalActivity miruActivity = stream.activityIndex.get(i);
                                 if (miruActivity == null) {
                                     log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
                                         i, stream.timeIndex.lastId(), stream.activityIndex.lastId());

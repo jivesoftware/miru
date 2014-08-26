@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
@@ -11,20 +11,20 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * In-memory impl. Activity data lives in an array, last index is a simple integer.
  */
-public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<MiruActivity[]>, BulkExport<MiruActivity[]> {
+public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<MiruInternalActivity[]>, BulkExport<MiruInternalActivity[]> {
 
     private final int initialCapacity = 32; //TODO configure?
-    private MiruActivity[] activities;
+    private MiruInternalActivity[] activities;
     private int last = -1;
     private long activitySizeInBytes = 0;
 
     public MiruInMemoryActivityIndex() {
-        this.activities = new MiruActivity[initialCapacity];
+        this.activities = new MiruInternalActivity[initialCapacity];
     }
 
     @Override
-    public MiruActivity get(int index) {
-        MiruActivity[] activities = this.activities; // stable reference
+    public MiruInternalActivity get(int index) {
+        MiruInternalActivity[] activities = this.activities; // stable reference
         int capacity = activities.length;
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
         return index < activities.length ? activities[index] : null;
@@ -36,7 +36,7 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public void set(int index, MiruActivity activity) {
+    public void set(int index, MiruInternalActivity activity) {
         synchronized (activities) {
             checkArgument(index >= 0, "Index parameter is out of bounds. The value " + index + " must be >=0");
             if (index >= activities.length) {
@@ -44,7 +44,7 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
                 while (newLength <= index) {
                     newLength *= 2;
                 }
-                MiruActivity[] newActivities = new MiruActivity[newLength];
+                MiruInternalActivity[] newActivities = new MiruInternalActivity[newLength];
                 System.arraycopy(activities, 0, newActivities, 0, activities.length);
                 activities = newActivities;
             }
@@ -72,10 +72,10 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public void bulkImport(BulkExport<MiruActivity[]> importItems) throws Exception {
-        MiruActivity[] importActivities = importItems.bulkExport();
+    public void bulkImport(BulkExport<MiruInternalActivity[]> importItems) throws Exception {
+        MiruInternalActivity[] importActivities = importItems.bulkExport();
         synchronized (activities) {
-            this.activities = new MiruActivity[importActivities.length];
+            this.activities = new MiruInternalActivity[importActivities.length];
             System.arraycopy(importActivities, 0, this.activities, 0, importActivities.length);
 
             //TODO could binary search for first null
@@ -90,8 +90,8 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public MiruActivity[] bulkExport() throws Exception {
-        MiruActivity[] activities = this.activities; // stable reference
+    public MiruInternalActivity[] bulkExport() throws Exception {
+        MiruInternalActivity[] activities = this.activities; // stable reference
         return Arrays.copyOf(activities, activities.length);
     }
 }

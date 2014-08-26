@@ -11,7 +11,6 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -38,6 +37,7 @@ import com.jivesoftware.os.miru.service.benchmark.caliper.Trial;
 import com.jivesoftware.os.miru.service.benchmark.caliper.Value;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
@@ -184,7 +184,7 @@ public class MiruStreamServiceBenchmarkTest {
         // Generate all of the activities and index them
         log.debug(currentProfile + " = Generating activities");
         Random random = new Random(System.currentTimeMillis());
-        TenantId tenantId = new TenantId("benchmark");
+        MiruTenantId tenantId = new MiruTenantId("benchmark".getBytes());
         long maxOrderId = customerSize.generateAndIndexActivities(miruService, orderIdProvider, random, tenantId, fieldCardinality);
         log.debug(currentProfile + " = Generated activities");
 

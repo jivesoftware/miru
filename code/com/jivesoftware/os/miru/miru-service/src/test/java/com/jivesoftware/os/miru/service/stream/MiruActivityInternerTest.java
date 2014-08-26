@@ -11,15 +11,15 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
+import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
@@ -27,7 +27,7 @@ import static org.testng.Assert.assertTrue;
 
 public class MiruActivityInternerTest {
 
-    private MiruActivityInterner interner;
+    private MiruActivityInternExtern interner;
     private MiruTenantId tenantId;
     private MiruSchema schema;
 
@@ -41,20 +41,20 @@ public class MiruActivityInternerTest {
         schema = new MiruSchema(
                 new MiruFieldDefinition[] { new MiruFieldDefinition(0, "f") },
                 new MiruPropertyDefinition[] { new MiruPropertyDefinition(0, "p") });
-        interner = new MiruActivityInterner(schema, ibaInterner, termInterner, tenantInterner, stringInterner);
+        interner = new MiruActivityInternExtern(schema, ibaInterner, termInterner, tenantInterner, stringInterner);
         tenantId = new MiruTenantId("testIntern".getBytes());
     }
 
     @Test
     public void testIntern_complete() throws Exception {
 
-        MiruActivity activity1 = interner.intern(
-            new MiruActivity.Builder(schema, tenantId, 1, new String[] { "a", "b", "c" }, 0)
+        MiruInternalActivity activity1 = interner.intern(
+            new MiruActivity.Builder(tenantId, 1, new String[] { "a", "b", "c" }, 0)
                 .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
                 .putAllPropValues("p", ImmutableList.of("v1", "v2"))
                 .build());
-        MiruActivity activity2 = interner.intern(
-            new MiruActivity.Builder(schema, tenantId, 2, new String[] { "a", "b", "c" }, 0)
+        MiruInternalActivity activity2 = interner.intern(
+            new MiruActivity.Builder(tenantId, 2, new String[] { "a", "b", "c" }, 0)
                 .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
                 .putAllPropValues("p", ImmutableList.of("v1", "v2"))
                 .build());
@@ -76,7 +76,7 @@ public class MiruActivityInternerTest {
 
     @Test
     public void testIntern_nullAuthz() throws Exception {
-        MiruActivity activity1 = interner.intern(new MiruActivity.Builder(schema, tenantId, 1, null, 0).build());
+        MiruInternalActivity activity1 = interner.intern(new MiruActivity.Builder(tenantId, 1, null, 0).build());
 
         assertNull(activity1.authz);
     }
