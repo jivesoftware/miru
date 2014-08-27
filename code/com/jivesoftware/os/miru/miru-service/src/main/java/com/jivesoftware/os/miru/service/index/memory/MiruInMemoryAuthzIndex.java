@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.collect.ImmutableMap;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -86,13 +87,13 @@ public class MiruInMemoryAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImpor
     }
 
     @Override
-    public Map<String, MiruInvertedIndex<BM>> bulkExport() throws Exception {
+    public Map<String, MiruInvertedIndex<BM>> bulkExport(MiruTenantId tenantId) throws Exception {
         return ImmutableMap.<String, MiruInvertedIndex<BM>>copyOf(index);
     }
 
     @Override
-    public void bulkImport(BulkExport<Map<String, MiruInvertedIndex<BM>>> importItems) throws Exception {
-        this.index.putAll(importItems.bulkExport());
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Map<String, MiruInvertedIndex<BM>>> importItems) throws Exception {
+        this.index.putAll(importItems.bulkExport(tenantId));
     }
 
 }

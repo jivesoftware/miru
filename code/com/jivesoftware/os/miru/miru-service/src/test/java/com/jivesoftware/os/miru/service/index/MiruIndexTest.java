@@ -8,6 +8,7 @@ import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskIndex;
@@ -102,6 +103,7 @@ public class MiruIndexTest {
 
     @DataProvider(name = "miruIndexDataProviderWithData")
     public Object[][] miruIndexDataProviderWithData() throws Exception {
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruInMemoryIndex miruInMemoryIndex = new MiruInMemoryIndex(new MiruBitmapsEWAH(4));
 
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
@@ -115,9 +117,9 @@ public class MiruIndexTest {
         final Map<Long, MiruInvertedIndex> importData = ImmutableMap.of(
                 key, invertedIndex
         );
-        miruInMemoryIndex.bulkImport(new BulkExport<Map<Long, MiruInvertedIndex>>() {
+        miruInMemoryIndex.bulkImport(tenantId, new BulkExport<Map<Long, MiruInvertedIndex>>() {
             @Override
-            public Map<Long, MiruInvertedIndex> bulkExport() throws Exception {
+            public Map<Long, MiruInvertedIndex> bulkExport(MiruTenantId tenantId) throws Exception {
                 return importData;
             }
         });
@@ -129,7 +131,7 @@ public class MiruIndexTest {
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), initialChunkStoreSizeInBytes, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, multiChunkStore);
-        miruOnDiskIndex.bulkImport(miruInMemoryIndex);
+        miruOnDiskIndex.bulkImport(tenantId, miruInMemoryIndex);
 
         return new Object[][]{
             {miruInMemoryIndex, importData, MiruBackingStorage.memory},

@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.keyed.store.RandomAccessSwappableFiler;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInvertedIndex;
@@ -212,22 +213,23 @@ public class MiruInvertedIndexTest {
 
     @DataProvider(name = "miruInvertedIndexDataProviderWithData")
     public Object[][] miruInvertedIndexDataProviderWithData() throws Exception {
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruInMemoryInvertedIndex<EWAHCompressedBitmap> miruInMemoryInvertedIndex = new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(100));
 
         final EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
         bitmap.set(1);
         bitmap.set(2);
         bitmap.set(3);
-        miruInMemoryInvertedIndex.bulkImport(new BulkExport<EWAHCompressedBitmap>() {
+        miruInMemoryInvertedIndex.bulkImport(tenantId, new BulkExport<EWAHCompressedBitmap>() {
             @Override
-            public EWAHCompressedBitmap bulkExport() throws Exception {
+            public EWAHCompressedBitmap bulkExport(MiruTenantId tenantId) throws Exception {
                 return bitmap;
             }
         });
 
         MiruOnDiskInvertedIndex<EWAHCompressedBitmap> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(100),
                 new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")));
-        miruOnDiskInvertedIndex.bulkImport(miruInMemoryInvertedIndex);
+        miruOnDiskInvertedIndex.bulkImport(tenantId, miruInMemoryInvertedIndex);
 
         return new Object[][]{
             {miruInMemoryInvertedIndex, Sets.newHashSet(1, 2, 3)},

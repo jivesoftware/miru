@@ -7,6 +7,7 @@ import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -37,7 +38,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
     }
 
     @Override
-    public MiruInternalActivity get(int index) {
+    public MiruInternalActivity get(MiruTenantId tenantId, int index) {
         int capacity = indexSize.get();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
         try {
@@ -46,7 +47,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
                 synchronized (swappableFiler.lock()) {
                     swappableFiler.sync();
                     swappableFiler.seek(0);
-                    return internalActivityMarshaller.fromFiler(swappableFiler);
+                    return internalActivityMarshaller.fromFiler(tenantId, swappableFiler);
                 }
             }
             return null;
@@ -56,7 +57,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
     }
 
     @Override
-    public MiruTermId[] get(int index, int fieldId) {
+    public MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId) {
         int capacity = indexSize.get();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
         try {
@@ -124,8 +125,8 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
     }
 
     @Override
-    public void bulkImport(BulkExport<MiruInternalActivity[]> bulkExport) throws Exception {
-        MiruInternalActivity[] importActivities = bulkExport.bulkExport();
+    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInternalActivity[]> bulkExport) throws Exception {
+        MiruInternalActivity[] importActivities = bulkExport.bulkExport(tenantId);
 
         int lastIndex;
         for (lastIndex = importActivities.length - 1; lastIndex >= 0 && importActivities[lastIndex] == null; lastIndex--) {
@@ -141,14 +142,14 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
     }
 
     @Override
-    public MiruInternalActivity[] bulkExport() throws Exception {
+    public MiruInternalActivity[] bulkExport(MiruTenantId tenantId) throws Exception {
         int capacity = indexSize.get();
 
         //TODO all activities need to fit in memory... sigh.
         //TODO need to "stream" this export/import.
         MiruInternalActivity[] activities = new MiruInternalActivity[capacity];
         for (int i = 0; i < activities.length; i++) {
-            activities[i] = get(i);
+            activities[i] = get(tenantId, i);
         }
         return activities;
     }

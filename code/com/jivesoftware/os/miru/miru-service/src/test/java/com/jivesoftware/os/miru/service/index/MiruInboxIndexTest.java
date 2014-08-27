@@ -9,6 +9,7 @@ import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInboxIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex;
@@ -109,7 +110,7 @@ public class MiruInboxIndexTest {
     @DataProvider(name = "miruInboxIndexDataProvider")
     public Object[][] miruInboxIndexDataProvider() throws Exception {
         MiruStreamId miruStreamId = new MiruStreamId(new Id(12345).toBytes());
-
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
         MiruInMemoryInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = new MiruInMemoryInboxIndex<>(bitmaps);
 
@@ -120,7 +121,7 @@ public class MiruInboxIndexTest {
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDir, swapDir, multiChunkStore);
-        miruOnDiskInboxIndex.bulkImport(miruInMemoryInboxIndex);
+        miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 
         return new Object[][]{
             {miruInMemoryInboxIndex, miruStreamId},
@@ -134,7 +135,7 @@ public class MiruInboxIndexTest {
 
         // Create in-memory inbox index
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
-
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruInMemoryInboxIndex miruInMemoryInboxIndex = new MiruInMemoryInboxIndex(bitmaps);
 
         ConcurrentMap<MiruStreamId, MiruInvertedIndex> index = new ConcurrentHashMap<>();
@@ -150,9 +151,9 @@ public class MiruInboxIndexTest {
         index.put(streamId, ii);
 
         final InboxAndLastActivityIndex inboxAndLastActivityIndex = new InboxAndLastActivityIndex(index, lastActivityIndex);
-        miruInMemoryInboxIndex.bulkImport(new BulkExport<InboxAndLastActivityIndex>() {
+        miruInMemoryInboxIndex.bulkImport(tenantId, new BulkExport<InboxAndLastActivityIndex>() {
             @Override
-            public InboxAndLastActivityIndex bulkExport() throws Exception {
+            public InboxAndLastActivityIndex bulkExport(MiruTenantId tenantId) throws Exception {
                 return inboxAndLastActivityIndex;
             }
         });
@@ -165,7 +166,7 @@ public class MiruInboxIndexTest {
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskInboxIndex miruOnDiskInboxIndex = new MiruOnDiskInboxIndex(bitmaps, mapDir, swapDir, multiChunkStore);
-        miruOnDiskInboxIndex.bulkImport(miruInMemoryInboxIndex);
+        miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 
         return new Object[][]{
             {miruInMemoryInboxIndex, streamId, ImmutableList.of(1, 2, 3)},

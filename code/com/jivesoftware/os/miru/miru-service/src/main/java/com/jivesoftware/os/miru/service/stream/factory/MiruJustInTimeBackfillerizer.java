@@ -78,7 +78,7 @@ public class MiruJustInTimeBackfillerizer<BM> {
                         while (intIterator.hasNext()) {
                             int i = intIterator.next();
                             if (i > lastActivityIndex && i <= lastId) {
-                                MiruInternalActivity miruActivity = stream.activityIndex.get(i);
+                                MiruInternalActivity miruActivity = stream.activityIndex.get(tenantId, i);
                                 if (miruActivity == null) {
                                     log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
                                         i, stream.timeIndex.lastId(), stream.activityIndex.lastId());

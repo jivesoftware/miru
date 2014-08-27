@@ -7,6 +7,7 @@ import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
@@ -55,7 +56,7 @@ public class MiruFieldTest {
     @DataProvider(name = "miruFieldDataProvider")
     public Object[][] miruFieldDataProvider() throws Exception {
         List<Integer> ids = Lists.newArrayList();
-
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1");
         MiruInMemoryField miruInMemoryField = new MiruInMemoryField(fieldDefinition,
                 Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(),
@@ -79,8 +80,8 @@ public class MiruFieldTest {
                 new MiruOnDiskIndex(new MiruBitmapsEWAH(2), indexMapDirectory, indexSwapDirectory, multiChunkStore),
                 fieldMapDirectory);
         // need to export/import both the field and its index (a little strange)
-        miruOnDiskField.bulkImport(miruInMemoryField);
-        miruOnDiskField.getIndex().bulkImport(miruInMemoryField.getIndex());
+        miruOnDiskField.bulkImport(tenantId, miruInMemoryField);
+        miruOnDiskField.getIndex().bulkImport(tenantId, miruInMemoryField.getIndex());
 
         return new Object[][]{
             {new MiruBitmapsEWAH(2), miruInMemoryField, ids},

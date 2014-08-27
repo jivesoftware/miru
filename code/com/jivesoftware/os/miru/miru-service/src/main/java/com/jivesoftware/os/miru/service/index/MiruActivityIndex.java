@@ -6,6 +6,7 @@
 
 package com.jivesoftware.os.miru.service.index;
 
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 
@@ -15,18 +16,19 @@ public interface MiruActivityIndex {
     /**
      * Returns the activity that was recorded at the given index
      *
+     * @param tenantId
      * @param index the index of the activity
      * @return the activity at the given index
      */
-    MiruInternalActivity get(int index);
+    MiruInternalActivity get(MiruTenantId tenantId, int index);
 
     /**
-     * 
+     *
      * @param index
      * @param fieldId
      * @return
      */
-    MiruTermId[] get(int index, int fieldId);
+    MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId);
 
     /**
      * Returns the index of the last activity.

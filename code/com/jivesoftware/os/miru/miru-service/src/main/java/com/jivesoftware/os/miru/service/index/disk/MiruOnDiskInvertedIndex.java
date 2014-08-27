@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.disk;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
@@ -166,7 +167,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
     }
 
     @Override
-    public void bulkImport(BulkExport<BM> importItems) throws Exception {
-        setIndex(importItems.bulkExport());
+    public void bulkImport(MiruTenantId tenantId, BulkExport<BM> importItems) throws Exception {
+        setIndex(importItems.bulkExport(tenantId));
     }
 }

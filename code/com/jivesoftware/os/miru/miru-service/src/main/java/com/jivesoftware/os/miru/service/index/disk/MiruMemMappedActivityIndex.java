@@ -10,6 +10,7 @@ import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -52,7 +53,7 @@ public class MiruMemMappedActivityIndex implements MiruActivityIndex, BulkImport
     }
 
     @Override
-    public MiruInternalActivity get(int index) {
+    public MiruInternalActivity get(MiruTenantId tenantId, int index) {
         checkArgument(index >= 0 && index < capacity(), "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity());
         try {
             SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), false);
@@ -72,8 +73,8 @@ public class MiruMemMappedActivityIndex implements MiruActivityIndex, BulkImport
     }
 
     @Override
-    public MiruTermId[] get(int index, int fieldId) {
-        MiruInternalActivity activity = get(index);
+    public MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId) {
+        MiruInternalActivity activity = get(tenantId, index);
         return activity.fieldsValues[fieldId];
     }
 
@@ -150,8 +151,8 @@ public class MiruMemMappedActivityIndex implements MiruActivityIndex, BulkImport
     }
 
     @Override
-    public void bulkImport(BulkExport<MiruInternalActivity[]> bulkExport) throws Exception {
-        MiruInternalActivity[] importActivities = bulkExport.bulkExport();
+    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInternalActivity[]> bulkExport) throws Exception {
+        MiruInternalActivity[] importActivities = bulkExport.bulkExport(tenantId);
 
         int lastIndex;
         for (lastIndex = importActivities.length - 1; lastIndex >= 0 && importActivities[lastIndex] == null; lastIndex--) {

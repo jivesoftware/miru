@@ -110,8 +110,9 @@ public class MiruFilterUtilsTest {
             timestamps[i] = i;
         }
 
-        MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(timestamps);
-        MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(miruInMemoryTimeIndex);
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
+        MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
         return new Object[][] {
             { new MiruBitmapsEWAH(2), miruFilterUtils, miruInMemoryTimeIndex },
@@ -132,8 +133,9 @@ public class MiruFilterUtilsTest {
             timestamps[i] = i;
         }
 
-        MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(timestamps);
-        MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(miruInMemoryTimeIndex);
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
+        MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
         return new Object[][] {
             { miruFilterUtils, miruInMemoryTimeIndex },
@@ -149,8 +151,9 @@ public class MiruFilterUtilsTest {
         MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2), activityInterner);
 
         final long[] timestamps = new long[] { System.currentTimeMillis() };
-        MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(timestamps);
-        MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(miruInMemoryTimeIndex);
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
+        MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
         return new Object[][] {
             { new MiruBitmapsEWAH(2), miruFilterUtils, miruInMemoryTimeIndex },
@@ -158,18 +161,18 @@ public class MiruFilterUtilsTest {
         };
     }
 
-    private MiruInMemoryTimeIndex buildInMemoryTimeIndex(final long[] timestamps) throws Exception {
+    private MiruInMemoryTimeIndex buildInMemoryTimeIndex(MiruTenantId tenantId, final long[] timestamps) throws Exception {
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent());
-        miruInMemoryTimeIndex.bulkImport(new BulkExport<long[]>() {
+        miruInMemoryTimeIndex.bulkImport(tenantId, new BulkExport<long[]>() {
             @Override
-            public long[] bulkExport() throws Exception {
+            public long[] bulkExport(MiruTenantId tenantId) throws Exception {
                 return timestamps;
             }
         });
         return miruInMemoryTimeIndex;
     }
 
-    private MiruOnDiskTimeIndex buildOnDiskTimeIndex(MiruInMemoryTimeIndex miruInMemoryTimeIndex) throws Exception {
+    private MiruOnDiskTimeIndex buildOnDiskTimeIndex(MiruTenantId tenantId, MiruInMemoryTimeIndex miruInMemoryTimeIndex) throws Exception {
         final File onDisk = Files.createTempFile("onDisk", "timeIndex").toFile();
 
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = new MiruOnDiskTimeIndex(new MiruFilerProvider() {
@@ -183,7 +186,7 @@ public class MiruFilterUtilsTest {
                 return new RandomAccessFiler(onDisk, "rw");
             }
         }, Files.createTempDirectory("timestampToIndex").toFile());
-        miruOnDiskTimeIndex.bulkImport(miruInMemoryTimeIndex);
+        miruOnDiskTimeIndex.bulkImport(tenantId, miruInMemoryTimeIndex);
 
         return miruOnDiskTimeIndex;
     }

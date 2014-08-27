@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
@@ -147,8 +148,8 @@ public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Map<MiruTe
     }
 
     @Override
-    public void bulkImport(BulkExport<Map<MiruTermId, MiruFieldIndexKey>> importItems) throws Exception {
-        for (Map.Entry<MiruTermId, MiruFieldIndexKey> entry : importItems.bulkExport().entrySet()) {
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> importItems) throws Exception {
+        for (Map.Entry<MiruTermId, MiruFieldIndexKey> entry : importItems.bulkExport(tenantId).entrySet()) {
             termToIndex.add(entry.getKey(), entry.getValue());
         }
     }

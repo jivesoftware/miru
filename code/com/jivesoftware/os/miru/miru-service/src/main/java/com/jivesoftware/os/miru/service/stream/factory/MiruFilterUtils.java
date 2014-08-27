@@ -10,6 +10,7 @@ import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
@@ -137,7 +138,7 @@ public class MiruFilterUtils<BM> {
                     break;
                 }
 
-                MiruInternalActivity activity = stream.activityIndex.get(lastSetBit);
+                MiruInternalActivity activity = stream.activityIndex.get(query.tenantId, lastSetBit);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -238,7 +239,7 @@ public class MiruFilterUtils<BM> {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruTermId[] fieldValues = stream.activityIndex.get(lastSetBit, fieldId);
+                MiruTermId[] fieldValues = stream.activityIndex.get(query.tenantId, lastSetBit, fieldId);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -317,7 +318,7 @@ public class MiruFilterUtils<BM> {
                     break;
                 }
 
-                MiruTermId[] fieldValues = stream.activityIndex.get(lastSetBit, fieldId);
+                MiruTermId[] fieldValues = stream.activityIndex.get(query.tenantId, lastSetBit, fieldId);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -423,7 +424,7 @@ public class MiruFilterUtils<BM> {
                 return -Long.compare(o1.count, o2.count); // minus to reverse :)
             }
         }).maximumSize(query.resultCount).create(); // overloaded :(
-        stream(stream, join1, Optional.<BM>absent(), aggregateField2, query.retrieveFieldName2, new CallbackStream<TermCount>() {
+        stream(query.tenantId, stream, join1, Optional.<BM>absent(), aggregateField2, query.retrieveFieldName2, new CallbackStream<TermCount>() {
 
             @Override
             public TermCount callback(TermCount v) throws Exception {
@@ -444,7 +445,7 @@ public class MiruFilterUtils<BM> {
         int fieldId = stream.schema.getFieldId(query.aggregateFieldName1);
         while (answerIterator.hasNext()) {
             int id = answerIterator.next();
-            MiruTermId[] fieldValues = stream.activityIndex.get(id, fieldId);
+            MiruTermId[] fieldValues = stream.activityIndex.get(query.tenantId, id, fieldId);
             if (fieldValues != null && fieldValues.length > 0) {
                 Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField1.getInvertedIndex(makeComposite(fieldValues[0], "^", query.aggregateFieldName2));
                 if (invertedIndex.isPresent()) {
@@ -470,7 +471,7 @@ public class MiruFilterUtils<BM> {
             }
         }).maximumSize(query.resultCount).create();
         // feeds us all recommended documents
-        stream(stream, join2, Optional.<BM>absent(), aggregateField3, query.retrieveFieldName3, new CallbackStream<TermCount>() {
+        stream(query.tenantId, stream, join2, Optional.<BM>absent(), aggregateField3, query.retrieveFieldName3, new CallbackStream<TermCount>() {
 
             @Override
             public TermCount callback(TermCount v) throws Exception {
@@ -511,7 +512,7 @@ public class MiruFilterUtils<BM> {
         return new MiruTermId(Bytes.concat(fieldValue.getBytes(), separator.getBytes(), fieldName.getBytes()));
     }
 
-    private void stream(MiruQueryStream stream, BM answer,
+    private void stream(MiruTenantId tenantId, MiruQueryStream stream, BM answer,
             Optional<BM> counter,
             MiruField<BM> pivotField, String streamField, CallbackStream<TermCount> terms) throws Exception {
 
@@ -527,7 +528,7 @@ public class MiruFilterUtils<BM> {
                 break;
             }
 
-            MiruTermId[] fieldValues = stream.activityIndex.get(lastSetBit, fieldId);
+            MiruTermId[] fieldValues = stream.activityIndex.get(tenantId, lastSetBit, fieldId);
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                 BM removeUnknownField = bitmaps.create();

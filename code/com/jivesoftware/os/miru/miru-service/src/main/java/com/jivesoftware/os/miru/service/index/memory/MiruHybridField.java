@@ -6,6 +6,7 @@ import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruField;
@@ -168,7 +169,7 @@ public class MiruHybridField implements MiruField, BulkExport<Map<MiruTermId, Mi
     }
 
     @Override
-    public Map<MiruTermId, MiruFieldIndexKey> bulkExport() throws Exception {
+    public Map<MiruTermId, MiruFieldIndexKey> bulkExport(MiruTenantId tenantId) throws Exception {
         //TODO needs to fit in memory! boo!
         Map<MiruTermId, MiruFieldIndexKey> export = Maps.newHashMap();
         for (KeyValueStore.Entry<MiruTermId, MiruFieldIndexKey> entry : termToIndex) {

@@ -71,7 +71,7 @@ public class MiruStreamFactoryTest {
                 MiruBackingStorage.memory,
                 miruFilterUtils,
                 activityInterner);
-      
+
     }
 
     @Test(enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
@@ -107,7 +107,7 @@ public class MiruStreamFactoryTest {
 
         for (int i = 0; i < numberOfActivities; i++) {
             assertEquals(onDiskStream.getQueryStream().timeIndex.getTimestamp(i), inMemoryStream.getQueryStream().timeIndex.getTimestamp(i));
-            assertEquals(onDiskStream.getQueryStream().activityIndex.get(i), inMemoryStream.getQueryStream().activityIndex.get(i));
+            assertEquals(onDiskStream.getQueryStream().activityIndex.get(tenantId, i), inMemoryStream.getQueryStream().activityIndex.get(tenantId, i));
 
             int fieldId = schema.getFieldId(MiruFieldName.OBJECT_ID.getFieldName());
             if (fieldId >= 0) {

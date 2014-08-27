@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
@@ -88,12 +89,12 @@ public class MiruInMemoryUnreadTrackingIndex<BM> implements MiruUnreadTrackingIn
     }
 
     @Override
-    public Map<MiruStreamId, MiruInvertedIndex<BM>> bulkExport() throws Exception {
+    public Map<MiruStreamId, MiruInvertedIndex<BM>> bulkExport(MiruTenantId tenantId) throws Exception {
         return ImmutableMap.copyOf(index);
     }
 
     @Override
-    public void bulkImport(BulkExport<Map<MiruStreamId, MiruInvertedIndex<BM>>> importItems) throws Exception {
-        this.index.putAll(importItems.bulkExport());
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Map<MiruStreamId, MiruInvertedIndex<BM>>> importItems) throws Exception {
+        this.index.putAll(importItems.bulkExport(tenantId));
     }
 }

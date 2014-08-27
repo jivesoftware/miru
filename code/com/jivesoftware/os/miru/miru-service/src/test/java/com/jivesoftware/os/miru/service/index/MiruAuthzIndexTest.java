@@ -10,6 +10,7 @@ import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
@@ -50,6 +51,7 @@ public class MiruAuthzIndexTest {
     @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8192);
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         final Map<Integer, EWAHCompressedBitmap> smallBitsIn = Maps.newHashMap();
@@ -62,15 +64,15 @@ public class MiruAuthzIndexTest {
         MiruInMemoryAuthzIndex<EWAHCompressedBitmap> largeMiruInMemoryAuthzIndex = new MiruInMemoryAuthzIndex<>(bitmaps, cache(bitmaps, miruAuthzUtils, 10));
 
         // Import items for test
-        smallMiruInMemoryAuthzIndex.bulkImport(new BulkExport<Map<String, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
+        smallMiruInMemoryAuthzIndex.bulkImport(tenantId, new BulkExport<Map<String, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
             @Override
-            public Map<String, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport() throws Exception {
+            public Map<String, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
                 return smallInvertedIndexData.getImportItems();
             }
         });
-        largeMiruInMemoryAuthzIndex.bulkImport(new BulkExport<Map<String, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
+        largeMiruInMemoryAuthzIndex.bulkImport(tenantId, new BulkExport<Map<String, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
             @Override
-            public Map<String, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport() throws Exception {
+            public Map<String, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
                 return largeInvertedIndexData.getImportItems();
             }
         });
@@ -83,7 +85,7 @@ public class MiruAuthzIndexTest {
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex
                 = new MiruOnDiskAuthzIndex<>(bitmaps, mapDir, swapDir, multiChunkStore, cache(bitmaps, miruAuthzUtils, 10));
-        smallMiruOnDiskAuthzIndex.bulkImport(smallMiruInMemoryAuthzIndex);
+        smallMiruOnDiskAuthzIndex.bulkImport(tenantId, smallMiruInMemoryAuthzIndex);
 
         return new Object[][]{
             {smallMiruInMemoryAuthzIndex, miruAuthzUtils, smallBitsIn},

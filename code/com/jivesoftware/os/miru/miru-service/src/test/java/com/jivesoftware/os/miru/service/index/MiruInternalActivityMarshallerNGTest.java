@@ -59,7 +59,7 @@ public class MiruInternalActivityMarshallerNGTest {
         MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller();
         MiruInternalActivity expResult = activity();
         ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult));
-        MiruInternalActivity result = instance.fromFiler(filer);
+        MiruInternalActivity result = instance.fromFiler(new MiruTenantId("abc".getBytes()), filer);
         Assert.assertEquals(result, expResult);
     }
 

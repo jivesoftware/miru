@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
@@ -195,7 +196,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     }
 
     @Override
-    public BM bulkExport() throws Exception {
+    public BM bulkExport(MiruTenantId tenantId) throws Exception {
         synchronized (write) {
             merge();
             return read.get();
@@ -203,9 +204,9 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     }
 
     @Override
-    public void bulkImport(BulkExport<BM> importItems) throws Exception {
+    public void bulkImport(MiruTenantId tenantId, BulkExport<BM> importItems) throws Exception {
         synchronized (write) {
-            write.set(importItems.bulkExport());
+            write.set(importItems.bulkExport(tenantId));
             merge();
         }
     }

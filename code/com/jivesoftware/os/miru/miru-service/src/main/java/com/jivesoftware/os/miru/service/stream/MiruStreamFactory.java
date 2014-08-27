@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -435,11 +436,11 @@ public class MiruStreamFactory<BM> {
     }
 
     public MiruStream copyMemMapped(MiruPartitionCoord coord, MiruStream from) throws Exception {
-        return copy(from, allocateMemMapped(coord));
+        return copy(coord.tenantId, from, allocateMemMapped(coord));
     }
 
     public MiruStream copyToDisk(MiruPartitionCoord coord, MiruStream from) throws Exception {
-        return copy(from, allocateOnDisk(coord));
+        return copy(coord.tenantId, from, allocateOnDisk(coord));
     }
 
     public void markStorage(MiruPartitionCoord coord, MiruBackingStorage marked) throws Exception {
@@ -476,14 +477,14 @@ public class MiruStreamFactory<BM> {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private MiruStream<BM> copy(MiruStream<BM> from, MiruStream<BM> to) throws Exception {
+    private MiruStream<BM> copy(MiruTenantId tenantId, MiruStream<BM> from, MiruStream<BM> to) throws Exception {
         Map<String, BulkImport<?>> importHandles = to.getImportHandles();
         for (Map.Entry<String, BulkExport<?>> entry : from.getExportHandles().entrySet()) {
             String key = entry.getKey();
             BulkExport<?> bulkExport = entry.getValue();
             BulkImport<?> bulkImport = importHandles.get(key);
             if (bulkImport != null) {
-                bulkImport.bulkImport((BulkExport) bulkExport);
+                bulkImport.bulkImport(tenantId, (BulkExport) bulkExport);
             } else {
                 log.warn("Missing bulk importer for {}", key);
             }

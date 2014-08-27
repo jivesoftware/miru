@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -24,7 +25,7 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public MiruInternalActivity get(int index) {
+    public MiruInternalActivity get(MiruTenantId tenantId, int index) {
         MiruInternalActivity[] activities = this.activities; // stable reference
         int capacity = activities.length;
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
@@ -32,8 +33,8 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public MiruTermId[] get(int index, int fieldId) {
-        MiruInternalActivity activity = get(index);
+    public MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId) {
+        MiruInternalActivity activity = get(tenantId, index);
         return activity.fieldsValues[fieldId];
     }
 
@@ -79,8 +80,8 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public void bulkImport(BulkExport<MiruInternalActivity[]> importItems) throws Exception {
-        MiruInternalActivity[] importActivities = importItems.bulkExport();
+    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInternalActivity[]> importItems) throws Exception {
+        MiruInternalActivity[] importActivities = importItems.bulkExport(tenantId);
         synchronized (activities) {
             this.activities = new MiruInternalActivity[importActivities.length];
             System.arraycopy(importActivities, 0, this.activities, 0, importActivities.length);
@@ -97,7 +98,7 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public MiruInternalActivity[] bulkExport() throws Exception {
+    public MiruInternalActivity[] bulkExport(MiruTenantId tenantId) throws Exception {
         MiruInternalActivity[] activities = this.activities; // stable reference
         return Arrays.copyOf(activities, activities.length);
     }

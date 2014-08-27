@@ -72,7 +72,7 @@ public class MiruIndexStream<BM> {
 
     public void repair(MiruActivity activity, int id) throws Exception {
         synchronized (stripingLocksProvider.lock(id)) {
-            MiruInternalActivity existing = activityIndex.get(id);
+            MiruInternalActivity existing = activityIndex.get(activity.tenantId, id);
             if (existing == null) {
                 log.debug("Can't repair nonexistent activity at {}\n- offered: {}", id, activity);
             } else if (activity.version <= existing.version) {
@@ -108,7 +108,7 @@ public class MiruIndexStream<BM> {
 
     public void remove(MiruActivity activity, int id) throws Exception {
         synchronized (stripingLocksProvider.lock(id)) {
-            MiruInternalActivity existing = activityIndex.get(id);
+            MiruInternalActivity existing = activityIndex.get(activity.tenantId, id);
             if (existing == null) {
                 log.debug("Can't remove nonexistent activity at {}\n- offered: {}", id, activity);
             } else if (activity.version <= existing.version) {

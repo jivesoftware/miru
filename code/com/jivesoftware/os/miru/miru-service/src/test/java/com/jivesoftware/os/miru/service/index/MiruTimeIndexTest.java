@@ -5,6 +5,7 @@ import com.jivesoftware.os.jive.utils.io.ByteBufferBackedFiler;
 import com.jivesoftware.os.jive.utils.io.FileBackedMemMappedByteBufferFactory;
 import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex.TimeOrderAnomalyStream;
@@ -141,7 +142,7 @@ public class MiruTimeIndexTest {
         int[] tryLevels = new int[] { 3 }; //{2, 3, 4, 5};
         int[] trySegments = new int[] { 16 }; //{4, 16, 32};
         int capacity = 100; //1_000_000;
-
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         long start = System.currentTimeMillis();
         final MiruInMemoryTimeIndex inMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent());
         for (int i = 0; i < capacity; i++) {
@@ -172,7 +173,7 @@ public class MiruTimeIndexTest {
                         return new RandomAccessFiler(onDisk, "rw");
                     }
                 }, Files.createTempDirectory("timestampToIndex").toFile());
-                onDiskTimeIndex.bulkImport(inMemoryTimeIndex);
+                onDiskTimeIndex.bulkImport(tenantId, inMemoryTimeIndex);
                 System.out.println("CopyToDisk" +
                     " size=" + formatter.format(onDiskTimeIndex.sizeOnDisk()) +
                     " levels=" + levels +
@@ -208,10 +209,10 @@ public class MiruTimeIndexTest {
         for (int i = 0; i < capacity; i++) {
             importValues[i] = i * 10;
         }
-
-        miruInMemoryTimeIndex.bulkImport(new BulkExport<long[]>() {
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        miruInMemoryTimeIndex.bulkImport(tenantId, new BulkExport<long[]>() {
             @Override
-            public long[] bulkExport() throws Exception {
+            public long[] bulkExport(MiruTenantId tenantId) throws Exception {
                 return importValues;
             }
         });
@@ -229,7 +230,7 @@ public class MiruTimeIndexTest {
                 return new RandomAccessFiler(onDisk, "rw");
             }
         }, Files.createTempDirectory("timestampToIndex").toFile());
-        miruOnDiskTimeIndex.bulkImport(miruInMemoryTimeIndex);
+        miruOnDiskTimeIndex.bulkImport(tenantId, miruInMemoryTimeIndex);
 
         // Set up and import mem-mapped implementation
         final File memMap = Files.createTempFile("memMap", "timeIndex").toFile();
@@ -248,7 +249,7 @@ public class MiruTimeIndexTest {
                 return new ByteBufferBackedFiler(memMap, byteBuffer);
             }
         }, Files.createTempDirectory("timestampToIndex").toFile());
-        miruMemMapTimeIndex.bulkImport(miruInMemoryTimeIndex);
+        miruMemMapTimeIndex.bulkImport(tenantId, miruInMemoryTimeIndex);
 
         return new Object[][] {
             { miruInMemoryTimeIndex, capacity },
@@ -260,13 +261,14 @@ public class MiruTimeIndexTest {
     @DataProvider(name = "miruTimeIndexDataProviderWithRangeData")
     public Object[][] miruTimeIndexDataProviderWithRangeData() throws Exception {
         // Set up and import in-memory implementation
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent());
 
         final long[] importValues = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
 
-        miruInMemoryTimeIndex.bulkImport(new BulkExport<long[]>() {
+        miruInMemoryTimeIndex.bulkImport(tenantId, new BulkExport<long[]>() {
             @Override
-            public long[] bulkExport() throws Exception {
+            public long[] bulkExport(MiruTenantId tenantId) throws Exception {
                 return importValues;
             }
         });
@@ -284,7 +286,7 @@ public class MiruTimeIndexTest {
                 return new RandomAccessFiler(onDisk, "rw");
             }
         }, Files.createTempDirectory("timestampToIndex").toFile());
-        miruOnDiskTimeIndex.bulkImport(miruInMemoryTimeIndex);
+        miruOnDiskTimeIndex.bulkImport(tenantId, miruInMemoryTimeIndex);
 
         // Set up and import mem-mapped implementation
         final File memMap = Files.createTempFile("memMap", "timeIndex").toFile();
@@ -303,7 +305,7 @@ public class MiruTimeIndexTest {
                 return new ByteBufferBackedFiler(memMap, byteBuffer);
             }
         }, Files.createTempDirectory("timestampToIndex").toFile());
-        miruMemMapTimeIndex.bulkImport(miruInMemoryTimeIndex);
+        miruMemMapTimeIndex.bulkImport(tenantId, miruInMemoryTimeIndex);
 
         return new Object[][] {
             { miruInMemoryTimeIndex },

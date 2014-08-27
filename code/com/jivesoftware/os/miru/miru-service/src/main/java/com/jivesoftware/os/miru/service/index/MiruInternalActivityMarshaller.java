@@ -43,7 +43,7 @@ public class MiruInternalActivityMarshaller {
         return propsFromFilter(filer);
     }
 
-    public MiruInternalActivity fromFiler(Filer filer) throws IOException {
+    public MiruInternalActivity fromFiler(MiruTenantId tenant, Filer filer) throws IOException {
         int fieldsLength = FilerIO.readInt(filer, "fieldsLength");
         int propsLength = FilerIO.readInt(filer, "propsLength");
         MiruTermId[][] values = new MiruTermId[fieldsLength][];
@@ -60,10 +60,9 @@ public class MiruInternalActivityMarshaller {
 
         long time = FilerIO.readLong(filer, "time");
         long version = FilerIO.readLong(filer, "version");
-        byte[] tenantId = FilerIO.readByteArray(filer, "tenantId");
         String[] authz = FilerIO.readStringArray(filer, "authz");
 
-        return new MiruInternalActivity(new MiruTenantId(tenantId), time, authz, version, values, props);
+        return new MiruInternalActivity(tenant, time, authz, version, values, props);
     }
 
     private MiruTermId[] valuesFromFilter(Filer filer) throws IOException {
@@ -132,7 +131,6 @@ public class MiruInternalActivityMarshaller {
 
         FilerIO.writeLong(filer, activity.time, "time");
         FilerIO.writeLong(filer, activity.version, "version");
-        FilerIO.writeByteArray(filer, activity.tenantId.immutableBytes(), "tenantId");
         FilerIO.writeStringArray(filer, activity.authz, "authz");
         return filer.getBytes();
     }

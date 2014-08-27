@@ -8,6 +8,7 @@ import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.VariableKeySizeFileBackedKeyedStore;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -114,8 +115,8 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     }
 
     @Override
-    public void bulkImport(BulkExport<Map<String, MiruInvertedIndex<BM>>> importItems) throws Exception {
-        Map<String, MiruInvertedIndex<BM>> authzMap = importItems.bulkExport();
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Map<String, MiruInvertedIndex<BM>>> importItems) throws Exception {
+        Map<String, MiruInvertedIndex<BM>> authzMap = importItems.bulkExport(tenantId);
         for (Map.Entry<String, MiruInvertedIndex<BM>> entry : authzMap.entrySet()) {
             MiruInvertedIndex<BM> miruInvertedIndex = entry.getValue();
 

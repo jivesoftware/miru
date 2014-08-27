@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
@@ -83,7 +84,7 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Map<Long
     }
 
     @Override
-    public Map<Long, MiruInvertedIndex<BM>> bulkExport() throws Exception {
+    public Map<Long, MiruInvertedIndex<BM>> bulkExport(MiruTenantId tenantId) throws Exception {
         synchronized (index) {
             final ImmutableMap.Builder<Long, MiruInvertedIndex<BM>> builder = ImmutableMap.builder();
             index.forEachEntry(new TLongObjectProcedure<MiruInvertedIndex<BM>>() {
@@ -98,9 +99,9 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Map<Long
     }
 
     @Override
-    public void bulkImport(BulkExport<Map<Long, MiruInvertedIndex<BM>>> importItems) throws Exception {
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Map<Long, MiruInvertedIndex<BM>>> importItems) throws Exception {
         synchronized (index) {
-            index.putAll(importItems.bulkExport());
+            index.putAll(importItems.bulkExport(tenantId));
         }
     }
 }

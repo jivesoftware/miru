@@ -8,6 +8,7 @@ import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskUnreadTrackingIndex;
@@ -103,13 +104,13 @@ public class MiruUnreadTrackingIndexTest {
     @DataProvider(name = "miruUnreadTrackingIndexDataProvider")
     public Object[][] miruUnreadTrackingIndexDataProvider() throws Exception {
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
-        return generateUnreadIndexes(bitmap, true);
+        return generateUnreadIndexes(new MiruTenantId(new byte[]{1}), bitmap, true);
     }
 
     @DataProvider(name = "miruUnreadTrackingIndexDataProviderWithoutData")
     public Object[][] miruUnreadTrackingIndexDataProviderWithoutData() throws Exception {
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
-        return generateUnreadIndexes(bitmap, false);
+        return generateUnreadIndexes(new MiruTenantId(new byte[]{1}), bitmap, false);
     }
 
     @DataProvider(name = "miruUnreadTrackingIndexDataProviderWithData")
@@ -118,10 +119,10 @@ public class MiruUnreadTrackingIndexTest {
         bitmap.set(1);
         bitmap.set(2);
         bitmap.set(3);
-        return generateUnreadIndexes(bitmap, true);
+        return generateUnreadIndexes(new MiruTenantId(new byte[]{1}), bitmap, true);
     }
 
-    private Object[][] generateUnreadIndexes(EWAHCompressedBitmap bitmap, boolean autoCreate) throws Exception {
+    private Object[][] generateUnreadIndexes(MiruTenantId tenantId, EWAHCompressedBitmap bitmap, boolean autoCreate) throws Exception {
         final MiruStreamId streamId = new MiruStreamId(new Id(12345).toBytes());
         MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
         MiruInMemoryUnreadTrackingIndex<EWAHCompressedBitmap> miruInMemoryUnreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex<>(bitmaps);
@@ -130,9 +131,9 @@ public class MiruUnreadTrackingIndexTest {
         if (autoCreate) {
             final MiruInvertedIndex<EWAHCompressedBitmap> tempMiruInvertedIndex = new MiruInMemoryInvertedIndex<>(bitmaps);
             tempMiruInvertedIndex.or(bitmap);
-            miruInMemoryUnreadTrackingIndex.bulkImport(new BulkExport<Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
+            miruInMemoryUnreadTrackingIndex.bulkImport(tenantId, new BulkExport<Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
                 @Override
-                public Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport() throws Exception {
+                public Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
                     return ImmutableMap.of(
                             streamId, tempMiruInvertedIndex
                     );
@@ -148,7 +149,7 @@ public class MiruUnreadTrackingIndexTest {
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskUnreadTrackingIndex miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex(bitmaps, mapDir, swapDir, multiChunkStore);
-        miruOnDiskUnreadTrackingIndex.bulkImport(miruInMemoryUnreadTrackingIndex);
+        miruOnDiskUnreadTrackingIndex.bulkImport(tenantId, miruInMemoryUnreadTrackingIndex);
 
         return new Object[][]{
             {miruInMemoryUnreadTrackingIndex, streamId, miruInvertedIndex},

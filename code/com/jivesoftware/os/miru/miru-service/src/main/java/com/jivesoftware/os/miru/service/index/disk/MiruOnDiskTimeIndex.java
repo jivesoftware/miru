@@ -8,6 +8,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.map.store.FileBackMapStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
@@ -326,8 +327,8 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     }
 
     @Override
-    public void bulkImport(BulkExport<MiruTimeIndex> importItems) throws Exception {
-        MiruTimeIndex index = importItems.bulkExport();
+    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruTimeIndex> importItems) throws Exception {
+        MiruTimeIndex index = importItems.bulkExport(tenantId);
 
         long length;
         try (RandomAccessFiler filer = new RandomAccessFiler(filerProvider.getBackingFile(), "rw")) {
