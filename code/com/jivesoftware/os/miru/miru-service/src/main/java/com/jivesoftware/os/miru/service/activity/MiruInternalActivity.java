@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author jonathan
@@ -74,47 +75,45 @@ public class MiruInternalActivity {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        MiruInternalActivity activity = (MiruInternalActivity) o;
-
-        if (time != activity.time) {
-            return false;
-        }
-        if (version != activity.version) {
-            return false;
-        }
-        if (!Arrays.equals(authz, activity.authz)) {
-            return false;
-        }
-        if (!Arrays.deepEquals(fieldsValues, activity.fieldsValues)) {
-            return false;
-        }
-        if (!Arrays.deepEquals(propsValues, activity.propsValues)) {
-            return false;
-        }
-        if (tenantId != null ? !tenantId.equals(activity.tenantId) : activity.tenantId != null) {
-            return false;
-        }
-
-        return true;
+    public int hashCode() {
+        int hash = 7;
+        hash = 79 * hash + Objects.hashCode(this.tenantId);
+        hash = 79 * hash + (int) (this.time ^ (this.time >>> 32));
+        hash = 79 * hash + Arrays.deepHashCode(this.authz);
+        hash = 79 * hash + (int) (this.version ^ (this.version >>> 32));
+        hash = 79 * hash + Arrays.deepHashCode(this.fieldsValues);
+        hash = 79 * hash + Arrays.deepHashCode(this.propsValues);
+        return hash;
     }
 
     @Override
-    public int hashCode() {
-        int result = tenantId != null ? tenantId.hashCode() : 0;
-        result = 31 * result + (int) (time ^ (time >>> 32));
-        result = 31 * result + (authz != null ? Arrays.hashCode(authz) : 0);
-        result = 31 * result + (int) (version ^ (version >>> 32));
-        result = 31 * result + Arrays.deepHashCode(fieldsValues);
-        result = 31 * result + propsValues.hashCode();
-        return result;
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final MiruInternalActivity other = (MiruInternalActivity) obj;
+        if (!Objects.equals(this.tenantId, other.tenantId)) {
+            return false;
+        }
+        if (this.time != other.time) {
+            return false;
+        }
+        if (!Arrays.deepEquals(this.authz, other.authz)) {
+            return false;
+        }
+        if (this.version != other.version) {
+            return false;
+        }
+        if (!Arrays.deepEquals(this.fieldsValues, other.fieldsValues)) {
+            return false;
+        }
+        if (!Arrays.deepEquals(this.propsValues, other.propsValues)) {
+            return false;
+        }
+        return true;
     }
 
     @Override

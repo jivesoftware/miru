@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import com.jivesoftware.os.miru.service.index.MiruFields;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
+import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
@@ -206,7 +207,7 @@ public class MiruStreamFactory<BM> {
                 hybridResourceLocator.getMapDirectory(identifier, "activity"),
                 hybridResourceLocator.getSwapDirectory(identifier, "activity"),
                 multiChunkStore,
-                objectMapper);
+                new MiruInternalActivityMarshaller());
         exportHandles.put("activityIndex", activityIndex);
 
         MiruInMemoryIndex index = new MiruInMemoryIndex(bitmaps);
