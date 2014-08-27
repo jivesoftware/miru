@@ -203,7 +203,7 @@ public class MiruIndexStreamTest {
 
         MiruInMemoryRemovalIndex miruInMemoryRemovalIndex = new MiruInMemoryRemovalIndex(new MiruBitmapsEWAH(4));
 
-        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(miruSchema, Interners.<MiruIBA>newWeakInterner(), Interners
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(), Interners
                 .<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
 
@@ -278,7 +278,7 @@ public class MiruIndexStreamTest {
                 .maximumSize(maximumSize)
                 .expireAfterAccess(1, TimeUnit.MINUTES)
                 .build();
-        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(miruSchema, Interners.<MiruIBA>newWeakInterner(), Interners
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(), Interners
                 .<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
         return new MiruAuthzCache(new MiruBitmapsEWAH(4), cache, activityInterner, miruAuthzUtils);

@@ -9,6 +9,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
@@ -22,6 +23,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
@@ -43,6 +45,7 @@ import com.jivesoftware.os.miru.service.MiruTempResourceLocatorProviderInitializ
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -127,11 +130,11 @@ public class ProfilebleMiruService {
         };
         this.miruSchema = new MiruSchema(fieldDefinitions);
 
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer<EWAHCompressedBitmap>().initialize(config,
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                miruSchema,
+                new SingleSchemaProvider(miruSchema),
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
@@ -167,11 +170,11 @@ public class ProfilebleMiruService {
 
         MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
         miruResourceLocatorProviderLifecyle.start();
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer<EWAHCompressedBitmap>().initialize(config,
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                miruSchema,
+                new SingleSchemaProvider(miruSchema),
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),

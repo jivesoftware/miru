@@ -20,6 +20,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -76,7 +77,7 @@ public class MiruStreamFactory<BM> {
     private static MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruBitmaps<BM> bitmaps;
-    private final MiruSchema schema;
+    private final MiruSchemaProvider schemaProvider;
     private final ExecutorService executorService;
     private final MiruReadTrackingWALReader readTrackingWALReader;
     private final MiruResourceLocator diskResourceLocator;
@@ -92,7 +93,7 @@ public class MiruStreamFactory<BM> {
     private final MiruBackingStorage defaultStorage;
 
     public MiruStreamFactory(MiruBitmaps<BM> bitmaps,
-            MiruSchema schema,
+            MiruSchemaProvider schemaProvider,
             ExecutorService executorService,
             MiruReadTrackingWALReader readTrackingWALReader,
             MiruResourceLocator diskResourceLocator,
@@ -102,7 +103,7 @@ public class MiruStreamFactory<BM> {
             MiruFilterUtils<BM> filterUtils,
             MiruActivityInternExtern activityInternExtern) {
         this.bitmaps = bitmaps;
-        this.schema = schema;
+        this.schemaProvider = schemaProvider;
         this.executorService = executorService;
         this.readTrackingWALReader = readTrackingWALReader;
         this.diskResourceLocator = diskResourceLocator;
@@ -124,9 +125,9 @@ public class MiruStreamFactory<BM> {
 
     public MiruStream allocate(MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
         if (storage == MiruBackingStorage.memory || storage == MiruBackingStorage.memory_fixed) {
-            return allocateInMemory();
+            return allocateInMemory(coord);
         } else if (storage == MiruBackingStorage.hybrid || storage == MiruBackingStorage.hybrid_fixed) {
-            return allocateHybrid();
+            return allocateHybrid(coord);
         } else if (storage == MiruBackingStorage.mem_mapped) {
             return allocateMemMapped(coord);
         } else if (storage == MiruBackingStorage.disk) {
@@ -136,7 +137,7 @@ public class MiruStreamFactory<BM> {
         }
     }
 
-    private MiruStream allocateInMemory() {
+    private MiruStream allocateInMemory(MiruPartitionCoord coord) {
         Map<String, BulkExport<?>> exportHandles = Maps.newHashMap();
 
         MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent());
@@ -148,6 +149,7 @@ public class MiruStreamFactory<BM> {
         MiruInMemoryIndex index = new MiruInMemoryIndex(bitmaps);
         exportHandles.put("index", index);
 
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         MiruInMemoryField[] fields = new MiruInMemoryField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruInMemoryField(schema.getFieldDefinition(fieldId), new ConcurrentHashMap<MiruTermId, MiruFieldIndexKey>(), index);
@@ -187,7 +189,7 @@ public class MiruStreamFactory<BM> {
         return new MiruStream(indexStream, queryStream, readTrackStream, timeIndex, Optional.<ChunkStore>absent()).exportable(exportHandles);
     }
 
-    private MiruStream allocateHybrid() throws Exception {
+    private MiruStream allocateHybrid(MiruPartitionCoord coord) throws Exception {
         Map<String, BulkExport<?>> exportHandles = Maps.newHashMap();
 
         MiruResourcePartitionIdentifier identifier = hybridResourceLocator.acquire();
@@ -213,6 +215,7 @@ public class MiruStreamFactory<BM> {
         MiruInMemoryIndex index = new MiruInMemoryIndex(bitmaps);
         exportHandles.put("index", index);
 
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         MiruHybridField[] fields = new MiruHybridField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruHybridField(
@@ -294,6 +297,7 @@ public class MiruStreamFactory<BM> {
                 multiChunkStore);
         importHandles.put("index", index);
 
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         MiruOnDiskField[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField(
@@ -383,6 +387,7 @@ public class MiruStreamFactory<BM> {
                 multiChunkStore);
         importHandles.put("index", index);
 
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         MiruOnDiskField[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField(schema.getFieldDefinition(fieldId),
@@ -512,10 +517,11 @@ public class MiruStreamFactory<BM> {
     private boolean checkMarkedStorage(MiruPartitionCoord coord, MiruBackingStorage storage, int numberOfChunks) throws IOException {
         File file = diskResourceLocator.getFilerFile(new MiruPartitionCoordIdentifier(coord), storage.name());
         if (file.exists()) {
+            MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
             if (storage == MiruBackingStorage.mem_mapped) {
-                return checkMemMapped(coord, numberOfChunks);
+                return checkMemMapped(schema, coord, numberOfChunks);
             } else if (storage == MiruBackingStorage.disk) {
-                return checkOnDisk(coord, numberOfChunks);
+                return checkOnDisk(schema, coord, numberOfChunks);
             } else {
                 return true;
             }
@@ -523,7 +529,7 @@ public class MiruStreamFactory<BM> {
         return false;
     }
 
-    private boolean checkMemMapped(MiruPartitionCoord coord, int numberOfChunks) throws IOException {
+    private boolean checkMemMapped(MiruSchema schema, MiruPartitionCoord coord, int numberOfChunks) throws IOException {
         List<String> mapDirectories = Lists.newArrayList("activity", "index", "authz", "unread", "inbox", "timestampToIndex");
         for (int i = 0; i < schema.fieldCount(); i++) {
             mapDirectories.add("field-" + i);
@@ -540,7 +546,7 @@ public class MiruStreamFactory<BM> {
                 chunkNames);
     }
 
-    private boolean checkOnDisk(MiruPartitionCoord coord, int numberOfChunks) throws IOException {
+    private boolean checkOnDisk(MiruSchema schema, MiruPartitionCoord coord, int numberOfChunks) throws IOException {
         List<String> mapDirectories = Lists.newArrayList("activity", "index", "authz", "unread", "inbox", "timestampToIndex");
         for (int i = 0; i < schema.fieldCount(); i++) {
             mapDirectories.add("field-" + i);

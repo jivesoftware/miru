@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
@@ -20,6 +21,7 @@ import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySe
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
@@ -164,11 +166,11 @@ public class MiruStreamServiceBenchmarkTest {
 
         MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
         miruResourceLocatorProviderLifecyle.start();
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer<EWAHCompressedBitmap>().initialize(config,
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                new MiruSchema(FIELDS),
+                new SingleSchemaProvider(new MiruSchema(FIELDS)),
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),

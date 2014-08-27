@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
+import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.RowColumnValueStoreImpl;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -14,6 +15,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -90,7 +92,7 @@ public class MiruLocalHostedPartitionTest {
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
 
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(2);
-        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(schema,
+        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(
                 Interners.<MiruIBA>newWeakInterner(),
                 Interners.<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newStrongInterner(),
@@ -99,8 +101,8 @@ public class MiruLocalHostedPartitionTest {
 
         MiruFilterUtils filterUtils = new MiruFilterUtils(bitmaps, activityInternExtern);
 
-        streamFactory = new MiruStreamFactory(bitmaps,
-            schema,
+        streamFactory = new MiruStreamFactory<>(bitmaps,
+            new SingleSchemaProvider(schema),
             Executors.newSingleThreadExecutor(),
             new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
             new MiruTempDirectoryResourceLocator(),

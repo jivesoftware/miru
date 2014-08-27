@@ -8,7 +8,7 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -41,6 +41,7 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
+
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,7 +54,7 @@ public final class MiruServiceInitializer<BM> {
             MiruRegistryStore registryStore,
             MiruClusterRegistry clusterRegistry,
             MiruHost miruHost,
-            MiruSchema miruSchema,
+            MiruSchemaProvider schemaProvider,
             MiruWAL wal,
             HttpClientFactory httpClientFactory,
             MiruResourceLocatorProvider resourceLocatorProvider,
@@ -68,7 +69,6 @@ public final class MiruServiceInitializer<BM> {
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
         MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
-                miruSchema,
                 Interners.<MiruIBA>newWeakInterner(),
                 Interners.<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newStrongInterner(),
@@ -79,7 +79,7 @@ public final class MiruServiceInitializer<BM> {
 
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount());
         MiruStreamFactory<BM> streamFactory = new MiruStreamFactory<>(bitmaps,
-                miruSchema,
+                schemaProvider,
                 streamFactoryExecutor,
                 readTrackingWALReader,
                 resourceLocatorProvider.getDiskResourceLocator(),

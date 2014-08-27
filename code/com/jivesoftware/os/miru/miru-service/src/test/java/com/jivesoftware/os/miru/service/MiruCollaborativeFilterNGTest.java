@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.RecoQuery;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -51,9 +52,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -115,7 +113,7 @@ public class MiruCollaborativeFilterNGTest {
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                miruSchema,
+                new SingleSchemaProvider(miruSchema),
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),

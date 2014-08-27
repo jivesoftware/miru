@@ -18,28 +18,25 @@ import java.util.Map;
  */
 public class MiruActivityInternExtern {
 
-    private final MiruSchema schema;
     private final Interner<MiruIBA> ibaInterner;
     private final Interner<MiruTermId> termInterner;
     private final Interner<MiruTenantId> tenantInterner;
     private final Interner<String> stringInterner;
 
-    public MiruActivityInternExtern(MiruSchema schema,
-            Interner<MiruIBA> ibaInterner,
+    public MiruActivityInternExtern(Interner<MiruIBA> ibaInterner,
             Interner<MiruTermId> termInterner,
             Interner<MiruTenantId> tenantInterner,
             Interner<String> stringInterner) {
-        this.schema = schema;
         this.ibaInterner = ibaInterner;
         this.termInterner = termInterner;
         this.tenantInterner = tenantInterner;
         this.stringInterner = stringInterner;
     }
 
-    public MiruInternalActivity intern(MiruActivity activity) {
+    public MiruInternalActivity intern(MiruActivity activity, MiruSchema schema) {
         return new MiruInternalActivity.Builder(schema, tenantInterner.intern(activity.tenantId), activity.time, internAuthz(activity.authz), activity.version)
-                .putFieldsValues(internFields(activity.fieldsValues))
-                .putPropsValues(internProps(activity.propsValues))
+                .putFieldsValues(internFields(activity.fieldsValues, schema))
+                .putPropsValues(internProps(activity.propsValues, schema))
                 .build();
     }
 
@@ -53,7 +50,7 @@ public class MiruActivityInternExtern {
         return activityAuthz;
     }
 
-    private MiruTermId[][] internFields(Map<String, List<String>> fields) {
+    private MiruTermId[][] internFields(Map<String, List<String>> fields, MiruSchema schema) {
         MiruTermId[][] fieldsValues = new MiruTermId[schema.fieldCount()][];
         for (String fieldName : fields.keySet()) {
             int fieldId = schema.getFieldId(fieldName);
@@ -67,7 +64,7 @@ public class MiruActivityInternExtern {
         return fieldsValues;
     }
 
-    private MiruIBA[][] internProps(Map<String, List<String>> properties) {
+    private MiruIBA[][] internProps(Map<String, List<String>> properties, MiruSchema schema) {
         MiruIBA[][] propertyValues = new MiruIBA[schema.propertyCount()][];
         for (String propertyName : properties.keySet()) {
             int propertyId = schema.getPropertyId(propertyName);
@@ -89,16 +86,16 @@ public class MiruActivityInternExtern {
         return stringInterner.intern(string);
     }
 
-    public MiruActivity extern(MiruInternalActivity activity) {
+    public MiruActivity extern(MiruInternalActivity activity, MiruSchema schema) {
         return new MiruActivity(activity.tenantId,
                 activity.time,
                 activity.authz,
                 activity.version,
-                externFields(activity.fieldsValues),
-                externProps(activity.propsValues));
+                externFields(activity.fieldsValues, schema),
+                externProps(activity.propsValues, schema));
     }
 
-    private Map<String, List<String>> externFields(MiruTermId[][] fields) {
+    private Map<String, List<String>> externFields(MiruTermId[][] fields, MiruSchema schema) {
         Map<String, List<String>> externFields = new HashMap<>();
         for (int i = 0; i < fields.length; i++) {
             MiruTermId[] values = fields[i];
@@ -113,7 +110,7 @@ public class MiruActivityInternExtern {
         return externFields;
     }
 
-    private Map<String, List<String>> externProps(MiruIBA[][] properties) {
+    private Map<String, List<String>> externProps(MiruIBA[][] properties, MiruSchema schema) {
         Map<String, List<String>> externProperties = new HashMap<>();
         for (int i = 0; i < properties.length; i++) {
             MiruIBA[] values = properties[i];

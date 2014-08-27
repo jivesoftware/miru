@@ -99,7 +99,7 @@ public class MiruFilterUtilsTest {
     @DataProvider(name = "evenTimeIndexDataProvider")
     public Object[][] evenTimeIndexDataProvider() throws Exception {
 
-        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(
                 Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
         MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2), activityInterner);
@@ -122,7 +122,7 @@ public class MiruFilterUtilsTest {
 
     @DataProvider(name = "oddTimeIndexDataProvider")
     public <BM> Object[][] oddTimeIndexDataProvider(MiruBitmaps<BM> bitmaps) throws Exception {
-        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(
                 Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
         MiruFilterUtils miruFilterUtils = new MiruFilterUtils(bitmaps, activityInterner);
@@ -145,7 +145,7 @@ public class MiruFilterUtilsTest {
 
     @DataProvider(name = "singleEntryTimeIndexDataProvider")
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
-        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(
                 Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
         MiruFilterUtils miruFilterUtils = new MiruFilterUtils(new MiruBitmapsEWAH(2), activityInterner);

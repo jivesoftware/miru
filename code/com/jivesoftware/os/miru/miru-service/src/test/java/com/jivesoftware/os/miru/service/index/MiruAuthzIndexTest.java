@@ -99,7 +99,7 @@ public class MiruAuthzIndexTest {
                 .maximumSize(maximumSize)
                 .expireAfterAccess(1, TimeUnit.MINUTES)
                 .build();
-        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(null, null, null, null, Interners.<String>newWeakInterner());
+        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(null, null, null, Interners.<String>newWeakInterner());
         return new MiruAuthzCache<BM>(bitmaps, cache, activityInternExtern, miruAuthzUtils);
     }
 

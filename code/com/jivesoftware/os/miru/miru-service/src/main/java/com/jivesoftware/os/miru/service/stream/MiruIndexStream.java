@@ -56,7 +56,7 @@ public class MiruIndexStream<BM> {
     }
 
     public void index(MiruActivity activity, int id) throws Exception {
-        MiruInternalActivity internalActivity = activityInterner.intern(activity);
+        MiruInternalActivity internalActivity = activityInterner.intern(activity, schema);
         indexFieldValues(internalActivity, id);
         indexAuthz(internalActivity, id);
         indexBloomins(internalActivity);
@@ -66,7 +66,7 @@ public class MiruIndexStream<BM> {
     }
 
     public void set(MiruActivity activity, int id) {
-        MiruInternalActivity internalActivity = activityInterner.intern(activity);
+        MiruInternalActivity internalActivity = activityInterner.intern(activity, schema);
         activityIndex.set(id, internalActivity);
     }
 
@@ -79,7 +79,7 @@ public class MiruIndexStream<BM> {
                 log.debug("Declined to repair old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
             } else {
                 log.debug("Repairing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
-                MiruInternalActivity internalActivity = activityInterner.intern(activity);
+                MiruInternalActivity internalActivity = activityInterner.intern(activity, schema);
 
                 Set<String> existingAuthz = existing.authz != null ? Sets.newHashSet(existing.authz) : Sets.<String>newHashSet();
                 Set<String> repairedAuthz = internalActivity.authz != null ? Sets.newHashSet(internalActivity.authz) : Sets.<String>newHashSet();
@@ -115,7 +115,7 @@ public class MiruIndexStream<BM> {
                 log.debug("Declined to remove old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
             } else {
                 log.debug("Removing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
-                MiruInternalActivity internalActivity = activityInterner.intern(activity);
+                MiruInternalActivity internalActivity = activityInterner.intern(activity, schema);
 
                 //TODO apply field changes?
                 // hide (add to removal)

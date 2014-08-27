@@ -17,6 +17,7 @@ package com.jivesoftware.os.miru.reader.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
@@ -27,6 +28,9 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.MiruWriter;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
@@ -39,8 +43,6 @@ import com.jivesoftware.os.miru.service.endpoint.MiruConfigEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.reader.MiruReaderImpl;
-import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProviderInitializer;
 import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
@@ -50,6 +52,7 @@ import com.jivesoftware.os.upena.main.InstanceConfig;
 import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClient;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
+
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
@@ -96,11 +99,11 @@ public class MiruReaderMain {
 
         miruResourceLocatorProviderLifecyle.start();
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(miruServiceConfig.getBitsetBufferSize());
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer<EWAHCompressedBitmap>().initialize(miruServiceConfig,
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                new MiruSchema(DefaultMiruSchemaDefinition.FIELDS),
+                new SingleSchemaProvider(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS)),
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),

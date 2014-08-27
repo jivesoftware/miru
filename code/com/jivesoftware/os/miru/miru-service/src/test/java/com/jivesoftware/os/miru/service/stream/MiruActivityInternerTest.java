@@ -41,7 +41,7 @@ public class MiruActivityInternerTest {
         schema = new MiruSchema(
                 new MiruFieldDefinition[] { new MiruFieldDefinition(0, "f") },
                 new MiruPropertyDefinition[] { new MiruPropertyDefinition(0, "p") });
-        interner = new MiruActivityInternExtern(schema, ibaInterner, termInterner, tenantInterner, stringInterner);
+        interner = new MiruActivityInternExtern(ibaInterner, termInterner, tenantInterner, stringInterner);
         tenantId = new MiruTenantId("testIntern".getBytes());
     }
 
@@ -52,12 +52,12 @@ public class MiruActivityInternerTest {
             new MiruActivity.Builder(tenantId, 1, new String[] { "a", "b", "c" }, 0)
                 .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
                 .putAllPropValues("p", ImmutableList.of("v1", "v2"))
-                .build());
+                .build(), schema);
         MiruInternalActivity activity2 = interner.intern(
             new MiruActivity.Builder(tenantId, 2, new String[] { "a", "b", "c" }, 0)
                 .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
                 .putAllPropValues("p", ImmutableList.of("v1", "v2"))
-                .build());
+                .build(), schema);
 
         assertTrue(activity1.tenantId == activity2.tenantId, "Different tenantIds"); // reference equality
 
@@ -76,7 +76,7 @@ public class MiruActivityInternerTest {
 
     @Test
     public void testIntern_nullAuthz() throws Exception {
-        MiruInternalActivity activity1 = interner.intern(new MiruActivity.Builder(tenantId, 1, null, 0).build());
+        MiruInternalActivity activity1 = interner.intern(new MiruActivity.Builder(tenantId, 1, null, 0).build(), schema);
 
         assertNull(activity1.authz);
     }

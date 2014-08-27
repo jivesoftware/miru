@@ -184,7 +184,11 @@ public class MiruFilterUtils<BM> {
                             }
                         }
 
-                        AggregateCount aggregateCount = new AggregateCount(activityInternExtern.extern(activity), aggregateValue, beforeCount - afterCount, unread);
+                        AggregateCount aggregateCount = new AggregateCount(
+                                activityInternExtern.extern(activity, stream.schema),
+                                aggregateValue,
+                                beforeCount - afterCount,
+                                unread);
                         aggregateCounts.add(aggregateCount);
 
                         if (aggregateCounts.size() >= query.desiredNumberOfDistincts) {
@@ -478,7 +482,8 @@ public class MiruFilterUtils<BM> {
                 if (v != null) {
                     MiruTermId[] fieldValues = v.mostRecent;
                     if (fieldValues != null && fieldValues.length > 0) {
-                        Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField3.getInvertedIndex(makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
+                        Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField3.getInvertedIndex(
+                                makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
                         if (invertedIndex.isPresent()) {
                             MiruInvertedIndex<BM> index = invertedIndex.get();
                             final MutableInt count = new MutableInt(0);

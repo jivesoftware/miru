@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -59,11 +60,11 @@ public class MiruStreamFactoryTest {
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
         MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(4);
-        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(schema, Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
+        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
         MiruFilterUtils<EWAHCompressedBitmap> miruFilterUtils = new MiruFilterUtils<>(bitmaps, activityInterner);
 
-        streamFactory = new MiruStreamFactory<>(bitmaps, schema, Executors.newSingleThreadExecutor(),
+        streamFactory = new MiruStreamFactory<>(bitmaps, new SingleSchemaProvider(schema), Executors.newSingleThreadExecutor(),
                 new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
                 new MiruTempDirectoryResourceLocator(),
                 new MiruTempDirectoryResourceLocator(),
