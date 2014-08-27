@@ -5,7 +5,6 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.reader.MiruHttpClientReader;
 
 /** @author jonathan */
 public class MiruRemotePartitionFactory {
@@ -24,6 +23,6 @@ public class MiruRemotePartitionFactory {
         HttpClient httpClient = httpClientFactory.createClient(coord.host.getLogicalName(), coord.host.getPort());
         RequestHelper requestHelper = new RequestHelper(httpClient, objectMapper);
 
-        return new MiruRemoteHostedPartition(coord, partitionInfoProvider, new MiruHttpClientReader(requestHelper));
+        return new MiruRemoteHostedPartition(coord, partitionInfoProvider, requestHelper);
     }
 }

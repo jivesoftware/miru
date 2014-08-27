@@ -117,10 +117,22 @@ public class MiruReaderMain {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
 
+        //Collection<MiruPlugin> plugins = null;
+
         deployable.addEndpoints(MiruWriterEndpoints.class);
         deployable.addInjectables(MiruWriter.class, miruWriter);
         deployable.addEndpoints(MiruReaderEndpoints.class);
         deployable.addInjectables(MiruReader.class, miruReader);
+        /*
+        for (MiruPlugin plugin : plugins) {
+            Class<?> endpointsClass = plugin.getEndpointsClass(miruService);
+            deployable.addEndpoints(endpointsClass);
+            for (MiruEndpointInjectable<?> miruEndpointInjectable : plugin.getInjectables()) {
+                deployable.addInjectables(miruEndpointInjectable.getInjectableClass(), miruEndpointInjectable.getInjectable());
+            }
+        }
+        */
+
         deployable.addEndpoints(MiruConfigEndpoints.class);
         deployable.addInjectables(MiruClusterRegistry.class, clusterRegistry);
         deployable.addInjectables(MiruService.class, miruService);

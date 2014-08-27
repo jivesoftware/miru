@@ -90,7 +90,6 @@ public interface MiruReader {
     /** Score trending on a specific local partition. */
     TrendingResult scoreTrending(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingResult> lastResult) throws MiruQueryServiceException;
 
-
     RecoResult collaborativeFilteringRecommendations(MiruTenantId tenantId, Optional<MiruActorId> userIdentity, Optional<MiruAuthzExpression> authzExpression,
         MiruRecoQueryCriteria queryCriteria) throws MiruQueryServiceException;
 

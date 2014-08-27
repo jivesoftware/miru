@@ -77,7 +77,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                             // should be few enough of these that we prefer a linear lookup
                             for (SolvableFuture<R> f : futures) {
                                 if (f.future == future) {
-                                    result = new MiruSolution<>(r, f.solvable.getCoord(), f.solvable.getQueryClass(), System.currentTimeMillis() - f.startTime);
+                                    result = new MiruSolution<>(r, f.solvable.getCoord(), System.currentTimeMillis() - f.startTime);
                                     break;
                                 }
                             }

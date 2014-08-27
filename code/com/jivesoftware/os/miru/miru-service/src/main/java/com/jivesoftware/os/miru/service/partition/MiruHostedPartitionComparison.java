@@ -89,13 +89,14 @@ public class MiruHostedPartitionComparison {
      * Analyzes the latest winning solutions for a replica set.
      *
      * @param solutions the latest winning solutions
+     * @param queryClass the query class
      */
-    public <R> void analyzeSolutions(List<MiruSolution<R>> solutions) {
+    public <R> void analyzeSolutions(List<MiruSolution<R>> solutions, String queryClass) {
         for (MiruSolution<R> solution : solutions) {
             MiruPartitionCoord coord = solution.getCoord();
             coordRecency.put(coord, timestamper.get());
 
-            TenantPartitionAndQuery key = new TenantPartitionAndQuery(coord.tenantId, coord.partitionId, solution.getQueryClass());
+            TenantPartitionAndQuery key = new TenantPartitionAndQuery(coord.tenantId, coord.partitionId, queryClass);
             RunningPercentile runningPercentile = queryPercentile.get(key);
             if (runningPercentile == null) {
                 queryPercentile.putIfAbsent(key, new RunningPercentile(windowSize, percentile));

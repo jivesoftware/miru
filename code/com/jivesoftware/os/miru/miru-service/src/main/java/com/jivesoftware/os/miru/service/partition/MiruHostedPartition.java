@@ -6,16 +6,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
-import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
-import com.jivesoftware.os.miru.api.query.result.RecoResult;
-import com.jivesoftware.os.miru.api.query.result.TrendingResult;
-import com.jivesoftware.os.miru.service.query.AggregateCountsReport;
-import com.jivesoftware.os.miru.service.query.DistinctCountReport;
-import com.jivesoftware.os.miru.service.query.RecoReport;
-import com.jivesoftware.os.miru.service.query.TrendingReport;
-import com.jivesoftware.os.miru.service.stream.factory.ExecuteQuery;
-import com.jivesoftware.os.miru.service.stream.factory.MiruStreamCollector;
+
 import java.util.Iterator;
 
 /**
@@ -48,11 +39,5 @@ public interface MiruHostedPartition {
 
     void setStorage(MiruBackingStorage storage) throws Exception;
 
-    MiruStreamCollector<AggregateCountsResult> createFilterCollector(ExecuteQuery<AggregateCountsResult, AggregateCountsReport> executeQuery);
-
-    MiruStreamCollector<DistinctCountResult> createCountCollector(ExecuteQuery<DistinctCountResult, DistinctCountReport> executeQuery);
-
-    MiruStreamCollector<TrendingResult> createTrendingCollector(ExecuteQuery<TrendingResult, TrendingReport> executeQuery);
-
-    MiruStreamCollector<RecoResult> createRecoCollector(ExecuteQuery<RecoResult, RecoReport> executeQuery);
+    MiruQueryHandle getQueryHandle() throws Exception;
 }

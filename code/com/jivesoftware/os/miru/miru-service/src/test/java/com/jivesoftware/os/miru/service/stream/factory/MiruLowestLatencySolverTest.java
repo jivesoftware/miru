@@ -36,7 +36,7 @@ public class MiruLowestLatencySolverTest {
         ImmutableList.Builder<MiruSolvable<Integer>> solvableBuilder = ImmutableList.<MiruSolvable<Integer>>builder();
         for (int i = 0; i < 10; i++) {
             final int id = i;
-            solvableBuilder.add(new MiruSolvable<Integer>(
+            solvableBuilder.add(new MiruSolvable<>(
                 new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(1), new MiruHost("localhost", 49600)),
                 new Callable<Integer>() {
                     @Override
@@ -44,7 +44,7 @@ public class MiruLowestLatencySolverTest {
                         Thread.sleep(id * 1000); // Fake latency for each callable, 0 should always win
                         return id;
                     }
-                }, FilterCustomExecuteQuery.class.getCanonicalName()));
+                }));
         }
         List<MiruSolvable<Integer>> solvables = Lists.newArrayList(solvableBuilder.build());
         Collections.shuffle(solvables); // randomize the solvers

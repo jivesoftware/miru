@@ -9,11 +9,12 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.stream.factory.FilterCustomExecuteQuery;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolution;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -44,12 +45,14 @@ public class MiruHostedPartitionComparisonTest {
         assertEquals(partitionComparison.getComparator().compare(p1, p2), 0);
 
         timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), FilterCustomExecuteQuery.class.getCanonicalName(), 0)));
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), 0)),
+                FilterCustomExecuteQuery.class.getCanonicalName());
 
         assertEquals(partitionComparison.getComparator().compare(p1, p2), -1);
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), FilterCustomExecuteQuery.class.getCanonicalName(), 0)));
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), 0)),
+                FilterCustomExecuteQuery.class.getCanonicalName());
         assertEquals(partitionComparison.getComparator().compare(p1, p2), 1);
     }
 
@@ -59,13 +62,15 @@ public class MiruHostedPartitionComparisonTest {
         MiruHostedPartition p2 = mockPartition(49602);
 
         timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), FilterCustomExecuteQuery.class.getCanonicalName(), 0)));
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), 0)),
+                FilterCustomExecuteQuery.class.getCanonicalName());
 
         Comparator<MiruHostedPartition> comparator = partitionComparison.getComparator();
         assertEquals(comparator.compare(p1, p2), -1);
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), FilterCustomExecuteQuery.class.getCanonicalName(), 0)));
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), 0)),
+                FilterCustomExecuteQuery.class.getCanonicalName());
         // comparator was built prior to p2 promotion, so p1 should still be sorted earlier
         assertEquals(comparator.compare(p1, p2), -1);
     }
@@ -75,10 +80,11 @@ public class MiruHostedPartitionComparisonTest {
         List<MiruSolution<Void>> solutions = Lists.newArrayList();
         for (int i = 1; i <= 100; i++) {
             MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49600 + i));
-            solutions.add(new MiruSolution<Void>(null, coord, FilterCustomExecuteQuery.class.getCanonicalName(), i));
+            solutions.add(new MiruSolution<Void>(null, coord, i));
         }
-        partitionComparison.analyzeSolutions(solutions);
-        assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, FilterCustomExecuteQuery.class.getCanonicalName()).get().longValue(), percentile);
+        partitionComparison.analyzeSolutions(solutions, FilterCustomExecuteQuery.class.getCanonicalName());
+        assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, FilterCustomExecuteQuery.class.getCanonicalName()).get().longValue(),
+                percentile);
     }
 
     private MiruHostedPartition mockPartition(int port) {

@@ -1,28 +1,16 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
-import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
-import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
-import com.jivesoftware.os.miru.api.query.result.RecoResult;
-import com.jivesoftware.os.miru.api.query.result.TrendingResult;
-import com.jivesoftware.os.miru.service.query.AggregateCountsReport;
-import com.jivesoftware.os.miru.service.query.DistinctCountReport;
-import com.jivesoftware.os.miru.service.query.RecoReport;
-import com.jivesoftware.os.miru.service.query.TrendingReport;
-import com.jivesoftware.os.miru.service.stream.factory.ExecuteQuery;
-import com.jivesoftware.os.miru.service.stream.factory.MiruStreamCollector;
-import com.jivesoftware.os.miru.service.stream.factory.remote.RemoteCountCollector;
-import com.jivesoftware.os.miru.service.stream.factory.remote.RemoteFilterCollector;
-import com.jivesoftware.os.miru.service.stream.factory.remote.RemoteRecoCollector;
-import com.jivesoftware.os.miru.service.stream.factory.remote.RemoteTrendingCollector;
+import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
+
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -31,13 +19,13 @@ public class MiruRemoteHostedPartition implements MiruHostedPartition {
 
     private final MiruPartitionCoord coord;
     private final MiruPartitionInfoProvider infoProvider;
-    private final MiruReader miruReader;
+    private final RequestHelper requestHelper;
     private final AtomicBoolean removed;
 
-    public MiruRemoteHostedPartition(MiruPartitionCoord coord, MiruPartitionInfoProvider infoProvider, MiruReader miruReader) {
+    public MiruRemoteHostedPartition(MiruPartitionCoord coord, MiruPartitionInfoProvider infoProvider, RequestHelper requestHelper) {
         this.coord = coord;
         this.infoProvider = infoProvider;
-        this.miruReader = miruReader;
+        this.requestHelper = requestHelper;
         this.removed = new AtomicBoolean(false);
     }
 
@@ -100,29 +88,39 @@ public class MiruRemoteHostedPartition implements MiruHostedPartition {
     public void setStorage(MiruBackingStorage storage) {
     }
 
-    public MiruReader getMiruReader() {
-        return miruReader;
-    }
-
     @Override
-    public MiruStreamCollector<AggregateCountsResult> createFilterCollector(ExecuteQuery<AggregateCountsResult, AggregateCountsReport> executeQuery) {
-        return new RemoteFilterCollector(this, executeQuery);
-    }
+    public MiruQueryHandle getQueryHandle() throws Exception {
+        //TODO split local/remote handles
+        return new MiruQueryHandle() {
+            @Override
+            public MiruQueryStream getQueryStream() {
+                return null;
+            }
 
-    @Override
-    public MiruStreamCollector<DistinctCountResult> createCountCollector(ExecuteQuery<DistinctCountResult, DistinctCountReport> executeQuery) {
-        return new RemoteCountCollector(this, executeQuery);
-    }
+            @Override
+            public boolean isLocal() {
+                return false;
+            }
 
-    @Override
-    public MiruStreamCollector<TrendingResult> createTrendingCollector(ExecuteQuery<TrendingResult, TrendingReport> executeQuery) {
-        return new RemoteTrendingCollector(this, executeQuery);
-    }
+            @Override
+            public boolean canBackfill() {
+                return false;
+            }
 
+            @Override
+            public MiruPartitionCoord getCoord() {
+                return coord;
+            }
 
-    @Override
-    public MiruStreamCollector<RecoResult> createRecoCollector(ExecuteQuery<RecoResult, RecoReport> executeQuery) {
-        return new RemoteRecoCollector(this, executeQuery);
+            @Override
+            public RequestHelper getRequestHelper() {
+                return requestHelper;
+            }
+
+            @Override
+            public void close() throws Exception {
+            }
+        };
     }
 
     @Override

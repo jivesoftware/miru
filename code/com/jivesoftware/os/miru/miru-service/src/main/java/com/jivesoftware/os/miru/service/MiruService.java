@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.plugin.Miru;
 import com.jivesoftware.os.miru.api.query.AggregateCountsQuery;
 import com.jivesoftware.os.miru.api.query.DistinctCountQuery;
 import com.jivesoftware.os.miru.api.query.RecoQuery;
@@ -28,19 +29,17 @@ import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionDirector;
+import com.jivesoftware.os.miru.service.partition.MiruQueryHandle;
 import com.jivesoftware.os.miru.service.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.service.query.merge.MergeAggregateCountResults;
 import com.jivesoftware.os.miru.service.query.merge.MergeDistinctCountResults;
 import com.jivesoftware.os.miru.service.query.merge.MergeRecoResults;
 import com.jivesoftware.os.miru.service.query.merge.MergeTrendingResults;
 import com.jivesoftware.os.miru.service.query.merge.MiruResultMerger;
-import com.jivesoftware.os.miru.service.stream.factory.AggregateCountsExecuteQueryCallableFactory;
 import com.jivesoftware.os.miru.service.stream.factory.AggregateCountsResultEvaluator;
 import com.jivesoftware.os.miru.service.stream.factory.CountCustomExecuteQuery;
 import com.jivesoftware.os.miru.service.stream.factory.CountInboxExecuteQuery;
-import com.jivesoftware.os.miru.service.stream.factory.DistinctCountExecuteQueryCallableFactory;
 import com.jivesoftware.os.miru.service.stream.factory.DistinctCountResultEvaluator;
-import com.jivesoftware.os.miru.service.stream.factory.ExecuteQueryCallableFactory;
 import com.jivesoftware.os.miru.service.stream.factory.FilterCustomExecuteQuery;
 import com.jivesoftware.os.miru.service.stream.factory.FilterInboxExecuteQuery;
 import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
@@ -48,12 +47,11 @@ import com.jivesoftware.os.miru.service.stream.factory.MiruJustInTimeBackfilleri
 import com.jivesoftware.os.miru.service.stream.factory.MiruResultEvaluator;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolution;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolvable;
+import com.jivesoftware.os.miru.service.stream.factory.MiruSolvableFactory;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolver;
 import com.jivesoftware.os.miru.service.stream.factory.RecoExecuteQuery;
-import com.jivesoftware.os.miru.service.stream.factory.RecoExecuteQueryCallableFactory;
 import com.jivesoftware.os.miru.service.stream.factory.RecoResultEvaluator;
 import com.jivesoftware.os.miru.service.stream.factory.TrendingExecuteQuery;
-import com.jivesoftware.os.miru.service.stream.factory.TrendingExecuteQueryCallableFactory;
 import com.jivesoftware.os.miru.service.stream.factory.TrendingResultEvaluator;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 
@@ -64,14 +62,14 @@ import java.util.concurrent.Callable;
 /**
  * @author jonathan
  */
-public class MiruService<BM> {
+public class MiruService<BM> implements Miru {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruHost localhost;
     private final MiruPartitionDirector partitionDirector;
-    private final MiruFilterUtils filterUtils;
-    private final MiruJustInTimeBackfillerizer backfillerizer;
+    private final MiruFilterUtils<BM> filterUtils;
+    private final MiruJustInTimeBackfillerizer<BM> backfillerizer;
     private final MiruSolver solver;
     private final MiruHostedPartitionComparison partitionComparison;
     private final MiruActivityWALWriter activityWALWriter;
@@ -80,14 +78,14 @@ public class MiruService<BM> {
     private final Optional<String> readStreamIdsPropName;
 
     public MiruService(MiruHost localhost,
-            MiruJustInTimeBackfillerizer backfillerizer,
+            MiruJustInTimeBackfillerizer<BM> backfillerizer,
             MiruPartitionDirector partitionDirector,
             MiruHostedPartitionComparison partitionComparison,
             MiruActivityWALWriter activityWALWriter,
             MiruActivityLookupTable activityLookupTable,
             MiruSolver solver,
             MiruBitmaps<BM> bitmaps,
-            MiruFilterUtils miruFilterUtils,
+            MiruFilterUtils<BM> filterUtils,
             Optional<String> readStreamIdsPropName) {
 
         this.localhost = localhost;
@@ -95,7 +93,7 @@ public class MiruService<BM> {
         this.partitionComparison = partitionComparison;
         this.activityWALWriter = activityWALWriter;
         this.activityLookupTable = activityLookupTable;
-        this.filterUtils = miruFilterUtils;
+        this.filterUtils = filterUtils;
         this.backfillerizer = backfillerizer;
         this.solver = solver;
         this.bitmaps = bitmaps;
@@ -131,7 +129,7 @@ public class MiruService<BM> {
      */
     public AggregateCountsResult filterCustomStream(final AggregateCountsQuery query) throws Exception {
         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
-                new AggregateCountsExecuteQueryCallableFactory(new FilterCustomExecuteQuery<>(bitmaps, filterUtils, query)),
+                new MiruSolvableFactory<>(new FilterCustomExecuteQuery<>(bitmaps, filterUtils, query)),
                 new AggregateCountsResultEvaluator(query),
                 new MergeAggregateCountResults(),
                 AggregateCountsResult.EMPTY_RESULTS);
@@ -139,7 +137,7 @@ public class MiruService<BM> {
 
     public AggregateCountsResult filterInboxStreamAll(AggregateCountsQuery query) throws Exception {
         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
-                new AggregateCountsExecuteQueryCallableFactory(
+                new MiruSolvableFactory<>(
                         new FilterInboxExecuteQuery<>(bitmaps, filterUtils, backfillerizer, query, readStreamIdsPropName, false)),
                 new AggregateCountsResultEvaluator(query),
                 new MergeAggregateCountResults(),
@@ -148,7 +146,7 @@ public class MiruService<BM> {
 
     public AggregateCountsResult filterInboxStreamUnread(AggregateCountsQuery query) throws Exception {
         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
-                new AggregateCountsExecuteQueryCallableFactory(
+                new MiruSolvableFactory<>(
                         new FilterInboxExecuteQuery<>(bitmaps, filterUtils, backfillerizer, query, readStreamIdsPropName, true)),
                 new AggregateCountsResultEvaluator(query),
                 new MergeAggregateCountResults(),
@@ -161,14 +159,14 @@ public class MiruService<BM> {
     public AggregateCountsResult filterCustomStream(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
             throws Exception {
         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
-                new AggregateCountsExecuteQueryCallableFactory(new FilterCustomExecuteQuery<>(bitmaps, filterUtils, query)),
+                new MiruSolvableFactory<>(new FilterCustomExecuteQuery<>(bitmaps, filterUtils, query)),
                 lastResult, AggregateCountsResult.EMPTY_RESULTS);
     }
 
     public AggregateCountsResult filterInboxStreamAll(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
             throws Exception {
         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
-                new AggregateCountsExecuteQueryCallableFactory(
+                new MiruSolvableFactory<>(
                         new FilterInboxExecuteQuery<>(bitmaps, filterUtils, backfillerizer, query, readStreamIdsPropName, false)),
                 lastResult, AggregateCountsResult.EMPTY_RESULTS);
     }
@@ -176,7 +174,7 @@ public class MiruService<BM> {
     public AggregateCountsResult filterInboxStreamUnread(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
             throws Exception {
         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
-                new AggregateCountsExecuteQueryCallableFactory(
+                new MiruSolvableFactory<>(
                         new FilterInboxExecuteQuery<>(bitmaps, filterUtils, backfillerizer, query, readStreamIdsPropName, true)),
                 lastResult, AggregateCountsResult.EMPTY_RESULTS);
     }
@@ -186,7 +184,7 @@ public class MiruService<BM> {
      */
     public DistinctCountResult countCustomStream(DistinctCountQuery query) throws Exception {
         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
-                new DistinctCountExecuteQueryCallableFactory(new CountCustomExecuteQuery<>(bitmaps, filterUtils, query)),
+                new MiruSolvableFactory<>(new CountCustomExecuteQuery<>(bitmaps, filterUtils, query)),
                 new DistinctCountResultEvaluator(query),
                 new MergeDistinctCountResults(),
                 DistinctCountResult.EMPTY_RESULTS);
@@ -194,7 +192,7 @@ public class MiruService<BM> {
 
     public DistinctCountResult countInboxStreamAll(DistinctCountQuery query) throws Exception {
         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
-                new DistinctCountExecuteQueryCallableFactory(
+                new MiruSolvableFactory<>(
                         new CountInboxExecuteQuery<>(bitmaps, filterUtils, backfillerizer, query, readStreamIdsPropName, false)),
                 new DistinctCountResultEvaluator(query),
                 new MergeDistinctCountResults(),
@@ -203,7 +201,7 @@ public class MiruService<BM> {
 
     public DistinctCountResult countInboxStreamUnread(DistinctCountQuery query) throws Exception {
         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
-                new DistinctCountExecuteQueryCallableFactory(
+                new MiruSolvableFactory<>(
                         new CountInboxExecuteQuery<>(bitmaps, filterUtils, backfillerizer, query, readStreamIdsPropName, true)),
                 new DistinctCountResultEvaluator(query),
                 new MergeDistinctCountResults(),
@@ -216,14 +214,14 @@ public class MiruService<BM> {
     public DistinctCountResult countCustomStream(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
             throws Exception {
         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
-                new DistinctCountExecuteQueryCallableFactory(new CountCustomExecuteQuery<>(bitmaps, filterUtils, query)),
+                new MiruSolvableFactory<>(new CountCustomExecuteQuery<>(bitmaps, filterUtils, query)),
                 lastResult, DistinctCountResult.EMPTY_RESULTS);
     }
 
     public DistinctCountResult countInboxStreamAll(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
             throws Exception {
         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
-                new DistinctCountExecuteQueryCallableFactory(
+                new MiruSolvableFactory<>(
                         new CountInboxExecuteQuery<>(bitmaps, filterUtils, backfillerizer, query, readStreamIdsPropName, false)),
                 lastResult, DistinctCountResult.EMPTY_RESULTS);
     }
@@ -231,7 +229,7 @@ public class MiruService<BM> {
     public DistinctCountResult countInboxStreamUnread(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
             throws Exception {
         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
-                new DistinctCountExecuteQueryCallableFactory(
+                new MiruSolvableFactory<>(
                         new CountInboxExecuteQuery<>(bitmaps, filterUtils, backfillerizer, query, readStreamIdsPropName, true)),
                 lastResult, DistinctCountResult.EMPTY_RESULTS);
     }
@@ -241,7 +239,7 @@ public class MiruService<BM> {
      */
     public TrendingResult scoreTrendingStream(TrendingQuery query) throws Exception {
         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
-                new TrendingExecuteQueryCallableFactory(new TrendingExecuteQuery<>(bitmaps, filterUtils, query)),
+                new MiruSolvableFactory<>(new TrendingExecuteQuery<>(bitmaps, filterUtils, query)),
                 new TrendingResultEvaluator(query),
                 new MergeTrendingResults(query.desiredNumberOfDistincts),
                 TrendingResult.EMPTY_RESULTS);
@@ -249,13 +247,13 @@ public class MiruService<BM> {
 
     public TrendingResult scoreTrendingStream(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingResult> lastResult) throws Exception {
         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
-                new TrendingExecuteQueryCallableFactory(new TrendingExecuteQuery<>(bitmaps, filterUtils, query)),
+                new MiruSolvableFactory<>(new TrendingExecuteQuery<>(bitmaps, filterUtils, query)),
                 lastResult, TrendingResult.EMPTY_RESULTS);
     }
 
     public RecoResult collaborativeFilteringRecommendations(RecoQuery query) throws Exception {
         return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(query.tenantId),
-                new RecoExecuteQueryCallableFactory(new RecoExecuteQuery<>(bitmaps, filterUtils, query)),
+                new MiruSolvableFactory<>(new RecoExecuteQuery<>(bitmaps, filterUtils, query)),
                 new RecoResultEvaluator(query),
                 new MergeRecoResults(query.resultCount),
                 RecoResult.EMPTY_RESULTS);
@@ -264,7 +262,7 @@ public class MiruService<BM> {
     public RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQuery query, Optional<RecoResult> lastResult)
             throws Exception {
         return callImmediate(getLocalTenantPartition(query.tenantId, partitionId),
-                new RecoExecuteQueryCallableFactory(new RecoExecuteQuery<>(bitmaps, filterUtils, query)),
+                new MiruSolvableFactory<>(new RecoExecuteQuery<>(bitmaps, filterUtils, query)),
                 lastResult, RecoResult.EMPTY_RESULTS);
     }
 
@@ -303,8 +301,17 @@ public class MiruService<BM> {
         return partitionDirector.getQueryablePartition(localPartitionCoord);
     }
 
-    private <M extends MiruHostedPartition, R> R callAndMerge(Iterable<OrderedPartitions<M>> partitionReplicas,
-            final ExecuteQueryCallableFactory<M, R> executeQueryCallableFactory,
+    public <R, P> R callAndMerge(
+            MiruTenantId tenantId,
+            MiruSolvableFactory<R, P> solvableFactory,
+            MiruResultEvaluator<R> evaluator,
+            MiruResultMerger<R> merger,
+            R defaultValue) throws Exception {
+        return callAndMerge(partitionDirector.allQueryablePartitionsInOrder(tenantId), solvableFactory, evaluator, merger, defaultValue);
+    }
+
+    private <M extends MiruHostedPartition, R, P> R callAndMerge(Iterable<OrderedPartitions<M>> partitionReplicas,
+            final MiruSolvableFactory<R, P> solvableFactory,
             MiruResultEvaluator<R> evaluator,
             MiruResultMerger<R> merger,
             R defaultValue) throws InterruptedException {
@@ -319,12 +326,16 @@ public class MiruService<BM> {
 
                 @Override
                 public MiruSolvable<R> apply(final M replica) {
-                    return executeQueryCallableFactory.create(replica, result);
+                    try (MiruQueryHandle handle = replica.getQueryHandle()) {
+                        return solvableFactory.create(handle, result);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             });
 
             Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
-                    executeQueryCallableFactory.getExecuteQuery().getClass().getCanonicalName());
+                    solvableFactory.getQueryClass());
             MiruSolution<R> solution = solver.solve(solvables.iterator(), suggestedTimeoutInMillis);
 
             numSearchedPartitions++;
@@ -347,7 +358,7 @@ public class MiruService<BM> {
         }
 
         debugPath(solutions);
-        partitionComparison.analyzeSolutions(solutions);
+        partitionComparison.analyzeSolutions(solutions, solvableFactory.getQueryClass());
 
         return merger.done(lastResult, defaultValue);
     }
@@ -364,13 +375,23 @@ public class MiruService<BM> {
         }
     }
 
-    private <M extends MiruHostedPartition, R> R callImmediate(
+    public <R, P> R callImmediate(
+            MiruTenantId tenantId,
+            MiruPartitionId partitionId,
+            MiruSolvableFactory<R, P> factory,
+            Optional<R> lastResult,
+            R defaultValue) throws Exception {
+        return callImmediate(getLocalTenantPartition(tenantId, partitionId), factory, lastResult, defaultValue);
+    }
+
+    private <M extends MiruHostedPartition, R, P> R callImmediate(
             Optional<M> partition,
-            ExecuteQueryCallableFactory<M, R> factory,
-            Optional<R> lastResult, R defaultValue) throws Exception {
+            MiruSolvableFactory<R, P> factory,
+            Optional<R> lastResult,
+            R defaultValue) throws Exception {
 
         if (partition.isPresent()) {
-            Callable<R> callable = factory.create(partition.get(), lastResult);
+            Callable<R> callable = factory.create(partition.get().getQueryHandle(), lastResult);
             return callable.call();
         } else {
             return defaultValue;

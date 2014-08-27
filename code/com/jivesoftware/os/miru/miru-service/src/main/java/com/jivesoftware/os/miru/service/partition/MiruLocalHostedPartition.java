@@ -13,23 +13,10 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
-import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
-import com.jivesoftware.os.miru.api.query.result.RecoResult;
-import com.jivesoftware.os.miru.api.query.result.TrendingResult;
-import com.jivesoftware.os.miru.service.query.AggregateCountsReport;
-import com.jivesoftware.os.miru.service.query.DistinctCountReport;
-import com.jivesoftware.os.miru.service.query.RecoReport;
-import com.jivesoftware.os.miru.service.query.TrendingReport;
 import com.jivesoftware.os.miru.service.stream.MiruStream;
 import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
-import com.jivesoftware.os.miru.service.stream.factory.ExecuteQuery;
-import com.jivesoftware.os.miru.service.stream.factory.MiruStreamCollector;
-import com.jivesoftware.os.miru.service.stream.factory.local.LocalCountCollector;
-import com.jivesoftware.os.miru.service.stream.factory.local.LocalFilterCollector;
-import com.jivesoftware.os.miru.service.stream.factory.local.LocalRecoCollector;
-import com.jivesoftware.os.miru.service.stream.factory.local.LocalTrendingCollector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -559,26 +546,6 @@ public class MiruLocalHostedPartition implements MiruHostedPartition {
             return gate.canAutoMigrate() && updateStorage(gate, MiruBackingStorage.mem_mapped, false);
         }
 
-    }
-
-    @Override
-    public LocalFilterCollector createFilterCollector(ExecuteQuery<AggregateCountsResult, AggregateCountsReport> executeQuery) {
-        return new LocalFilterCollector(this, executeQuery);
-    }
-
-    @Override
-    public LocalCountCollector createCountCollector(ExecuteQuery<DistinctCountResult, DistinctCountReport> executeQuery) {
-        return new LocalCountCollector(this, executeQuery);
-    }
-
-    @Override
-    public MiruStreamCollector<TrendingResult> createTrendingCollector(ExecuteQuery<TrendingResult, TrendingReport> executeQuery) {
-        return new LocalTrendingCollector(this, executeQuery);
-    }
-
-    @Override
-    public MiruStreamCollector<RecoResult> createRecoCollector(ExecuteQuery<RecoResult, RecoReport> executeQuery) {
-        return new LocalRecoCollector(this, executeQuery);
     }
 
     @Override

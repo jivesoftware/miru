@@ -259,7 +259,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.mem_mapped);
 
         try (MiruQueryHandle queryHandle = localHostedPartition.getQueryHandle()) {
-            assertEquals(queryHandle.getPartitionId(), partitionId);
+            assertEquals(queryHandle.getCoord(), coord);
             assertNotNull(queryHandle.getQueryStream()); // would throw exception if offline
         }
     }

@@ -9,13 +9,11 @@ public class MiruSolution<R> {
 
     private final R result;
     private final MiruPartitionCoord coord;
-    private final String queryClass;
     private final long elapsed;
 
-    public MiruSolution(R result, MiruPartitionCoord coord, String queryClass, long elapsed) {
+    public MiruSolution(R result, MiruPartitionCoord coord, long elapsed) {
         this.result = result;
         this.coord = coord;
-        this.queryClass = queryClass;
         this.elapsed = elapsed;
     }
 
@@ -25,10 +23,6 @@ public class MiruSolution<R> {
 
     public MiruPartitionCoord getCoord() {
         return coord;
-    }
-
-    public String getQueryClass() {
-        return queryClass;
     }
 
     public long getElapsed() {

@@ -10,20 +10,14 @@ public class MiruSolvable<R> implements Callable<R> {
 
     private final MiruPartitionCoord coord;
     private final Callable<R> callable;
-    private final String queryClass;
 
-    public MiruSolvable(MiruPartitionCoord coord, Callable<R> callable, String queryClass) {
+    public MiruSolvable(MiruPartitionCoord coord, Callable<R> callable) {
         this.coord = coord;
         this.callable = callable;
-        this.queryClass = queryClass;
     }
 
     public MiruPartitionCoord getCoord() {
         return coord;
-    }
-
-    public String getQueryClass() {
-        return queryClass;
     }
 
     @Override

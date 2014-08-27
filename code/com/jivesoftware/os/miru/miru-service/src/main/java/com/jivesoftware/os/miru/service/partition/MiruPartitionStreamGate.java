@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -9,11 +10,11 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
 import com.jivesoftware.os.miru.service.stream.MiruStream;
+
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -46,8 +47,8 @@ class MiruPartitionStreamGate {
     public final AtomicBoolean closed;
 
     MiruPartitionStreamGate(MiruPartitionCoord coord, MiruPartitionCoordInfo info, MiruStream stream, AtomicLong sipTimestamp, AtomicLong rebuildTimestamp,
-        AtomicLong refreshTimestamp, Set<TimeAndVersion> seenLastSip, Set<Integer> beginWriters, Set<Integer> endWriters, Semaphore semaphore,
-        AtomicBoolean closed) {
+            AtomicLong refreshTimestamp, Set<TimeAndVersion> seenLastSip, Set<Integer> beginWriters, Set<Integer> endWriters, Semaphore semaphore,
+            AtomicBoolean closed) {
         this.coord = coord;
         this.info = info;
         this.stream = stream;
@@ -63,12 +64,12 @@ class MiruPartitionStreamGate {
 
     MiruPartitionStreamGate(MiruPartitionCoord coord, MiruPartitionCoordInfo info, MiruStream stream, long sipTimestamp) {
         this(coord, info, stream, new AtomicLong(sipTimestamp), new AtomicLong(), new AtomicLong(), Sets.<TimeAndVersion>newHashSet(),
-            Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean());
+                Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean());
     }
 
     MiruPartitionStreamGate copyToState(MiruPartitionState state) {
         return new MiruPartitionStreamGate(coord, info.copyToState(state), stream, sipTimestamp, rebuildTimestamp, refreshTimestamp, seenLastSip.get(),
-            beginWriters, endWriters, semaphore, closed);
+                beginWriters, endWriters, semaphore, closed);
     }
 
     MiruStream close() throws InterruptedException {
@@ -99,8 +100,8 @@ class MiruPartitionStreamGate {
 
     boolean isMemoryComplete() {
         return info.storage.isMemoryBacked()
-            && info.state == MiruPartitionState.online
-            && !beginWriters.isEmpty() && beginWriters.equals(endWriters);
+                && info.state == MiruPartitionState.online
+                && !beginWriters.isEmpty() && beginWriters.equals(endWriters);
     }
 
     void markForRefresh() {
@@ -123,7 +124,7 @@ class MiruPartitionStreamGate {
                     MiruPartitionedActivity partitionedActivity = partitionedActivities.next();
                     if (partitionedActivity.partitionId.equals(coord.partitionId)) {
                         if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN
-                            || partitionedActivity.type == MiruPartitionedActivity.Type.END) {
+                                || partitionedActivity.type == MiruPartitionedActivity.Type.END) {
                             handleBoundaryType(partitionedActivity);
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.ACTIVITY) {
                             handleActivityType(partitionedActivity);
@@ -237,13 +238,23 @@ class MiruPartitionStreamGate {
             }
 
             @Override
+            public boolean isLocal() {
+                return true;
+            }
+
+            @Override
             public boolean canBackfill() {
                 return isEligibleToBackfill();
             }
 
             @Override
-            public MiruPartitionId getPartitionId() {
-                return coord.partitionId;
+            public MiruPartitionCoord getCoord() {
+                return coord;
+            }
+
+            @Override
+            public RequestHelper getRequestHelper() {
+                return null;
             }
 
             @Override
@@ -279,9 +290,9 @@ class MiruPartitionStreamGate {
 
             @Override
             public MiruPartitionStreamGate migrated(MiruStream stream,
-                Optional<MiruBackingStorage> storage,
-                Optional<MiruPartitionState> state,
-                long sipTimestamp) {
+                    Optional<MiruBackingStorage> storage,
+                    Optional<MiruPartitionState> state,
+                    long sipTimestamp) {
 
                 MiruPartitionCoordInfo migratedInfo = info;
                 if (storage.isPresent()) {
@@ -303,12 +314,12 @@ class MiruPartitionStreamGate {
     @Override
     public String toString() {
         return "MiruPartitionStreamGate{" +
-            "coord=" + coord +
-            ", info=" + info +
-            ", sipTimestamp=" + sipTimestamp +
-            ", rebuildTimestamp=" + rebuildTimestamp +
-            ", refreshTimestamp=" + refreshTimestamp +
-            ", closed=" + closed +
-            '}';
+                "coord=" + coord +
+                ", info=" + info +
+                ", sipTimestamp=" + sipTimestamp +
+                ", rebuildTimestamp=" + rebuildTimestamp +
+                ", refreshTimestamp=" + refreshTimestamp +
+                ", closed=" + closed +
+                '}';
     }
 }
