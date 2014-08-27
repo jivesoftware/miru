@@ -10,6 +10,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
@@ -79,17 +80,17 @@ public class MiruCollaborativeFilterNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
 
-        MiruBackingStorage disiredStorage = MiruBackingStorage.hybrid;
+        MiruBackingStorage desiredStorage = MiruBackingStorage.hybrid;
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
-        config.setDefaultStorage(disiredStorage.name());
+        config.setDefaultStorage(desiredStorage.name());
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
 
         MiruHost miruHost = new MiruHost("logicalName", 1234);
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
                 .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
-        SetOfSortedMapsImplInitializer setOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
+        SetOfSortedMapsImplInitializer<RuntimeException> setOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", setOfSortedMapsImplInitializer);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(),
                 registryStore.getExpectedTenantsRegistry(),
@@ -110,7 +111,7 @@ public class MiruCollaborativeFilterNGTest {
 
         MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
         miruResourceLocatorProviderLifecyle.start();
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer<EWAHCompressedBitmap>().initialize(config,
                 registryStore,
                 clusterRegistry,
                 miruHost,
@@ -125,7 +126,7 @@ public class MiruCollaborativeFilterNGTest {
         MiruService miruService = miruServiceLifecyle.getService();
 
         long t = System.currentTimeMillis();
-        while (!miruService.checkInfo(tenant1, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, disiredStorage))) {
+        while (!miruService.checkInfo(tenant1, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
             Thread.sleep(10);
             if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(5000)) {
                 Assert.fail("Partition failed to come online");
@@ -143,14 +144,8 @@ public class MiruCollaborativeFilterNGTest {
     }
 
 
-    //recoResult:RecoResult{results=[Recommendation{, distinctValue=939, rank=57.0}, Recommendation{, distinctValue=776, rank=55.0}, Recommendation{, distinctValue=713, rank=46.0}, Recommendation{, distinctValue=576, rank=45.0}, Recommendation{, distinctValue=147, rank=44.0}, Recommendation{, distinctValue=746, rank=44.0}, Recommendation{, distinctValue=74, rank=44.0}, Recommendation{, distinctValue=412, rank=43.0}, Recommendation{, distinctValue=363, rank=43.0}, Recommendation{, distinctValue=582, rank=42.0}]}
-    //recoResult:RecoResult{results=[Recommendation{, distinctValue=939, rank=57.0}, Recommendation{, distinctValue=776, rank=55.0}, Recommendation{, distinctValue=713, rank=46.0}, Recommendation{, distinctValue=576, rank=45.0}, Recommendation{, distinctValue=147, rank=44.0}, Recommendation{, distinctValue=746, rank=44.0}, Recommendation{, distinctValue=74, rank=44.0}, Recommendation{, distinctValue=412, rank=43.0}, Recommendation{, distinctValue=363, rank=43.0}, Recommendation{, distinctValue=582, rank=42.0}]}
-
-
     @Test(enabled = true)
     public void basicTest() throws Exception {
-
-        ExecutorService indexerThread = Executors.newFixedThreadPool(16);
 
         AtomicInteger time = new AtomicInteger();
         Random rand = new Random(1234);
@@ -159,42 +154,25 @@ public class MiruCollaborativeFilterNGTest {
         int numberOfDocument = 500_000;
         int numberOfViewsPerUser = 2;
         System.out.println("Building activities....");
-        final long start = System.currentTimeMillis();
-        final AtomicInteger count = new AtomicInteger();
+        long start = System.currentTimeMillis();
+        int count = 0;
         int numGroups = 10;
-        final CountDownLatch latch = new CountDownLatch(numberOfUsers * numberOfViewsPerUser);
         for (int i = 0; i < numberOfUsers; i++) {
-            final String user = "bob" + i;
+            String user = "bob" + i;
             int randSeed = i % numGroups;
             Random userRand = new Random(randSeed * 137);
             for (int r = 0; r < 2 * (i / numGroups); r++) {
                 userRand.nextInt(numberOfDocument);
             }
             for (int d = 0; d < numberOfViewsPerUser; d++) {
-                final int docId = userRand.nextInt(numberOfDocument);
-                final long activityTime = time.incrementAndGet();
-                indexerThread.submit(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        try {
-                            service.writeToIndex(Collections.singletonList(viewActivity(activityTime, user, String.valueOf(docId))));
-                            if (count.incrementAndGet() % 10_000 == 0) {
-                                System.out.println("Finished " + count.get() + " in " + (System.currentTimeMillis() - start) + " ms");
-                            }
-                        } catch(Exception x) {
-                            x.printStackTrace();
-                        } finally {
-                            latch.countDown();
-                        }
-                    }
-                });
-
-
+                int docId = userRand.nextInt(numberOfDocument);
+                long activityTime = time.incrementAndGet();
+                service.writeToIndex(Collections.singletonList(viewActivity(activityTime, user, String.valueOf(docId))));
+                if (++count % 10_000 == 0) {
+                    System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
+                }
             }
         }
-        latch.await();
-        indexerThread.shutdown();
 
         System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
 

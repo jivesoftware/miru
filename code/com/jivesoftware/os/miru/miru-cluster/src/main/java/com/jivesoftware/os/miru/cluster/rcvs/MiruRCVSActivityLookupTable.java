@@ -7,20 +7,17 @@ import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.Con
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
+
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /**
  *
  */
-@Singleton
 public class MiruRCVSActivityLookupTable implements MiruActivityLookupTable {
 
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> lookupTable;
 
-    @Inject
     public MiruRCVSActivityLookupTable(RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> lookupTable) {
         this.lookupTable = lookupTable;
     }

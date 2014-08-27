@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopology;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -18,14 +19,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nullable;
-import javax.inject.Singleton;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  *
  */
-@Singleton
 public class MiruClusterExpectedTenants implements MiruExpectedTenants {
 
     private final MiruPartitionInfoProvider partitionInfoProvider;

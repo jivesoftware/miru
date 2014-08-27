@@ -16,7 +16,7 @@ import com.jivesoftware.os.miru.api.query.result.AggregateCountsResult;
 import com.jivesoftware.os.miru.api.query.result.DistinctCountResult;
 import com.jivesoftware.os.miru.api.query.result.TrendingResult;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionUnavailableException;
-import javax.inject.Singleton;
+
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -35,7 +35,6 @@ import static com.jivesoftware.os.miru.api.MiruReader.QUERY_SERVICE_ENDPOINT_PRE
 import static com.jivesoftware.os.miru.api.MiruReader.TRENDING_INFIX;
 import static com.jivesoftware.os.miru.api.MiruReader.WARM_ENDPOINT;
 
-@Singleton
 @Path(QUERY_SERVICE_ENDPOINT_PREFIX)
 public class MiruReaderEndpoints {
 

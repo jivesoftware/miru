@@ -12,12 +12,11 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+
 import java.util.Collections;
 import java.util.List;
-import javax.inject.Singleton;
 
 /** @author jonathan */
-@Singleton
 public class MiruPartitionDirector {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

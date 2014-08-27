@@ -22,16 +22,15 @@ import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruPartitioner;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
-import javax.inject.Singleton;
 
 /** @author jonathan */
-@Singleton
 public class MiruBestEffortFailureTolerantClient implements MiruClient {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

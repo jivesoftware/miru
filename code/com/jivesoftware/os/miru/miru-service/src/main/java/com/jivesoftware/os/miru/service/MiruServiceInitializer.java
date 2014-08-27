@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.base.Optional;
 import com.google.common.collect.Interners;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -58,7 +59,7 @@ public final class MiruServiceInitializer<BM> {
             MiruResourceLocatorProvider resourceLocatorProvider,
             MiruBitmaps<BM> bitmaps) throws IOException {
 
-        final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(6);//TODO expose to config
+        final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(6); //TODO expose to config
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
                 config.getLongTailSolverWindowSize(),
@@ -74,7 +75,7 @@ public final class MiruServiceInitializer<BM> {
                 // makes sense to share string internment as this is authz in both cases
                 Interners.<String>newWeakInterner());
 
-        MiruFilterUtils miruFilterUtils = new MiruFilterUtils(bitmaps, internExtern);
+        MiruFilterUtils<BM> miruFilterUtils = new MiruFilterUtils<>(bitmaps, internExtern);
 
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount());
         MiruStreamFactory<BM> streamFactory = new MiruStreamFactory<>(bitmaps,
@@ -126,14 +127,16 @@ public final class MiruServiceInitializer<BM> {
                 config.getDefaultAddAnotherSolverAfterNMillis(),
                 config.getDefaultFailAfterNMillis());
 
-        final ExecutorService backfillExecutor = Executors.newFixedThreadPool(10);//TODO expose to config
+        final ExecutorService backfillExecutor = Executors.newFixedThreadPool(10); //TODO expose to config
         MiruJustInTimeBackfillerizer<BM> backfillerizer = new MiruJustInTimeBackfillerizer<>(miruHost, bitmaps, backfillExecutor);
 
+        String readStreamIdsPropName = config.getReadStreamIdsPropName();
+        if (readStreamIdsPropName != null && readStreamIdsPropName.isEmpty()) {
+            readStreamIdsPropName = null;
+        }
 
         final MiruService<BM> miruService = new MiruService<>(
                 miruHost,
-                serviceExecutor,
-                scheduledExecutor,
                 backfillerizer,
                 partitionDirector,
                 partitionComparison,
@@ -141,12 +144,13 @@ public final class MiruServiceInitializer<BM> {
                 activityLookupTable,
                 solver,
                 bitmaps,
-                miruFilterUtils);
+                miruFilterUtils,
+                Optional.fromNullable(readStreamIdsPropName));
 
-        return new MiruLifecyle() {
+        return new MiruLifecyle<MiruService>() {
 
             @Override
-            public Object getService() {
+            public MiruService getService() {
                 return miruService;
             }
 

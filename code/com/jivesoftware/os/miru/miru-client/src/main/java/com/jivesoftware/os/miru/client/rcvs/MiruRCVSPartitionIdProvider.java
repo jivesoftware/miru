@@ -3,6 +3,13 @@ package com.jivesoftware.os.miru.client.rcvs;
 import com.google.common.base.Charsets;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.jive.utils.id.TenantId;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.ConstantTimestamper;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.Timestamper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -13,23 +20,14 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
-import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
-import com.jivesoftware.os.jive.utils.id.TenantId;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.ConstantTimestamper;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.Timestamper;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
-@Singleton
 public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -50,7 +48,6 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
     private final int totalCapacity;
     private int perClientCapacity;
 
-    @Inject
     public MiruRCVSPartitionIdProvider(MiruClientConfig config,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry,
         RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,

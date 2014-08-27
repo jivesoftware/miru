@@ -24,23 +24,19 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
+
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 
 /** You get a tenant, and you get a tenant, and you get a tenant! Everybody gets a tenant! */
-@Singleton
 public class MiruNaiveClusterRegistry implements MiruClusterRegistry {
 
     private final Set<MiruHost> hostSet;
 
-    @Inject
-    public MiruNaiveClusterRegistry(@Named("miruDefaultHosts") List<MiruHost> miruHosts) {
+    public MiruNaiveClusterRegistry(List<MiruHost> miruHosts) {
         Preconditions.checkArgument(!miruHosts.isEmpty(), getClass().getSimpleName() + " requires default hosts");
         this.hostSet = Sets.newCopyOnWriteArraySet(miruHosts);
     }

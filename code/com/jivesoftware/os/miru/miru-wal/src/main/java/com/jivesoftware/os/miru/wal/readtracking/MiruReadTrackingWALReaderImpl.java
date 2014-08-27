@@ -14,7 +14,6 @@ import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumn
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.inject.Inject;
 
 public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader {
 
@@ -26,7 +25,6 @@ public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader 
     // TODO - this should probably live in the hbase registry
     private final Map<MiruTenantPartitionAndStreamId, Long> userSipTimestamp = new ConcurrentHashMap<>();
 
-    @Inject
     public MiruReadTrackingWALReaderImpl(
         RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
         RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {

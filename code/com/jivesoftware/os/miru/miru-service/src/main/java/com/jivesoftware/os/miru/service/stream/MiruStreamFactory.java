@@ -58,6 +58,7 @@ import com.jivesoftware.os.miru.service.stream.locator.MiruPartitionCoordIdentif
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,12 +67,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import javax.inject.Singleton;
 
 /**
  * @author jonathan
  */
-@Singleton
 public class MiruStreamFactory<BM> {
 
     private static MetricLogger log = MetricLoggerFactory.getLogger();
@@ -476,7 +475,7 @@ public class MiruStreamFactory<BM> {
         }
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private MiruStream<BM> copy(MiruTenantId tenantId, MiruStream<BM> from, MiruStream<BM> to) throws Exception {
         Map<String, BulkImport<?>> importHandles = to.getImportHandles();
         for (Map.Entry<String, BulkExport<?>> entry : from.getExportHandles().entrySet()) {

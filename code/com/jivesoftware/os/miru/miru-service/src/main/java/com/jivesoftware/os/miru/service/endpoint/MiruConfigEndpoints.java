@@ -15,7 +15,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.config.PartitionsForTenantResult;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.service.MiruService;
-import javax.inject.Singleton;
+
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -30,7 +30,6 @@ import javax.ws.rs.core.Response;
 import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX;
 import static com.jivesoftware.os.miru.api.MiruConfigReader.PARTITIONS_ENDPOINT;
 
-@Singleton
 @Path(CONFIG_SERVICE_ENDPOINT_PREFIX)
 public class MiruConfigEndpoints {
 

@@ -1,8 +1,14 @@
 package com.jivesoftware.os.miru.wal.readtracking.hbase;
 
+import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 
-public class MiruReadTrackingWALRow {
+import java.util.Comparator;
+
+public class MiruReadTrackingWALRow implements Comparable<MiruReadTrackingWALRow> {
+
+    private static final Comparator<byte[]> COMPARATOR = UnsignedBytes.lexicographicalComparator();
+
     private final MiruStreamId streamId;
 
     public MiruReadTrackingWALRow(MiruStreamId streamId) {
@@ -34,6 +40,11 @@ public class MiruReadTrackingWALRow {
     @Override
     public int hashCode() {
         return streamId != null ? streamId.hashCode() : 0;
+    }
+
+    @Override
+    public int compareTo(MiruReadTrackingWALRow o) {
+        return COMPARATOR.compare(streamId.immutableBytes(), o.streamId.immutableBytes());
     }
 
     @Override

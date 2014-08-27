@@ -3,11 +3,10 @@ package com.jivesoftware.os.miru.cluster.memory;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.cluster.MiruHostsStorage;
+
 import java.util.List;
-import javax.inject.Singleton;
 
 /** @author jonathan */
-@Singleton
 public class MiruInMemoryHostsStorage implements MiruHostsStorage {
 
     private final List<MiruHost> hosts;

@@ -24,19 +24,22 @@ public class FilterInboxExecuteQuery<BM> implements ExecuteQuery<AggregateCounts
     private final MiruFilterUtils<BM> utils;
     private final MiruJustInTimeBackfillerizer<BM> backfillerizer;
     private final AggregateCountsQuery query;
+    private final Optional<String> readStreamIdsPropName;
     private final boolean unreadOnly;
 
     public FilterInboxExecuteQuery(MiruBitmaps<BM> bitmaps,
             MiruFilterUtils<BM> utils,
-        MiruJustInTimeBackfillerizer<BM> backfillerizer,
-        AggregateCountsQuery query,
-        boolean unreadOnly) {
+            MiruJustInTimeBackfillerizer<BM> backfillerizer,
+            AggregateCountsQuery query,
+            Optional<String> readStreamIdsPropName,
+            boolean unreadOnly) {
 
-        this.bitmaps = bitmaps;
         Preconditions.checkArgument(query.streamId.isPresent(), "Inbox queries require a streamId");
+        this.bitmaps = bitmaps;
         this.utils = utils;
         this.backfillerizer = backfillerizer;
         this.query = query;
+        this.readStreamIdsPropName = readStreamIdsPropName;
         this.unreadOnly = unreadOnly;
     }
 
@@ -47,7 +50,7 @@ public class FilterInboxExecuteQuery<BM> implements ExecuteQuery<AggregateCounts
             MiruQueryStream<BM> stream = handle.getQueryStream();
 
             if (handle.canBackfill()) {
-                backfillerizer.backfill(stream, query.streamFilter, query.tenantId, handle.getPartitionId(), query.streamId.get());
+                backfillerizer.backfill(stream, query.streamFilter, query.tenantId, handle.getPartitionId(), query.streamId.get(), readStreamIdsPropName);
             }
 
             List<BM> ands = new ArrayList<>();

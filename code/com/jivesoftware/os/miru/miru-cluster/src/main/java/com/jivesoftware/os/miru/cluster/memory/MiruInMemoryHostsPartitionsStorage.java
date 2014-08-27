@@ -7,15 +7,14 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruHostsPartitionsStorage;
+
 import java.util.List;
 import java.util.Set;
-import javax.inject.Singleton;
 
 /**
  *
  * @author jonathan
  */
-@Singleton
 public class MiruInMemoryHostsPartitionsStorage implements MiruHostsPartitionsStorage {
 
     private final Multimap<MiruHost, MiruPartitionCoord> hostToPartitions;

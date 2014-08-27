@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -34,10 +35,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
-import javax.inject.Singleton;
 
 /** @author jonathan */
-@Singleton
 public class MiruInMemoryClusterRegistry implements MiruClusterRegistry {
 
     private final Multimap<MiruTenantId, MiruPartitionCoord> tenantIdToCoords;

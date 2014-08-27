@@ -34,6 +34,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
+
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,10 +42,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
-@Singleton
 public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -62,7 +60,6 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
     private final StripingLocksProvider<TenantPartitionHostKey> topologyLocks = new StripingLocksProvider<>(64);
 
-    @Inject
     public MiruRCVSClusterRegistry(
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry,
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry,

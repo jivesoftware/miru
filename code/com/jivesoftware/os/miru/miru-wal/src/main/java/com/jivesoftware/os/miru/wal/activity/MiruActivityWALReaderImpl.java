@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
-import javax.inject.Inject;
 
 /** @author jonathan */
 public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
@@ -21,7 +20,6 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
     private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activitySipWAL;
 
-    @Inject
     public MiruActivityWALReaderImpl(
         RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
         RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {

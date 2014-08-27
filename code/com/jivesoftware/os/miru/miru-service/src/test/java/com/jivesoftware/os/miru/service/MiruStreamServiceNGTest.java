@@ -10,6 +10,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
@@ -45,6 +46,7 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import java.text.DecimalFormat;
@@ -57,6 +59,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import org.merlin.config.BindInterfaceToConfiguration;
+import org.roaringbitmap.RoaringBitmap;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -89,8 +94,6 @@ public class MiruStreamServiceNGTest {
     int author2 = 20000;
     int author3 = 30000;
 
-    int capacity = 100_000;
-
     MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
     MiruService service;
     MiruPartitionId partitionId = MiruPartitionId.of(1);
@@ -107,16 +110,11 @@ public class MiruStreamServiceNGTest {
         };
         this.miruSchema = new MiruSchema(fieldDefinitions);
 
-        MiruServiceConfig config = mock(MiruServiceConfig.class);
-        when(config.getBitsetBufferSize()).thenReturn(8192);
-        when(config.getHeartbeatIntervalInMillis()).thenReturn(10L);
-        when(config.getEnsurePartitionsIntervalInMillis()).thenReturn(10L);
-        when(config.getPartitionBootstrapIntervalInMillis()).thenReturn(10L);
-        when(config.getPartitionRunnableIntervalInMillis()).thenReturn(10L);
-        when(config.getDefaultInitialSolvers()).thenReturn(1);
-        when(config.getDefaultMaxNumberOfSolvers()).thenReturn(1);
-        when(config.getDefaultAddAnotherSolverAfterNMillis()).thenReturn(1000L);
-        when(config.getDefaultFailAfterNMillis()).thenReturn(60000L);
+        MiruBackingStorage desiredStorage = MiruBackingStorage.hybrid;
+
+        MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
+        config.setDefaultStorage(desiredStorage.name());
+        config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
 
         MiruHost miruHost = new MiruHost("logicalName", 1234);
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
@@ -142,7 +140,7 @@ public class MiruStreamServiceNGTest {
 
         MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
         miruResourceLocatorProviderLifecyle.start();
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer<RoaringBitmap>().initialize(config,
                 registryStore,
                 clusterRegistry,
                 miruHost,
@@ -150,15 +148,15 @@ public class MiruStreamServiceNGTest {
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
-                new MiruBitmapsEWAH(4));
+                new MiruBitmapsRoaring());
 
         miruServiceLifecyle.start();
         MiruService miruService = miruServiceLifecyle.getService();
 
         long t = System.currentTimeMillis();
-        while (!miruService.checkInfo(tenant1, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory))) {
+        while (!miruService.checkInfo(tenant1, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
             Thread.sleep(10);
-            if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(10)) {
+            if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(5000)) {
                 Assert.fail("Partition failed to come online");
             }
         }
@@ -166,38 +164,50 @@ public class MiruStreamServiceNGTest {
         this.service = miruService;
     }
 
-    @Test(groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
+    @Test(enabled = false, description = "This test is disabled because it is very slow")
     public void basicTest() throws Exception {
-        DecimalFormat formatter = new DecimalFormat("###,###,###");
-        capacity = 1_000_000;
+        final int capacity = 1_000_000;
+        final int numQueries = 1_000;
 
+        DecimalFormat formatter = new DecimalFormat("###,###,###");
         Random rand = new Random(1234);
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(1));
         List<MiruPartitionedActivity> activities = new ArrayList<>();
-        long t = System.currentTimeMillis();
         int passes = 1;
         for (int p = 0; p < passes; p++) {
             activities.clear();
+
             for (int i = p * (capacity / passes); i < (p + 1) * (capacity / passes); i++) {
                 activities.add(generateActivity(i, rand));
                 if (i % 100_000 == 0) {
-                    //System.out.println("Generated:" + i);
+
+                    //System.out.println("Adding " + activities.size() + " activities.");
+                    long t = System.currentTimeMillis();
+                    service.writeToIndex(activities);
+                    long e = (System.currentTimeMillis() - t);
+                    int indexSize = p * (capacity / passes) + i;
+                    System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
+                            + " millis ratePerSecond:" + formatter.format(1000 * (activities.size() / e)));
+                    System.out.println("\t\tIndexSize:" + formatter.format(indexSize) + " sizeInBytes:" + formatter.format(service.sizeInBytes()));
+
+                    activities.clear();
                 }
             }
-            long e = (System.currentTimeMillis() - t);
-            System.out.println("Created " + formatter.format(capacity / passes) + " activities in " + formatter.format(e) + " millis");
+
+            if (!activities.isEmpty()) {
+                long t = System.currentTimeMillis();
+                service.writeToIndex(activities);
+                long e = (System.currentTimeMillis() - t);
+                int indexSize = (p + 1) * (capacity / passes);
+                System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
+                        + " millis ratePerSecond:" + formatter.format(1000 * (activities.size() / e)));
+                System.out.println("\t\tIndexSize:" + formatter.format(indexSize) + " sizeInBytes:" + formatter.format(service.sizeInBytes()));
+            }
 
             //System.out.println("Adding " + activities.size() + " activities.");
-            t = System.currentTimeMillis();
-            service.writeToIndex(activities);
-            e = (System.currentTimeMillis() - t);
-            long seconds = e / 1000;
             int indexSize = (p + 1) * (capacity / passes);
-            System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
-                    + " millis ratePerSecond:" + formatter.format(activities.size() / (seconds < 1 ? 1 : seconds)));
-            System.out.println("\t\tIndexSize:" + formatter.format(indexSize) + " sizeInBytes:" + formatter.format(service.sizeInBytes()));
 
-            for (int q = 0; q < 2; q++) {
+            for (int q = 0; q < numQueries; q++) {
                 List<MiruFieldFilter> fieldFilters = new ArrayList<>();
                 //fieldFilters.add(new MiruFieldFilter("author", ImmutableList.of(FilerIO.intBytes(rand.nextInt(1000)))));
                 List<String> following = generateDisticts(rand, 10_000, 1_000_000);

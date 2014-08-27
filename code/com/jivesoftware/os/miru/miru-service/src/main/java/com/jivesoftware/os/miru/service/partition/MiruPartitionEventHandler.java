@@ -5,13 +5,12 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /**
  *
  */
-@Singleton
 public class MiruPartitionEventHandler {
 
     private final MiruClusterRegistry clusterRegistry;

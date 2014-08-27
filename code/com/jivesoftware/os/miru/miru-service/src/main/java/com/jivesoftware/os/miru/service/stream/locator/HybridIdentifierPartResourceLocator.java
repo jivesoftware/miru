@@ -3,12 +3,10 @@ package com.jivesoftware.os.miru.service.stream.locator;
 import com.google.common.io.BaseEncoding;
 import java.io.File;
 import java.util.Random;
-import javax.inject.Singleton;
 
 /**
  *
  */
-@Singleton
 public class HybridIdentifierPartResourceLocator extends AbstractIdentifierPartResourceLocator implements MiruHybridResourceLocator {
 
     private final MiruHybridResourceCleaner cleaner;

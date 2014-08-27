@@ -65,4 +65,7 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(95)
     int getLongTailSolverPercentile();
+
+    @StringDefault("")
+    String getReadStreamIdsPropName();
 }

@@ -10,14 +10,12 @@ import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
 import java.util.List;
-import javax.inject.Inject;
 
 /** @author jonathan */
 public class MiruWriteToActivityAndSipWAL implements MiruActivityWALWriter {
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruActivityWALWriter activitySipWALWriter;
 
-    @Inject
     public MiruWriteToActivityAndSipWAL(
         RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
         RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {

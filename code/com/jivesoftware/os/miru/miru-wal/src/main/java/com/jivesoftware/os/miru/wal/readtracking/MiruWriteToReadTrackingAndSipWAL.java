@@ -11,23 +11,21 @@ import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALCol
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
 import java.util.List;
-import javax.inject.Inject;
 
 public class MiruWriteToReadTrackingAndSipWAL implements MiruReadTrackingWALWriter {
     private final MiruReadTrackingWALWriter readTrackingWALWriter;
     private final MiruReadTrackingWALWriter readTrackingSipWALWriter;
 
-    @Inject
     public MiruWriteToReadTrackingAndSipWAL(
         RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
         RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {
 
-        this.readTrackingWALWriter = new MiruReadTrackingWALWriterImpl<MiruReadTrackingWALColumnKey, MiruPartitionedActivity>(readTrackingWAL,
+        this.readTrackingWALWriter = new MiruReadTrackingWALWriterImpl<>(readTrackingWAL,
             READTRACKING_WAL_COLUMN_KEY,
             READTRACKING_WAL_COLUMN_VALUE,
             READTRACKING_WAL_COLLISIONID);
 
-        this.readTrackingSipWALWriter = new MiruReadTrackingWALWriterImpl<MiruReadTrackingSipWALColumnKey, Long>(readTrackingSipWAL,
+        this.readTrackingSipWALWriter = new MiruReadTrackingWALWriterImpl<>(readTrackingSipWAL,
             READTRACKING_SIP_WAL_COLUMN_KEY,
             READTRACKING_SIP_WAL_COLUMN_VALUE,
             READTRACKING_SIP_WAL_COLLISIONID);

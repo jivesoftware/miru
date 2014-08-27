@@ -45,6 +45,7 @@ import com.jivesoftware.os.miru.reader.MiruHttpClientConfigReader;
 import com.jivesoftware.os.miru.reader.MiruHttpClientConfigReaderConfig;
 import com.jivesoftware.os.miru.reader.MiruHttpClientReader;
 import com.jivesoftware.os.miru.reader.MiruHttpClientReaderConfig;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -55,11 +56,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 
-@Singleton
 public class MiruClusterReader implements MiruReader {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -74,19 +71,18 @@ public class MiruClusterReader implements MiruReader {
 
     private final Cache<MiruTenantId, ListMultimap<MiruPartitionState, MiruPartition>> mostRecentCache;
 
-    @Inject
     public MiruClusterReader(
-        MiruHttpClientReaderConfig readerConfig,
-        MiruHttpClientConfigReaderConfig configReaderConfig,
-        ObjectMapper objectMapper,
-        @Named("miruWarmOfflineHostExecutor") ExecutorService warmOfflineHostExecutor) {
+            MiruHttpClientReaderConfig readerConfig,
+            MiruHttpClientConfigReaderConfig configReaderConfig,
+            ObjectMapper objectMapper,
+            ExecutorService warmOfflineHostExecutor) {
 
         // MiruConfigReader client configuration
         Collection<HttpClientConfiguration> configReaderConfigurations = Lists.newArrayList();
         HttpClientConfig configurationReaderConfig = HttpClientConfig.newBuilder()
-            .setSocketTimeoutInMillis(configReaderConfig.getSocketTimeoutInMillis())
-            .setMaxConnections(configReaderConfig.getMaxConnections())
-            .build();
+                .setSocketTimeoutInMillis(configReaderConfig.getSocketTimeoutInMillis())
+                .setMaxConnections(configReaderConfig.getMaxConnections())
+                .build();
         configReaderConfigurations.add(configurationReaderConfig);
 
         HttpClientFactory configReaderHttpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configReaderConfigurations);
@@ -97,35 +93,35 @@ public class MiruClusterReader implements MiruReader {
         // MiruReader client configuration
         Collection<HttpClientConfiguration> readerConfigurations = Lists.newArrayList();
         HttpClientConfig baseReaderConfig = HttpClientConfig.newBuilder()
-            .setSocketTimeoutInMillis(readerConfig.getSocketTimeoutInMillis())
-            .setMaxConnections(readerConfig.getMaxConnections())
-            .build();
+                .setSocketTimeoutInMillis(readerConfig.getSocketTimeoutInMillis())
+                .setMaxConnections(readerConfig.getMaxConnections())
+                .build();
         readerConfigurations.add(baseReaderConfig);
 
         this.httpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(readerConfigurations);
         this.warmOfflineHostExecutor = warmOfflineHostExecutor;
         this.objectMapper = objectMapper;
         this.mostRecentCache = CacheBuilder.newBuilder() //TODO config
-            .maximumSize(1000)
-            .expireAfterWrite(1, TimeUnit.MINUTES)
-            .build();
+                .maximumSize(1000)
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .build();
         this.userNodeAffinity = readerConfig.getUserNodeAffinity();
     }
 
     @Override
     public AggregateCountsResult filterCustomStream(final MiruTenantId tenantId, final Optional<MiruActorId> userIdentity,
-        final Optional<MiruAuthzExpression> authzExpression, final MiruAggregateCountsQueryCriteria queryCriteria) throws MiruQueryServiceException {
+            final Optional<MiruAuthzExpression> authzExpression, final MiruAggregateCountsQueryCriteria queryCriteria) throws MiruQueryServiceException {
 
         try {
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             AggregateCountsResult result = callForRandomBestOnlineHost(
-                tenantId, partitionsForTenant, AggregateCountsResult.EMPTY_RESULTS, randomAffinity(userIdentity),
-                new RandomBestOnlineHostCallback<AggregateCountsResult>() {
-                    @Override
-                    public AggregateCountsResult call(MiruHost host) throws MiruQueryServiceException {
-                        return readerForHost(host).filterCustomStream(tenantId, userIdentity, authzExpression, queryCriteria);
-                    }
-                });
+                    tenantId, partitionsForTenant, AggregateCountsResult.EMPTY_RESULTS, randomAffinity(userIdentity),
+                    new RandomBestOnlineHostCallback<AggregateCountsResult>() {
+                        @Override
+                        public AggregateCountsResult call(MiruHost host) throws MiruQueryServiceException {
+                            return readerForHost(host).filterCustomStream(tenantId, userIdentity, authzExpression, queryCriteria);
+                        }
+                    });
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -136,18 +132,18 @@ public class MiruClusterReader implements MiruReader {
 
     @Override
     public AggregateCountsResult filterInboxStreamAll(final MiruTenantId tenantId, final Optional<MiruActorId> userIdentity,
-        final Optional<MiruAuthzExpression> authzExpression, final MiruAggregateCountsQueryCriteria queryCriteria) throws MiruQueryServiceException {
+            final Optional<MiruAuthzExpression> authzExpression, final MiruAggregateCountsQueryCriteria queryCriteria) throws MiruQueryServiceException {
 
         try {
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             AggregateCountsResult result = callForRandomBestOnlineHost(
-                tenantId, partitionsForTenant, AggregateCountsResult.EMPTY_RESULTS, randomAffinity(userIdentity),
-                new RandomBestOnlineHostCallback<AggregateCountsResult>() {
-                    @Override
-                    public AggregateCountsResult call(MiruHost host) throws MiruQueryServiceException {
-                        return readerForHost(host).filterInboxStreamAll(tenantId, userIdentity, authzExpression, queryCriteria);
-                    }
-                });
+                    tenantId, partitionsForTenant, AggregateCountsResult.EMPTY_RESULTS, randomAffinity(userIdentity),
+                    new RandomBestOnlineHostCallback<AggregateCountsResult>() {
+                        @Override
+                        public AggregateCountsResult call(MiruHost host) throws MiruQueryServiceException {
+                            return readerForHost(host).filterInboxStreamAll(tenantId, userIdentity, authzExpression, queryCriteria);
+                        }
+                    });
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -158,18 +154,18 @@ public class MiruClusterReader implements MiruReader {
 
     @Override
     public AggregateCountsResult filterInboxStreamUnread(final MiruTenantId tenantId, final Optional<MiruActorId> userIdentity,
-        final Optional<MiruAuthzExpression> authzExpression, final MiruAggregateCountsQueryCriteria queryCriteria) throws MiruQueryServiceException {
+            final Optional<MiruAuthzExpression> authzExpression, final MiruAggregateCountsQueryCriteria queryCriteria) throws MiruQueryServiceException {
 
         try {
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             AggregateCountsResult result = callForRandomBestOnlineHost(
-                tenantId, partitionsForTenant, AggregateCountsResult.EMPTY_RESULTS, randomAffinity(userIdentity),
-                new RandomBestOnlineHostCallback<AggregateCountsResult>() {
-                    @Override
-                    public AggregateCountsResult call(MiruHost host) throws MiruQueryServiceException {
-                        return readerForHost(host).filterInboxStreamUnread(tenantId, userIdentity, authzExpression, queryCriteria);
-                    }
-                });
+                    tenantId, partitionsForTenant, AggregateCountsResult.EMPTY_RESULTS, randomAffinity(userIdentity),
+                    new RandomBestOnlineHostCallback<AggregateCountsResult>() {
+                        @Override
+                        public AggregateCountsResult call(MiruHost host) throws MiruQueryServiceException {
+                            return readerForHost(host).filterInboxStreamUnread(tenantId, userIdentity, authzExpression, queryCriteria);
+                        }
+                    });
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -180,39 +176,39 @@ public class MiruClusterReader implements MiruReader {
 
     @Override
     public AggregateCountsResult filterCustomStream(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
-        throws MiruQueryServiceException {
+            throws MiruQueryServiceException {
 
         throw new UnsupportedOperationException("Direct host communication is not supported with this MiruReader.");
     }
 
     @Override
     public AggregateCountsResult filterInboxStreamAll(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
-        throws MiruQueryServiceException {
+            throws MiruQueryServiceException {
 
         throw new UnsupportedOperationException("Direct host communication is not supported with this MiruReader.");
     }
 
     @Override
     public AggregateCountsResult filterInboxStreamUnread(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
-        throws MiruQueryServiceException {
+            throws MiruQueryServiceException {
 
         throw new UnsupportedOperationException("Direct host communication is not supported with this MiruReader.");
     }
 
     @Override
     public DistinctCountResult countCustomStream(final MiruTenantId tenantId, final Optional<MiruActorId> userIdentity,
-        final Optional<MiruAuthzExpression> authzExpression, final MiruDistinctCountQueryCriteria queryCriteria) throws MiruQueryServiceException {
+            final Optional<MiruAuthzExpression> authzExpression, final MiruDistinctCountQueryCriteria queryCriteria) throws MiruQueryServiceException {
 
         try {
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             DistinctCountResult result = callForRandomBestOnlineHost(
-                tenantId, partitionsForTenant, DistinctCountResult.EMPTY_RESULTS, randomAffinity(userIdentity),
-                new RandomBestOnlineHostCallback<DistinctCountResult>() {
-                    @Override
-                    public DistinctCountResult call(MiruHost host) throws MiruQueryServiceException {
-                        return readerForHost(host).countCustomStream(tenantId, userIdentity, authzExpression, queryCriteria);
-                    }
-                });
+                    tenantId, partitionsForTenant, DistinctCountResult.EMPTY_RESULTS, randomAffinity(userIdentity),
+                    new RandomBestOnlineHostCallback<DistinctCountResult>() {
+                        @Override
+                        public DistinctCountResult call(MiruHost host) throws MiruQueryServiceException {
+                            return readerForHost(host).countCustomStream(tenantId, userIdentity, authzExpression, queryCriteria);
+                        }
+                    });
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -223,18 +219,18 @@ public class MiruClusterReader implements MiruReader {
 
     @Override
     public DistinctCountResult countInboxStreamAll(final MiruTenantId tenantId, final Optional<MiruActorId> userIdentity,
-        final Optional<MiruAuthzExpression> authzExpression, final MiruDistinctCountQueryCriteria queryCriteria) throws MiruQueryServiceException {
+            final Optional<MiruAuthzExpression> authzExpression, final MiruDistinctCountQueryCriteria queryCriteria) throws MiruQueryServiceException {
 
         try {
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             DistinctCountResult result = callForRandomBestOnlineHost(
-                tenantId, partitionsForTenant, DistinctCountResult.EMPTY_RESULTS, randomAffinity(userIdentity),
-                new RandomBestOnlineHostCallback<DistinctCountResult>() {
-                    @Override
-                    public DistinctCountResult call(MiruHost host) throws MiruQueryServiceException {
-                        return readerForHost(host).countInboxStreamAll(tenantId, userIdentity, authzExpression, queryCriteria);
-                    }
-                });
+                    tenantId, partitionsForTenant, DistinctCountResult.EMPTY_RESULTS, randomAffinity(userIdentity),
+                    new RandomBestOnlineHostCallback<DistinctCountResult>() {
+                        @Override
+                        public DistinctCountResult call(MiruHost host) throws MiruQueryServiceException {
+                            return readerForHost(host).countInboxStreamAll(tenantId, userIdentity, authzExpression, queryCriteria);
+                        }
+                    });
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -245,18 +241,18 @@ public class MiruClusterReader implements MiruReader {
 
     @Override
     public DistinctCountResult countInboxStreamUnread(final MiruTenantId tenantId, final Optional<MiruActorId> userIdentity,
-        final Optional<MiruAuthzExpression> authzExpression, final MiruDistinctCountQueryCriteria queryCriteria) throws MiruQueryServiceException {
+            final Optional<MiruAuthzExpression> authzExpression, final MiruDistinctCountQueryCriteria queryCriteria) throws MiruQueryServiceException {
 
         try {
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             DistinctCountResult result = callForRandomBestOnlineHost(
-                tenantId, partitionsForTenant, DistinctCountResult.EMPTY_RESULTS, randomAffinity(userIdentity),
-                new RandomBestOnlineHostCallback<DistinctCountResult>() {
-                    @Override
-                    public DistinctCountResult call(MiruHost host) throws MiruQueryServiceException {
-                        return readerForHost(host).countInboxStreamUnread(tenantId, userIdentity, authzExpression, queryCriteria);
-                    }
-                });
+                    tenantId, partitionsForTenant, DistinctCountResult.EMPTY_RESULTS, randomAffinity(userIdentity),
+                    new RandomBestOnlineHostCallback<DistinctCountResult>() {
+                        @Override
+                        public DistinctCountResult call(MiruHost host) throws MiruQueryServiceException {
+                            return readerForHost(host).countInboxStreamUnread(tenantId, userIdentity, authzExpression, queryCriteria);
+                        }
+                    });
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -275,39 +271,39 @@ public class MiruClusterReader implements MiruReader {
 
     @Override
     public DistinctCountResult countCustomStream(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
-        throws MiruQueryServiceException {
+            throws MiruQueryServiceException {
 
         throw new UnsupportedOperationException("Direct host communication is not supported with this MiruReader.");
     }
 
     @Override
     public DistinctCountResult countInboxStreamAll(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
-        throws MiruQueryServiceException {
+            throws MiruQueryServiceException {
 
         throw new UnsupportedOperationException("Direct host communication is not supported with this MiruReader.");
     }
 
     @Override
     public DistinctCountResult countInboxStreamUnread(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
-        throws MiruQueryServiceException {
+            throws MiruQueryServiceException {
 
         throw new UnsupportedOperationException("Direct host communication is not supported with this MiruReader.");
     }
 
     @Override
     public TrendingResult scoreTrending(final MiruTenantId tenantId, final Optional<MiruActorId> userIdentity,
-        final Optional<MiruAuthzExpression> authzExpression, final MiruTrendingQueryCriteria queryCriteria) throws MiruQueryServiceException {
+            final Optional<MiruAuthzExpression> authzExpression, final MiruTrendingQueryCriteria queryCriteria) throws MiruQueryServiceException {
 
         try {
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             TrendingResult result = callForRandomBestOnlineHost(
-                tenantId, partitionsForTenant, TrendingResult.EMPTY_RESULTS, randomAffinity(userIdentity),
-                new RandomBestOnlineHostCallback<TrendingResult>() {
-                    @Override
-                    public TrendingResult call(MiruHost host) throws MiruQueryServiceException {
-                        return readerForHost(host).scoreTrending(tenantId, userIdentity, authzExpression, queryCriteria);
-                    }
-                });
+                    tenantId, partitionsForTenant, TrendingResult.EMPTY_RESULTS, randomAffinity(userIdentity),
+                    new RandomBestOnlineHostCallback<TrendingResult>() {
+                        @Override
+                        public TrendingResult call(MiruHost host) throws MiruQueryServiceException {
+                            return readerForHost(host).scoreTrending(tenantId, userIdentity, authzExpression, queryCriteria);
+                        }
+                    });
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -348,7 +344,7 @@ public class MiruClusterReader implements MiruReader {
     }
 
     private <R> R callForRandomBestOnlineHost(MiruTenantId tenantId, ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant,
-        R defaultResult, Optional<Random> randomAffinity, RandomBestOnlineHostCallback<R> randomBestOnlineHostCallback) {
+            R defaultResult, Optional<Random> randomAffinity, RandomBestOnlineHostCallback<R> randomBestOnlineHostCallback) {
 
         for (MiruHost host : randomBestOnlineHost(partitionsForTenant, randomAffinity)) {
             try {

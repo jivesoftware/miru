@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.property.MiruPropertyName;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
@@ -21,6 +20,7 @@ import com.jivesoftware.os.miru.service.query.base.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader.StreamReadTrackingSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader.StreamReadTrackingWAL;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -45,7 +45,7 @@ public class MiruJustInTimeBackfillerizer<BM> {
     }
 
     public void backfill(final MiruQueryStream stream, final MiruFilter streamFilter, final MiruTenantId tenantId,
-        final MiruPartitionId partitionId, final MiruStreamId streamId) throws Exception {
+        final MiruPartitionId partitionId, final MiruStreamId streamId, final Optional<String> readStreamIdsPropName) throws Exception {
 
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
         Future<?> future = backfillExecutor.submit(new Callable<Void>() {
@@ -70,7 +70,7 @@ public class MiruJustInTimeBackfillerizer<BM> {
                         MiruIBA streamIdAsIBA = new MiruIBA(streamId.getBytes());
 
                         long oldestBackfilledEventId = Long.MAX_VALUE;
-                        int propId = stream.schema.getPropertyId(MiruPropertyName.READ_STREAMIDS.getPropertyName());
+                        int propId = readStreamIdsPropName.isPresent() ? stream.schema.getPropertyId(readStreamIdsPropName.get()) : -1;
                         //TODO more efficient way to merge answer into inbox and unread
                         MiruIntIterator intIterator = bitmaps.intIterator(answer);
                         List<Integer> inboxIds = Lists.newLinkedList();
@@ -88,7 +88,7 @@ public class MiruJustInTimeBackfillerizer<BM> {
 
                                 inboxIds.add(i);
 
-                                MiruIBA[] readStreamIds = miruActivity.propsValues[propId];
+                                MiruIBA[] readStreamIds = propId >= 0 ? miruActivity.propsValues[propId] : null;
                                 if (readStreamIds == null || !Arrays.asList(readStreamIds).contains(streamIdAsIBA)) {
                                     unreadIds.add(i);
                                 }

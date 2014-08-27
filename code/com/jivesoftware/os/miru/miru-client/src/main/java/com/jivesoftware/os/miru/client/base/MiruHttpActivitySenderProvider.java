@@ -2,11 +2,6 @@ package com.jivesoftware.os.miru.client.base;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruWriter;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.client.MiruActivitySenderProvider;
-import com.jivesoftware.os.miru.client.MiruClientConfig;
 import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
@@ -15,14 +10,18 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruWriter;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.client.MiruActivitySenderProvider;
+import com.jivesoftware.os.miru.client.MiruClientConfig;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /** @author jonathan */
-@Singleton
 public class MiruHttpActivitySenderProvider implements MiruActivitySenderProvider {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
