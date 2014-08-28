@@ -21,7 +21,7 @@ import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
+import com.jivesoftware.os.miru.query.MiruInternalActivity;
 import java.io.IOException;
 
 /**

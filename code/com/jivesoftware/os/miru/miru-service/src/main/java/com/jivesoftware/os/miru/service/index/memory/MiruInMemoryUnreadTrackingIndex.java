@@ -4,12 +4,12 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.MiruInvertedIndexAppender;
+import com.jivesoftware.os.miru.query.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndexAppender;
-import com.jivesoftware.os.miru.service.index.MiruUnreadTrackingIndex;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -45,10 +45,10 @@ public class MiruInMemoryUnreadTrackingIndex<BM> implements MiruUnreadTrackingIn
         return getOrCreateUnread(streamId);
     }
 
-    private MiruInvertedIndex getOrCreateUnread(MiruStreamId streamId) throws Exception {
-        MiruInvertedIndex got = index.get(streamId);
+    private MiruInvertedIndex<BM> getOrCreateUnread(MiruStreamId streamId) throws Exception {
+        MiruInvertedIndex<BM> got = index.get(streamId);
         if (got == null) {
-            index.putIfAbsent(streamId, new MiruInMemoryInvertedIndex(bitmaps));
+            index.putIfAbsent(streamId, new MiruInMemoryInvertedIndex<>(bitmaps));
             got = index.get(streamId);
         }
         return got;
@@ -56,13 +56,13 @@ public class MiruInMemoryUnreadTrackingIndex<BM> implements MiruUnreadTrackingIn
 
     @Override
     public void applyRead(MiruStreamId streamId, BM readMask) throws Exception {
-        MiruInvertedIndex unread = getOrCreateUnread(streamId);
+        MiruInvertedIndex<BM> unread = getOrCreateUnread(streamId);
         unread.andNotToSourceSize(readMask);
     }
 
     @Override
     public void applyUnread(MiruStreamId streamId, BM unreadMask) throws Exception {
-        MiruInvertedIndex unread = getOrCreateUnread(streamId);
+        MiruInvertedIndex<BM> unread = getOrCreateUnread(streamId);
         unread.orToSourceSize(unreadMask);
     }
 

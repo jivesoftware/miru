@@ -7,14 +7,13 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.stream.factory.FilterCustomExecuteQuery;
+import com.jivesoftware.os.miru.query.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolution;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -24,6 +23,7 @@ public class MiruHostedPartitionComparisonTest {
 
     private final int windowSize = 1000;
     private final int percentile = 95;
+    private final String queryKey = "TestExecuteQuery";
 
     private MiruHostedPartitionComparison partitionComparison;
     private TestTimestamper timestamper = new TestTimestamper();
@@ -45,14 +45,12 @@ public class MiruHostedPartitionComparisonTest {
         assertEquals(partitionComparison.getComparator().compare(p1, p2), 0);
 
         timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), 0)),
-                FilterCustomExecuteQuery.class.getCanonicalName());
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), 0)), queryKey);
 
         assertEquals(partitionComparison.getComparator().compare(p1, p2), -1);
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), 0)),
-                FilterCustomExecuteQuery.class.getCanonicalName());
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), 0)), queryKey);
         assertEquals(partitionComparison.getComparator().compare(p1, p2), 1);
     }
 
@@ -62,15 +60,13 @@ public class MiruHostedPartitionComparisonTest {
         MiruHostedPartition p2 = mockPartition(49602);
 
         timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), 0)),
-                FilterCustomExecuteQuery.class.getCanonicalName());
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p1.getCoord(), 0)), queryKey);
 
         Comparator<MiruHostedPartition> comparator = partitionComparison.getComparator();
         assertEquals(comparator.compare(p1, p2), -1);
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), 0)),
-                FilterCustomExecuteQuery.class.getCanonicalName());
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution<Void>(null, p2.getCoord(), 0)), queryKey);
         // comparator was built prior to p2 promotion, so p1 should still be sorted earlier
         assertEquals(comparator.compare(p1, p2), -1);
     }
@@ -82,9 +78,8 @@ public class MiruHostedPartitionComparisonTest {
             MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49600 + i));
             solutions.add(new MiruSolution<Void>(null, coord, i));
         }
-        partitionComparison.analyzeSolutions(solutions, FilterCustomExecuteQuery.class.getCanonicalName());
-        assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, FilterCustomExecuteQuery.class.getCanonicalName()).get().longValue(),
-                percentile);
+        partitionComparison.analyzeSolutions(solutions, queryKey);
+        assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, queryKey).get().longValue(), percentile);
     }
 
     private MiruHostedPartition mockPartition(int port) {

@@ -20,7 +20,10 @@ import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
 import com.googlecode.javaewah.IntIterator;
-import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruIntIterator;
+import com.jivesoftware.os.miru.query.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.stream.filter.AnswerCardinalityLastSetBitmapStorage;
 import com.jivesoftware.os.miru.service.stream.filter.MatchNoMoreThanNBitmapStorage;
 import java.io.DataInput;
@@ -294,7 +297,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
         return mask;
     }
 
-    private static final EWAHCompressedBitmap EMPTY = new EWAHCompressedBitmap();// Balls!!
+    private static final EWAHCompressedBitmap EMPTY = new EWAHCompressedBitmap(); // Balls!!
 
     @Override
     public void copy(EWAHCompressedBitmap container, EWAHCompressedBitmap original) {
@@ -318,4 +321,13 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
         };
     }
 
+    @Override
+    public int lastSetBit(EWAHCompressedBitmap bitmap) {
+        MiruIntIterator iterator = intIterator(bitmap);
+        int last = -1;
+        for (; iterator.hasNext();) {
+            last = iterator.next();
+        }
+        return last;
+    }
 }

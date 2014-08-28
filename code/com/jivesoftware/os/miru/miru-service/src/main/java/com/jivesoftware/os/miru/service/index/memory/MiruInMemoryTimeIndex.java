@@ -2,9 +2,9 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.query.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import gnu.trove.impl.Constants;
 import gnu.trove.iterator.TLongIntIterator;
 import gnu.trove.map.hash.TLongIntHashMap;

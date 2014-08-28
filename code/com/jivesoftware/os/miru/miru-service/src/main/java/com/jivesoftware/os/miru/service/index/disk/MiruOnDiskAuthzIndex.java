@@ -10,12 +10,12 @@ import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.VariableKeySizeFileBackedKeyedStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruAuthzIndex;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import java.io.File;
 import java.util.List;
@@ -31,7 +31,8 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     private final VariableKeySizeFileBackedKeyedStore keyedStore;
     private final MiruAuthzCache<BM> cache;
 
-    public MiruOnDiskAuthzIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore, MiruAuthzCache<BM> cache) throws Exception {
+    public MiruOnDiskAuthzIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore, MiruAuthzCache<BM> cache)
+            throws Exception {
         this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
         this.keyedStore = new VariableKeySizeFileBackedKeyedStore(mapDirectory, swapDirectory, chunkStore, new int[] { 4, 16, 64, 256, 1024 }, 100, 512);

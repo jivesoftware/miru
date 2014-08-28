@@ -2,10 +2,10 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
+import com.jivesoftware.os.miru.query.MiruActivityIndex;
+import com.jivesoftware.os.miru.query.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkArgument;

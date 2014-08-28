@@ -12,16 +12,17 @@ import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.query.MiruAuthzIndex;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskAuthzIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryAuthzIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
-import com.jivesoftware.os.miru.service.stream.MiruActivityInternExtern;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,7 +52,7 @@ public class MiruAuthzIndexTest {
     @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8192);
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         final Map<Integer, EWAHCompressedBitmap> smallBitsIn = Maps.newHashMap();
@@ -87,10 +88,10 @@ public class MiruAuthzIndexTest {
                 = new MiruOnDiskAuthzIndex<>(bitmaps, mapDir, swapDir, multiChunkStore, cache(bitmaps, miruAuthzUtils, 10));
         smallMiruOnDiskAuthzIndex.bulkImport(tenantId, smallMiruInMemoryAuthzIndex);
 
-        return new Object[][]{
-            {smallMiruInMemoryAuthzIndex, miruAuthzUtils, smallBitsIn},
-            {largeMiruInMemoryAuthzIndex, miruAuthzUtils, largeBitsIn},
-            {smallMiruOnDiskAuthzIndex, miruAuthzUtils, smallBitsIn}
+        return new Object[][] {
+                { smallMiruInMemoryAuthzIndex, miruAuthzUtils, smallBitsIn },
+                { largeMiruInMemoryAuthzIndex, miruAuthzUtils, largeBitsIn },
+                { smallMiruOnDiskAuthzIndex, miruAuthzUtils, smallBitsIn }
         };
     }
 
@@ -105,7 +106,7 @@ public class MiruAuthzIndexTest {
 
     private <BM> InvertedIndexData<BM> buildInMemoryInvertedIndexes(MiruBitmaps<BM> bitmaps, Map<Integer, BM> bitsIn, MiruAuthzUtils<BM> miruAuthzUtils,
             int size) throws Exception {
-        Map<String, MiruInvertedIndex> importItems = Maps.newHashMap();
+        Map<String, MiruInvertedIndex<BM>> importItems = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
@@ -119,12 +120,12 @@ public class MiruAuthzIndexTest {
             bitmaps.set(bits, 1_000_000 * i);
             bitsIn.put(i, bits);
 
-            MiruInvertedIndex<BM> index = new MiruInMemoryInvertedIndex(bitmaps);
+            MiruInvertedIndex<BM> index = new MiruInMemoryInvertedIndex<>(bitmaps);
             index.or(bits);
             importItems.put(authz, index);
         }
 
-        return new InvertedIndexData(bitsIn, importItems);
+        return new InvertedIndexData<>(bitsIn, importItems);
     }
 
     private static class InvertedIndexData<BM2> {

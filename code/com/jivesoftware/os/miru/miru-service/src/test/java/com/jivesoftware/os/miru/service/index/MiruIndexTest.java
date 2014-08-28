@@ -9,7 +9,9 @@ import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruIndex;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryIndex;
@@ -31,14 +33,14 @@ public class MiruIndexTest {
     private long initialChunkStoreSizeInBytes = 4096;
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testGetMissingFieldTerm(MiruBitmaps<BM> bitmaps, MiruIndex miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
-        Optional<MiruInvertedIndex> invertedIndex = miruIndex.get(1, 1);
+    public <BM> void testGetMissingFieldTerm(MiruBitmaps<BM> bitmaps, MiruIndex<BM> miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+        Optional<MiruInvertedIndex<BM>> invertedIndex = miruIndex.get(1, 1);
         assertNotNull(invertedIndex);
         assertFalse(invertedIndex.isPresent());
     }
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testEmptyIndexSize(MiruBitmaps<BM> bitmaps, MiruIndex miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+    public <BM> void testEmptyIndexSize(MiruBitmaps<BM> bitmaps, MiruIndex<BM> miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
         long sizeInBytes = miruIndex.sizeInMemory() + miruIndex.sizeOnDisk();
         if (miruBackingStorage.equals(MiruBackingStorage.memory)) {
             assertEquals(sizeInBytes, 0);
@@ -51,7 +53,7 @@ public class MiruIndexTest {
     }
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testIndexFieldTerm(MiruBitmaps<BM> bitmaps, MiruIndex miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+    public <BM> void testIndexFieldTerm(MiruBitmaps<BM> bitmaps, MiruIndex<BM> miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
         miruIndex.index(1, 2, 3);
         Optional<MiruInvertedIndex<BM>> invertedIndex = miruIndex.get(1, 2);
         assertNotNull(invertedIndex);
@@ -60,8 +62,9 @@ public class MiruIndexTest {
     }
 
     @Test(dataProvider = "miruIndexDataProviderWithData")
-    public void testExpectedData(MiruIndex miruIndex, Map<Long, MiruInvertedIndex> importData, MiruBackingStorage miruBackingStorage) throws Exception {
-        long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[]{1, 2}));
+    public <BM> void testExpectedData(MiruIndex<BM> miruIndex, Map<Long, MiruInvertedIndex> importData, MiruBackingStorage miruBackingStorage) throws
+            Exception {
+        long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { 1, 2 }));
         MiruInvertedIndex expected = importData.get(fieldTermId);
 
         long sizeInBytes = miruIndex.sizeInMemory() + miruIndex.sizeOnDisk();
@@ -75,7 +78,7 @@ public class MiruIndexTest {
             assertEquals(sizeInBytes, initialMapStoreSizeInBytes); // chunk store is shared and not included in index size
         }
 
-        Optional<MiruInvertedIndex> invertedIndex = miruIndex.get(1, 2);
+        Optional<MiruInvertedIndex<BM>> invertedIndex = miruIndex.get(1, 2);
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.isPresent());
 
@@ -85,7 +88,7 @@ public class MiruIndexTest {
 
     @DataProvider(name = "miruIndexDataProvider")
     public Object[][] miruIndexDataProvider() throws Exception {
-        MiruInMemoryIndex miruInMemoryIndex = new MiruInMemoryIndex(new MiruBitmapsEWAH(4));
+        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4));
 
         File mapDir = Files.createTempDirectory("map").toFile();
         File swapDir = Files.createTempDirectory("swap").toFile();
@@ -93,33 +96,33 @@ public class MiruIndexTest {
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), initialChunkStoreSizeInBytes, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
-        MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, multiChunkStore);
+        MiruOnDiskIndex<EWAHCompressedBitmap> miruOnDiskIndex = new MiruOnDiskIndex<>(new MiruBitmapsEWAH(4), mapDir, swapDir, multiChunkStore);
 
-        return new Object[][]{
-            {new MiruBitmapsEWAH(4), miruInMemoryIndex, MiruBackingStorage.memory},
-            {new MiruBitmapsEWAH(4), miruOnDiskIndex, MiruBackingStorage.disk}
+        return new Object[][] {
+                { new MiruBitmapsEWAH(4), miruInMemoryIndex, MiruBackingStorage.memory },
+                { new MiruBitmapsEWAH(4), miruOnDiskIndex, MiruBackingStorage.disk }
         };
     }
 
     @DataProvider(name = "miruIndexDataProviderWithData")
     public Object[][] miruIndexDataProviderWithData() throws Exception {
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
-        MiruInMemoryIndex miruInMemoryIndex = new MiruInMemoryIndex(new MiruBitmapsEWAH(4));
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4));
 
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
         bitmap.set(1);
         bitmap.set(2);
         bitmap.set(3);
-        MiruInvertedIndex invertedIndex = new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(4));
+        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex = new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(4));
         invertedIndex.or(bitmap);
 
-        long key = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[]{1, 2}));
-        final Map<Long, MiruInvertedIndex> importData = ImmutableMap.of(
+        long key = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { 1, 2 }));
+        final Map<Long, MiruInvertedIndex<EWAHCompressedBitmap>> importData = ImmutableMap.of(
                 key, invertedIndex
         );
-        miruInMemoryIndex.bulkImport(tenantId, new BulkExport<Map<Long, MiruInvertedIndex>>() {
+        miruInMemoryIndex.bulkImport(tenantId, new BulkExport<Map<Long, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
             @Override
-            public Map<Long, MiruInvertedIndex> bulkExport(MiruTenantId tenantId) throws Exception {
+            public Map<Long, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
                 return importData;
             }
         });
@@ -130,12 +133,12 @@ public class MiruIndexTest {
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), initialChunkStoreSizeInBytes, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
-        MiruOnDiskIndex miruOnDiskIndex = new MiruOnDiskIndex(new MiruBitmapsEWAH(4), mapDir, swapDir, multiChunkStore);
+        MiruOnDiskIndex<EWAHCompressedBitmap> miruOnDiskIndex = new MiruOnDiskIndex<>(new MiruBitmapsEWAH(4), mapDir, swapDir, multiChunkStore);
         miruOnDiskIndex.bulkImport(tenantId, miruInMemoryIndex);
 
-        return new Object[][]{
-            {miruInMemoryIndex, importData, MiruBackingStorage.memory},
-            {miruOnDiskIndex, importData, MiruBackingStorage.disk}
+        return new Object[][] {
+                { miruInMemoryIndex, importData, MiruBackingStorage.memory },
+                { miruOnDiskIndex, importData, MiruBackingStorage.disk }
         };
     }
 }

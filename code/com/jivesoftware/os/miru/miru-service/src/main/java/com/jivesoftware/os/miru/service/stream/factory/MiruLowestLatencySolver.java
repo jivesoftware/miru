@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.stream.factory;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.query.MiruSolvable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;

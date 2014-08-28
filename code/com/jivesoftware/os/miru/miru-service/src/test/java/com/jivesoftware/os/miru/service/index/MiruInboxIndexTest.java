@@ -10,6 +10,9 @@ import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.query.MiruInboxIndex;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInboxIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex;
@@ -33,7 +36,7 @@ import static org.testng.Assert.assertTrue;
 public class MiruInboxIndexTest {
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
-    public void testGetEmptyInboxWithoutCreating(MiruInboxIndex miruInboxIndex, MiruStreamId miruStreamId)
+    public void testGetEmptyInboxWithoutCreating(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId miruStreamId)
             throws Exception {
 
         Optional<EWAHCompressedBitmap> inbox = miruInboxIndex.getInbox(miruStreamId);
@@ -42,7 +45,7 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
-    public void testGetEmptyInboxAndCreate(MiruInboxIndex miruInboxIndex, MiruStreamId miruStreamId)
+    public void testGetEmptyInboxAndCreate(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId miruStreamId)
             throws Exception {
 
         MiruInvertedIndexAppender inbox = miruInboxIndex.getAppender(miruStreamId);
@@ -64,7 +67,7 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testIndexedData(MiruInboxIndex miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
+    public void testIndexedData(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
         Optional<EWAHCompressedBitmap> inbox = miruInboxIndex.getInbox(streamId);
         assertNotNull(inbox);
         assertTrue(inbox.isPresent());
@@ -74,7 +77,8 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testLastActivityIndexNotSetAutomatically(MiruInboxIndex miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
+    public void testLastActivityIndexNotSetAutomatically(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds)
+            throws Exception {
 
         int lastActivityIndex = miruInboxIndex.getLastActivityIndex(streamId);
         assertEquals(lastActivityIndex, -1);
@@ -86,7 +90,7 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
+    public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
 
         MiruStreamId newStreamId = new MiruStreamId(new Id(1337).toBytes());
         int lastActivityIndex = miruInboxIndex.getLastActivityIndex(newStreamId);
@@ -99,7 +103,7 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testLastActivityIndex(MiruInboxIndex miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
+    public void testLastActivityIndex(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
 
         int nextId = Integer.MAX_VALUE / 3;
         miruInboxIndex.setLastActivityIndex(streamId, nextId);
@@ -136,9 +140,9 @@ public class MiruInboxIndexTest {
         // Create in-memory inbox index
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
         MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
-        MiruInMemoryInboxIndex miruInMemoryInboxIndex = new MiruInMemoryInboxIndex(bitmaps);
+        MiruInMemoryInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = new MiruInMemoryInboxIndex<>(bitmaps);
 
-        ConcurrentMap<MiruStreamId, MiruInvertedIndex> index = new ConcurrentHashMap<>();
+        ConcurrentMap<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>> index = new ConcurrentHashMap<>();
         Map<MiruStreamId, Integer> lastActivityIndex = Maps.newHashMap();
 
         // Add activities to index
@@ -146,14 +150,14 @@ public class MiruInboxIndexTest {
         invertedIndex.set(1);
         invertedIndex.set(2);
         invertedIndex.set(3);
-        MiruInMemoryInvertedIndex ii = new MiruInMemoryInvertedIndex(bitmaps);
+        MiruInMemoryInvertedIndex<EWAHCompressedBitmap> ii = new MiruInMemoryInvertedIndex<>(bitmaps);
         ii.or(invertedIndex);
         index.put(streamId, ii);
 
-        final InboxAndLastActivityIndex inboxAndLastActivityIndex = new InboxAndLastActivityIndex(index, lastActivityIndex);
-        miruInMemoryInboxIndex.bulkImport(tenantId, new BulkExport<InboxAndLastActivityIndex>() {
+        final InboxAndLastActivityIndex<EWAHCompressedBitmap> inboxAndLastActivityIndex = new InboxAndLastActivityIndex<>(index, lastActivityIndex);
+        miruInMemoryInboxIndex.bulkImport(tenantId, new BulkExport<InboxAndLastActivityIndex<EWAHCompressedBitmap>>() {
             @Override
-            public InboxAndLastActivityIndex bulkExport(MiruTenantId tenantId) throws Exception {
+            public InboxAndLastActivityIndex<EWAHCompressedBitmap> bulkExport(MiruTenantId tenantId) throws Exception {
                 return inboxAndLastActivityIndex;
             }
         });
@@ -165,7 +169,7 @@ public class MiruInboxIndexTest {
         File chunks = new File(chunksDir.toFile(), "chunks.data");
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
-        MiruOnDiskInboxIndex miruOnDiskInboxIndex = new MiruOnDiskInboxIndex(bitmaps, mapDir, swapDir, multiChunkStore);
+        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDir, swapDir, multiChunkStore);
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 
         return new Object[][]{

@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.query.MiruSolvable;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;

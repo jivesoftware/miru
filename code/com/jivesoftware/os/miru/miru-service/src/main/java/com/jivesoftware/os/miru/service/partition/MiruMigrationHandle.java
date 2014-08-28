@@ -8,11 +8,11 @@ import com.jivesoftware.os.miru.service.stream.MiruStream;
 /**
  *
  */
-public interface MiruMigrationHandle extends AutoCloseable {
+public interface MiruMigrationHandle<BM> extends AutoCloseable {
 
     boolean canMigrateTo(MiruBackingStorage destinationStorage);
 
-    MiruStream getStream();
+    MiruStream<BM> getStream();
 
-    MiruPartitionStreamGate migrated(MiruStream stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state, long sipTimestamp);
+    MiruPartitionStreamGate<BM> migrated(MiruStream<BM> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state, long sipTimestamp);
 }

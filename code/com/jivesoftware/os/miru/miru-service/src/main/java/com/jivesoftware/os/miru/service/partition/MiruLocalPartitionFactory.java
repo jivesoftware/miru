@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
@@ -29,10 +31,9 @@ public class MiruLocalPartitionFactory {
         this.scheduledExecutorService = scheduledExecutorService;
     }
 
-    public MiruHostedPartition create(MiruPartitionCoord coord) throws Exception {
-        MiruLocalHostedPartition partition = new MiruLocalHostedPartition(coord, miruStreamFactory,
+    public <BM> MiruHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+        return new MiruLocalHostedPartition<>(bitmaps, coord, miruStreamFactory,
                 activityWALReader, partitionEventHandler, scheduledExecutorService, config.getPartitionRebuildBatchSize(),
                 config.getPartitionBootstrapIntervalInMillis(), config.getPartitionRunnableIntervalInMillis());
-        return partition;
     }
 }

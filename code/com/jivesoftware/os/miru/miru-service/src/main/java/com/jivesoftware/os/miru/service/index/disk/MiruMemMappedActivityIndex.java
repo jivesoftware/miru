@@ -12,10 +12,10 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.service.activity.MiruInternalActivity;
+import com.jivesoftware.os.miru.query.MiruActivityIndex;
+import com.jivesoftware.os.miru.query.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import java.io.File;
 import java.io.IOException;
@@ -38,8 +38,9 @@ public class MiruMemMappedActivityIndex implements MiruActivityIndex, BulkImport
 
     private Filer filer;
 
-    public MiruMemMappedActivityIndex(MiruFilerProvider filerProvider, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore, ObjectMapper objectMapper)
-        throws Exception {
+    public MiruMemMappedActivityIndex(MiruFilerProvider filerProvider, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore,
+            ObjectMapper objectMapper)
+            throws Exception {
 
         this.filerProvider = filerProvider;
         this.keyedStore = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 4, 100, chunkStore, 512);

@@ -20,10 +20,10 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.query.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.stream.factory.MiruFilterUtils;
 import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
@@ -44,8 +44,9 @@ import static org.testng.Assert.assertEquals;
 public class MiruStreamFactoryTest {
 
     private MiruSchema schema;
-    private MiruStreamFactory<EWAHCompressedBitmap> streamFactory;
+    private MiruStreamFactory streamFactory;
     private MiruHost host = new MiruHost("localhost", 49600);
+    private MiruBitmaps<EWAHCompressedBitmap> bitmaps;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -54,23 +55,22 @@ public class MiruStreamFactoryTest {
         when(config.getDefaultStorage()).thenReturn(MiruBackingStorage.memory.name());
 
         RowColumnValueStoreImpl<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
-            new RowColumnValueStoreImpl<>();
+                new RowColumnValueStoreImpl<>();
         RowColumnValueStoreImpl<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> readTrackingSipWAL =
-            new RowColumnValueStoreImpl<>();
+                new RowColumnValueStoreImpl<>();
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
-        MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(4);
+        bitmaps = new MiruBitmapsEWAH(4);
         MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
                 Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
-        MiruFilterUtils<EWAHCompressedBitmap> miruFilterUtils = new MiruFilterUtils<>(bitmaps, activityInterner);
 
-        streamFactory = new MiruStreamFactory<>(bitmaps, new SingleSchemaProvider(schema), Executors.newSingleThreadExecutor(),
+        streamFactory = new MiruStreamFactory(new SingleSchemaProvider(schema),
+                Executors.newSingleThreadExecutor(),
                 new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
                 new MiruTempDirectoryResourceLocator(),
                 new MiruTempDirectoryResourceLocator(),
                 20,
                 MiruBackingStorage.memory,
-                miruFilterUtils,
                 activityInterner);
 
     }
@@ -83,28 +83,28 @@ public class MiruStreamFactoryTest {
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, host);
 
-        MiruStream<EWAHCompressedBitmap> inMemoryStream = streamFactory.allocate(coord, MiruBackingStorage.memory);
+        MiruStream<EWAHCompressedBitmap> inMemoryStream = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
 
         for (int i = 0; i < numberOfActivities; i++) {
             String[] authz = { "aaaabbbbcccc" };
             MiruActivity activity = new MiruActivity.Builder(tenantId, (long) i, authz, 0)
-                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
-                .build();
+                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
+                    .build();
             int id = inMemoryStream.getTimeIndex().nextId((long) i);
             inMemoryStream.getIndexStream().index(activity, id);
             inMemoryStream.getIndexStream().remove(activity, id);
         }
 
-        MiruStream<EWAHCompressedBitmap> onDiskStream = streamFactory.copyToDisk(coord, inMemoryStream);
+        MiruStream<EWAHCompressedBitmap> onDiskStream = streamFactory.copyToDisk(bitmaps, coord, inMemoryStream);
 
         assertEquals(onDiskStream.getQueryStream().timeIndex.getSmallestTimestamp(), inMemoryStream.getQueryStream().timeIndex.getSmallestTimestamp());
         assertEquals(onDiskStream.getQueryStream().timeIndex.getLargestTimestamp(), inMemoryStream.getQueryStream().timeIndex.getLargestTimestamp());
 
         MiruAuthzExpression authzExpression = new MiruAuthzExpression(Arrays.asList("aaaabbbbcccc"));
         assertEquals(onDiskStream.getQueryStream().authzIndex.getCompositeAuthz(authzExpression),
-            inMemoryStream.getQueryStream().authzIndex.getCompositeAuthz(authzExpression));
+                inMemoryStream.getQueryStream().authzIndex.getCompositeAuthz(authzExpression));
         assertEquals(onDiskStream.getQueryStream().removalIndex.getIndex(),
-            inMemoryStream.getQueryStream().removalIndex.getIndex());
+                inMemoryStream.getQueryStream().removalIndex.getIndex());
 
         for (int i = 0; i < numberOfActivities; i++) {
             assertEquals(onDiskStream.getQueryStream().timeIndex.getTimestamp(i), inMemoryStream.getQueryStream().timeIndex.getTimestamp(i));
@@ -114,7 +114,7 @@ public class MiruStreamFactoryTest {
             if (fieldId >= 0) {
                 MiruTermId termId = new MiruTermId(String.valueOf(i).getBytes());
                 assertEquals(onDiskStream.getQueryStream().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex(),
-                    inMemoryStream.getQueryStream().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex());
+                        inMemoryStream.getQueryStream().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex());
             }
         }
     }
@@ -125,9 +125,9 @@ public class MiruStreamFactoryTest {
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, host);
 
-        MiruStream inMem = minimalInMemory(coord);
+        MiruStream<EWAHCompressedBitmap> inMem = minimalInMemory(coord);
 
-        MiruStream miruStream = streamFactory.copyToDisk(coord, inMem);
+        MiruStream<EWAHCompressedBitmap> miruStream = streamFactory.copyToDisk(bitmaps, coord, inMem);
         streamFactory.markStorage(coord, MiruBackingStorage.disk);
         streamFactory.close(miruStream);
 
@@ -140,23 +140,23 @@ public class MiruStreamFactoryTest {
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, host);
 
-        MiruStream inMem = minimalInMemory(coord);
+        MiruStream<EWAHCompressedBitmap> inMem = minimalInMemory(coord);
 
-        MiruStream miruStream = streamFactory.copyMemMapped(coord, inMem);
+        MiruStream<EWAHCompressedBitmap> miruStream = streamFactory.copyMemMapped(bitmaps, coord, inMem);
         streamFactory.markStorage(coord, MiruBackingStorage.mem_mapped);
         streamFactory.close(miruStream);
 
         assertEquals(streamFactory.findBackingStorage(coord), MiruBackingStorage.mem_mapped);
     }
 
-    private MiruStream minimalInMemory(MiruPartitionCoord coord) throws Exception {
+    private MiruStream<EWAHCompressedBitmap> minimalInMemory(MiruPartitionCoord coord) throws Exception {
         //TODO detecting backing storage fails if we haven't indexed at least 1 term for every field, 1 inbox, 1 unread
         MiruActivity.Builder builder = new MiruActivity.Builder(coord.tenantId, 0, new String[] { "abcd" }, 0);
         for (MiruFieldName fieldName : MiruFieldName.values()) {
             builder.putFieldValue(fieldName.getFieldName(), "defg");
         }
 
-        MiruStream inMem = streamFactory.allocate(coord, MiruBackingStorage.memory);
+        MiruStream<EWAHCompressedBitmap> inMem = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
         int id = inMem.getTimeIndex().nextId(System.currentTimeMillis());
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(0));
         inMem.getIndexStream().index(builder.build(), id);

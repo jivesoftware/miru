@@ -4,10 +4,10 @@ import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import java.io.DataInput;
 import java.util.Arrays;
 import java.util.Collections;
@@ -71,7 +71,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
 
     @Override
     public void remove(int id) throws Exception { // Kinda crazy expensive way to remove an intermediary bit.
-        BM remove= bitmaps.create();
+        BM remove = bitmaps.create();
         bitmaps.set(remove, id);
         synchronized (filer.lock()) {
             filer.sync();
@@ -106,7 +106,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
     public void andNot(BM mask) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            BM r= bitmaps.create();
+            BM r = bitmaps.create();
             bitmaps.andNot(r, getIndex(), Collections.singletonList(mask));
             setIndex(r);
         }
@@ -116,7 +116,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
     public void or(BM mask) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            BM r= bitmaps.create();
+            BM r = bitmaps.create();
             bitmaps.or(r, Arrays.asList(getIndex(), mask));
             setIndex(r);
         }

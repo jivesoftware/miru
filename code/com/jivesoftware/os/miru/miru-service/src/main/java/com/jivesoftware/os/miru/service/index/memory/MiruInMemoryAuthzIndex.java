@@ -3,26 +3,29 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruAuthzIndex;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-/** @author jonathan */
-public class MiruInMemoryAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<Map<String, MiruInvertedIndex<BM>>>, BulkExport<Map<String, MiruInvertedIndex<BM>>> {
+/**
+ * @author jonathan
+ */
+public class MiruInMemoryAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<Map<String, MiruInvertedIndex<BM>>>,
+        BulkExport<Map<String, MiruInvertedIndex<BM>>> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final ConcurrentMap<String, MiruInvertedIndex<BM>> index;
     private final MiruAuthzCache<BM> cache;
 
     public MiruInMemoryAuthzIndex(MiruBitmaps<BM> bitmaps, MiruAuthzCache<BM> cache) {
-        this.bitmaps =  bitmaps;
+        this.bitmaps = bitmaps;
         this.index = new ConcurrentHashMap<>();
         this.cache = cache;
     }

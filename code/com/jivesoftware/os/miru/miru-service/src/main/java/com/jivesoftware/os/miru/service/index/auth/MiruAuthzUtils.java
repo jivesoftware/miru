@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service.index.auth;
 import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
 import java.util.List;
 
 /**

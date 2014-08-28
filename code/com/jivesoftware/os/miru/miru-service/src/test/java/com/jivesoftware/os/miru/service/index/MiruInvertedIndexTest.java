@@ -5,7 +5,8 @@ import com.google.common.collect.Sets;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.keyed.store.RandomAccessSwappableFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInvertedIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
@@ -186,34 +187,35 @@ public class MiruInvertedIndexTest {
         int diskAppends = 100;
         int diskSets = 1_000;
 
-        return new Object[][]{
-            {new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(100)), memoryAppends, memorySets},
-            {new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), diskAppends, diskSets}
+        return new Object[][] {
+                { new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(100)), memoryAppends, memorySets },
+                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))),
+                        diskAppends, diskSets }
         };
     }
 
     @DataProvider(name = "miruInvertedIndexDataProvider")
     public Object[][] miruInvertedIndexDataProvider() throws Exception {
-        return new Object[][]{
-            {new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(100))},
-            {new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")))}
+        return new Object[][] {
+                { new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(100)) },
+                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))) }
         };
     }
 
     @DataProvider(name = "miruInvertedIndexDataProviderWithOverhead")
     public Object[][] miruInvertedIndexDataProviderWithOverhead() throws Exception {
-        return new Object[][]{
-            {new MiruInMemoryInvertedIndex(new MiruBitmapsEWAH(4)), 0},
-            {new MiruOnDiskInvertedIndex(new MiruBitmapsEWAH(4), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), 12}
-        /**
-         * @see com.googlecode.javaewah.EWAHCompressedBitmap#serializedSizeInBytes()
-         */
+        return new Object[][] {
+                { new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(4)), 0 },
+                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(4), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), 12 }
+                /**
+                 * @see com.googlecode.javaewah.EWAHCompressedBitmap#serializedSizeInBytes()
+                 */
         };
     }
 
     @DataProvider(name = "miruInvertedIndexDataProviderWithData")
     public Object[][] miruInvertedIndexDataProviderWithData() throws Exception {
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruInMemoryInvertedIndex<EWAHCompressedBitmap> miruInMemoryInvertedIndex = new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(100));
 
         final EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
@@ -231,9 +233,9 @@ public class MiruInvertedIndexTest {
                 new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")));
         miruOnDiskInvertedIndex.bulkImport(tenantId, miruInMemoryInvertedIndex);
 
-        return new Object[][]{
-            {miruInMemoryInvertedIndex, Sets.newHashSet(1, 2, 3)},
-            {miruOnDiskInvertedIndex, Sets.newHashSet(1, 2, 3)}
+        return new Object[][] {
+                { miruInMemoryInvertedIndex, Sets.newHashSet(1, 2, 3) },
+                { miruOnDiskInvertedIndex, Sets.newHashSet(1, 2, 3) }
         };
     }
 

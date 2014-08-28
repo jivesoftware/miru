@@ -5,10 +5,10 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.query.MiruField;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -91,7 +91,7 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Map<Miru
         return Optional.absent();
     }
 
-    public MiruInMemoryIndex getIndex() {
+    public MiruInMemoryIndex<BM> getIndex() {
         return index;
     }
 

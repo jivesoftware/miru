@@ -8,7 +8,7 @@
         <version>0.7-SNAPSHOT</version>
         <relativePath>../inheritance-poms/shared-lib-build-management/pom.xml</relativePath>
     </parent>
-    <groupId>com.jivesoftwareos.miru</groupId>
+    <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-reco</artifactId>
     <version>0.7-SNAPSHOT</version>
     <properties>

@@ -13,9 +13,9 @@ import java.util.List;
  */
 public interface MiruExpectedTenants {
 
-    MiruTenantTopology getTopology(MiruTenantId tenantId);
+    MiruTenantTopology<?> getTopology(MiruTenantId tenantId);
 
-    Collection<MiruTenantTopology> topologies();
+    Collection<MiruTenantTopology<?>> topologies();
 
     boolean isExpected(MiruTenantId tenantId);
 

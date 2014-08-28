@@ -31,7 +31,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     private final MiruClusterRegistry clusterRegistry;
     private final MiruTenantTopologyFactory tenantTopologyFactory;
 
-    private final ConcurrentMap<MiruTenantId, MiruTenantTopology> hostedTenants = Maps.newConcurrentMap();
+    private final ConcurrentMap<MiruTenantId, MiruTenantTopology<?>> hostedTenants = Maps.newConcurrentMap();
     private final Set<MiruTenantId> expectedTenants = Collections.newSetFromMap(Maps.<MiruTenantId, Boolean>newConcurrentMap());
 
     public MiruClusterExpectedTenants(MiruPartitionInfoProvider partitionInfoProvider,
@@ -45,12 +45,12 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     }
 
     @Override
-    public MiruTenantTopology getTopology(MiruTenantId tenantId) {
+    public MiruTenantTopology<?> getTopology(MiruTenantId tenantId) {
         return hostedTenants.get(tenantId);
     }
 
     @Override
-    public Collection<MiruTenantTopology> topologies() {
+    public Collection<MiruTenantTopology<?>> topologies() {
         return hostedTenants.values();
     }
 
@@ -63,7 +63,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     public void expect(List<MiruTenantId> expectedTenantsForHost) throws Exception {
         checkArgument(expectedTenantsForHost != null);
         for (MiruTenantId tenantId : expectedTenantsForHost) {
-            MiruTenantTopology tenantTopology = hostedTenants.get(tenantId);
+            MiruTenantTopology<?> tenantTopology = hostedTenants.get(tenantId);
             if (tenantTopology == null) {
                 tenantTopology = tenantTopologyFactory.create(tenantId);
                 hostedTenants.putIfAbsent(tenantId, tenantTopology);

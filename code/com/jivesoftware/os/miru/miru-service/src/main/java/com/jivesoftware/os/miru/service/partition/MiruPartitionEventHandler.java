@@ -6,8 +6,6 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 
-import javax.inject.Inject;
-
 /**
  *
  */
@@ -15,7 +13,6 @@ public class MiruPartitionEventHandler {
 
     private final MiruClusterRegistry clusterRegistry;
 
-    @Inject
     public MiruPartitionEventHandler(MiruClusterRegistry clusterRegistry) {
         this.clusterRegistry = clusterRegistry;
     }

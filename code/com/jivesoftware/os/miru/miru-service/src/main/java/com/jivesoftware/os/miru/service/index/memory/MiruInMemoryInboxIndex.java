@@ -4,12 +4,12 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruInboxIndex;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruInboxIndex;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex.InboxAndLastActivityIndex;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -92,13 +92,13 @@ public class MiruInMemoryInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImpor
     }
 
     @Override
-    public InboxAndLastActivityIndex bulkExport(MiruTenantId tenantId) throws Exception {
-        return new InboxAndLastActivityIndex(index, lastActivityIndex);
+    public InboxAndLastActivityIndex<BM> bulkExport(MiruTenantId tenantId) throws Exception {
+        return new InboxAndLastActivityIndex<>(index, lastActivityIndex);
     }
 
     @Override
     public void bulkImport(MiruTenantId tenantId, BulkExport<InboxAndLastActivityIndex<BM>> importItems) throws Exception {
-        InboxAndLastActivityIndex inboxAndLastActivityIndex = importItems.bulkExport(tenantId);
+        InboxAndLastActivityIndex<BM> inboxAndLastActivityIndex = importItems.bulkExport(tenantId);
         this.index.putAll(inboxAndLastActivityIndex.index);
         this.lastActivityIndex.putAll(inboxAndLastActivityIndex.lastActivityIndex);
     }

@@ -4,11 +4,11 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruIndex;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruIndex;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import gnu.trove.impl.Constants;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import gnu.trove.procedure.TLongObjectProcedure;
@@ -24,7 +24,7 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Map<Long
 
     public MiruInMemoryIndex(MiruBitmaps<BM> bitmaps) {
         this.bitmaps = bitmaps;
-        this.index = new TLongObjectHashMap<MiruInvertedIndex<BM>>(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR, -1);
+        this.index = new TLongObjectHashMap<>(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR, -1);
     }
 
     @Override

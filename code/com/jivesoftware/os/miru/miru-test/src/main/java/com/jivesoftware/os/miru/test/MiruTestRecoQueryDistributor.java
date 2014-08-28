@@ -4,16 +4,15 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
-import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruRecoQueryCriteria;
-import com.jivesoftware.os.miru.api.MiruRecoQueryParams;
-import com.jivesoftware.os.miru.api.MiruTrendingQueryCriteria;
-import com.jivesoftware.os.miru.api.MiruTrendingQueryParams;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.reco.plugins.reco.MiruRecoQueryCriteria;
+import com.jivesoftware.os.miru.reco.plugins.reco.MiruRecoQueryParams;
+import com.jivesoftware.os.miru.reco.plugins.trending.MiruTrendingQueryCriteria;
+import com.jivesoftware.os.miru.reco.plugins.trending.MiruTrendingQueryParams;
 import java.util.Arrays;
 
 /**
@@ -49,8 +48,6 @@ public class MiruTestRecoQueryDistributor {
 
         return new MiruTrendingQueryParams(
                 featureSupplier.miruTenantId(),
-                Optional.<MiruActorId>absent(),
-                Optional.of(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId)))),
                 criteriaBuilder.build());
     }
 
@@ -62,6 +59,7 @@ public class MiruTestRecoQueryDistributor {
                 Optional.<ImmutableList<MiruFilter>>absent());
         MiruRecoQueryCriteria criteria = new MiruRecoQueryCriteria(
                 filter,
+                new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
@@ -74,8 +72,6 @@ public class MiruTestRecoQueryDistributor {
 
         return new MiruRecoQueryParams(
                 featureSupplier.miruTenantId(),
-                Optional.<MiruActorId>absent(),
-                Optional.of(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId)))),
                 criteria);
     }
 

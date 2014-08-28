@@ -15,11 +15,9 @@ import com.jivesoftware.os.miru.api.MiruWriter;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.client.MiruActivitySenderProvider;
 import com.jivesoftware.os.miru.client.MiruClientConfig;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.inject.Inject;
 
 /** @author jonathan */
 public class MiruHttpActivitySenderProvider implements MiruActivitySenderProvider {
@@ -33,7 +31,6 @@ public class MiruHttpActivitySenderProvider implements MiruActivitySenderProvide
 
     private static final ConcurrentHashMap<String, RequestHelper> hostToRequestHelpers = new ConcurrentHashMap<>();
 
-    @Inject
     public MiruHttpActivitySenderProvider(MiruClientConfig config, ObjectMapper objectMapper) {
         this.sendActivitesEndpointUrl = MiruWriter.WRITER_SERVICE_ENDPOINT_PREFIX + MiruWriter.ADD_ACTIVITIES;
         this.socketTimeoutInMillis = config.getSocketTimeoutInMillis();

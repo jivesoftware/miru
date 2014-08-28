@@ -19,10 +19,16 @@
         <module>miru-client</module>
         <module>miru-cluster</module>
         <module>miru-wal</module>
+        <module>miru-query</module>
         <module>miru-reco</module>
         <module>miru-ewah</module>
         <module>miru-reader-deployable</module>
         <module>miru-writer-deployable</module>
         <module>miru-test</module>
+        <module>miru-plugin-test</module>
+        <module>miru-stream-plugins</module>
+        <module>miru-stream-plugins-test</module>
+        <module>miru-reco-plugins</module>
+        <module>miru-reco-plugins-test</module>
     </modules>
 </project>

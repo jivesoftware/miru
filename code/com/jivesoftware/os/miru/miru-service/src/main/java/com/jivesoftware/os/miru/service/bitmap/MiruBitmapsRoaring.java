@@ -16,7 +16,10 @@
 package com.jivesoftware.os.miru.service.bitmap;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruIntIterator;
+import com.jivesoftware.os.miru.query.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.Arrays;
@@ -163,7 +166,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
             return mask;
         }
 
-        mask.flip(0, largestIndex);
+        mask.flip(0, largestIndex + 1);
         if (andNotMask.isPresent()) {
             mask.andNot(andNotMask.get());
         }
@@ -184,8 +187,6 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
         mask.flip(smallestId, largestId);
         return mask;
     }
-
-    private static final RoaringBitmap EMPTY = new RoaringBitmap();// Balls!!
 
     @Override
     public void copy(RoaringBitmap container, RoaringBitmap original) {
@@ -209,5 +210,13 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
         };
     }
 
-
+    @Override
+    public int lastSetBit(RoaringBitmap bitmap) {
+        MiruIntIterator iterator = intIterator(bitmap);
+        int last = -1;
+        for (; iterator.hasNext();) {
+            last = iterator.next();
+        }
+        return last;
+    }
 }

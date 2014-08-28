@@ -46,6 +46,21 @@
             <version>0.7-SNAPSHOT</version>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-query</artifactId>
+            <version>0.7-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-stream-plugins</artifactId>
+            <version>0.7-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-reco-plugins</artifactId>
+            <version>0.7-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>id</artifactId>
         </dependency>

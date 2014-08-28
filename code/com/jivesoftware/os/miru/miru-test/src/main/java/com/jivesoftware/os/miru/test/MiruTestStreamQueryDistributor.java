@@ -6,17 +6,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.ObjectId;
-import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryCriteria;
-import com.jivesoftware.os.miru.api.MiruAggregateCountsQueryParams;
-import com.jivesoftware.os.miru.api.MiruDistinctCountQueryCriteria;
-import com.jivesoftware.os.miru.api.MiruDistinctCountQueryParams;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
-import com.jivesoftware.os.miru.api.query.MiruTimeRange;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.query.MiruTimeRange;
+import com.jivesoftware.os.miru.stream.plugins.count.MiruDistinctCountQueryCriteria;
+import com.jivesoftware.os.miru.stream.plugins.count.MiruDistinctCountQueryParams;
+import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryCriteria;
+import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryParams;
 import java.util.Random;
 import javax.annotation.Nullable;
 
@@ -63,7 +62,8 @@ public class MiruTestStreamQueryDistributor {
                                 new MiruFilter(
                                         MiruFilterOperation.or,
                                         Optional.of(buildFieldFilters(inbox, userId)),
-                                        Optional.<ImmutableList<MiruFilter>>absent())))));
+                                        Optional.<ImmutableList<MiruFilter>>absent())))))
+                .setAuthzExpression(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))));
 
         if (random.nextInt(100) < 10) {
             // 10% page, which uses an origin timestamp plus an offset
@@ -83,8 +83,6 @@ public class MiruTestStreamQueryDistributor {
 
         return new MiruAggregateCountsQueryParams(
                 featureSupplier.miruTenantId(),
-                Optional.<MiruActorId>absent(),
-                Optional.<MiruAuthzExpression>of(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId)))),
                 criteriaBuilder.build());
     }
 
@@ -101,7 +99,8 @@ public class MiruTestStreamQueryDistributor {
                                 new MiruFilter(
                                         MiruFilterOperation.or,
                                         Optional.of(buildFieldFilters(inbox, userId)),
-                                        Optional.<ImmutableList<MiruFilter>>absent())))));
+                                        Optional.<ImmutableList<MiruFilter>>absent())))))
+                .setAuthzExpression(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))));
 
         if (!inbox) {
             // activity stream gets distinct count after last time viewed
@@ -115,8 +114,6 @@ public class MiruTestStreamQueryDistributor {
 
         return new MiruDistinctCountQueryParams(
                 featureSupplier.miruTenantId(),
-                Optional.<MiruActorId>absent(),
-                Optional.<MiruAuthzExpression>of(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId)))),
                 criteriaBuilder.build());
     }
 

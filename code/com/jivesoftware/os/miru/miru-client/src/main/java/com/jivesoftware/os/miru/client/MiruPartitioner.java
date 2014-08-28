@@ -19,12 +19,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
 
 /** @author jonathan */
-@Singleton
 public class MiruPartitioner {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -37,8 +33,7 @@ public class MiruPartitioner {
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
     private final StripingLocksProvider<MiruTenantId> locks = new StripingLocksProvider<>(64);
 
-    @Inject
-    public MiruPartitioner(@Named("miruWriterId") int writerId,
+    public MiruPartitioner(int writerId,
         MiruPartitionIdProvider partitionIdProvider,
         MiruActivityWALWriter activityWALWriter,
         MiruReadTrackingWALWriter readTrackingWAL,

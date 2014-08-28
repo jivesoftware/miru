@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.ReusableBuffers;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.ReusableBuffers;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;

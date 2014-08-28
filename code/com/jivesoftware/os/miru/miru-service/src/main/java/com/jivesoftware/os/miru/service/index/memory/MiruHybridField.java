@@ -8,10 +8,10 @@ import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.query.MiruField;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.MiruField;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
-import com.jivesoftware.os.miru.service.index.MiruInvertedIndex;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -22,17 +22,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Short-lived (transient) impl. Term dictionary is mem-mapped. Supports index().
  * Next term id is held in memory.
  */
-public class MiruHybridField implements MiruField, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> {
+public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> {
 
     private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1024 }; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
 
     private final MiruFieldDefinition fieldDefinition;
-    private final MiruInMemoryIndex index;
+    private final MiruInMemoryIndex<BM> index;
     private final AtomicInteger nextTermId;
     private final VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
 
-    public MiruHybridField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex index, File mapDirectory) {
+    public MiruHybridField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex<BM> index, File mapDirectory) {
         this.fieldDefinition = fieldDefinition;
         this.index = index;
         this.nextTermId = new AtomicInteger();
@@ -116,9 +116,9 @@ public class MiruHybridField implements MiruField, BulkExport<Map<MiruTermId, Mi
     }
 
     @Override
-    public MiruInvertedIndex getOrCreateInvertedIndex(MiruTermId term) throws Exception {
+    public MiruInvertedIndex<BM> getOrCreateInvertedIndex(MiruTermId term) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
-        Optional<MiruInvertedIndex> invertedIndex = getInvertedIndex(indexKey);
+        Optional<MiruInvertedIndex<BM>> invertedIndex = getInvertedIndex(indexKey);
         if (invertedIndex.isPresent()) {
             return invertedIndex.get();
         }
@@ -126,7 +126,7 @@ public class MiruHybridField implements MiruField, BulkExport<Map<MiruTermId, Mi
     }
 
     @Override
-    public Optional<MiruInvertedIndex> getInvertedIndex(MiruTermId term, int considerIfIndexIdGreaterThanN) throws Exception {
+    public Optional<MiruInvertedIndex<BM>> getInvertedIndex(MiruTermId term, int considerIfIndexIdGreaterThanN) throws Exception {
         Optional<MiruFieldIndexKey> indexKey = getTermId(term);
         if (indexKey.isPresent() && indexKey.get().getMaxId() > considerIfIndexIdGreaterThanN) {
             return getInvertedIndex(term);
@@ -135,7 +135,7 @@ public class MiruHybridField implements MiruField, BulkExport<Map<MiruTermId, Mi
     }
 
     @Override
-    public Optional<MiruInvertedIndex> getInvertedIndex(MiruTermId term) throws Exception {
+    public Optional<MiruInvertedIndex<BM>> getInvertedIndex(MiruTermId term) throws Exception {
         Optional<MiruFieldIndexKey> indexKey = getTermId(term);
         if (indexKey.isPresent()) {
             return getInvertedIndex(indexKey.get());
@@ -147,7 +147,7 @@ public class MiruHybridField implements MiruField, BulkExport<Map<MiruTermId, Mi
         return index;
     }
 
-    private Optional<MiruInvertedIndex> getInvertedIndex(MiruFieldIndexKey indexKey) throws Exception {
+    private Optional<MiruInvertedIndex<BM>> getInvertedIndex(MiruFieldIndexKey indexKey) throws Exception {
         if (indexKey != null) {
             return index.get(fieldDefinition.fieldId, indexKey.getId());
         }

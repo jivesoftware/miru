@@ -1,0 +1,186 @@
+package com.jivesoftware.os.miru.stream.plugins.filter;
+
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruField;
+import com.jivesoftware.os.miru.query.MiruInternalActivity;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.MiruQueryStream;
+import com.jivesoftware.os.miru.query.ReusableBuffers;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkState;
+import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsResult.AggregateCount;
+
+/**
+ *
+ */
+public class AggregateCounts {
+
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
+    private final MiruProvider miruProvider;
+
+    public AggregateCounts(MiruProvider miruProvider) {
+        this.miruProvider = miruProvider;
+    }
+
+    public <BM> AggregateCountsResult getAggregateCounts(MiruBitmaps<BM> bitmaps,
+            MiruQueryStream<BM> stream,
+            AggregateCountsQuery query,
+            Optional<AggregateCountsReport> lastReport,
+            BM answer,
+            Optional<BM> counter)
+            throws Exception {
+
+        log.debug("Get aggregate counts for answer {}", answer);
+
+        int collectedDistincts = 0;
+        int skippedDistincts = 0;
+        Set<MiruTermId> aggregateTerms;
+        if (lastReport.isPresent()) {
+            collectedDistincts = lastReport.get().collectedDistincts;
+            skippedDistincts = lastReport.get().skippedDistincts;
+            aggregateTerms = Sets.newHashSet(lastReport.get().aggregateTerms);
+        } else {
+            aggregateTerms = Sets.newHashSet();
+        }
+
+        List<AggregateCount> aggregateCounts = new ArrayList<>();
+        int fieldId = stream.schema.getFieldId(query.aggregateCountAroundField);
+        if (fieldId >= 0) {
+            MiruField<BM> aggregateField = stream.fieldIndex.getField(fieldId);
+
+            BM unreadIndex = null;
+            if (query.streamId.isPresent()) {
+                Optional<BM> unread = stream.unreadTrackingIndex.getUnread(query.streamId.get());
+                if (unread.isPresent()) {
+                    unreadIndex = unread.get();
+                }
+            }
+
+            // 2 to swap answers, 2 to swap counters, 1 to check unread
+            final int numBuffers = 2 + (counter.isPresent() ? 2 : 0) + (unreadIndex != null ? 1 : 0);
+            ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, numBuffers);
+
+            long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
+            CardinalityAndLastSetBit answerCollector = null;
+            for (MiruTermId aggregateTermId : aggregateTerms) { // Consider
+                Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField.getInvertedIndex(aggregateTermId);
+                if (!invertedIndex.isPresent()) {
+                    continue;
+                }
+
+                BM termIndex = invertedIndex.get().getIndex();
+                BM revisedAnswer = reusable.next();
+                answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
+                answer = revisedAnswer;
+
+                long afterCount;
+                if (counter.isPresent()) {
+                    BM revisedCounter = reusable.next();
+                    CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
+                    counter = Optional.of(revisedCounter);
+                    afterCount = counterCollector.cardinality;
+                } else {
+                    afterCount = answerCollector.cardinality;
+                }
+
+                boolean unread = false;
+                if (unreadIndex != null) {
+                    BM unreadAnswer = reusable.next();
+                    CardinalityAndLastSetBit storage = bitmaps.andWithCardinalityAndLastSetBit(unreadAnswer, Arrays.asList(unreadIndex, termIndex));
+                    if (storage.cardinality > 0) {
+                        unread = true;
+                    }
+                }
+
+                aggregateCounts.add(new AggregateCount(null, aggregateTermId.getBytes(), beforeCount - afterCount, unread));
+                beforeCount = afterCount;
+            }
+
+            while (true) {
+                int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
+                if (lastSetBit < 0) {
+                    break;
+                }
+
+                MiruInternalActivity activity = stream.activityIndex.get(query.tenantId, lastSetBit);
+                MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+                if (fieldValues == null || fieldValues.length == 0) {
+                    // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
+                    BM removeUnknownField = bitmaps.create();
+                    bitmaps.set(removeUnknownField, lastSetBit);
+                    BM revisedAnswer = reusable.next();
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
+                    answer = revisedAnswer;
+                    beforeCount--;
+
+                } else {
+                    MiruTermId aggregateTermId = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
+                    byte[] aggregateValue = aggregateTermId.getBytes();
+                    aggregateTerms.add(aggregateTermId);
+
+                    Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField.getInvertedIndex(aggregateTermId);
+                    checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
+
+                    BM termIndex = invertedIndex.get().getIndex();
+
+                    BM revisedAnswer = reusable.next();
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
+                    answer = revisedAnswer;
+
+                    long afterCount;
+                    if (counter.isPresent()) {
+                        BM revisedCounter = reusable.next();
+                        CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
+                        counter = Optional.of(revisedCounter);
+                        afterCount = counterCollector.cardinality;
+                    } else {
+                        afterCount = answerCollector.cardinality;
+                    }
+
+                    collectedDistincts++;
+                    if (collectedDistincts > query.startFromDistinctN) {
+                        boolean unread = false;
+                        if (unreadIndex != null) {
+                            BM unreadAnswer = reusable.next();
+                            CardinalityAndLastSetBit storage = bitmaps.andNotWithCardinalityAndLastSetBit(unreadAnswer, unreadIndex, termIndex);
+                            if (storage.cardinality > 0) {
+                                unread = true;
+                            }
+                        }
+
+                        AggregateCount aggregateCount = new AggregateCount(
+                                miruProvider.getActivityInternExtern(query.tenantId).extern(activity, stream.schema),
+                                aggregateValue,
+                                beforeCount - afterCount,
+                                unread);
+                        aggregateCounts.add(aggregateCount);
+
+                        if (aggregateCounts.size() >= query.desiredNumberOfDistincts) {
+                            break;
+                        }
+                    } else {
+                        skippedDistincts++;
+                    }
+                    beforeCount = afterCount;
+                }
+            }
+        }
+
+        return new AggregateCountsResult(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
+    }
+
+}

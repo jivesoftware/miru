@@ -11,10 +11,12 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
-import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.MiruQueryHandle;
+import com.jivesoftware.os.miru.query.MiruQueryStream;
+import com.jivesoftware.os.miru.query.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.stream.MiruStream;
-
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -26,14 +28,15 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Package protected class, for use by {@link com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition}.
  */
-class MiruPartitionStreamGate {
+class MiruPartitionStreamGate<BM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
     private static final int PERMITS = 64; //TODO config?
 
+    public final MiruBitmaps<BM> bitmaps;
     public final MiruPartitionCoord coord;
     public final MiruPartitionCoordInfo info;
-    public final MiruStream stream;
+    public final MiruStream<BM> stream;
 
     public final AtomicLong sipTimestamp;
     public final AtomicLong rebuildTimestamp;
@@ -46,9 +49,10 @@ class MiruPartitionStreamGate {
     public final Semaphore semaphore;
     public final AtomicBoolean closed;
 
-    MiruPartitionStreamGate(MiruPartitionCoord coord, MiruPartitionCoordInfo info, MiruStream stream, AtomicLong sipTimestamp, AtomicLong rebuildTimestamp,
-            AtomicLong refreshTimestamp, Set<TimeAndVersion> seenLastSip, Set<Integer> beginWriters, Set<Integer> endWriters, Semaphore semaphore,
-            AtomicBoolean closed) {
+    MiruPartitionStreamGate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruPartitionCoordInfo info, MiruStream<BM> stream, AtomicLong sipTimestamp,
+            AtomicLong rebuildTimestamp, AtomicLong refreshTimestamp, Set<TimeAndVersion> seenLastSip, Set<Integer> beginWriters, Set<Integer> endWriters,
+            Semaphore semaphore, AtomicBoolean closed) {
+        this.bitmaps = bitmaps;
         this.coord = coord;
         this.info = info;
         this.stream = stream;
@@ -62,17 +66,17 @@ class MiruPartitionStreamGate {
         this.closed = closed;
     }
 
-    MiruPartitionStreamGate(MiruPartitionCoord coord, MiruPartitionCoordInfo info, MiruStream stream, long sipTimestamp) {
-        this(coord, info, stream, new AtomicLong(sipTimestamp), new AtomicLong(), new AtomicLong(), Sets.<TimeAndVersion>newHashSet(),
+    MiruPartitionStreamGate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruPartitionCoordInfo info, MiruStream<BM> stream, long sipTimestamp) {
+        this(bitmaps, coord, info, stream, new AtomicLong(sipTimestamp), new AtomicLong(), new AtomicLong(), Sets.<TimeAndVersion>newHashSet(),
                 Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean());
     }
 
-    MiruPartitionStreamGate copyToState(MiruPartitionState state) {
-        return new MiruPartitionStreamGate(coord, info.copyToState(state), stream, sipTimestamp, rebuildTimestamp, refreshTimestamp, seenLastSip.get(),
-                beginWriters, endWriters, semaphore, closed);
+    MiruPartitionStreamGate<BM> copyToState(MiruPartitionState state) {
+        return new MiruPartitionStreamGate<>(bitmaps, coord, info.copyToState(state), stream, sipTimestamp, rebuildTimestamp, refreshTimestamp,
+                seenLastSip.get(), beginWriters, endWriters, semaphore, closed);
     }
 
-    MiruStream close() throws InterruptedException {
+    MiruStream<BM> close() throws InterruptedException {
         semaphore.acquire(PERMITS);
         try {
             closed.set(true);
@@ -208,7 +212,7 @@ class MiruPartitionStreamGate {
         }
     }
 
-    MiruQueryHandle getQueryHandle() {
+    MiruQueryHandle<BM> getQueryHandle() {
         log.debug("Query handle requested for {}", coord);
         markForRefresh();
 
@@ -223,10 +227,15 @@ class MiruPartitionStreamGate {
             throw new MiruPartitionUnavailableException("Partition is closed");
         }
 
-        return new MiruQueryHandle() {
+        return new MiruQueryHandle<BM>() {
 
             @Override
-            public MiruQueryStream getQueryStream() {
+            public MiruBitmaps<BM> getBitmaps() {
+                return bitmaps;
+            }
+
+            @Override
+            public MiruQueryStream<BM> getQueryStream() {
                 if (info.state != MiruPartitionState.online) {
                     throw new MiruPartitionUnavailableException("Partition is not online");
                 }
@@ -254,7 +263,7 @@ class MiruPartitionStreamGate {
 
             @Override
             public RequestHelper getRequestHelper() {
-                return null;
+                return null; // never talk to a local partition via reader
             }
 
             @Override
@@ -264,7 +273,7 @@ class MiruPartitionStreamGate {
         };
     }
 
-    MiruMigrationHandle getMigrationHandle(long millis) {
+    MiruMigrationHandle<BM> getMigrationHandle(long millis) {
         try {
             semaphore.tryAcquire(millis, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
@@ -276,7 +285,7 @@ class MiruPartitionStreamGate {
             throw new MiruPartitionUnavailableException("Partition is closed");
         }
 
-        return new MiruMigrationHandle() {
+        return new MiruMigrationHandle<BM>() {
 
             @Override
             public boolean canMigrateTo(MiruBackingStorage destinationStorage) {
@@ -284,12 +293,12 @@ class MiruPartitionStreamGate {
             }
 
             @Override
-            public MiruStream getStream() {
+            public MiruStream<BM> getStream() {
                 return stream;
             }
 
             @Override
-            public MiruPartitionStreamGate migrated(MiruStream stream,
+            public MiruPartitionStreamGate<BM> migrated(MiruStream<BM> stream,
                     Optional<MiruBackingStorage> storage,
                     Optional<MiruPartitionState> state,
                     long sipTimestamp) {
@@ -301,7 +310,7 @@ class MiruPartitionStreamGate {
                 if (state.isPresent()) {
                     migratedInfo = migratedInfo.copyToState(state.get());
                 }
-                return new MiruPartitionStreamGate(coord, migratedInfo, stream, sipTimestamp);
+                return new MiruPartitionStreamGate<BM>(bitmaps, coord, migratedInfo, stream, sipTimestamp);
             }
 
             @Override

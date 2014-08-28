@@ -9,13 +9,15 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.service.stream.MiruQueryStream;
-
+import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruHostedPartition;
+import com.jivesoftware.os.miru.query.MiruQueryHandle;
+import com.jivesoftware.os.miru.query.MiruQueryStream;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** @author jonathan */
-public class MiruRemoteHostedPartition implements MiruHostedPartition {
+public class MiruRemoteHostedPartition<BM> implements MiruHostedPartition<BM> {
 
     private final MiruPartitionCoord coord;
     private final MiruPartitionInfoProvider infoProvider;
@@ -89,11 +91,17 @@ public class MiruRemoteHostedPartition implements MiruHostedPartition {
     }
 
     @Override
-    public MiruQueryHandle getQueryHandle() throws Exception {
+    public MiruQueryHandle<BM> getQueryHandle() throws Exception {
         //TODO split local/remote handles
-        return new MiruQueryHandle() {
+        return new MiruQueryHandle<BM>() {
+
             @Override
-            public MiruQueryStream getQueryStream() {
+            public MiruBitmaps<BM> getBitmaps() {
+                return null;
+            }
+
+            @Override
+            public MiruQueryStream<BM> getQueryStream() {
                 return null;
             }
 

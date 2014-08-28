@@ -2,9 +2,11 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.miru.query.MiruQueryStream;
+import com.jivesoftware.os.miru.query.MiruReadTrackStream;
+import com.jivesoftware.os.miru.query.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourcePartitionIdentifier;
 import java.util.Map;
 
@@ -15,7 +17,7 @@ import java.util.Map;
  */
 public class MiruStream<BM> {
 
-    private final MiruIndexStream <BM>indexStream;
+    private final MiruIndexStream<BM> indexStream;
     private final MiruQueryStream<BM> queryStream;
     private final MiruReadTrackStream<BM> readTrackStream;
     private final MiruTimeIndex timeIndex;

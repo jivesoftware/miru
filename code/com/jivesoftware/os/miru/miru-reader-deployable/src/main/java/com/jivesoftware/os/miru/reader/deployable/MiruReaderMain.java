@@ -17,7 +17,7 @@ package com.jivesoftware.os.miru.reader.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.google.common.collect.Interners;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
@@ -26,15 +26,25 @@ import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSor
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer.HBaseSetOfSortedMapsConfig;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.api.MiruReader;
 import com.jivesoftware.os.miru.api.MiruWriter;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.query.Miru;
+import com.jivesoftware.os.miru.query.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.query.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.SingleBitmapsProvider;
+import com.jivesoftware.os.miru.query.plugin.MiruEndpointInjectable;
+import com.jivesoftware.os.miru.query.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.service.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
@@ -42,7 +52,6 @@ import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.endpoint.MiruConfigEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
-import com.jivesoftware.os.miru.service.reader.MiruReaderImpl;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProviderInitializer;
 import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
@@ -52,9 +61,15 @@ import com.jivesoftware.os.upena.main.InstanceConfig;
 import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClient;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
-
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.reflections.Reflections;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypesScanner;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 
 public class MiruReaderMain {
 
@@ -94,12 +109,24 @@ public class MiruReaderMain {
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer);
 
+        MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer().initialize(miruServiceConfig, miruHost);
+
+        backfillerizerLifecycle.start();
+        final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
+
         MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruResourceLocatorProviderInitializer()
                 .initialize(miruServiceConfig);
 
         miruResourceLocatorProviderLifecyle.start();
-        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(miruServiceConfig.getBitsetBufferSize());
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer<EWAHCompressedBitmap>().initialize(miruServiceConfig,
+
+        final MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
+                Interners.<MiruIBA>newWeakInterner(),
+                Interners.<MiruTermId>newWeakInterner(),
+                Interners.<MiruTenantId>newStrongInterner(),
+                // makes sense to share string internment as this is authz in both cases
+                Interners.<String>newWeakInterner());
+        final MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(miruServiceConfig.getBitsetBufferSize());
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                 registryStore,
                 clusterRegistry,
                 miruHost,
@@ -107,31 +134,45 @@ public class MiruReaderMain {
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
-                bitmaps);
+                internExtern,
+                new SingleBitmapsProvider(bitmaps));
 
         miruServiceLifecyle.start();
-        MiruService miruService = miruServiceLifecyle.getService();
-        MiruReader miruReader = new MiruReaderImpl(miruService);
+        final MiruService miruService = miruServiceLifecyle.getService();
         MiruWriter miruWriter = new MiruWriterImpl(miruService);
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
 
-        //Collection<MiruPlugin> plugins = null;
-
         deployable.addEndpoints(MiruWriterEndpoints.class);
         deployable.addInjectables(MiruWriter.class, miruWriter);
         deployable.addEndpoints(MiruReaderEndpoints.class);
-        deployable.addInjectables(MiruReader.class, miruReader);
-        /*
-        for (MiruPlugin plugin : plugins) {
-            Class<?> endpointsClass = plugin.getEndpointsClass(miruService);
-            deployable.addEndpoints(endpointsClass);
-            for (MiruEndpointInjectable<?> miruEndpointInjectable : plugin.getInjectables()) {
-                deployable.addInjectables(miruEndpointInjectable.getInjectableClass(), miruEndpointInjectable.getInjectable());
+        deployable.addInjectables(MiruService.class, miruService);
+
+        MiruProvider<Miru> miruProvider = new MiruProvider<Miru>() {
+            @Override
+            public Miru getMiru(MiruTenantId tenantId) {
+                return miruService;
             }
+
+            @Override
+            public MiruActivityInternExtern getActivityInternExtern(MiruTenantId tenantId) {
+                return internExtern;
+            }
+
+            @Override
+            public MiruJustInTimeBackfillerizer getBackfillerizer(MiruTenantId tenantId) {
+                return backfillerizer;
+            }
+        };
+
+        Reflections reflections = new Reflections(new ConfigurationBuilder()
+                .setUrls(ClasspathHelper.forPackage("com.jivesoftware")) // GRRR
+                .setScanners(new SubTypesScanner(), new TypesScanner()));
+        Set<Class<? extends MiruPlugin>> pluginTypes = reflections.getSubTypesOf(MiruPlugin.class);
+        for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
+            add(miruProvider, deployable, pluginType.newInstance());
         }
-        */
 
         deployable.addEndpoints(MiruConfigEndpoints.class);
         deployable.addInjectables(MiruClusterRegistry.class, clusterRegistry);
@@ -139,5 +180,14 @@ public class MiruReaderMain {
 
         deployable.buildServer().start();
 
+    }
+
+    private <E, I> void add(MiruProvider miruProvider, Deployable deployable, MiruPlugin<E, I> plugin) {
+        Class<E> endpointsClass = plugin.getEndpointsClass();
+        deployable.addEndpoints(endpointsClass);
+        Collection<MiruEndpointInjectable<I>> injectables = plugin.getInjectables(miruProvider);
+        for (MiruEndpointInjectable<?> miruEndpointInjectable : injectables) {
+            deployable.addInjectables(miruEndpointInjectable.getInjectableClass(), miruEndpointInjectable.getInjectable());
+        }
     }
 }
