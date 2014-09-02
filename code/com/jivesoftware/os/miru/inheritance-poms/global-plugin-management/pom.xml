@@ -73,39 +73,6 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-deploy-plugin</artifactId>
-                    <version>2.7</version>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>deploy-file</goal>
-                            </goals>
-                            <configuration>
-                                <packaging>tar.gz</packaging>
-                                <url>${project.distributionManagement.repository.url}</url>
-                                <groupId>${project.groupId}</groupId>
-                                <artifactId>${project.artifactId}</artifactId>
-                                <repositoryId>nexus-server</repositoryId>
-                                <version>${git.commitIdentification}</version>
-                                <retryFailedDeploymentCount>3</retryFailedDeploymentCount>
-                            </configuration>
-                        </execution>
-                    </executions>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.apache.maven.plugins</groupId>
-                            <artifactId>maven-invoker-plugin</artifactId>
-                            <version>1.8</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>org.codehaus.plexus</groupId>
-                            <artifactId>plexus-utils</artifactId>
-                            <version>3.0.14</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <version>2.9</version>
                 </plugin>
