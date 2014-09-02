@@ -48,7 +48,7 @@ import com.jivesoftware.os.miru.service.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.endpoint.MiruConfigEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
@@ -125,7 +125,7 @@ public class MiruReaderMain {
                 Interners.<MiruTenantId>newStrongInterner(),
                 // makes sense to share string internment as this is authz in both cases
                 Interners.<String>newWeakInterner());
-        final MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(miruServiceConfig.getBitsetBufferSize());
+        final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                 registryStore,
                 clusterRegistry,
@@ -135,7 +135,7 @@ public class MiruReaderMain {
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
                 internExtern,
-                new SingleBitmapsProvider(bitmaps));
+                new SingleBitmapsProvider<>(bitmaps));
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();
