@@ -52,7 +52,7 @@ public class MiruWriterMain {
         TenantRoutingHttpClient<String> client = tenantRoutingHttpClientInitializer.initialize(connections);
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-        
+
         HBaseSetOfSortedMapsConfig hbaseConfig = deployable.config(HBaseSetOfSortedMapsConfig.class);
         SetOfSortedMapsImplInitializer<Exception> setOfSortedMapsInitializer = new HBaseSetOfSortedMapsImplInitializer(hbaseConfig);
 
@@ -60,18 +60,17 @@ public class MiruWriterMain {
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                3,
-                TimeUnit.HOURS.toMillis(1));
+            registryStore.getExpectedTenantsRegistry(),
+            registryStore.getExpectedTenantPartitionsRegistry(),
+            registryStore.getReplicaRegistry(),
+            registryStore.getTopologyRegistry(),
+            registryStore.getConfigRegistry(),
+            3,
+            TimeUnit.HOURS.toMillis(1));
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer);
 
         MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig, clusterRegistry, registryStore, wal, instanceConfig.getInstanceName());
-
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
