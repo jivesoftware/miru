@@ -15,15 +15,15 @@
         </license>
     </licenses>
     <scm>
-		<url>https://github.com/jivesoftware/miru</url>
-		<connection>scm:git:git://github.com/jivesoftware/miru.git</connection>
-		<developerConnection>scm:git:git@github.com:jivesoftware/miru.git</developerConnection>
-	</scm>
+        <url>https://github.com/jivesoftware/miru</url>
+        <connection>scm:git:git://github.com/jivesoftware/miru.git</connection>
+        <developerConnection>scm:git:git@github.com:jivesoftware/miru.git</developerConnection>
+    </scm>
     <distributionManagement>
-            <repository>
-                <id>modified-thirdparty</id>
-                <name>Jive Internal Repository</name>
-                <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
-            </repository>
-        </distributionManagement>
+        <repository>
+            <id>modified-thirdparty</id>
+            <name>Jive Internal Repository</name>
+            <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
+        </repository>
+    </distributionManagement>
 </project>
