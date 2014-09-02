@@ -66,6 +66,9 @@
         </profile>
         <profile>
             <id>make-deployable</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <config.home>${project.basedir}</config.home>
                 <assembly.home>${project.parent.basedir}/../deployable-build-management</assembly.home>
