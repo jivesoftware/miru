@@ -21,10 +21,9 @@
     <profiles>
         <profile>
             <activation>
-                <property>
-                    <name>deployable</name>
-                    <value>true</value>
-                </property>
+                <file>
+                    <exists>deployable-marker.txt</exists>
+                </file>
             </activation>
             <id>make-deployable</id>
             <properties>
