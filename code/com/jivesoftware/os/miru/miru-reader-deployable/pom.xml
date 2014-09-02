@@ -14,6 +14,7 @@
     <properties>
         <java.main>com.jivesoftware.os.miru.reader.deployable.MiruReaderMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
+        <deployable>true</deployable>
     </properties>
     <dependencies>
         <dependency>
