@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.api.activity.schema;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -22,7 +23,7 @@ public class MiruSchema {
     public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
         this(fieldDefinitions, new MiruPropertyDefinition[0]);
     }
-    
+
     @JsonCreator
     public MiruSchema(@JsonProperty("fieldDefinitions") MiruFieldDefinition[] fieldDefinitions,
         @JsonProperty("propertyDefinitions") MiruPropertyDefinition[] propertyDefinitions) {
@@ -41,6 +42,15 @@ public class MiruSchema {
         }
     }
 
+    public MiruFieldDefinition[] getFieldDefinitions() {
+        return fieldDefinitions;
+    }
+
+    public MiruPropertyDefinition[] getPropertyDefinitions() {
+        return propertyDefinitions;
+    }
+
+    @JsonIgnore
     public int getFieldId(String fieldName) {
         Integer fieldId = fieldNameToId.get(fieldName);
         if (fieldId == null) {
@@ -49,14 +59,17 @@ public class MiruSchema {
         return fieldId;
     }
 
+    @JsonIgnore
     public MiruFieldDefinition getFieldDefinition(int fieldId) {
         return fieldDefinitions[fieldId];
     }
 
+    @JsonIgnore
     public int fieldCount() {
         return fieldDefinitions.length;
     }
 
+    @JsonIgnore
     public int getPropertyId(String propName) {
         Integer propId = propNameToId.get(propName);
         if (propId == null) {
@@ -65,10 +78,12 @@ public class MiruSchema {
         return propId;
     }
 
+    @JsonIgnore
     public MiruPropertyDefinition getPropertyDefinition(int propId) {
         return propertyDefinitions[propId];
     }
 
+    @JsonIgnore
     public int propertyCount() {
         return propertyDefinitions.length;
     }
