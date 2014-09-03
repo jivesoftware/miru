@@ -61,6 +61,7 @@ import com.jivesoftware.os.upena.main.InstanceConfig;
 import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClient;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
+import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
@@ -126,12 +127,26 @@ public class MiruReaderMain {
                 Interners.<MiruTenantId>newStrongInterner(),
                 // makes sense to share string internment as this is authz in both cases
                 Interners.<String>newWeakInterner());
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new GuavaModule());
+
+
+        File schemaFile = new File(System.getProperty("user.home"),"miru-default-schema.json");
+        MiruSchema schema;
+        if (schemaFile.exists()) {
+            schema = mapper.readValue(schemaFile, MiruSchema.class);
+        } else {
+            schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS, DefaultMiruSchemaDefinition.PROPERTIES);
+            mapper.writeValue(schemaFile, schema);
+        }
+
         final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                 registryStore,
                 clusterRegistry,
                 miruHost,
-                new SingleSchemaProvider(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS)),
+                new SingleSchemaProvider(schema),
                 wal,
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
@@ -141,9 +156,6 @@ public class MiruReaderMain {
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();
         MiruWriter miruWriter = new MiruWriterImpl(miruService);
-
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new GuavaModule());
 
         deployable.addEndpoints(MiruWriterEndpoints.class);
         deployable.addInjectables(MiruWriter.class, miruWriter);

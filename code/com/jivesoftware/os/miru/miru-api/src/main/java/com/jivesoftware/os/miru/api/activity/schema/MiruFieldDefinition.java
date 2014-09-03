@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.api.activity.schema;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Collections;
 import java.util.List;
 
@@ -18,7 +20,13 @@ public class MiruFieldDefinition {
         this(fieldId, name, false, Collections.<String>emptyList(), Collections.<String>emptyList());
     }
 
-    public MiruFieldDefinition(int fieldId, String name, boolean writeTimeAggregate, List<String> aggregateFieldNames, List<String> bloomFieldNames) {
+    @JsonCreator
+    public MiruFieldDefinition(@JsonProperty("fieldId") int fieldId,
+        @JsonProperty("name") String name,
+        @JsonProperty("writeTimeAggregate") boolean writeTimeAggregate,
+        @JsonProperty("aggregateFieldNames") List<String> aggregateFieldNames,
+        @JsonProperty("bloomFieldNames") List<String> bloomFieldNames) {
+
         this.fieldId = fieldId;
         this.name = name;
         this.writeTimeAggregate = writeTimeAggregate;

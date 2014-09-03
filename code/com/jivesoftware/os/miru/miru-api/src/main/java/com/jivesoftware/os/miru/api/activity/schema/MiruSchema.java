@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.api.activity.schema;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import java.util.Map;
@@ -20,8 +22,11 @@ public class MiruSchema {
     public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
         this(fieldDefinitions, new MiruPropertyDefinition[0]);
     }
+    
+    @JsonCreator
+    public MiruSchema(@JsonProperty("fieldDefinitions") MiruFieldDefinition[] fieldDefinitions,
+        @JsonProperty("propertyDefinitions") MiruPropertyDefinition[] propertyDefinitions) {
 
-    public MiruSchema(MiruFieldDefinition[] fieldDefinitions, MiruPropertyDefinition[] propertyDefinitions) {
         this.fieldDefinitions = fieldDefinitions;
         this.fieldNameToId = Maps.newHashMap();
         for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
