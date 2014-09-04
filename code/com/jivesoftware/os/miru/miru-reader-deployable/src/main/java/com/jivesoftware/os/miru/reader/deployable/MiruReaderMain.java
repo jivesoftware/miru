@@ -21,6 +21,8 @@ import com.google.common.collect.Interners;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer.HBaseSetOfSortedMapsConfig;
@@ -70,6 +72,8 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 public class MiruReaderMain {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static void main(String[] args) throws Exception {
         new MiruReaderMain().run(args);
@@ -172,12 +176,15 @@ public class MiruReaderMain {
             }
         };
 
-        Reflections reflections = new Reflections(new ConfigurationBuilder()
-                .setUrls(ClasspathHelper.forPackage("com.jivesoftware")) // GRRR
-                .setScanners(new SubTypesScanner(), new TypesScanner()));
-        Set<Class<? extends MiruPlugin>> pluginTypes = reflections.getSubTypesOf(MiruPlugin.class);
-        for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
-            add(miruProvider, deployable, pluginType.newInstance());
+        for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {
+            Reflections reflections = new Reflections(new ConfigurationBuilder()
+                    .setUrls(ClasspathHelper.forPackage(pluginPackage.trim()))
+                    .setScanners(new SubTypesScanner(), new TypesScanner()));
+            Set<Class<? extends MiruPlugin>> pluginTypes = reflections.getSubTypesOf(MiruPlugin.class);
+            for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
+                LOG.info("Loading plugin {}", pluginType.getSimpleName());
+                add(miruProvider, deployable, pluginType.newInstance());
+            }
         }
 
         deployable.addEndpoints(MiruConfigEndpoints.class);
@@ -188,7 +195,7 @@ public class MiruReaderMain {
 
     }
 
-    private <E, I> void add(MiruProvider miruProvider, Deployable deployable, MiruPlugin<E, I> plugin) {
+    private <E, I> void add(MiruProvider<? extends Miru> miruProvider, Deployable deployable, MiruPlugin<E, I> plugin) {
         Class<E> endpointsClass = plugin.getEndpointsClass();
         deployable.addEndpoints(endpointsClass);
         Collection<MiruEndpointInjectable<I>> injectables = plugin.getInjectables(miruProvider);

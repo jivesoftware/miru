@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-
 import com.jivesoftware.os.miru.query.MiruHostedPartition;
 import com.jivesoftware.os.miru.query.MiruPartitionDirector;
 import com.jivesoftware.os.miru.query.OrderedPartitions;
@@ -46,7 +45,14 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
                 if (tenantTopology == null) {
                     // We are not going to auto create the TenantTopology even though we know there should be one.
                 } else {
-                    tenantTopology.index(activities);
+                    LOG.startTimer("indexed");
+                    try {
+                        tenantTopology.index(activities);
+                        LOG.inc("indexed", activities.size());
+                        LOG.inc("indexed>" + tenantId, activities.size());
+                    } finally {
+                        LOG.stopTimer("indexed");
+                    }
                 }
             }
         }

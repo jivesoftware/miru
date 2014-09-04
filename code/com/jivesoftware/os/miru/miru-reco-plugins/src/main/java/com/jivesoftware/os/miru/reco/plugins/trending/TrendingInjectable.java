@@ -27,7 +27,7 @@ public class TrendingInjectable {
             MiruTenantId tenantId = query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.callAndMerge(tenantId,
-                    new MiruSolvableFactory<>(new TrendingExecuteQuery(trending, query)),
+                    new MiruSolvableFactory<>("scoreTrending", new TrendingExecuteQuery(trending, query)),
                     new TrendingResultEvaluator(query),
                     new MergeTrendingResults(query.desiredNumberOfDistincts),
                     TrendingResult.EMPTY_RESULTS);
@@ -47,7 +47,7 @@ public class TrendingInjectable {
             MiruTenantId tenantId = query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.callAndMerge(tenantId,
-                    new MiruSolvableFactory<>(new TrendingExecuteQuery(trending, query)),
+                    new MiruSolvableFactory<>("scoreTrending", new TrendingExecuteQuery(trending, query)),
                     new TrendingResultEvaluator(query),
                     new MergeTrendingResults(query.desiredNumberOfDistincts),
                     TrendingResult.EMPTY_RESULTS);

@@ -13,6 +13,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(10)
     int getStreamFactoryExecutorCount();
 
+    @StringDefault("com.jivesoftware")
+    String getPluginPackages();
+
     @StringDefault("var/lib/miru/data")
     String getDiskResourceLocatorPath();
 

@@ -109,7 +109,7 @@ public class MiruService implements Miru {
                     });
 
             Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
-                    solvableFactory.getQueryClass());
+                    solvableFactory.getQueryKey());
             MiruSolution<R> solution = solver.solve(solvables.iterator(), suggestedTimeoutInMillis);
 
             numSearchedPartitions++;
@@ -132,23 +132,37 @@ public class MiruService implements Miru {
         }
 
         debugPath(solutions);
-        partitionComparison.analyzeSolutions(solutions, solvableFactory.getQueryClass());
+        partitionComparison.analyzeSolutions(solutions, solvableFactory.getQueryKey());
 
-        return merger.done(lastResult, defaultValue);
+        R result = merger.done(lastResult, defaultValue);
+
+        log.inc("callAndMerge>all");
+        log.inc("callAndMerge>tenant>" + tenantId);
+        log.inc("callAndMerge>query>" + solvableFactory.getQueryKey());
+        log.inc("callAndMerge>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
+
+        return result;
     }
 
     @Override
     public <R, P> R callImmediate(
             MiruTenantId tenantId,
             MiruPartitionId partitionId,
-            MiruSolvableFactory<R, P> factory,
+            MiruSolvableFactory<R, P> solvableFactory,
             Optional<R> lastResult,
             R defaultValue) throws Exception {
         Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
-            Callable<R> callable = factory.create(partition.get(), lastResult);
-            return callable.call();
+            Callable<R> callable = solvableFactory.create(partition.get(), lastResult);
+            R result = callable.call();
+
+            log.inc("callImmediate>all");
+            log.inc("callImmediate>tenant>" + tenantId);
+            log.inc("callImmediate>query>" + solvableFactory.getQueryKey());
+            log.inc("callImmediate>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
+
+            return result;
         } else {
             return defaultValue;
         }

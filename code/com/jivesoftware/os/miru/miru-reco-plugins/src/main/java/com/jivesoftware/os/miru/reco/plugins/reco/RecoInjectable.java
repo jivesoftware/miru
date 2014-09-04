@@ -27,7 +27,7 @@ public class RecoInjectable {
             MiruTenantId tenantId = query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.callAndMerge(tenantId,
-                    new MiruSolvableFactory<>(new RecoExecuteQuery(collaborativeFiltering, query)),
+                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoExecuteQuery(collaborativeFiltering, query)),
                     new RecoResultEvaluator(query),
                     new MergeRecoResults(query.resultCount),
                     RecoResult.EMPTY_RESULTS);
@@ -46,7 +46,7 @@ public class RecoInjectable {
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.callImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>(new RecoExecuteQuery(collaborativeFiltering, query)),
+                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoExecuteQuery(collaborativeFiltering, query)),
                     lastResult,
                     RecoResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {

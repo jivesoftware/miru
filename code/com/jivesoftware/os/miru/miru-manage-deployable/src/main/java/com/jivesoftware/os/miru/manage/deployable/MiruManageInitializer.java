@@ -41,6 +41,9 @@ public class MiruManageInitializer {
 
         @StringDefault("resources")
         String getPathToStaticResources();
+
+        @StringDefault("soy.miru")
+        String getSoyResourcePackage();
     }
 
     public MiruManageService initialize(MiruManageConfig config,
@@ -49,7 +52,7 @@ public class MiruManageInitializer {
             MiruWAL miruWAL) throws Exception {
 
         Set<String> templateFilenames = new Reflections(new ConfigurationBuilder()
-                .setUrls(ClasspathHelper.forPackage("soy.miru"))
+                .setUrls(ClasspathHelper.forPackage(config.getSoyResourcePackage()))
                 .setScanners(new ResourcesScanner())).getResources(Pattern.compile(".*\\.soy"));
 
         SoyFileSet.Builder soyFileSetBuilder = new SoyFileSet.Builder();

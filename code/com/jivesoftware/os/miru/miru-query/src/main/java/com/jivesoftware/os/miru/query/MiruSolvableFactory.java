@@ -8,9 +8,11 @@ import java.util.concurrent.Callable;
  */
 public class MiruSolvableFactory<R, P> {
 
+    private final String queryKey;
     private final ExecuteQuery<R, P> executeQuery;
 
-    public MiruSolvableFactory(ExecuteQuery<R, P> executeQuery) {
+    public MiruSolvableFactory(String queryKey, ExecuteQuery<R, P> executeQuery) {
+        this.queryKey = queryKey;
         this.executeQuery = executeQuery;
     }
 
@@ -32,7 +34,7 @@ public class MiruSolvableFactory<R, P> {
         return new MiruSolvable<>(replica.getCoord(), callable);
     }
 
-    public String getQueryClass() {
-        return executeQuery.getClass().getCanonicalName();
+    public String getQueryKey() {
+        return queryKey;
     }
 }
