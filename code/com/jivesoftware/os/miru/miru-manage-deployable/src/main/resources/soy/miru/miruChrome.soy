@@ -1,0 +1,123 @@
+{namespace soy.miru.chrome}
+
+/**
+ * @param title
+ * @param header
+ * @param region
+ * @param version
+ */
+{template .chromeRegion}
+<!DOCTYPE HTML>
+<html lang="en" dir="ltr">
+	<head>
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{$title}</title>
+        {call .styles /}
+	</head>
+	<body>
+        {$header|noAutoescape}
+        <div class="container">
+            <div class="row">
+                <div class="col-md-2">
+                    {call .nav /}
+                </div>
+                <div class="col-md-10">
+                    {$region|noAutoescape}
+                </div>
+            </div>
+        </div>
+        {call .footer}
+            {param version: $version /}
+        {/call}
+	</body>
+</html>
+{/template}
+
+/**
+ *
+ */
+{template .styles}
+    <!-- Character Encoding -->
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <!-- jquery-ui -->
+    <link rel="stylesheet" href="/static/css/jquery-ui/ui-lightness/jquery-ui-1.10.4.custom.min.css">
+
+    <!-- Vanilla bootstrap -->
+    <link rel="stylesheet" type="text/css" href="/static/vendor/bootstrap-3.0.3/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" media="screen" href="/static/vendor/bootstrap-3.0.3/css/bootstrap-theme.min.css">
+
+    <!-- bootstrap-multiselect -->
+    <link rel="stylesheet" href="/static/vendor/bootstrap-multiselect/css/bootstrap-multiselect.css">
+    <link rel="stylesheet" href="/static/vendor/bootstrap-multiselect/css/prettify.css">
+
+    // HEY ENGINEERS, add CSS here for now:
+    <link rel="stylesheet" href="/static/css/miru.css">
+
+    // following CC is for IE8 and lower. No harm in leaving it here.
+    // It's no overhead to other browsers and would automatically give unsupported IE8 a fighting chance to view content
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+{/template}
+
+/**
+ *
+ */
+{template .headerRegion}
+	<div class="navbar navbar-default" role="navigation">
+	    <div class="navbar-header">
+            <a class="navbar-brand" href="/miru/manage">
+                Miru
+            </a>
+	    </div>
+	</div>
+{/template}
+
+/**
+ *
+ */
+{template .nav}
+    <a class="list-group-item" href="/miru/manage/hosts">
+        <span class="glyphicon glyphicon-bookmark"></span>{sp}
+        Hosts
+    </a>
+    <a class="list-group-item" href="/miru/manage/tenants">
+        <span class="glyphicon glyphicon-bookmark"></span>{sp}
+        Tenants
+    </a>
+    <a class="list-group-item" href="/miru/manage/lookup">
+        <span class="glyphicon glyphicon-bookmark"></span>{sp}
+        Activity Lookup
+    </a>
+    <a class="list-group-item" href="/miru/manage/wal/activity">
+        <span class="glyphicon glyphicon-bookmark"></span>{sp}
+        Activity WAL
+    </a>
+    <a class="list-group-item" href="/miru/manage/wal/read">
+        <span class="glyphicon glyphicon-bookmark"></span>{sp}
+        Read WAL
+    </a>
+{/template}
+
+/**
+ *
+ */
+{template .favicon}
+    <!-- favicon -->
+    //<link rel="icon" type="image/png" href="/static/img/favicon.png">
+{/template}
+
+/**
+ * @param version
+ */
+{template .footer}
+	<div class="row">
+		<div class="col-md-8">
+			<b><span class="glyphicon glyphicon-copyright-mark"></span> 2014 Jive Software</b> All rights reserved.
+		</div>
+		<div class="col-md-3">
+		    <span>{$version}</span>
+		</div>
+	</div>
+{/template}

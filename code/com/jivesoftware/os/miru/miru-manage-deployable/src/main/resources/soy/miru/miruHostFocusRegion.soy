@@ -1,0 +1,78 @@
+{namespace soy.miru.section}
+
+/**
+ * Host focus section
+ *
+ * @param host
+ * @param tenants
+ */
+{template .hostFocusRegion}
+    <a name="focus"></a>
+    <div class="panel panel-default">
+        <div class="panel-heading">Expected Tenants for {$host.logicalName}:{$host.port}</div>
+        <div class="panel-body">
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Tenant</th>
+                        <th>Partition</th>
+                        <th>Status</th>
+                        <th>Storage</th>
+                        <th>Size in memory</th>
+                        <th>Size on disk</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {foreach $tenant in $tenants}
+                        {call .hostFocusPartitions}
+                            {param tenantId: $tenant.tenantId /}
+                            {param type: 'online' /}
+                            {param partitions: $tenant.online /}
+                        {/call}
+                        {call .hostFocusPartitions}
+                            {param tenantId: $tenant.tenantId /}
+                            {param type: 'rebuilding' /}
+                            {param partitions: $tenant.rebuilding /}
+                        {/call}
+                        {call .hostFocusPartitions}
+                            {param tenantId: $tenant.tenantId /}
+                            {param type: 'bootstrap' /}
+                            {param partitions: $tenant.bootstrap /}
+                        {/call}
+                        {call .hostFocusPartitions}
+                            {param tenantId: $tenant.tenantId /}
+                            {param type: 'offline' /}
+                            {param partitions: $tenant.offline /}
+                        {/call}
+                    {ifempty}
+                        <tr>
+                            <td colspan="5">There are no registered partitions for this host</td>
+                        </tr>
+                    {/foreach}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{/template}
+
+/**
+ * Render partition list
+ *
+ * @param tenantId
+ * @param type
+ * @param partitions
+ */
+{template .hostFocusPartitions}
+    {foreach $partition in $partitions}
+        <tr>
+            <td>
+                <a href="/miru/manage/tenants/{$tenantId|escapeUri}#focus">{$tenantId}</a>
+            </td>
+            <td>{$partition.partitionId}</td>
+            <td style="text-transform:uppercase;">{$type}</td>
+            <td>{$partition.backingStorage}</td>
+            <td>{$partition.sizeInMemory}</td>
+            <td>{$partition.sizeOnDisk}</td>
+        </tr>
+    {/foreach}
+{/template}

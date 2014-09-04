@@ -94,7 +94,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             public TenantIdAndRow<MiruVoidByte, MiruHost> callback(TenantIdAndRow<MiruVoidByte, MiruHost> value) throws Exception {
                 if (value != null) {
                     final MiruHost host = value.getRow();
-                    streams.add(new KeyedColumnValueCallbackStream<MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, Long>(
+                    streams.add(new KeyedColumnValueCallbackStream<>(
                         host, new CallbackStream<ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long>>() {
 
                         @Override

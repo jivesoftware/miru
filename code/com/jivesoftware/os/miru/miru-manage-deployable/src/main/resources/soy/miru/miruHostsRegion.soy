@@ -1,0 +1,36 @@
+{namespace soy.miru.page}
+
+/**
+ * Hosts page
+ *
+ * @param hosts
+ * @param hostFocusRegion
+ */
+{template .hostsRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Hosts</div>
+        <div class="panel-body">
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Logical name</th>
+                        <th>Port</th>
+                        <th>Last heartbeat</th>
+                        <th>Size in memory</th>
+                        <th>Size on disk</th>
+                        <th>Tenants</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {foreach $host in $hosts}
+                        {$host|noAutoescape}
+                    {/foreach}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {if $hostFocusRegion}
+        {$hostFocusRegion|noAutoescape}
+    {/if}
+{/template}

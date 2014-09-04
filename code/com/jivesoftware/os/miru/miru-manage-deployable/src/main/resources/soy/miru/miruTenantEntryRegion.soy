@@ -1,0 +1,108 @@
+{namespace soy.miru.section}
+
+/**
+ * Tenant section
+ *
+ * @param tenant
+ * @param config
+ * @param? configNumberOfReplicas
+ * @param? configTopologyIsStaleAfterMillis
+ * @param partitionCount
+ * @param partitions
+ */
+{template .tenantEntryRegion}
+    <a name="focus"></a>
+
+    {if $config}
+        <div class="panel panel-default">
+            <div class="panel-heading">Configuration for {$tenant}</div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Number of replicas</th>
+                            <th>Topology is stale after millis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{$configNumberOfReplicas != '-1' ? $configNumberOfReplicas : 'unset'}</td>
+                            <td>{$configTopologyIsStaleAfterMillis != '-1' ? $configTopologyIsStaleAfterMillis : 'unset'}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {/if}
+
+    <div class="panel panel-default">
+        <div class="panel-heading">Topology for {$tenant}</div>
+        <div class="panel-body">
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Storage</th>
+                        <th>Logical name</th>
+                        <th>Port</th>
+                        <th>Size in memory</th>
+                        <th>Size on disk</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {foreach $partition in $partitions}
+                        <tr>
+                            <td colspan="6" style="background-color: #eee; font-size:90%;">
+                                Partition {$partition.partitionId}
+                            </td>
+                        </tr>
+                        {call .tenantEntryPartitions}
+                            {param type: 'online' /}
+                            {param partitions: $partition.online /}
+                        {/call}
+                        {call .tenantEntryPartitions}
+                            {param type: 'rebuilding' /}
+                            {param partitions: $partition.rebuilding /}
+                        {/call}
+                        {call .tenantEntryPartitions}
+                            {param type: 'bootstrap' /}
+                            {param partitions: $partition.bootstrap /}
+                        {/call}
+                        {call .tenantEntryPartitions}
+                            {param type: 'offline' /}
+                            {param partitions: $partition.offline /}
+                        {/call}
+                    {/foreach}
+                    {if $partitionCount == 0}
+                        <tr>
+                            <td colspan="6">There are no registered partitions for this tenant</td>
+                        </tr>
+                    {/if}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{/template}
+
+/**
+ * Render partition list
+ *
+ * @param type
+ * @param partitions
+ */
+{template .tenantEntryPartitions}
+    {foreach $partition in $partitions}
+        <tr>
+            <td style="text-transform:uppercase;">{$type}</td>
+            <td>{$partition.backingStorage}</td>
+            <td>
+                <a href="/miru/manage/hosts/{$partition.host.logicalName|escapeUri}/{$partition.host.port}#focus">
+                    {$partition.host.logicalName}
+                </a>
+            </td>
+            <td>{$partition.host.port}</td>
+            <td>{$partition.sizeInMemory}</td>
+            <td>{$partition.sizeOnDisk}</td>
+        </tr>
+    {/foreach}
+{/template}

@@ -1,0 +1,128 @@
+{namespace soy.miru.page}
+
+/**
+ * Read WAL page
+ *
+ * @param? tenant
+ * @param? streamId
+ * @param? limit
+ * @param? sip
+ * @param? afterTimestamp
+ * @param? activities
+ * @param? nextTimestamp
+ * @param? error
+ */
+{template .readWalRegion}
+    {if $error}
+        <h3 style="color:red;">{$error}</h3>
+    {/if}
+    <div class="panel panel-default">
+        <div class="panel-heading">Tenant</div>
+        <div class="panel-body">
+            <label for="tenantPicker">Select Tenant</label>
+            <form id="tenantPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#tenantPicker" data-form-el="#tenantPickerForm"
+                data-jive-ui="jive/ui/typeahead/tenant_typeahead" method="post" name="tenantPickerForm" action="#"
+                //TODO wire this up correctly
+                onsubmit="location.href='/miru/manage/wal/read/'+document.getElementById('tenantPicker').value+'#focus'; return false">
+                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                    class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                    name="tenantId" id="tenantPicker" data-original-title="" title="">
+            </form>
+        </div>
+    </div>
+    {if $tenant}
+        <div class="panel panel-default">
+            <div class="panel-heading">User</div>
+            <div class="panel-body">
+                <label for="streamPicker">Select User</label>
+                <form id="streamPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#streamPicker" data-form-el="#streamPickerForm"
+                    data-jive-ui="jive/ui/typeahead/user_typeahead" method="post" name="streamPickerForm" action="#"
+                    //TODO wire this up correctly
+                    onsubmit="location.href='/miru/manage/wal/read/{$tenant}/'+encodeURIComponent(document.getElementById('streamPicker').value)+'#focus'; return false">
+                    <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                        class="j-user-autocomplete j-autocomplete-input j-ui-elem" placeholder="StreamId" value="{$streamId?:''}"
+                        name="stream" id="streamPicker" data-original-title="" title="">
+                </form>
+            </div>
+        </div>
+    {/if}
+    {if $streamId}
+        <a name="focus"></a>
+        <div class="panel panel-default">
+            <div class="panel-heading">WAL for {$streamId}</div>
+            <div class="panel-body">
+                <div style="float:right; margin-bottom:10px;">
+                    Sip{sp}
+                    <input type="checkbox" id="sip" style="margin-right:10px;"{if $sip} checked="checked"{/if} />
+                    From collisionId{sp}
+                    <input type="text" id="fromTimestamp" style="margin-right:10px;" value="{$afterTimestamp}" />
+                    Limit{sp}
+                    <select id="withLimit" style="margin-right:10px;">
+                        <option value="10"{if $limit == 10} selected="selected"{/if}>10</option>
+                        <option value="100"{if $limit == 100} selected="selected"{/if}>100</option>
+                        <option value="1000"{if $limit == 1000} selected="selected"{/if}>1000</option>
+                    </select>
+                    <input type="button" value="Go" onclick="
+                        location.href='/miru/manage/wal/read/{$tenant}/{$streamId}'+
+                            '?sip='+document.getElementById('sip').checked+
+                            '&amp;afterTimestamp='+document.getElementById('fromTimestamp').value+
+                            '&amp;limit='+document.getElementById('withLimit').value+
+                            '#focus'" />
+                </div>
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>CollisionId</th>
+                            <th>Type</th>
+                            <th>Writer</th>
+                            <th>Index</th>
+                            <th>Timestamp</th>
+                            <th>ReadTime</th>
+                            <th>Stream</th>
+                            <th>Filter</th>
+                            <th>Version</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $activity in $activities}
+                            <tr>
+                                <td>{$activity.collisionId}</td>
+                                <td>{$activity.type?:''}</td>
+                                <td>{$activity.writerId?:''}</td>
+                                <td>{$activity.index?:''}</td>
+                                <td>{$activity.timestamp == $activity.collisionId ? '=' : $activity.timestamp ?: ''}</td>
+                                <td>{$activity.readTime == $activity.collisionId ? '=' : $activity.readTime ?: ''}</td>
+                                <td>{$activity.readStreamId?:''}</td>
+                                <td>
+                                    {if isNonnull($activity.readFilter)}
+                                        <a href="#" onclick="document.getElementById('readFilter-{$activity.timestamp}').style.display='table-row'; return false">Show</a>
+                                    {/if}
+                                </td>
+                                <td>{$activity.version == $activity.collisionId ? '=' : $activity.version ?: ''}</td>
+                            </tr>
+                            <tr id="readFilter-{$activity.timestamp}" style="display:none">
+                                <td colspan="7">
+                                    <em>ReadFilter</em> {$activity.readFilter?:''}
+                                </td>
+                            </tr>
+                        {ifempty}
+                            <tr>
+                                <td colspan="7">No read events found</td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+                {if length($activities) == $limit}
+                    <div style="float:right; margin-right:10px;">
+                        <a href="#" onclick="
+                            location.href='/miru/manage/wal/read/{$tenant}/{$streamId}'+
+                                 '?sip='+document.getElementById('sip').checked+
+                                 '&amp;afterTimestamp={$nextTimestamp}'+
+                                 '&amp;limit='+document.getElementById('withLimit').value+
+                                 '#focus'">Next &gt;</a>
+                    </div>
+                {/if}
+            </div>
+        </div>
+    {/if}
+{/template}

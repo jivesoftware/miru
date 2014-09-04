@@ -10,7 +10,7 @@
     <artifactId>global-version-management</artifactId>
     <packaging>pom</packaging>
     <properties>
-        <jive-utils-version>0.33</jive-utils-version>
+        <jive-utils-version>0.34</jive-utils-version>
         <upena-version>0.6</upena-version>
     </properties>
     <dependencyManagement>
@@ -191,6 +191,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>14.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.template</groupId>
+                <artifactId>soy</artifactId>
+                <version>2012-12-21</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>

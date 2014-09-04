@@ -58,9 +58,6 @@ import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
-import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClient;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
@@ -83,10 +80,6 @@ public class MiruReaderMain {
         Deployable deployable = new Deployable(args);
         deployable.buildManageServer().start();
 
-        TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-deployable", "main");
-        TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-        TenantRoutingHttpClient<String> client = tenantRoutingHttpClientInitializer.initialize(connections);
-
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
         MiruHost miruHost = new MiruHost(instanceConfig.getHost(), instanceConfig.getMainPort());
 
@@ -99,7 +92,7 @@ public class MiruReaderMain {
                 .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
-            setOfSortedMapsInitializer);
+                setOfSortedMapsInitializer);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(),
                 registryStore.getExpectedTenantsRegistry(),
                 registryStore.getExpectedTenantPartitionsRegistry(),
@@ -132,7 +125,7 @@ public class MiruReaderMain {
         mapper.registerModule(new GuavaModule());
 
 
-        File schemaFile = new File(System.getProperty("user.home"),"miru-default-schema.json");
+        File schemaFile = new File(System.getProperty("user.home"), "miru-default-schema.json");
         MiruSchema schema;
         if (schemaFile.exists()) {
             schema = mapper.readValue(schemaFile, MiruSchema.class);
