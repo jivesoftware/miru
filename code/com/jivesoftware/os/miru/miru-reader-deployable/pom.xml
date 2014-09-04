@@ -87,5 +87,19 @@
             <version>0.17-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-stream-plugins</artifactId>
+            <version>0.17-SNAPSHOT</version>
+            <type>jar</type>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-reco-plugins</artifactId>
+            <version>0.17-SNAPSHOT</version>
+            <type>jar</type>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 </project>
