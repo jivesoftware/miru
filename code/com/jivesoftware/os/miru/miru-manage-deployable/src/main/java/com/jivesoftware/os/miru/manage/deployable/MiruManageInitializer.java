@@ -22,28 +22,20 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Set;
-import java.util.regex.Pattern;
+import java.io.File;
+import org.apache.commons.io.FileUtils;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.StringDefault;
-import org.reflections.Reflections;
-import org.reflections.scanners.ResourcesScanner;
-import org.reflections.util.ClasspathHelper;
-import org.reflections.util.ConfigurationBuilder;
 
 public class MiruManageInitializer {
 
     interface MiruManageConfig extends Config {
 
-        @StringDefault("resources")
+        @StringDefault("resources/static")
         String getPathToStaticResources();
 
-        @StringDefault("soy.miru")
-        String getSoyResourcePackage();
+        @StringDefault("resources/soy")
+        String getPathToSoyResources();
     }
 
     public MiruManageService initialize(MiruManageConfig config,
@@ -51,19 +43,10 @@ public class MiruManageInitializer {
             MiruRegistryStore registryStore,
             MiruWAL miruWAL) throws Exception {
 
-        Set<String> templateFilenames = new Reflections(new ConfigurationBuilder()
-                .setUrls(ClasspathHelper.forPackage(config.getSoyResourcePackage()))
-                .setScanners(new ResourcesScanner())).getResources(Pattern.compile(".*\\.soy"));
-
+        File soyPath = new File(System.getProperty("user.dir"), config.getPathToSoyResources());
         SoyFileSet.Builder soyFileSetBuilder = new SoyFileSet.Builder();
-        for (String fileName : templateFilenames) {
-            URL url = getClass().getResource("/" + fileName);
-
-            Path file = Paths.get(url.getFile());
-            if (Files.exists(file)) {
-                // file URL
-                soyFileSetBuilder.add(file.toFile());
-            }
+        for (File file : FileUtils.listFiles(soyPath, null, true)) {
+            soyFileSetBuilder.add(file);
         }
 
         SoyFileSet sfs = soyFileSetBuilder.build();
