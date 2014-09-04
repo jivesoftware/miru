@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.merlin.config.Config;
+import org.merlin.config.defaults.StringDefault;
 import org.reflections.Reflections;
 import org.reflections.scanners.ResourcesScanner;
 import org.reflections.util.ClasspathHelper;
@@ -38,6 +39,8 @@ public class MiruManageInitializer {
 
     interface MiruManageConfig extends Config {
 
+        @StringDefault("resources")
+        String getPathToStaticResources();
     }
 
     public MiruManageService initialize(MiruManageConfig config,

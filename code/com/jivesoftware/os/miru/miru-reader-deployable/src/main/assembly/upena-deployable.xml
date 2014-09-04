@@ -8,16 +8,6 @@
         </file>
     </files>
     <fileSets>
-        <fileSet>
-            <directory>${config.home}/src/main/deployable</directory>
-            <outputDirectory>${project.name}/env</outputDirectory>
-            <directoryMode>755</directoryMode>
-        </fileSet>
-        <fileSet>
-            <directory>${config.home}/src/main/dist</directory>
-            <outputDirectory>${project.name}/dist</outputDirectory>
-            <directoryMode>755</directoryMode>
-        </fileSet>
 
     </fileSets>
     <dependencySets>

@@ -68,9 +68,11 @@ public class MiruManageMain {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
 
-        Resource sourceTree = new Resource(new File(System.getProperty("user.dir")))
+        File staticResourceDir = new File(System.getProperty("user.dir"));
+        System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
+        Resource sourceTree = new Resource(staticResourceDir)
                 //.addResourcePath("../../../../../src/main/resources") // fluff?
-                .addResourcePath("resources")
+                .addResourcePath(manageConfig.getPathToStaticResources())
                 .setContext("/static");
 
         deployable.addEndpoints(MiruManageEndpoints.class);
