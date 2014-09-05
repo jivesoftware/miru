@@ -189,7 +189,6 @@ public class MiruReaderMain {
 
         deployable.addEndpoints(MiruConfigEndpoints.class);
         deployable.addInjectables(MiruClusterRegistry.class, clusterRegistry);
-        deployable.addInjectables(MiruService.class, miruService);
 
         deployable.buildServer().start();
 
