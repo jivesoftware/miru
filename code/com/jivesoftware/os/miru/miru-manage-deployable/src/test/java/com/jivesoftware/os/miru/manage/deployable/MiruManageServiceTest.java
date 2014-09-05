@@ -1,14 +1,24 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import static com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer.MiruManageConfig;
@@ -18,8 +28,15 @@ import static org.testng.Assert.assertTrue;
 
 public class MiruManageServiceTest {
 
-    @Test
-    public void testRenderHostsWithFocus() throws Exception {
+    private MiruManageService miruManageService;
+    private MiruTenantId tenantId;
+    private List<MiruHost> hosts;
+    private MiruPartitionId partitionId;
+
+    @BeforeClass
+    public void before() throws Exception {
+        int numberOfReplicas = 3;
+
         MiruManageConfig config = BindInterfaceToConfiguration.bindDefault(MiruManageConfig.class);
         config.setPathToSoyResources("src/main/home/resources/soy");
 
@@ -27,21 +44,53 @@ public class MiruManageServiceTest {
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", setOfSortedMapsImplInitializer);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(), registryStore.getExpectedTenantsRegistry(),
                 registryStore.getExpectedTenantPartitionsRegistry(), registryStore.getReplicaRegistry(), registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(), 3, TimeUnit.HOURS.toMillis(1));
+                registryStore.getConfigRegistry(), numberOfReplicas, TimeUnit.HOURS.toMillis(1));
         MiruWAL miruWAL = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer);
-        MiruManageService miruManageService = new MiruManageInitializer().initialize(config, clusterRegistry, registryStore, miruWAL);
+        miruManageService = new MiruManageInitializer().initialize(config, clusterRegistry, registryStore, miruWAL);
 
-        MiruHost host1 = new MiruHost("host1", 10001);
-        MiruHost host2 = new MiruHost("host2", 10002);
-        clusterRegistry.sendHeartbeatForHost(host1, 123, 456);
-        clusterRegistry.sendHeartbeatForHost(host2, 789, 987);
+        tenantId = new MiruTenantId("test1".getBytes());
+        partitionId = MiruPartitionId.of(0);
+        hosts = Lists.newArrayList();
 
-        String rendered = miruManageService.renderHostsWithFocus(host1);
-        assertTrue(rendered.contains("/miru/manage/hosts/host1/10001#focus"));
-        assertTrue(rendered.contains("<td>10001</td>"));
-        assertTrue(rendered.contains("/miru/manage/hosts/host2/10002#focus"));
-        assertTrue(rendered.contains("<td>10002</td>"));
-        assertTrue(rendered.contains("host1:10001"));
-        assertFalse(rendered.contains("host2:10002"));
+        for (int i = 0; i < numberOfReplicas; i++) {
+            MiruHost host = new MiruHost("host" + i, 10000 + i);
+            clusterRegistry.sendHeartbeatForHost(host, i, i);
+            hosts.add(host);
+        }
+
+        clusterRegistry.electToReplicaSetForTenantPartition(tenantId, partitionId,
+                new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), Sets.<MiruHost>newHashSet(), numberOfReplicas));
     }
+
+    @Test
+    public void testRenderHostsWithFocus() throws Exception {
+        String rendered = miruManageService.renderHostsWithFocus(hosts.get(0));
+        for (int i = 0; i < hosts.size(); i++) {
+            MiruHost host = hosts.get(i);
+            assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "/" + host.getPort() + "#focus"));
+            assertTrue(rendered.contains("<td>" + host.getPort() + "</td>"));
+            if (i == 0) {
+                assertTrue(rendered.contains(host.toStringForm()));
+            } else {
+                assertFalse(rendered.contains(host.toStringForm()));
+            }
+        }
+    }
+
+    @Test
+    public void testRenderTenantsWithFocus() throws Exception {
+        String rendered = miruManageService.renderTenantsWithFocus(tenantId);
+        assertTrue(rendered.contains(tenantId.toString()));
+        for (MiruHost host : hosts) {
+            assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "/" + host.getPort() + "#focus"));
+        }
+    }
+
+    @Test
+    public void testRenderActivityWALWithTenant() throws Exception {
+        String rendered = miruManageService.renderActivityWALWithTenant(tenantId);
+        assertTrue(rendered.contains(tenantId.toString()));
+        assertTrue(rendered.contains("/miru/manage/wal/activity/" + tenantId + "/" + partitionId + "#focus"));
+    }
+
 }

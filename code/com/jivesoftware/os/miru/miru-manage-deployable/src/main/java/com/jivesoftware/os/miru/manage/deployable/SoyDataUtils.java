@@ -1,6 +1,11 @@
 /*
- * This is a modification of code available at https://github.com/codedance/silken
- * which has been published with the following license information:
+ * This class is adapted from code available at https://github.com/codedance/silken
+ * which has been published with the below license information, and which contains
+ * the following modifications:
+ *
+ *   1. Added enum support
+ *
+ * --------------------- Start original license information ---------------------
  *
  * (c) Copyright 2011-2013 PaperCut Software Int. Pty. Ltd. http://www.papercut.com/
  *
@@ -85,6 +90,9 @@ public class SoyDataUtils {
         }
         if (obj.getClass().isArray()) {
             return obj;
+        }
+        if (obj.getClass().isEnum()) {
+            return ((Enum) obj).name();
         }
 
         // At this point we must assume it's a POJO so map-it.

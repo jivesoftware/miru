@@ -2,20 +2,19 @@ package com.jivesoftware.os.miru.manage.deployable;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.template.soy.SoyFileSet;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.Map;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 
 public class MiruSoyRendererTest {
-    private MiruSoyRenderer renderer;
 
-    @BeforeMethod
-    public void setUp() throws Exception {
+    @Test
+    public void testConvertMiruHost() throws Exception {
         SoyFileSet.Builder builder = new SoyFileSet.Builder();
         File soyFile = File.createTempFile("dumb", "soy");
         FileWriter writer = new FileWriter(soyFile);
@@ -28,14 +27,34 @@ public class MiruSoyRendererTest {
                 "{/template}\n");
         writer.close();
         builder.add(soyFile);
-        renderer = new MiruSoyRenderer(builder.build().compileToTofu(), new SoyDataUtils());
-    }
+        MiruSoyRenderer renderer = new MiruSoyRenderer(builder.build().compileToTofu(), new SoyDataUtils());
 
-    @Test
-    public void testConvertObjectToMap() throws Exception {
         MiruHost host = new MiruHost("localhost", 10001);
         Map<String, ?> data = ImmutableMap.of("host", host);
         String rendered = renderer.render("miru.test", data);
         assertEquals(rendered, host.toStringForm());
     }
+
+    @Test
+    public void testConvertMiruBackingStorage() throws Exception {
+        SoyFileSet.Builder builder = new SoyFileSet.Builder();
+        File soyFile = File.createTempFile("dumb", "soy");
+        FileWriter writer = new FileWriter(soyFile);
+        writer.write("{namespace miru}\n\n" +
+                "/**\n" +
+                " * @param storage\n" +
+                " */\n" +
+                "{template .test}\n" +
+                "{$storage}\n" +
+                "{/template}\n");
+        writer.close();
+        builder.add(soyFile);
+        MiruSoyRenderer renderer = new MiruSoyRenderer(builder.build().compileToTofu(), new SoyDataUtils());
+
+        MiruBackingStorage storage = MiruBackingStorage.disk;
+        Map<String, ?> data = ImmutableMap.of("storage", storage);
+        String rendered = renderer.render("miru.test", data);
+        assertEquals(rendered, storage.name());
+    }
+
 }
