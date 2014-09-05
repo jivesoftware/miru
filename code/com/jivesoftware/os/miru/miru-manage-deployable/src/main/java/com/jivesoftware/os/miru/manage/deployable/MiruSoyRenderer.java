@@ -10,9 +10,11 @@ import java.util.Map;
 public class MiruSoyRenderer {
 
     private final SoyTofu tofu;
+    private final SoyDataUtils soyDataUtils;
 
-    public MiruSoyRenderer(SoyTofu tofu) {
+    public MiruSoyRenderer(SoyTofu tofu, SoyDataUtils soyDataUtils) {
         this.tofu = tofu;
+        this.soyDataUtils = soyDataUtils;
     }
 
     public String render(String template, Map<String, ?> data) {
@@ -24,7 +26,7 @@ public class MiruSoyRenderer {
             throw new IllegalArgumentException("No renderer found for template : " + template + ".  Are you sure it exists?");
         }
 
-        renderer.setData(data);
+        renderer.setData(soyDataUtils.toSoyCompatibleMap(data));
 
         return renderer.render();
     }

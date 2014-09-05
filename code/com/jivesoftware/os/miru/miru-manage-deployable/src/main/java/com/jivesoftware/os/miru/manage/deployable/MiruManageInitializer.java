@@ -36,6 +36,7 @@ public class MiruManageInitializer {
 
         @StringDefault("resources/soy")
         String getPathToSoyResources();
+        void setPathToSoyResources(String pathToSoyResources);
     }
 
     public MiruManageService initialize(MiruManageConfig config,
@@ -51,7 +52,7 @@ public class MiruManageInitializer {
 
         SoyFileSet sfs = soyFileSetBuilder.build();
         SoyTofu tofu = sfs.compileToTofu();
-        MiruSoyRenderer renderer = new MiruSoyRenderer(tofu);
+        MiruSoyRenderer renderer = new MiruSoyRenderer(tofu, new SoyDataUtils());
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());

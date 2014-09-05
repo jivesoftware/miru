@@ -79,6 +79,11 @@
             <type>jar</type>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+            <artifactId>row-column-value-store-inmemory</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>javax.ws.rs-api</artifactId>
         </dependency>
