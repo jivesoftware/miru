@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -14,6 +16,8 @@ import com.jivesoftware.os.miru.query.MiruSolvableFactory;
  */
 public class TrendingInjectable {
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final MiruProvider<? extends Miru> miruProvider;
     private final Trending trending;
 
@@ -24,6 +28,7 @@ public class TrendingInjectable {
 
     public TrendingResult scoreTrending(TrendingQuery query) throws MiruQueryServiceException {
         try {
+            LOG.debug("callAndMerge: query={}", query);
             MiruTenantId tenantId = query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.callAndMerge(tenantId,
@@ -44,12 +49,14 @@ public class TrendingInjectable {
             Optional<TrendingResult> lastResult)
             throws MiruQueryServiceException {
         try {
+            LOG.debug("callImmediate: partitionId={} query={}", query, partitionId);
+            LOG.trace("callImmediate: lastResult={}", lastResult);
             MiruTenantId tenantId = query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
-            return miru.callAndMerge(tenantId,
+            return miru.callImmediate(tenantId,
+                    partitionId,
                     new MiruSolvableFactory<>("scoreTrending", new TrendingExecuteQuery(trending, query)),
-                    new TrendingResultEvaluator(query),
-                    new MergeTrendingResults(query.desiredNumberOfDistincts),
+                    lastResult,
                     TrendingResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;

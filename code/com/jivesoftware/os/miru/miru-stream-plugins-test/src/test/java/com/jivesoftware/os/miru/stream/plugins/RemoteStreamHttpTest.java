@@ -30,7 +30,10 @@ import static org.testng.Assert.assertNotNull;
  */
 public class RemoteStreamHttpTest {
 
-    @Test
+    private static final String REMOTE_HOST = "";
+    private static final int REMOTE_PORT = -1;
+
+    @Test(enabled = false, description = "Needs REMOTE constants")
     public void testAggregateCounts() throws Exception {
 
         String tenant = "999";
@@ -40,7 +43,7 @@ public class RemoteStreamHttpTest {
                 .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
-        RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient("soa-prime-data6.phx1.jivehosted.com", 10004), objectMapper);
+        RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
 
         int queries = 100;
         for (int i = 0; i < queries; i++) {

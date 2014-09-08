@@ -50,7 +50,7 @@ public class Trending {
 
         List<Trendy> trendies = new ArrayList<>();
         int fieldId = stream.schema.getFieldId(query.aggregateCountAroundField);
-        log.trace("fieldId={}", fieldId);
+        log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             MiruField<BM> aggregateField = stream.fieldIndex.getField(fieldId);
 
@@ -112,13 +112,24 @@ public class Trending {
 
                     SimpleRegressionTrend trend = new SimpleRegressionTrend();
                     MiruIntIterator iter = bitmaps.intIterator(termIndex);
+                    long minTime = Long.MAX_VALUE;
+                    long maxTime = Long.MIN_VALUE;
                     while (iter.hasNext()) {
                         int index = iter.next();
                         long timestamp = stream.timeIndex.getTimestamp(index);
+                        if (timestamp < minTime) {
+                            minTime = timestamp;
+                        }
+                        if (timestamp > maxTime) {
+                            maxTime = timestamp;
+                        }
                         trend.add(timestamp, 1d);
                     }
                     Trendy trendy = new Trendy(aggregateValue, trend, trend.getRank(trend.getCurrentT()));
                     trendies.add(trendy);
+                    if (log.isTraceEnabled()) {
+                        log.trace("Trend minTime={} maxTime={} currentT={} bucketTimes={}", minTime, maxTime, trend.getCurrentT(), trend.getBucketsT());
+                    }
 
                     //TODO desiredNumberOfDistincts is used to truncate the final list. Do we need a maxDistincts of some sort?
                     /*
