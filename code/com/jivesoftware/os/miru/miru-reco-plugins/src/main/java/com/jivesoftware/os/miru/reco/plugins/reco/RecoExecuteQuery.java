@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.MiruQueryHandle;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
 import java.util.ArrayList;
@@ -18,10 +19,11 @@ import java.util.List;
  */
 public class RecoExecuteQuery implements ExecuteQuery<RecoResult, RecoReport> {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final CollaborativeFiltering collaborativeFiltering;
     private final RecoQuery query;
+    private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public RecoExecuteQuery(CollaborativeFiltering collaborativeFiltering,
             RecoQuery query) {
@@ -52,6 +54,7 @@ public class RecoExecuteQuery implements ExecuteQuery<RecoResult, RecoReport> {
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
+        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         return collaborativeFiltering.collaborativeFiltering(bitmaps, stream, query, report, answer);

@@ -1,0 +1,144 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.jivesoftware.os.miru.reco.plugins;
+
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
+import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.reco.plugins.trending.Trending;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingResult;
+import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
+import com.jivesoftware.os.miru.service.MiruService;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
+import java.util.Collections;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+
+/**
+ * @author jonathan
+ */
+public class MiruTrendingNGTest {
+
+    MiruSchema miruSchema = new MiruSchema(
+            new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
+            new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
+
+    MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
+    MiruPartitionId partitionId = MiruPartitionId.of(1);
+    MiruHost miruHost = new MiruHost("logicalName", 1234);
+    CollaborativeFilterUtil util = new CollaborativeFilterUtil();
+
+    MiruService service;
+    TrendingInjectable injectable;
+
+    @BeforeMethod
+    public void setUpMethod() throws Exception {
+        MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
+                miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring());
+
+        this.service = miruProvider.getMiru(tenant1);
+        this.injectable = new TrendingInjectable(miruProvider, new Trending());
+    }
+
+    @Test(enabled = true)
+    public void basicTest() throws Exception {
+
+        Random rand = new Random(1234);
+        int numqueries = 2;
+        int numberOfUsers = 2;
+        int numberOfDocument = 100;
+        int numberOfViewsPerUser = 2;
+        int numberOfActivities = numberOfUsers * numberOfViewsPerUser + 18;
+        long timespan = SimpleRegressionTrend.numberOfBuckets * SimpleRegressionTrend.durationPerBucket;
+        long intervalPerActivity = timespan / numberOfActivities;
+        AtomicLong time = new AtomicLong(new SnowflakeIdPacker().pack(System.currentTimeMillis(), 0, 0) - timespan);
+        System.out.println("Building activities....");
+        long start = System.currentTimeMillis();
+        int count = 0;
+        int numGroups = 10;
+        for (int i = 0; i < numberOfUsers; i++) {
+            String user = "bob" + i;
+            int randSeed = i % numGroups;
+            Random userRand = new Random(randSeed * 137);
+            for (int r = 0; r < 2 * (i / numGroups); r++) {
+                userRand.nextInt(numberOfDocument);
+            }
+            for (int d = 0; d < numberOfViewsPerUser; d++) {
+                int docId = userRand.nextInt(numberOfDocument);
+                long activityTime = time.addAndGet(intervalPerActivity);
+                service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId))));
+                if (++count % 10_000 == 0) {
+                    System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
+                }
+            }
+        }
+
+        System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
+
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "1")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "2")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "3")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "4")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "9")));
+
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "1")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "2")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "3")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "4")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "10")));
+
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "2")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "3")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "4")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "11")));
+
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "3")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "4")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "12")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "12")));
+
+        System.out.println("Running queries...");
+
+        for (int i = 0; i < numqueries; i++) {
+            String user = "bob" + rand.nextInt(numberOfUsers);
+            MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(user));
+            MiruFilter filter = new MiruFilter(
+                    MiruFilterOperation.or,
+                    Optional.of(ImmutableList.of(miruFieldFilter)),
+                    Optional.<ImmutableList<MiruFilter>>absent());
+
+            long s = System.currentTimeMillis();
+            TrendingQuery query = new TrendingQuery(tenant1,
+                    Optional.<MiruAuthzExpression>absent(),
+                    filter,
+                    "doc",
+                    10);
+            TrendingResult trendingResult = injectable.scoreTrending(query);
+
+            System.out.println("trendingResult:" + trendingResult);
+            System.out.println("Took:" + (System.currentTimeMillis() - s));
+        }
+
+    }
+
+}

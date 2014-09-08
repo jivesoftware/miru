@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -10,6 +12,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.MiruQueryHandle;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
 import com.jivesoftware.os.miru.query.MiruTimeRange;
@@ -21,8 +24,11 @@ import java.util.List;
  */
 public class CountCustomExecuteQuery implements ExecuteQuery<DistinctCountResult, DistinctCountReport> {
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final NumberOfDistincts numberOfDistincts;
     private final DistinctCountQuery query;
+    private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public CountCustomExecuteQuery(NumberOfDistincts numberOfDistincts,
             DistinctCountQuery query) {
@@ -64,11 +70,11 @@ public class CountCustomExecuteQuery implements ExecuteQuery<DistinctCountResult
         }
 
         // 4) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
-
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
+        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         return numberOfDistincts.numberOfDistincts(bitmaps, stream, query, report, answer);

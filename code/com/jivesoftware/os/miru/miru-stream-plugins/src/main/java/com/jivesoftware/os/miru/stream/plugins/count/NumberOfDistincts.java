@@ -31,7 +31,7 @@ public class NumberOfDistincts {
             BM answer)
             throws Exception {
 
-        log.debug("Get number of distincts for answer {}", answer);
+        log.debug("Get number of distincts for answer={} query={}", answer, query);
 
         int collectedDistincts = 0;
         Set<MiruTermId> aggregateTerms;
@@ -43,6 +43,7 @@ public class NumberOfDistincts {
         }
 
         int fieldId = stream.schema.getFieldId(query.aggregateCountAroundField);
+        log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             MiruField<BM> aggregateField = stream.fieldIndex.getField(fieldId);
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
@@ -63,10 +64,12 @@ public class NumberOfDistincts {
             CardinalityAndLastSetBit answerCollector = null;
             while (true) {
                 int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
+                log.trace("lastSetBit={}", lastSetBit);
                 if (lastSetBit < 0) {
                     break;
                 }
                 MiruTermId[] fieldValues = stream.activityIndex.get(query.tenantId, lastSetBit, fieldId);
+                log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -94,7 +97,9 @@ public class NumberOfDistincts {
                 }
             }
         }
-        return new DistinctCountResult(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
+        DistinctCountResult result = new DistinctCountResult(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
+        log.debug("result={}", result);
+        return result;
     }
 
 }

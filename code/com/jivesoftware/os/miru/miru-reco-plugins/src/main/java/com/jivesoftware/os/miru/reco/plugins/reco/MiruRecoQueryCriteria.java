@@ -31,7 +31,7 @@ public class MiruRecoQueryCriteria {
             @JsonProperty("lookupFieldNamed2") String lookupFieldNamed2,
             @JsonProperty("aggregateFieldName3") String aggregateFieldName3,
             @JsonProperty("retrieveFieldName3") String retrieveFieldName3,
-            int desiredNumberOfDistincts) {
+            @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
         this.constraintsFilter = constraintsFilter;
         this.authzExpression = authzExpression;
         this.aggregateFieldName1 = aggregateFieldName1;

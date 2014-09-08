@@ -51,6 +51,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
         try {
             while (solvables.hasNext() && solvers > 0) {
                 MiruSolvable<R> solvable = solvables.next();
+                log.debug("Initial solver index={} coord={}", n, solvable.getCoord());
                 futures.add(new SolvableFuture<R>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                 solvers--;
                 n++;
@@ -68,7 +69,8 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 if (future == null) {
                     if (mayAddSolver) {
                         MiruSolvable<R> solvable = solvables.next();
-                        futures.add(new SolvableFuture<R>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
+                        log.debug("Added a solver coord={}", solvable.getCoord());
+                        futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                         n++;
                     }
                 } else {
@@ -78,6 +80,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                             // should be few enough of these that we prefer a linear lookup
                             for (SolvableFuture<R> f : futures) {
                                 if (f.future == future) {
+                                    log.debug("Got a solution coord={}", f.solvable.getCoord());
                                     result = new MiruSolution<>(r, f.solvable.getCoord(), System.currentTimeMillis() - f.startTime);
                                     break;
                                 }

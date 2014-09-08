@@ -1,0 +1,75 @@
+package com.jivesoftware.os.miru.stream.plugins;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.base.Functions;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsResult;
+import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryCriteria;
+import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryParams;
+import java.util.Arrays;
+import java.util.Collections;
+import org.apache.commons.io.Charsets;
+import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertNotNull;
+
+/**
+ *
+ */
+public class RemoteStreamHttpTest {
+
+    @Test
+    public void testAggregateCounts() throws Exception {
+
+        String tenant = "999";
+        MiruTenantId tenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
+
+        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
+                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new GuavaModule());
+        RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient("soa-prime-data6.phx1.jivehosted.com", 10004), objectMapper);
+
+        int queries = 100;
+        for (int i = 0; i < queries; i++) {
+            query(requestHelper, tenantId);
+        }
+    }
+
+    private void query(RequestHelper requestHelper, MiruTenantId tenantId) throws Exception {
+        MiruAggregateCountsQueryCriteria.Builder queryCriteria = new MiruAggregateCountsQueryCriteria.Builder();
+        queryCriteria.setDesiredNumberOfDistincts(100);
+
+        MiruFilter streamFilter = new MiruFilter(MiruFilterOperation.or,
+                Optional.of(ImmutableList.of(
+                        new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
+                                0 //viewed
+                        ), Functions.toStringFunction()))
+                )),
+                Optional.<ImmutableList<MiruFilter>>absent());
+        queryCriteria.setStreamFilter(streamFilter);
+        queryCriteria.setAggregateCountAroundField("parent");
+        queryCriteria.setAuthzExpression(null);
+
+        MiruAggregateCountsQueryParams miruAggregateCountsQueryParams = new MiruAggregateCountsQueryParams(tenantId,
+                queryCriteria.build());
+        AggregateCountsResult result = requestHelper.executeRequest(miruAggregateCountsQueryParams,
+                AggregateCountsConstants.FILTER_PREFIX + AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT,
+                AggregateCountsResult.class, AggregateCountsResult.EMPTY_RESULTS);
+        System.out.println(result);
+        assertNotNull(result);
+    }
+
+}

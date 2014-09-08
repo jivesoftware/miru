@@ -325,7 +325,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     public int lastSetBit(EWAHCompressedBitmap bitmap) {
         MiruIntIterator iterator = intIterator(bitmap);
         int last = -1;
-        for (; iterator.hasNext();) {
+        while (iterator.hasNext()) {
             last = iterator.next();
         }
         return last;

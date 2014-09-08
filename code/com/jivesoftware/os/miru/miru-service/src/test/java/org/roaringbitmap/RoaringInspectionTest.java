@@ -17,4 +17,14 @@ public class RoaringInspectionTest {
             assertEquals(cardinalityAndLastSetBit.lastSetBit, i * 37);
         }
     }
+
+    @Test
+    public void testSizeInBits() throws Exception {
+        RoaringBitmap bitmap = new RoaringBitmap();
+        for (int i = 0; i * 37 < 5 * Short.MAX_VALUE; i++) {
+            bitmap.add(i * 37);
+            long sizeInBits = RoaringInspection.sizeInBits(bitmap);
+            assertEquals(sizeInBits, i * 37);
+        }
+    }
 }

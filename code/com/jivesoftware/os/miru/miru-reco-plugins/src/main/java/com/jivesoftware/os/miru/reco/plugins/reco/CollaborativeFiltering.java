@@ -4,6 +4,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.hash.Hashing;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.query.BloomIndex;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
@@ -26,6 +28,8 @@ import static com.jivesoftware.os.miru.reco.plugins.reco.RecoResult.Recommendati
  */
 public class CollaborativeFiltering {
 
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
     private final MiruFilterUtils filterUtils;
 
     public CollaborativeFiltering(MiruFilterUtils filterUtils) {
@@ -42,6 +46,8 @@ public class CollaborativeFiltering {
             BM answer)
             throws Exception {
 
+        log.debug("Get collaborative filtering for answer={} query={}", answer, query);
+
         BM contributors = possibleContributors(bitmaps, stream, query, answer);
         BM otherContributors = bitmaps.create();
         bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
@@ -51,7 +57,7 @@ public class CollaborativeFiltering {
         BM contributions = contributions(bitmaps, contributorHeap, stream, query);
 
         final List<TermCount> mostLike = new ArrayList<>(contributorHeap);
-        final BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
+        final BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100000, 0.01f); // TODO fix somehow
         final List<BloomIndex.Mights<TermCount>> wantBits = bloomIndex.wantBits(mostLike);
         // TODO handle authz
         BM othersContributions = bitmaps.create();
@@ -81,7 +87,9 @@ public class CollaborativeFiltering {
             MiruQueryStream<BM> stream,
             BM join1)
             throws Exception {
-        MiruField<BM> aggregateField2 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName2));
+        int fieldId = stream.schema.getFieldId(query.aggregateFieldName2);
+        log.debug("rankContributors: fieldId={}", fieldId);
+        MiruField<BM> aggregateField2 = stream.fieldIndex.getField(fieldId);
 
         final MinMaxPriorityQueue<TermCount> userHeap = MinMaxPriorityQueue.orderedBy(new Comparator<TermCount>() {
 
@@ -104,15 +112,17 @@ public class CollaborativeFiltering {
         return userHeap;
     }
 
-    public <BM> BM possibleContributors(MiruBitmaps<BM> bitmaps, MiruQueryStream<BM> stream, final RecoQuery query, BM answer) throws Exception {
+    private <BM> BM possibleContributors(MiruBitmaps<BM> bitmaps, MiruQueryStream<BM> stream, final RecoQuery query, BM answer) throws Exception {
         MiruField<BM> aggregateField1 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName1));
         // feeds us our docIds
         List<BM> toBeORed = new ArrayList<>();
         MiruIntIterator answerIterator = bitmaps.intIterator(answer);
         int fieldId = stream.schema.getFieldId(query.aggregateFieldName1);
+        log.debug("possibleContributors: fieldId={}", fieldId);
         while (answerIterator.hasNext()) {
             int id = answerIterator.next();
             MiruTermId[] fieldValues = stream.activityIndex.get(query.tenantId, id, fieldId);
+            log.trace("possibleContributors: fieldValues={}", (Object) fieldValues);
             if (fieldValues != null && fieldValues.length > 0) {
                 Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField1.getInvertedIndex(
                         filterUtils.makeComposite(fieldValues[0], "^", query.aggregateFieldName2));
@@ -122,14 +132,18 @@ public class CollaborativeFiltering {
             }
         }
         BM r = bitmaps.create();
+        log.debug("possibleContributors: toBeORed.size={}", toBeORed.size());
         bitmaps.or(r, toBeORed);
+        log.trace("possibleContributors: r={}", r);
         return r;
     }
 
     private <BM> RecoResult score(MiruBitmaps<BM> bitmaps, final RecoQuery query, BM join2, MiruQueryStream<BM> stream,
             final BloomIndex<BM> bloomIndex, final List<BloomIndex.Mights<TermCount>> wantBits) throws Exception {
 
-        final MiruField<BM> aggregateField3 = stream.fieldIndex.getField(stream.schema.getFieldId(query.aggregateFieldName3));
+        int fieldId = stream.schema.getFieldId(query.aggregateFieldName3);
+        log.debug("score: fieldId={}", fieldId);
+        final MiruField<BM> aggregateField3 = stream.fieldIndex.getField(fieldId);
 
         final MinMaxPriorityQueue<TermCount> heap = MinMaxPriorityQueue.orderedBy(new Comparator<TermCount>() {
 
@@ -145,6 +159,7 @@ public class CollaborativeFiltering {
                     public TermCount callback(TermCount v) throws Exception {
                         if (v != null) {
                             MiruTermId[] fieldValues = v.mostRecent;
+                            log.trace("score.fieldValues={}", (Object) fieldValues);
                             if (fieldValues != null && fieldValues.length > 0) {
                                 Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField3.getInvertedIndex(
                                         filterUtils.makeComposite(fieldValues[0], "|", query.retrieveFieldName2));
@@ -174,6 +189,7 @@ public class CollaborativeFiltering {
         for (TermCount result : heap) {
             results.add(new Recommendation(result.termId, result.count));
         }
+        log.debug("score: results.size={}", results.size());
         return new RecoResult(results);
     }
 

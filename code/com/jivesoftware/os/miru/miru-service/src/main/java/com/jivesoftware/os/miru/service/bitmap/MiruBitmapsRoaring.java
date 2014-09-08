@@ -151,7 +151,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
 
     @Override
     public long sizeInBits(RoaringBitmap bitmap) {
-        return bitmap.getSizeInBytes();
+        return RoaringInspection.sizeInBits(bitmap);
     }
 
     @Override
@@ -214,7 +214,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     public int lastSetBit(RoaringBitmap bitmap) {
         MiruIntIterator iterator = intIterator(bitmap);
         int last = -1;
-        for (; iterator.hasNext();) {
+        while (iterator.hasNext()) {
             last = iterator.next();
         }
         return last;

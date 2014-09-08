@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -10,6 +12,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.MiruQueryHandle;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
 import com.jivesoftware.os.miru.query.MiruTimeRange;
@@ -22,8 +25,11 @@ import java.util.List;
  */
 public class FilterCustomExecuteQuery implements ExecuteQuery<AggregateCountsResult, AggregateCountsReport> {
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final AggregateCounts aggregateCounts;
     private final AggregateCountsQuery query;
+    private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public FilterCustomExecuteQuery(AggregateCounts aggregateCounts, AggregateCountsQuery query) {
         this.aggregateCounts = aggregateCounts;
@@ -53,7 +59,9 @@ public class FilterCustomExecuteQuery implements ExecuteQuery<AggregateCountsRes
             MiruTimeRange timeRange = query.answerTimeRange.get();
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
+
         BM answer = bitmaps.create();
+        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         BM counter = null;

@@ -44,7 +44,7 @@ public class AggregateCounts {
             Optional<BM> counter)
             throws Exception {
 
-        log.debug("Get aggregate counts for answer {}", answer);
+        log.debug("Get aggregate counts for answer={} query={}", answer, query);
 
         int collectedDistincts = 0;
         int skippedDistincts = 0;
@@ -59,6 +59,7 @@ public class AggregateCounts {
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
         int fieldId = stream.schema.getFieldId(query.aggregateCountAroundField);
+        log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             MiruField<BM> aggregateField = stream.fieldIndex.getField(fieldId);
 
@@ -112,12 +113,14 @@ public class AggregateCounts {
 
             while (true) {
                 int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
+                log.trace("lastSetBit={}", lastSetBit);
                 if (lastSetBit < 0) {
                     break;
                 }
 
                 MiruInternalActivity activity = stream.activityIndex.get(query.tenantId, lastSetBit);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+                log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.create();
@@ -180,7 +183,10 @@ public class AggregateCounts {
             }
         }
 
-        return new AggregateCountsResult(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
+        AggregateCountsResult result = new AggregateCountsResult(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms),
+                skippedDistincts, collectedDistincts);
+        log.debug("result={}", result);
+        return result;
     }
 
 }

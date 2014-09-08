@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.query;
 import com.google.common.base.Optional;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.concurrent.atomic.AtomicLong;
@@ -13,6 +15,8 @@ import static com.google.common.base.Preconditions.checkState;
  *
  */
 public class MiruFilterUtils {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public MiruTermId makeComposite(MiruTermId fieldValue, String separator, String fieldName) {
         return new MiruTermId(Bytes.concat(fieldValue.getBytes(), separator.getBytes(), fieldName.getBytes()));
@@ -28,24 +32,36 @@ public class MiruFilterUtils {
             CallbackStream<TermCount> terms)
             throws Exception {
 
+        boolean traceEnabled = LOG.isTraceEnabled();
+        boolean debugEnabled = LOG.isDebugEnabled();
+
         final AtomicLong bytesTraversed = new AtomicLong();
-        bytesTraversed.addAndGet(bitmaps.sizeInBytes(answer));
+        if (debugEnabled) {
+            bytesTraversed.addAndGet(bitmaps.sizeInBytes(answer));
+        }
         CardinalityAndLastSetBit answerCollector = null;
         ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
         int fieldId = stream.schema.getFieldId(streamField);
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
+        LOG.debug("stream: field={} fieldId={} beforeCount={}", streamField, fieldId, beforeCount);
         while (true) {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
+            LOG.trace("stream: lastSetBit={}", lastSetBit);
             if (lastSetBit < 0) {
                 break;
             }
 
             MiruTermId[] fieldValues = stream.activityIndex.get(tenantId, lastSetBit, fieldId);
+            if (traceEnabled) {
+                LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
+            }
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                 BM removeUnknownField = bitmaps.create();
                 bitmaps.set(removeUnknownField, lastSetBit);
-                bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(removeUnknownField)));
+                if (debugEnabled) {
+                    bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(removeUnknownField)));
+                }
 
                 BM revisedAnswer = reusable.next();
                 answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
@@ -58,7 +74,9 @@ public class MiruFilterUtils {
                 checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
 
                 BM termIndex = invertedIndex.get().getIndex();
-                bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(termIndex)));
+                if (debugEnabled) {
+                    bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(termIndex)));
+                }
 
                 BM revisedAnswer = reusable.next();
                 answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
@@ -83,8 +101,7 @@ public class MiruFilterUtils {
 
         }
         terms.callback(null); // EOS
-        System.out.println("Bytes Traversed=" + bytesTraversed.longValue());
-
+        LOG.debug("stream: bytesTraversed={}", bytesTraversed.longValue());
     }
 
 }

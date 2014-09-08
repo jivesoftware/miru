@@ -3,10 +3,13 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
+import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.query.MiruQueryHandle;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
@@ -20,10 +23,13 @@ import java.util.List;
  */
 public class CountInboxExecuteQuery implements ExecuteQuery<DistinctCountResult, DistinctCountReport> {
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final NumberOfDistincts numberOfDistincts;
     private final MiruJustInTimeBackfillerizer backfillerizer;
     private final DistinctCountQuery query;
     private final boolean unreadOnly;
+    private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public CountInboxExecuteQuery(NumberOfDistincts numberOfDistincts,
             MiruJustInTimeBackfillerizer backfillerizer,
@@ -52,6 +58,7 @@ public class CountInboxExecuteQuery implements ExecuteQuery<DistinctCountResult,
 
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
+                LOG.debug("No time index intersection");
                 return numberOfDistincts.numberOfDistincts(bitmaps, stream, query, report, bitmaps.create());
             }
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
@@ -62,6 +69,7 @@ public class CountInboxExecuteQuery implements ExecuteQuery<DistinctCountResult,
             ands.add(inbox.get());
         } else {
             // Short-circuit if the user doesn't have an inbox here
+            LOG.debug("No user inbox");
             return numberOfDistincts.numberOfDistincts(bitmaps, stream, query, report, bitmaps.create());
         }
 
@@ -80,7 +88,9 @@ public class CountInboxExecuteQuery implements ExecuteQuery<DistinctCountResult,
             }
         }
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
+
         BM answer = bitmaps.create();
+        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         return numberOfDistincts.numberOfDistincts(bitmaps, stream, query, report, answer);
