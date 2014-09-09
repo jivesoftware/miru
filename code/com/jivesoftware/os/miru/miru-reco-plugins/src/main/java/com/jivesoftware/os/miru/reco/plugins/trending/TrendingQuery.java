@@ -21,7 +21,7 @@ public class TrendingQuery {
     @JsonCreator
     public TrendingQuery(
             @JsonProperty("tenantId") MiruTenantId tenantId,
-            @JsonProperty("contraintsFilter") MiruFilter constraintsFilter,
+            @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
             @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
             @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
             @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {

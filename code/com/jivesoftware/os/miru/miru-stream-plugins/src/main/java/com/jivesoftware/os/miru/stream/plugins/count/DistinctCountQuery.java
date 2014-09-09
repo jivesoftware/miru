@@ -27,7 +27,7 @@ public class DistinctCountQuery {
             @JsonProperty("streamId") MiruStreamId streamId,
             @JsonProperty("timeRange") MiruTimeRange timeRange,
             @JsonProperty("streamFilter") MiruFilter streamFilter,
-            @JsonProperty("contraintsFilter") MiruFilter constraintsFilter,
+            @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
             @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
             @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
             @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {

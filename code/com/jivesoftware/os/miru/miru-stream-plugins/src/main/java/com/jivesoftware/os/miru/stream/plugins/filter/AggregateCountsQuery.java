@@ -30,7 +30,7 @@ public class AggregateCountsQuery {
             @JsonProperty("answerTimeRange") MiruTimeRange answerTimeRange,
             @JsonProperty("countTimeRange") MiruTimeRange countTimeRange,
             @JsonProperty("streamFilter") MiruFilter streamFilter,
-            @JsonProperty("contraintsFilter") MiruFilter constraintsFilter,
+            @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
             @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
             @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
             @JsonProperty("startFromDistinctN") int startFromDistinctN,

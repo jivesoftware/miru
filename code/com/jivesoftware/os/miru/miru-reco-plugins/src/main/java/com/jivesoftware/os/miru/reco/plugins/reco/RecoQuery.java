@@ -25,7 +25,7 @@ public class RecoQuery {
     public final int desiredNumberOfDistincts;
 
     public RecoQuery(@JsonProperty("tenantId") MiruTenantId tenantId,
-            @JsonProperty("contraintsFilter") MiruFilter constraintsFilter,
+            @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
             @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
             @JsonProperty("aggregateFieldName1") String aggregateFieldName1,
             @JsonProperty("retrieveFieldName1") String retrieveFieldName1,
