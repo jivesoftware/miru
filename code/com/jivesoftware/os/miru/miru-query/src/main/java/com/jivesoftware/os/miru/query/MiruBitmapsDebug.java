@@ -7,6 +7,16 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
  */
 public class MiruBitmapsDebug {
 
+    public <BM> String toString(MiruBitmaps<BM> bitmaps, BM bitmap) {
+        MiruIntIterator miruIntIterator = bitmaps.intIterator(bitmap);
+        StringBuilder buf = new StringBuilder();
+        while (miruIntIterator.hasNext()) {
+            int id = miruIntIterator.next();
+            buf.append(id).append('\n');
+        }
+        return buf.toString();
+    }
+
     public <BM> void debug(MetricLogger log, MiruBitmaps<BM> bitmaps, String message, Iterable<BM> iter) {
         if (log.isDebugEnabled()) {
             StringBuilder buf = new StringBuilder(message);

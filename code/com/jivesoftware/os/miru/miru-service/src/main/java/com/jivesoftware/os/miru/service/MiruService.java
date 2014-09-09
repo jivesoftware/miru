@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
@@ -15,10 +16,16 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.query.Miru;
+import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
+import com.jivesoftware.os.miru.query.MiruField;
 import com.jivesoftware.os.miru.query.MiruHostedPartition;
+import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.query.MiruPartitionDirector;
+import com.jivesoftware.os.miru.query.MiruQueryHandle;
+import com.jivesoftware.os.miru.query.MiruQueryStream;
 import com.jivesoftware.os.miru.query.MiruResultEvaluator;
 import com.jivesoftware.os.miru.query.MiruResultMerger;
 import com.jivesoftware.os.miru.query.MiruSolvable;
@@ -45,6 +52,7 @@ public class MiruService implements Miru {
     private final MiruHostedPartitionComparison partitionComparison;
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruActivityLookupTable activityLookupTable;
+    private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public MiruService(MiruHost localhost,
             MiruPartitionDirector partitionDirector,
@@ -173,6 +181,32 @@ public class MiruService implements Miru {
      */
     public void warm(MiruTenantId tenantId) throws Exception {
         partitionDirector.warm(tenantId);
+    }
+
+    /**
+     * Inspect a field term.
+     */
+    public String inspect(MiruTenantId tenantId, MiruPartitionId partitionId, String fieldName, String termValue) throws Exception {
+        Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
+        if (partition.isPresent()) {
+            return inspect(partition.get(), fieldName, termValue);
+        } else {
+            return "Partition unavailable";
+        }
+    }
+
+    private <BM> String inspect(MiruHostedPartition<BM> partition, String fieldName, String termValue) throws Exception {
+        try (MiruQueryHandle<BM> handle = partition.getQueryHandle()) {
+            MiruQueryStream<BM> queryStream = handle.getQueryStream();
+            int fieldId = queryStream.schema.getFieldId(fieldName);
+            MiruField<BM> field = queryStream.fieldIndex.getField(fieldId);
+            Optional<? extends MiruInvertedIndex<BM>> invertedIndex = field.getInvertedIndex(new MiruTermId(termValue.getBytes(Charsets.UTF_8)));
+            if (invertedIndex.isPresent()) {
+                return bitmapsDebug.toString(handle.getBitmaps(), invertedIndex.get().getIndex());
+            } else {
+                return "Index not present";
+            }
+        }
     }
 
     /**
