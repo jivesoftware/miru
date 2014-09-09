@@ -6,6 +6,7 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
@@ -45,9 +46,9 @@ public class CountCustomExecuteQuery implements ExecuteQuery<DistinctCountResult
         MiruFilter combinedFilter = query.streamFilter;
 
         // If we have a constraints filter grab that as well and AND it to the stream filter
-        if (query.constraintsFilter.isPresent()) {
+        if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
             combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<ImmutableList<MiruFieldFilter>>absent(),
-                    Optional.of(ImmutableList.of(query.streamFilter, query.constraintsFilter.get())));
+                    Optional.of(ImmutableList.of(query.streamFilter, query.constraintsFilter)));
         }
 
         // Start building up list of bitmap operations to run
@@ -59,13 +60,13 @@ public class CountCustomExecuteQuery implements ExecuteQuery<DistinctCountResult
         ands.add(executeMiruFilter.call());
 
         // 2) Add in the authz check if we have it
-        if (query.authzExpression.isPresent()) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression.get()));
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
         }
 
         // 3) Add in a time-range mask if we have it
-        if (query.timeRange.isPresent()) {
-            MiruTimeRange timeRange = query.timeRange.get();
+        if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {
+            MiruTimeRange timeRange = query.timeRange;
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 

@@ -97,7 +97,7 @@ public class CollaborativeFiltering {
             public int compare(TermCount o1, TermCount o2) {
                 return -Long.compare(o1.count, o2.count); // minus to reverse :)
             }
-        }).maximumSize(query.resultCount).create(); // overloaded :(
+        }).maximumSize(query.desiredNumberOfDistincts).create(); // overloaded :(
 
         filterUtils.stream(bitmaps, query.tenantId, stream, join1, Optional.<BM>absent(), aggregateField2, query.retrieveFieldName2,
                 new CallbackStream<TermCount>() {
@@ -151,7 +151,7 @@ public class CollaborativeFiltering {
             public int compare(TermCount o1, TermCount o2) {
                 return -Long.compare(o1.count, o2.count); // minus to reverse :)
             }
-        }).maximumSize(query.resultCount).create();
+        }).maximumSize(query.desiredNumberOfDistincts).create();
         // feeds us all recommended documents
         filterUtils.stream(bitmaps, query.tenantId, stream, join2, Optional.<BM>absent(), aggregateField3, query.retrieveFieldName3,
                 new CallbackStream<TermCount>() {

@@ -125,8 +125,8 @@ public class MiruCollaborativeFilterNGTest {
 
             long s = System.currentTimeMillis();
             RecoResult recoResult = injectable.collaborativeFilteringRecommendations(new RecoQuery(tenant1,
-                    Optional.<MiruAuthzExpression>absent(),
                     filter,
+                    MiruAuthzExpression.NOT_PROVIDED,
                     "doc", "doc", "doc",
                     "user", "user", "user",
                     "doc", "doc",

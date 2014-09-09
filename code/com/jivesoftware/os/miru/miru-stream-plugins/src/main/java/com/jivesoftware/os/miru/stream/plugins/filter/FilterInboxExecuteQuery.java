@@ -6,6 +6,9 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
@@ -36,7 +39,7 @@ public class FilterInboxExecuteQuery implements ExecuteQuery<AggregateCountsResu
             AggregateCountsQuery query,
             boolean unreadOnly) {
 
-        Preconditions.checkArgument(query.streamId.isPresent(), "Inbox queries require a streamId");
+        Preconditions.checkArgument(!MiruStreamId.NULL.equals(query.streamId), "Inbox queries require a streamId");
         this.aggregateCounts = aggregateCounts;
         this.backfillerizer = backfillerizer;
         this.query = query;
@@ -49,14 +52,14 @@ public class FilterInboxExecuteQuery implements ExecuteQuery<AggregateCountsResu
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
-            backfillerizer.backfill(bitmaps, stream, query.streamFilter, query.tenantId, handle.getCoord().partitionId, query.streamId.get());
+            backfillerizer.backfill(bitmaps, stream, query.streamFilter, query.tenantId, handle.getCoord().partitionId, query.streamId);
         }
 
         List<BM> ands = new ArrayList<>();
         List<BM> counterAnds = new ArrayList<>();
 
-        if (query.answerTimeRange.isPresent()) {
-            MiruTimeRange timeRange = query.answerTimeRange.get();
+        if (!MiruTimeRange.ALL_TIME.equals(query.answerTimeRange)) {
+            MiruTimeRange timeRange = query.answerTimeRange;
 
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
@@ -65,8 +68,8 @@ public class FilterInboxExecuteQuery implements ExecuteQuery<AggregateCountsResu
             }
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
-        if (query.countTimeRange.isPresent()) {
-            MiruTimeRange timeRange = query.countTimeRange.get();
+        if (!MiruTimeRange.ALL_TIME.equals(query.countTimeRange)) {
+            MiruTimeRange timeRange = query.countTimeRange;
 
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
@@ -74,10 +77,10 @@ public class FilterInboxExecuteQuery implements ExecuteQuery<AggregateCountsResu
                 return aggregateCounts.getAggregateCounts(bitmaps, stream, query, report, bitmaps.create(), Optional.of(bitmaps.create()));
             }
             counterAnds.add(bitmaps.buildTimeRangeMask(
-                    stream.timeIndex, query.countTimeRange.get().smallestTimestamp, query.countTimeRange.get().largestTimestamp));
+                    stream.timeIndex, query.countTimeRange.smallestTimestamp, query.countTimeRange.largestTimestamp));
         }
 
-        Optional<BM> inbox = stream.inboxIndex.getInbox(query.streamId.get());
+        Optional<BM> inbox = stream.inboxIndex.getInbox(query.streamId);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -86,16 +89,18 @@ public class FilterInboxExecuteQuery implements ExecuteQuery<AggregateCountsResu
             return aggregateCounts.getAggregateCounts(bitmaps, stream, query, report, bitmaps.create(), Optional.of(bitmaps.create()));
         }
 
-        if (query.constraintsFilter.isPresent()) {
+        if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
             ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
-                    query.constraintsFilter.get(), Optional.<BM>absent(), -1);
+                    query.constraintsFilter, Optional.<BM>absent(), -1);
             ands.add(executeMiruFilter.call());
         }
-        if (query.authzExpression.isPresent()) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression.get()));
+
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
         }
+
         if (unreadOnly) {
-            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId.get());
+            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
@@ -109,7 +114,7 @@ public class FilterInboxExecuteQuery implements ExecuteQuery<AggregateCountsResu
         counterAnds.add(answer);
         if (!unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
-            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId.get());
+            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId);
             if (unreadIndex.isPresent()) {
                 counterAnds.add(unreadIndex.get());
             }

@@ -1,11 +1,9 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -35,11 +33,10 @@ public class RecoEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response collaborativeFiltering(MiruRecoQueryParams params) {
+    public Response collaborativeFiltering(RecoQuery query) {
         try {
             long t = System.currentTimeMillis();
-            RecoResult result = injectable.collaborativeFilteringRecommendations(
-                    buildRecoQuery(params.getTenantId(), params.getQueryCriteria()));
+            RecoResult result = injectable.collaborativeFilteringRecommendations(query);
 
             log.info("collaborativeFiltering: " + result.results.size() + " in " + (System.currentTimeMillis() - t) + " ms");
             return responseHelper.jsonResponse(result != null ? result : RecoResult.EMPTY_RESULTS);
@@ -55,10 +52,10 @@ public class RecoEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response collaborativeFiltering(@PathParam("partitionId") int id, MiruRecoQueryAndResultParams params) {
+    public Response collaborativeFiltering(@PathParam("partitionId") int id, RecoQueryAndResult queryAndResult) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            RecoResult result = injectable.collaborativeFilteringRecommendations(partitionId, params.getQuery(), params.getLastResult());
+            RecoResult result = injectable.collaborativeFilteringRecommendations(partitionId, queryAndResult);
 
             //log.info("collaborativeFiltering: " + result.results.size());
             return responseHelper.jsonResponse(result != null ? result : RecoResult.EMPTY_RESULTS);
@@ -69,22 +66,4 @@ public class RecoEndpoints {
             return Response.serverError().build();
         }
     }
-
-    private RecoQuery buildRecoQuery(MiruTenantId tenantId,
-            MiruRecoQueryCriteria queryCriteria) {
-        return new RecoQuery(
-                tenantId,
-                Optional.fromNullable(queryCriteria.getAuthzExpression()),
-                queryCriteria.getConstraintsFilter(),
-                queryCriteria.getAggregateFieldName1(),
-                queryCriteria.getRetrieveFieldName1(),
-                queryCriteria.getLookupFieldNamed1(),
-                queryCriteria.getAggregateFieldName2(),
-                queryCriteria.getRetrieveFieldName2(),
-                queryCriteria.getLookupFieldNamed2(),
-                queryCriteria.getAggregateFieldName3(),
-                queryCriteria.getRetrieveFieldName3(),
-                queryCriteria.getDesiredNumberOfDistincts());
-    }
-
 }

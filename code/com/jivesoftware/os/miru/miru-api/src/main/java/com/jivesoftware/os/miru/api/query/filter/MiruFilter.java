@@ -11,7 +11,7 @@ import java.util.List;
 /** @author jonathan */
 public class MiruFilter {
 
-    public static final MiruFilter DEFAULT_FILTER = new MiruFilter(
+    public static final MiruFilter NO_FILTER = new MiruFilter(
         MiruFilterOperation.or,
         Optional.<ImmutableList<MiruFieldFilter>>absent(),
         Optional.<ImmutableList<MiruFilter>>absent());
@@ -57,6 +57,38 @@ public class MiruFilter {
             ", fieldFilters=" + fieldFilters +
             ", subFilter=" + subFilter +
             '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        MiruFilter that = (MiruFilter) o;
+
+        if (fieldFilters != null ? !fieldFilters.equals(that.fieldFilters) : that.fieldFilters != null) {
+            return false;
+        }
+        if (operation != that.operation) {
+            return false;
+        }
+        if (subFilter != null ? !subFilter.equals(that.subFilter) : that.subFilter != null) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = operation != null ? operation.hashCode() : 0;
+        result = 31 * result + (fieldFilters != null ? fieldFilters.hashCode() : 0);
+        result = 31 * result + (subFilter != null ? subFilter.hashCode() : 0);
+        return result;
     }
 
     private static final <T> Function<List<T>, ImmutableList<T>> toImmutableList() {

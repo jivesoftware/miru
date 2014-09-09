@@ -129,8 +129,8 @@ public class MiruTrendingNGTest {
 
             long s = System.currentTimeMillis();
             TrendingQuery query = new TrendingQuery(tenant1,
-                    Optional.<MiruAuthzExpression>absent(),
                     filter,
+                    MiruAuthzExpression.NOT_PROVIDED,
                     "doc",
                     10);
             TrendingResult trendingResult = injectable.scoreTrending(query);

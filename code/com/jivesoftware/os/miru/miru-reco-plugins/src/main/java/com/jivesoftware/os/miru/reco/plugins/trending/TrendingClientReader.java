@@ -19,12 +19,11 @@ public class TrendingClientReader {
 
     public TrendingResult scoreTrending(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
-            MiruTrendingQueryCriteria queryCriteria)
+            TrendingQuery query)
             throws MiruQueryServiceException {
 
-        MiruTrendingQueryParams params = new MiruTrendingQueryParams(tenantId, queryCriteria);
         try {
-            return clusterReader.read(tenantId, actorId, params,
+            return clusterReader.read(tenantId, actorId, query,
                     TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
                     TrendingResult.class, TrendingResult.EMPTY_RESULTS);
         } catch (RuntimeException e) {

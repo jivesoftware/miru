@@ -19,7 +19,7 @@ public class RecoResultEvaluator implements MiruResultEvaluator<RecoResult> {
 
     @Override
     public boolean isDone(RecoResult result) {
-        log.debug("Evaluate {} >= {}", result.results.size(), query.resultCount);
-        return result.results.size() >= query.resultCount; // TODO fix this exits to fast!
+        log.debug("Evaluate {} >= {}", result.results.size(), query.desiredNumberOfDistincts);
+        return result.results.size() >= query.desiredNumberOfDistincts; // TODO fix, this exits too fast!
     }
 }

@@ -6,6 +6,7 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
@@ -42,9 +43,9 @@ public class FilterCustomExecuteQuery implements ExecuteQuery<AggregateCountsRes
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         MiruFilter combinedFilter = query.streamFilter;
-        if (query.constraintsFilter.isPresent()) {
+        if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
             combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<ImmutableList<MiruFieldFilter>>absent(),
-                    Optional.of(ImmutableList.of(query.streamFilter, query.constraintsFilter.get())));
+                    Optional.of(ImmutableList.of(query.streamFilter, query.constraintsFilter)));
         }
 
         List<BM> ands = new ArrayList<>();
@@ -52,11 +53,13 @@ public class FilterCustomExecuteQuery implements ExecuteQuery<AggregateCountsRes
                 combinedFilter, Optional.<BM>absent(), -1);
         ands.add(executeMiruFilter.call());
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
-        if (query.authzExpression.isPresent()) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression.get()));
+
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
         }
-        if (query.answerTimeRange.isPresent()) {
-            MiruTimeRange timeRange = query.answerTimeRange.get();
+
+        if (!MiruTimeRange.ALL_TIME.equals(query.answerTimeRange)) {
+            MiruTimeRange timeRange = query.answerTimeRange;
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
@@ -65,10 +68,10 @@ public class FilterCustomExecuteQuery implements ExecuteQuery<AggregateCountsRes
         bitmaps.and(answer, ands);
 
         BM counter = null;
-        if (query.countTimeRange.isPresent()) {
+        if (!MiruTimeRange.ALL_TIME.equals(query.countTimeRange)) {
             counter = bitmaps.create();
             bitmaps.and(counter, Arrays.asList(answer, bitmaps.buildTimeRangeMask(
-                    stream.timeIndex, query.countTimeRange.get().smallestTimestamp, query.countTimeRange.get().largestTimestamp)));
+                    stream.timeIndex, query.countTimeRange.smallestTimestamp, query.countTimeRange.largestTimestamp)));
         }
 
         return aggregateCounts.getAggregateCounts(bitmaps, stream, query, report, answer, Optional.fromNullable(counter));

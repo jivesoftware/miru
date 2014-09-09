@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
@@ -64,8 +65,8 @@ public class AggregateCounts {
             MiruField<BM> aggregateField = stream.fieldIndex.getField(fieldId);
 
             BM unreadIndex = null;
-            if (query.streamId.isPresent()) {
-                Optional<BM> unread = stream.unreadTrackingIndex.getUnread(query.streamId.get());
+            if (!MiruStreamId.NULL.equals(query.streamId)) {
+                Optional<BM> unread = stream.unreadTrackingIndex.getUnread(query.streamId);
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }

@@ -24,12 +24,11 @@ public class DistinctCountClientReader {
 
     public DistinctCountResult countCustomStream(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
-            MiruDistinctCountQueryCriteria queryCriteria)
+            DistinctCountQuery query)
             throws MiruQueryServiceException {
 
-        MiruDistinctCountQueryParams params = new MiruDistinctCountQueryParams(tenantId, queryCriteria);
         try {
-            return clusterReader.read(tenantId, actorId, params,
+            return clusterReader.read(tenantId, actorId, query,
                     COUNT_PREFIX + CUSTOM_QUERY_ENDPOINT,
                     DistinctCountResult.class, DistinctCountResult.EMPTY_RESULTS);
         } catch (RuntimeException e) {
@@ -39,12 +38,11 @@ public class DistinctCountClientReader {
 
     public DistinctCountResult countInboxStreamAll(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
-            MiruDistinctCountQueryCriteria queryCriteria)
+            DistinctCountQuery query)
             throws MiruQueryServiceException {
 
-        MiruDistinctCountQueryParams params = new MiruDistinctCountQueryParams(tenantId, queryCriteria);
         try {
-            return clusterReader.read(tenantId, actorId, params,
+            return clusterReader.read(tenantId, actorId, query,
                     COUNT_PREFIX + INBOX_ALL_QUERY_ENDPOINT,
                     DistinctCountResult.class, DistinctCountResult.EMPTY_RESULTS);
         } catch (RuntimeException e) {
@@ -54,12 +52,11 @@ public class DistinctCountClientReader {
 
     public DistinctCountResult countInboxStreamUnread(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
-            MiruDistinctCountQueryCriteria queryCriteria)
+            DistinctCountQuery query)
             throws MiruQueryServiceException {
 
-        MiruDistinctCountQueryParams params = new MiruDistinctCountQueryParams(tenantId, queryCriteria);
         try {
-            return clusterReader.read(tenantId, actorId, params,
+            return clusterReader.read(tenantId, actorId, query,
                     COUNT_PREFIX + INBOX_UNREAD_QUERY_ENDPOINT,
                     DistinctCountResult.class, DistinctCountResult.EMPTY_RESULTS);
         } catch (RuntimeException e) {

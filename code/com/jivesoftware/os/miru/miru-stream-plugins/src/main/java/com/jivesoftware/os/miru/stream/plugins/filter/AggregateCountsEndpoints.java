@@ -1,12 +1,9 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.base.MiruStreamId;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -38,10 +35,9 @@ public class AggregateCountsEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterCustomStream(MiruAggregateCountsQueryParams params) {
+    public Response filterCustomStream(AggregateCountsQuery query) {
         try {
-            AggregateCountsResult result = injectable.filterCustomStream(
-                    buildAggregateCountsQuery(params.getTenantId(), params.getQueryCriteria()));
+            AggregateCountsResult result = injectable.filterCustomStream(query);
 
             //log.info("filterCustomStream: " + result.collectedDistincts);
             return responseHelper.jsonResponse(result != null ? result : AggregateCountsResult.EMPTY_RESULTS);
@@ -57,10 +53,9 @@ public class AggregateCountsEndpoints {
     @Path(INBOX_ALL_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamAll(MiruAggregateCountsQueryParams params) {
+    public Response filterInboxStreamAll(AggregateCountsQuery query) {
         try {
-            AggregateCountsResult result = injectable.filterInboxStreamAll(
-                    buildAggregateCountsQuery(params.getTenantId(), params.getQueryCriteria()));
+            AggregateCountsResult result = injectable.filterInboxStreamAll(query);
 
             //log.info("filterInboxStreamAll: " + result.collectedDistincts);
             return responseHelper.jsonResponse(result != null ? result : AggregateCountsResult.EMPTY_RESULTS);
@@ -76,10 +71,9 @@ public class AggregateCountsEndpoints {
     @Path(INBOX_UNREAD_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamUnread(MiruAggregateCountsQueryParams params) {
+    public Response filterInboxStreamUnread(AggregateCountsQuery query) {
         try {
-            AggregateCountsResult result = injectable.filterInboxStreamUnread(
-                    buildAggregateCountsQuery(params.getTenantId(), params.getQueryCriteria()));
+            AggregateCountsResult result = injectable.filterInboxStreamUnread(query);
 
             //log.info("filterInboxStreamUnread: " + result.collectedDistincts);
             return responseHelper.jsonResponse(result != null ? result : AggregateCountsResult.EMPTY_RESULTS);
@@ -95,10 +89,10 @@ public class AggregateCountsEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterCustomStream(@PathParam("partitionId") int id, MiruAggregateCountsQueryAndResultParams params) {
+    public Response filterCustomStream(@PathParam("partitionId") int id, AggregateCountsQueryAndResult queryAndResult) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            AggregateCountsResult result = injectable.filterCustomStream(partitionId, params.getQuery(), params.getLastResult());
+            AggregateCountsResult result = injectable.filterCustomStream(partitionId, queryAndResult);
 
             return responseHelper.jsonResponse(result != null ? result : AggregateCountsResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
@@ -113,10 +107,10 @@ public class AggregateCountsEndpoints {
     @Path(INBOX_ALL_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamAll(@PathParam("partitionId") int id, MiruAggregateCountsQueryAndResultParams params) {
+    public Response filterInboxStreamAll(@PathParam("partitionId") int id, AggregateCountsQueryAndResult queryAndResult) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            AggregateCountsResult result = injectable.filterInboxStreamAll(partitionId, params.getQuery(), params.getLastResult());
+            AggregateCountsResult result = injectable.filterInboxStreamAll(partitionId, queryAndResult);
 
             return responseHelper.jsonResponse(result != null ? result : AggregateCountsResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
@@ -131,10 +125,10 @@ public class AggregateCountsEndpoints {
     @Path(INBOX_UNREAD_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamUnread(@PathParam("partitionId") int id, MiruAggregateCountsQueryAndResultParams params) {
+    public Response filterInboxStreamUnread(@PathParam("partitionId") int id, AggregateCountsQueryAndResult queryAndResult) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            AggregateCountsResult result = injectable.filterInboxStreamUnread(partitionId, params.getQuery(), params.getLastResult());
+            AggregateCountsResult result = injectable.filterInboxStreamUnread(partitionId, queryAndResult);
 
             return responseHelper.jsonResponse(result != null ? result : AggregateCountsResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
@@ -144,20 +138,4 @@ public class AggregateCountsEndpoints {
             return Response.serverError().build();
         }
     }
-
-    private AggregateCountsQuery buildAggregateCountsQuery(MiruTenantId tenantId, MiruAggregateCountsQueryCriteria queryCriteria) {
-        return new AggregateCountsQuery(
-                tenantId,
-                Optional.fromNullable(queryCriteria.getStreamId() != null ? new MiruStreamId(queryCriteria.getStreamId().toBytes()) : null),
-                Optional.fromNullable(queryCriteria.getAnswerTimeRange()),
-                Optional.fromNullable(queryCriteria.getCountTimeRange()),
-                Optional.fromNullable(queryCriteria.getAuthzExpression()),
-                queryCriteria.getStreamFilter(),
-                Optional.fromNullable(queryCriteria.getConstraintsFilter()),
-                queryCriteria.getQuery(),
-                queryCriteria.getAggregateCountAroundField(),
-                queryCriteria.getStartFromDistinctN(),
-                queryCriteria.getDesiredNumberOfDistincts());
-    }
-
 }

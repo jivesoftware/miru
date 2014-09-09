@@ -31,7 +31,7 @@ public class DistinctCountRemotePartitionReader {
     public DistinctCountResult countCustomStream(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
             throws MiruQueryServiceException {
 
-        MiruDistinctCountQueryAndResultParams params = new MiruDistinctCountQueryAndResultParams(query, lastResult.orNull());
+        DistinctCountQueryAndResult params = new DistinctCountQueryAndResult(query, lastResult.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
@@ -47,7 +47,7 @@ public class DistinctCountRemotePartitionReader {
     public DistinctCountResult countInboxStreamAll(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
             throws MiruQueryServiceException {
 
-        MiruDistinctCountQueryAndResultParams params = new MiruDistinctCountQueryAndResultParams(query, lastResult.orNull());
+        DistinctCountQueryAndResult params = new DistinctCountQueryAndResult(query, lastResult.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
@@ -63,7 +63,7 @@ public class DistinctCountRemotePartitionReader {
     public DistinctCountResult countInboxStreamUnread(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountResult> lastResult)
             throws MiruQueryServiceException {
 
-        MiruDistinctCountQueryAndResultParams params = new MiruDistinctCountQueryAndResultParams(query, lastResult.orNull());
+        DistinctCountQueryAndResult params = new DistinctCountQueryAndResult(query, lastResult.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,

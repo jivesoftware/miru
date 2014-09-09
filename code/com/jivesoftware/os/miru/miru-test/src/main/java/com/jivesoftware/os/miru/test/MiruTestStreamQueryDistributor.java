@@ -6,16 +6,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.ObjectId;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.query.MiruTimeRange;
-import com.jivesoftware.os.miru.stream.plugins.count.MiruDistinctCountQueryCriteria;
-import com.jivesoftware.os.miru.stream.plugins.count.MiruDistinctCountQueryParams;
-import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryCriteria;
-import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryParams;
+import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import java.util.Random;
 import javax.annotation.Nullable;
 
@@ -49,90 +48,93 @@ public class MiruTestStreamQueryDistributor {
         return numQueries;
     }
 
-    public MiruAggregateCountsQueryParams aggregateCountsQuery(boolean inbox) {
+    public AggregateCountsQuery aggregateCountsQuery(boolean inbox) {
         Id userId = featureSupplier.oldUsers(1).get(0);
         ObjectId user = new ObjectId("User", userId);
-        MiruAggregateCountsQueryCriteria.Builder criteriaBuilder = new MiruAggregateCountsQueryCriteria.Builder()
-                .setDesiredNumberOfDistincts(numResultsAggregateCounts + 1) // we usually add 1 for "hasMore"
-                .setStreamId(streamId(inbox, user))
-                .setStreamFilter(new MiruFilter(
-                        MiruFilterOperation.and,
-                        Optional.of(ImmutableList.of(viewClassesFilter())),
-                        Optional.of(ImmutableList.of(
-                                new MiruFilter(
-                                        MiruFilterOperation.or,
-                                        Optional.of(buildFieldFilters(inbox, userId)),
-                                        Optional.<ImmutableList<MiruFilter>>absent())))))
-                .setAuthzExpression(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))));
+
+        int startFromDistinctN = 0;
+        MiruTimeRange answerTimeRange = null;
+        MiruTimeRange countTimeRange = null;
 
         if (random.nextInt(100) < 10) {
             // 10% page, which uses an origin timestamp plus an offset
-            criteriaBuilder.setAnswerTimeRange(buildTimeRange(true));
-            criteriaBuilder.setStartFromDistinctN(numResultsAggregateCounts * (int) (1 + pageNumber.get(random)));
+            answerTimeRange = buildTimeRange(true);
+            startFromDistinctN = numResultsAggregateCounts * (int) (1 + pageNumber.get(random));
         }
 
         if (!inbox) {
             // activity stream applies count time range for zippers
-            criteriaBuilder.setCountTimeRange(buildTimeRange(false));
+            countTimeRange = buildTimeRange(false);
         }
 
-        Optional<MiruFilter> constraints = buildConstraintsFilter(inbox, userId);
-        if (constraints.isPresent()) {
-            criteriaBuilder.setConstraintsFilter(constraints.get());
-        }
+        Optional<MiruFilter> constraintsFilter = buildConstraintsFilter(inbox, userId);
 
-        return new MiruAggregateCountsQueryParams(
+        return new AggregateCountsQuery(
                 featureSupplier.miruTenantId(),
-                criteriaBuilder.build());
-    }
-
-    public MiruDistinctCountQueryParams distinctCountQuery(boolean inbox) {
-        Id userId = featureSupplier.oldUsers(1).get(0);
-        ObjectId user = new ObjectId("User", userId);
-        MiruDistinctCountQueryCriteria.Builder criteriaBuilder = new MiruDistinctCountQueryCriteria.Builder()
-                .setDesiredNumberOfDistincts(numResultsDistinctCount + 1) // we usually add 1 for "hasMore"
-                .setStreamId(streamId(inbox, user))
-                .setStreamFilter(new MiruFilter(
+                streamId(inbox, user),
+                answerTimeRange,
+                countTimeRange,
+                new MiruFilter(
                         MiruFilterOperation.and,
                         Optional.of(ImmutableList.of(viewClassesFilter())),
                         Optional.of(ImmutableList.of(
                                 new MiruFilter(
                                         MiruFilterOperation.or,
                                         Optional.of(buildFieldFilters(inbox, userId)),
-                                        Optional.<ImmutableList<MiruFilter>>absent())))))
-                .setAuthzExpression(new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))));
+                                        Optional.<ImmutableList<MiruFilter>>absent())))),
+                constraintsFilter.orNull(),
+                new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
+                MiruFieldName.ACTIVITY_PARENT.getFieldName(),
+                startFromDistinctN,
+                numResultsAggregateCounts + 1); // we usually add 1 for "hasMore"
+    }
 
+    public DistinctCountQuery distinctCountQuery(boolean inbox) {
+        Id userId = featureSupplier.oldUsers(1).get(0);
+        ObjectId user = new ObjectId("User", userId);
+
+        MiruTimeRange timeRange = null;
         if (!inbox) {
             // activity stream gets distinct count after last time viewed
-            criteriaBuilder.setTimeRange(buildTimeRange(false));
+            timeRange = buildTimeRange(false);
         }
 
         Optional<MiruFilter> constraintsFilter = buildConstraintsFilter(inbox, userId);
-        if (constraintsFilter.isPresent()) {
-            criteriaBuilder.setConstraintsFilter(constraintsFilter.get());
-        }
 
-        return new MiruDistinctCountQueryParams(
+        return new DistinctCountQuery(
                 featureSupplier.miruTenantId(),
-                criteriaBuilder.build());
+                streamId(inbox, user),
+                timeRange,
+                new MiruFilter(
+                        MiruFilterOperation.and,
+                        Optional.of(ImmutableList.of(viewClassesFilter())),
+                        Optional.of(ImmutableList.of(
+                                new MiruFilter(
+                                        MiruFilterOperation.or,
+                                        Optional.of(buildFieldFilters(inbox, userId)),
+                                        Optional.<ImmutableList<MiruFilter>>absent())))),
+                constraintsFilter.or(MiruFilter.NO_FILTER),
+                new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
+                MiruFieldName.ACTIVITY_PARENT.getFieldName(),
+                numResultsDistinctCount + 1); // we usually add 1 for "hasMore"
     }
 
-    private Id streamId(boolean inbox, ObjectId user) {
+    private MiruStreamId streamId(boolean inbox, ObjectId user) {
         if (inbox) {
-            return CompositeId.createOrdered("InboxStream", featureSupplier.tenantId(), user.toStringForm());
+            return new MiruStreamId(CompositeId.createOrdered("InboxStream", featureSupplier.tenantId(), user.toStringForm()).toBytes());
         } else {
-            return CompositeId.createOrdered("ConnectionsStream", featureSupplier.tenantId(), user.toStringForm());
+            return new MiruStreamId(CompositeId.createOrdered("ConnectionsStream", featureSupplier.tenantId(), user.toStringForm()).toBytes());
         }
     }
 
     private MiruFieldFilter viewClassesFilter() {
         return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.of(
-                        "ContentVersionActivitySearchView",
-                        "CommentVersionActivitySearchView",
-                        "LikeActivitySearchView",
-                        "UserFollowActivitySearchView",
-                        "MembershipActivitySearchView",
-                        "PlaceActivitySearchView"));
+                "ContentVersionActivitySearchView",
+                "CommentVersionActivitySearchView",
+                "LikeActivitySearchView",
+                "UserFollowActivitySearchView",
+                "MembershipActivitySearchView",
+                "PlaceActivitySearchView"));
     }
 
     private ImmutableList<MiruFieldFilter> buildFieldFilters(boolean inbox, Id userId) {

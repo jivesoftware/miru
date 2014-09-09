@@ -29,7 +29,7 @@ public class RecoInjectable {
             return miru.callAndMerge(tenantId,
                     new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoExecuteQuery(collaborativeFiltering, query)),
                     new RecoResultEvaluator(query),
-                    new MergeRecoResults(query.resultCount),
+                    new MergeRecoResults(query.desiredNumberOfDistincts),
                     RecoResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
@@ -39,15 +39,15 @@ public class RecoInjectable {
         }
     }
 
-    public RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQuery query, Optional<RecoResult> lastResult)
+    public RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQueryAndResult queryAndResult)
             throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = query.tenantId;
+            MiruTenantId tenantId = queryAndResult.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.callImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoExecuteQuery(collaborativeFiltering, query)),
-                    lastResult,
+                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoExecuteQuery(collaborativeFiltering, queryAndResult.query)),
+                    Optional.fromNullable(queryAndResult.lastResult),
                     RecoResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;

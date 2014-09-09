@@ -13,12 +13,15 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.MiruTimeRange;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
@@ -26,9 +29,8 @@ import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCounts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsEndpoints;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsResult;
-import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryCriteria;
-import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryParams;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -100,34 +102,40 @@ public class InMemoryEndpointsTest {
         assertEquals(addResponse.getStatus(), 200);
 
         // Request 1
-        Response getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruAggregateCountsQueryParams(
+        Response getResponse = aggregateCountsEndpoints.filterCustomStream(new AggregateCountsQuery(
                 tenantId,
-                new MiruAggregateCountsQueryCriteria.Builder()
-                        .setAggregateCountAroundField(OBJECT_ID.getFieldName())
-                        .setStreamFilter(new MiruFilter(MiruFilterOperation.or,
-                                Optional.of(ImmutableList.of(
-                                        new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")))),
-                                Optional.<ImmutableList<MiruFilter>>absent()
-                        ))
-                        .build()
-        ));
+                MiruStreamId.NULL,
+                MiruTimeRange.ALL_TIME,
+                MiruTimeRange.ALL_TIME,
+                new MiruFilter(MiruFilterOperation.or,
+                        Optional.of(ImmutableList.of(
+                                new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")))),
+                        Optional.<ImmutableList<MiruFilter>>absent()),
+                MiruFilter.NO_FILTER,
+                MiruAuthzExpression.NOT_PROVIDED,
+                OBJECT_ID.getFieldName(),
+                0,
+                100));
         assertNotNull(getResponse);
         AggregateCountsResult aggregateCountsResult = objectMapper.readValue(getResponse.getEntity().toString(), AggregateCountsResult.class);
         assertEquals(aggregateCountsResult.collectedDistincts, 1);
 
         // Request 2
-        getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruAggregateCountsQueryParams(
+        getResponse = aggregateCountsEndpoints.filterCustomStream(new AggregateCountsQuery(
                 tenantId,
-                new MiruAggregateCountsQueryCriteria.Builder()
-                        .setAggregateCountAroundField(OBJECT_ID.getFieldName())
-                        .setStreamFilter(new MiruFilter(MiruFilterOperation.or,
-                                Optional.of(ImmutableList.of(
-                                        new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
-                                        new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of("value2")))),
-                                Optional.<ImmutableList<MiruFilter>>absent()
-                        ))
-                        .build()
-        ));
+                MiruStreamId.NULL,
+                MiruTimeRange.ALL_TIME,
+                MiruTimeRange.ALL_TIME,
+                new MiruFilter(MiruFilterOperation.or,
+                        Optional.of(ImmutableList.of(
+                                new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
+                                new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of("value2")))),
+                        Optional.<ImmutableList<MiruFilter>>absent()),
+                MiruFilter.NO_FILTER,
+                MiruAuthzExpression.NOT_PROVIDED,
+                OBJECT_ID.getFieldName(),
+                0,
+                100));
         assertNotNull(getResponse);
         aggregateCountsResult = objectMapper.readValue(getResponse.getEntity().toString(), AggregateCountsResult.class);
         assertEquals(aggregateCountsResult.collectedDistincts, 2);

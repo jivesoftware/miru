@@ -15,13 +15,11 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.reco.plugins.reco.MiruRecoQueryCriteria;
-import com.jivesoftware.os.miru.reco.plugins.reco.MiruRecoQueryParams;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoResult;
-import com.jivesoftware.os.miru.reco.plugins.trending.MiruTrendingQueryCriteria;
-import com.jivesoftware.os.miru.reco.plugins.trending.MiruTrendingQueryParams;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingResult;
 import java.util.Arrays;
 import java.util.Collections;
@@ -50,7 +48,7 @@ public class RemoteRecoHttpTest {
         objectMapper.registerModule(new GuavaModule());
         RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
 
-        MiruFilter constraitFilter = new MiruFilter(MiruFilterOperation.or,
+        MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.or,
                 Optional.of(ImmutableList.of(
                         new MiruFieldFilter("objectType", Lists.transform(
                                 Arrays.asList(102, 1, 18, 38, 801, 1464927464, -960826044),
@@ -64,16 +62,13 @@ public class RemoteRecoHttpTest {
                 )),
                 Optional.<ImmutableList<MiruFilter>>absent());
 
-        MiruTrendingQueryCriteria.Builder queryCriteria = new MiruTrendingQueryCriteria.Builder()
-                .setDesiredNumberOfDistincts(100)
-                .setConstraintsFilter(constraitFilter)
-                .setAggregateCountAroundField("parent")
-                .setAuthzExpression(null);
+        TrendingQuery query = new TrendingQuery(tenantId,
+                constraintsFilter,
+                MiruAuthzExpression.NOT_PROVIDED,
+                "parent",
+                100);
 
-        MiruTrendingQueryParams miruTrendingQueryParams = new MiruTrendingQueryParams(tenantId,
-                queryCriteria.build());
-
-        TrendingResult trendingResult = requestHelper.executeRequest(miruTrendingQueryParams,
+        TrendingResult trendingResult = requestHelper.executeRequest(query,
                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
                 TrendingResult.class, TrendingResult.EMPTY_RESULTS);
         System.out.println(trendingResult);
@@ -92,7 +87,7 @@ public class RemoteRecoHttpTest {
         objectMapper.registerModule(new GuavaModule());
         RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
 
-        MiruFilter constraitFilter = new MiruFilter(MiruFilterOperation.and,
+        MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
                 Optional.of(ImmutableList.of(
                         new MiruFieldFilter("user", Arrays.asList(String.valueOf(3765))),
                         new MiruFieldFilter("objectType", Lists.transform(
@@ -107,17 +102,15 @@ public class RemoteRecoHttpTest {
                 )),
                 Optional.<ImmutableList<MiruFilter>>absent());
 
-        MiruRecoQueryCriteria queryCriteria = new MiruRecoQueryCriteria(constraitFilter,
-                new MiruAuthzExpression(Collections.<String>emptyList()),
+        RecoQuery query = new RecoQuery(tenantId,
+                constraintsFilter,
+                MiruAuthzExpression.NOT_PROVIDED,
                 "parent", "parent", "parent",
                 "user", "user", "user",
                 "parent", "parent",
                 100);
 
-        MiruRecoQueryParams miruRecoQueryParams = new MiruRecoQueryParams(tenantId,
-                queryCriteria);
-
-        RecoResult results = requestHelper.executeRequest(miruRecoQueryParams,
+        RecoResult results = requestHelper.executeRequest(query,
                 RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
                 RecoResult.class, RecoResult.EMPTY_RESULTS);
         assertNotNull(results);

@@ -5,6 +5,7 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
 import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
@@ -45,8 +46,8 @@ public class RecoExecuteQuery implements ExecuteQuery<RecoResult, RecoReport> {
         ands.add(executeMiruFilter.call());
 
         // 2) Add in the authz check if we have it
-        if (query.authzExpression.isPresent()) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression.get()));
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index

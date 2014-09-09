@@ -30,7 +30,7 @@ public class RecoRemotePartitionReader {
             RecoQuery query,
             Optional<RecoResult> lastResult)
             throws MiruQueryServiceException {
-        MiruRecoQueryAndResultParams params = new MiruRecoQueryAndResultParams(query, lastResult.orNull());
+        RecoQueryAndResult params = new RecoQueryAndResult(query, lastResult.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,

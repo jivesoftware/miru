@@ -45,18 +45,17 @@ public class TrendingInjectable {
     }
 
     public TrendingResult scoreTrending(MiruPartitionId partitionId,
-            TrendingQuery query,
-            Optional<TrendingResult> lastResult)
+            TrendingQueryAndResult queryAndResult)
             throws MiruQueryServiceException {
         try {
-            LOG.debug("callImmediate: partitionId={} query={}", query, partitionId);
-            LOG.trace("callImmediate: lastResult={}", lastResult);
-            MiruTenantId tenantId = query.tenantId;
+            LOG.debug("callImmediate: partitionId={} query={}", partitionId, queryAndResult.query);
+            LOG.trace("callImmediate: lastResult={}", queryAndResult.lastResult);
+            MiruTenantId tenantId = queryAndResult.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.callImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("scoreTrending", new TrendingExecuteQuery(trending, query)),
-                    lastResult,
+                    new MiruSolvableFactory<>("scoreTrending", new TrendingExecuteQuery(trending, queryAndResult.query)),
+                    Optional.fromNullable(queryAndResult.lastResult),
                     TrendingResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;

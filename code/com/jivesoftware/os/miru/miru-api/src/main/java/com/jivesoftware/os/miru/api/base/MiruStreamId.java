@@ -11,6 +11,8 @@ import com.jivesoftware.os.jive.utils.id.Id;
  */
 public class MiruStreamId extends MiruIBA {
 
+    public static final MiruStreamId NULL = new MiruStreamId(new byte[0]);
+
     @JsonCreator
     public MiruStreamId(@JsonProperty("bytes") byte[] _bytes) {
         super(_bytes);

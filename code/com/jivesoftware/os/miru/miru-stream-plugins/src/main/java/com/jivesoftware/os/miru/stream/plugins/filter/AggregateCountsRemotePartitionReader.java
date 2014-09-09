@@ -31,7 +31,7 @@ public class AggregateCountsRemotePartitionReader {
     public AggregateCountsResult filterCustomStream(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
             throws MiruQueryServiceException {
 
-        MiruAggregateCountsQueryAndResultParams params = new MiruAggregateCountsQueryAndResultParams(query, lastResult.orNull());
+        AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
@@ -47,7 +47,7 @@ public class AggregateCountsRemotePartitionReader {
     public AggregateCountsResult filterInboxStreamAll(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
             throws MiruQueryServiceException {
 
-        MiruAggregateCountsQueryAndResultParams params = new MiruAggregateCountsQueryAndResultParams(query, lastResult.orNull());
+        AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
@@ -63,7 +63,7 @@ public class AggregateCountsRemotePartitionReader {
     public AggregateCountsResult filterInboxStreamUnread(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
             throws MiruQueryServiceException {
 
-        MiruAggregateCountsQueryAndResultParams params = new MiruAggregateCountsQueryAndResultParams(query, lastResult.orNull());
+        AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,

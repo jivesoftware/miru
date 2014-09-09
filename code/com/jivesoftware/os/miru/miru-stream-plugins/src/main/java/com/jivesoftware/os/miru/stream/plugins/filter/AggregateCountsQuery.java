@@ -1,86 +1,65 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.query.MiruTimeRange;
 
-/** @author jonathan */
+/**
+ *
+ */
 public class AggregateCountsQuery {
 
     public final MiruTenantId tenantId;
-    public final Optional<MiruStreamId> streamId;
-    public final Optional<MiruTimeRange> answerTimeRange;
-    public final Optional<MiruTimeRange> countTimeRange;
-    public final Optional<MiruAuthzExpression> authzExpression;
+    public final MiruStreamId streamId;
+    public final MiruTimeRange answerTimeRange;
+    public final MiruTimeRange countTimeRange;
     public final MiruFilter streamFilter;
-    public final Optional<MiruFilter> constraintsFilter;
-    public final String query;
-    public final String aggregateCountAroundField; // implied that we are counting distict id which is the value part of ActivityTypedalue
+    public final MiruFilter constraintsFilter;
+    public final MiruAuthzExpression authzExpression;
+    public final String aggregateCountAroundField;
     public final int startFromDistinctN;
     public final int desiredNumberOfDistincts;
 
     public AggregateCountsQuery(
-        MiruTenantId tenantId,
-        Optional<MiruStreamId> streamId,
-        Optional<MiruTimeRange> answerTimeRange,
-        Optional<MiruTimeRange> countTimeRange,
-        Optional<MiruAuthzExpression> authzExpression,
-        MiruFilter streamFilter,
-        Optional<MiruFilter> constraintsFilter,
-        String query,
-        String aggregateCountAroundField,
-        int startFromDistinctN,
-        int desiredNumberOfDistincts) {
-        this.tenantId = tenantId;
-        this.streamId = streamId;
-        this.answerTimeRange = answerTimeRange;
-        this.countTimeRange = countTimeRange;
-        this.authzExpression = authzExpression;
-        this.streamFilter = streamFilter;
-        this.constraintsFilter = constraintsFilter;
-        this.query = query;
-        this.aggregateCountAroundField = aggregateCountAroundField;
+            @JsonProperty("tenantId") MiruTenantId tenantId,
+            @JsonProperty("streamId") MiruStreamId streamId,
+            @JsonProperty("answerTimeRange") MiruTimeRange answerTimeRange,
+            @JsonProperty("countTimeRange") MiruTimeRange countTimeRange,
+            @JsonProperty("streamFilter") MiruFilter streamFilter,
+            @JsonProperty("contraintsFilter") MiruFilter constraintsFilter,
+            @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
+            @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
+            @JsonProperty("startFromDistinctN") int startFromDistinctN,
+            @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
+        this.tenantId = Preconditions.checkNotNull(tenantId);
+        this.streamId = Preconditions.checkNotNull(streamId);
+        this.answerTimeRange = Preconditions.checkNotNull(answerTimeRange);
+        this.countTimeRange = Preconditions.checkNotNull(countTimeRange);
+        this.streamFilter = Preconditions.checkNotNull(streamFilter);
+        this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
+        this.authzExpression = Preconditions.checkNotNull(authzExpression);
+        this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
         this.startFromDistinctN = startFromDistinctN;
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
 
-    @JsonCreator
-    public static AggregateCountsQuery fromJson(
-        @JsonProperty("tenantId") MiruTenantId tenantId,
-        @JsonProperty("streamId") Optional<MiruStreamId> streamId,
-        @JsonProperty("answerTimeRange") Optional<MiruTimeRange> answerTimeRange,
-        @JsonProperty("countTimeRange") Optional<MiruTimeRange> countTimeRange,
-        @JsonProperty("authzExpression") Optional<MiruAuthzExpression> authzExpression,
-        @JsonProperty("streamFilter") MiruFilter streamFilter,
-        @JsonProperty("constraintsFilter") Optional<MiruFilter> constraintsFilter,
-        @JsonProperty("query") String query,
-        @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
-        @JsonProperty("startFromDistinctN") int startFromDistinctN,
-        @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
-        return new AggregateCountsQuery(tenantId, streamId, answerTimeRange, countTimeRange, authzExpression, streamFilter, constraintsFilter,
-            query, aggregateCountAroundField, startFromDistinctN, desiredNumberOfDistincts);
-    }
-
     @Override
     public String toString() {
-        return "AggregateCountsQuery{" +
-            "tenantId=" + tenantId +
-            ", streamId=" + streamId +
-            ", answerTimeRange=" + answerTimeRange +
-            ", countTimeRange=" + countTimeRange +
-            ", authzExpression=" + authzExpression +
-            ", streamFilter=" + streamFilter +
-            ", constraintsFilter=" + constraintsFilter +
-            ", query='" + query + '\'' +
-            ", aggregateCountAroundField='" + aggregateCountAroundField + '\'' +
-            ", startFromDistinctN=" + startFromDistinctN +
-            ", desiredNumberOfDistincts=" + desiredNumberOfDistincts +
-            '}';
+        return "MiruAggregateCountsQueryCriteria{" +
+                "tenantId=" + tenantId +
+                ", streamId=" + streamId +
+                ", answerTimeRange=" + answerTimeRange +
+                ", countTimeRange=" + countTimeRange +
+                ", streamFilter=" + streamFilter +
+                ", constraintsFilter=" + constraintsFilter +
+                ", authzExpression=" + authzExpression +
+                ", aggregateCountAroundField='" + aggregateCountAroundField + '\'' +
+                ", startFromDistinctN=" + startFromDistinctN +
+                ", desiredNumberOfDistincts=" + desiredNumberOfDistincts +
+                '}';
     }
-
 }

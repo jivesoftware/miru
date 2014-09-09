@@ -10,14 +10,16 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.query.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsResult;
-import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryCriteria;
-import com.jivesoftware.os.miru.stream.plugins.filter.MiruAggregateCountsQueryParams;
 import java.util.Arrays;
 import java.util.Collections;
 import org.apache.commons.io.Charsets;
@@ -52,23 +54,23 @@ public class RemoteStreamHttpTest {
     }
 
     private void query(RequestHelper requestHelper, MiruTenantId tenantId) throws Exception {
-        MiruAggregateCountsQueryCriteria.Builder queryCriteria = new MiruAggregateCountsQueryCriteria.Builder();
-        queryCriteria.setDesiredNumberOfDistincts(100);
-
-        MiruFilter streamFilter = new MiruFilter(MiruFilterOperation.or,
-                Optional.of(ImmutableList.of(
-                        new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
-                                0 //viewed
-                        ), Functions.toStringFunction()))
-                )),
-                Optional.<ImmutableList<MiruFilter>>absent());
-        queryCriteria.setStreamFilter(streamFilter);
-        queryCriteria.setAggregateCountAroundField("parent");
-        queryCriteria.setAuthzExpression(null);
-
-        MiruAggregateCountsQueryParams miruAggregateCountsQueryParams = new MiruAggregateCountsQueryParams(tenantId,
-                queryCriteria.build());
-        AggregateCountsResult result = requestHelper.executeRequest(miruAggregateCountsQueryParams,
+        AggregateCountsQuery query = new AggregateCountsQuery(tenantId,
+                MiruStreamId.NULL,
+                MiruTimeRange.ALL_TIME,
+                MiruTimeRange.ALL_TIME,
+                new MiruFilter(MiruFilterOperation.or,
+                        Optional.of(ImmutableList.of(
+                                new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
+                                        0 //viewed
+                                ), Functions.toStringFunction()))
+                        )),
+                        Optional.<ImmutableList<MiruFilter>>absent()),
+                MiruFilter.NO_FILTER,
+                MiruAuthzExpression.NOT_PROVIDED,
+                "parent",
+                0,
+                100);
+        AggregateCountsResult result = requestHelper.executeRequest(query,
                 AggregateCountsConstants.FILTER_PREFIX + AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT,
                 AggregateCountsResult.class, AggregateCountsResult.EMPTY_RESULTS);
         System.out.println(result);

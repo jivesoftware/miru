@@ -9,6 +9,8 @@ import java.util.List;
  */
 public class MiruAuthzExpression {
 
+    public static final MiruAuthzExpression NOT_PROVIDED = new MiruAuthzExpression(null);
+
     public final List<String> values;
 
     @JsonCreator

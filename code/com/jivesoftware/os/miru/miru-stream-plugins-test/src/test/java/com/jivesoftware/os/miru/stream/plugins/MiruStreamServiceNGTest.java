@@ -156,13 +156,12 @@ public class MiruStreamServiceNGTest {
                         Optional.of(ImmutableList.copyOf(fieldFilters)),
                         Optional.<ImmutableList<MiruFilter>>absent());
                 AggregateCountsQuery query = new AggregateCountsQuery(tenant1,
-                        Optional.of(streamId),
-                        Optional.of(new MiruTimeRange(0, capacity)),
-                        Optional.of(new MiruTimeRange(0, capacity)),
-                        Optional.<MiruAuthzExpression>absent(),
+                        streamId,
+                        new MiruTimeRange(0, capacity),
+                        new MiruTimeRange(0, capacity),
                         filter,
-                        Optional.<MiruFilter>absent(),
-                        "",
+                        MiruFilter.NO_FILTER,
+                        MiruAuthzExpression.NOT_PROVIDED,
                         "container",
                         0, 51);
 
@@ -266,13 +265,13 @@ public class MiruStreamServiceNGTest {
         //aggregateQuery:
         {
             AggregateCountsQuery query = new AggregateCountsQuery(tenant1,
-                    Optional.of(streamId),
-                    Optional.of(new MiruTimeRange(0, 1000)),
-                    Optional.of(new MiruTimeRange(0, 1000)),
-                    Optional.<MiruAuthzExpression>absent(),
+                    streamId,
+                    new MiruTimeRange(0, 1000),
+                    new MiruTimeRange(0, 1000),
                     filter,
-                    Optional.<MiruFilter>absent(),
-                    "", "container", 0, 10);
+                    MiruFilter.NO_FILTER,
+                    MiruAuthzExpression.NOT_PROVIDED,
+                    "container", 0, 10);
             AggregateCountsResult results = aggregateCountsInjectable.filterInboxStreamAll(query);
             for (AggregateCount a : results.results) {
                 System.out.println(a);
@@ -284,11 +283,11 @@ public class MiruStreamServiceNGTest {
         //countQuery:
         {
             DistinctCountQuery query = new DistinctCountQuery(tenant1,
-                    Optional.of(streamId),
-                    Optional.of(new MiruTimeRange(0, 1000)),
-                    Optional.<MiruAuthzExpression>absent(),
+                    streamId,
+                    new MiruTimeRange(0, 1000),
                     filter,
-                    Optional.<MiruFilter>absent(),
+                    MiruFilter.NO_FILTER,
+                    MiruAuthzExpression.NOT_PROVIDED,
                     "container",
                     50);
             DistinctCountResult count = distinctCountInjectable.countInboxStreamAll(query);
@@ -302,13 +301,13 @@ public class MiruStreamServiceNGTest {
         //aggregateQuery:
         {
             AggregateCountsQuery query = new AggregateCountsQuery(tenant1,
-                    Optional.of(streamId),
-                    Optional.of(new MiruTimeRange(0, 1000)),
-                    Optional.of(new MiruTimeRange(0, 1000)),
-                    Optional.<MiruAuthzExpression>absent(),
+                    streamId,
+                    new MiruTimeRange(0, 1000),
+                    new MiruTimeRange(0, 1000),
                     filter,
-                    Optional.<MiruFilter>absent(),
-                    "", "container", 0, 10);
+                    MiruFilter.NO_FILTER,
+                    MiruAuthzExpression.NOT_PROVIDED,
+                    "container", 0, 10);
             AggregateCountsResult results = aggregateCountsInjectable.filterInboxStreamAll(query);
             for (AggregateCount a : results.results) {
                 System.out.println(a);
@@ -320,11 +319,11 @@ public class MiruStreamServiceNGTest {
         //countQuery:
         {
             DistinctCountQuery query = new DistinctCountQuery(tenant1,
-                    Optional.of(streamId),
-                    Optional.of(new MiruTimeRange(0, 1000)),
-                    Optional.<MiruAuthzExpression>absent(),
+                    streamId,
+                    new MiruTimeRange(0, 1000),
                     filter,
-                    Optional.<MiruFilter>absent(),
+                    MiruFilter.NO_FILTER,
+                    MiruAuthzExpression.NOT_PROVIDED,
                     "container",
                     50);
             DistinctCountResult count = distinctCountInjectable.countInboxStreamAll(query);
