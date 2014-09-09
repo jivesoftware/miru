@@ -11,6 +11,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -49,12 +50,15 @@ public class MiruReaderEndpoints {
     @GET
     @Path(INSPECT_ENDPOINT + "/{tenantId}/{partitionId}/{field}/{term}")
     @Produces(MediaType.TEXT_PLAIN)
-    public Response inspect(String tenantId, int partitionId, String field, String term) {
+    public Response inspect(@PathParam("tenantId") String tenantId,
+            @PathParam("partitionId") int partitionId,
+            @PathParam("field") String field,
+            @PathParam("term") String term) {
         try {
             String value = miruService.inspect(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId), field, term);
             return Response.ok(value).build();
         } catch (Exception e) {
-            log.error("Failed to warm.", e);
+            log.error("Failed to inspect.", e);
             return Response.serverError().build();
         }
     }
