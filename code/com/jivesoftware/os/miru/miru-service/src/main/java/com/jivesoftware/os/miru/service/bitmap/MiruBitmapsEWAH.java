@@ -52,12 +52,10 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
 
     @Override
     public EWAHCompressedBitmap setIntermediate(EWAHCompressedBitmap bitmap, int... indexes) {
-        Arrays.sort(indexes);
-        EWAHCompressedBitmap or = new EWAHCompressedBitmap();
-        for (int bitIndex : indexes) {
-            or.set(bitIndex);
+        for (int index : indexes) {
+            bitmap.set(index);
         }
-        return bitmap.or(or);
+        return bitmap;
     }
 
     @Override

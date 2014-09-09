@@ -84,12 +84,6 @@ public class MiruInvertedIndexTest {
         assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 8));
     }
 
-    @Test(dataProvider = "miruInvertedIndexDataProvider", expectedExceptions = RuntimeException.class)
-    public void testAppendInDecreasingOrder(MiruInvertedIndex miruInvertedIndex) throws Exception {
-        miruInvertedIndex.append(2);
-        miruInvertedIndex.append(1);
-    }
-
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
     public void testRemove(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, Set<Integer> ids) throws Exception {
         EWAHCompressedBitmap index = miruInvertedIndex.getIndex();
