@@ -15,13 +15,12 @@ import com.jivesoftware.os.miru.query.MiruIntIterator;
 import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
 import com.jivesoftware.os.miru.query.TermCount;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoResult.Recommendation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.commons.lang.mutable.MutableInt;
-
-import static com.jivesoftware.os.miru.reco.plugins.reco.RecoResult.Recommendation;
 
 /**
  *

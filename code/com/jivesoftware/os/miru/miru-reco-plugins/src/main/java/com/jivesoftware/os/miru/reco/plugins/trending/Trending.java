@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.query.MiruIntIterator;
 import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
 import com.jivesoftware.os.miru.query.ReusableBuffers;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingResult.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,7 +22,6 @@ import java.util.List;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingResult.Trendy;
 
 /**
  *
@@ -31,11 +31,11 @@ public class Trending {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     public <BM> TrendingResult trending(MiruBitmaps<BM> bitmaps,
-            MiruQueryStream<BM> stream,
-            TrendingQuery query,
-            Optional<TrendingReport> lastReport,
-            BM answer)
-            throws Exception {
+        MiruQueryStream<BM> stream,
+        TrendingQuery query,
+        Optional<TrendingReport> lastReport,
+        BM answer)
+        throws Exception {
 
         log.debug("Get trending for answer={} query={}", answer, query);
 
@@ -77,9 +77,15 @@ public class Trending {
             }
 
             CardinalityAndLastSetBit answerCollector = null;
+            int priorLastSetBit = Integer.MAX_VALUE;
             while (true) {
                 int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
                 log.trace("lastSetBit={}", lastSetBit);
+                if (priorLastSetBit <= lastSetBit) {
+                    log.error("Failed to make forward progress removing lastSetBit:{} answer:{}", lastSetBit, answer);
+                    break;
+                }
+                priorLastSetBit = lastSetBit;
                 if (lastSetBit < 0) {
                     break;
                 }

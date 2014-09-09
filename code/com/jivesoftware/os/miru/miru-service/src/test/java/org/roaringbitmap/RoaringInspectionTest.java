@@ -1,6 +1,8 @@
 package org.roaringbitmap;
 
 import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
+import java.util.Arrays;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -16,6 +18,31 @@ public class RoaringInspectionTest {
             assertEquals(cardinalityAndLastSetBit.cardinality, i + 1);
             assertEquals(cardinalityAndLastSetBit.lastSetBit, i * 37);
         }
+    }
+
+
+    @Test
+    public void testBoundary() throws Exception {
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+
+        RoaringBitmap bitmap = bitmaps.create();
+        bitmaps.set(bitmap, 0);
+        CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(bitmap);
+
+        System.out.println("cardinalityAndLastSetBit="+cardinalityAndLastSetBit.lastSetBit);
+
+        RoaringBitmap remove = bitmaps.create();
+        bitmaps.set(remove, 0);
+
+        RoaringBitmap answer = bitmaps.create();
+        bitmaps.andNot(answer, bitmap, Arrays.asList(remove));
+
+        cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(answer);
+        System.out.println("cardinalityAndLastSetBit="+cardinalityAndLastSetBit.lastSetBit);
+
+    }
+
+    public RoaringInspectionTest() {
     }
 
     @Test
