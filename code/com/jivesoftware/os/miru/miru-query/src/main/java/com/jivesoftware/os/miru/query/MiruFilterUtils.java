@@ -23,14 +23,14 @@ public class MiruFilterUtils {
     }
 
     public <BM> void stream(MiruBitmaps<BM> bitmaps,
-            MiruTenantId tenantId,
-            MiruQueryStream stream,
-            BM answer,
-            Optional<BM> counter,
-            MiruField<BM> pivotField,
-            String streamField,
-            CallbackStream<TermCount> terms)
-            throws Exception {
+        MiruTenantId tenantId,
+        MiruQueryStream stream,
+        BM answer,
+        Optional<BM> counter,
+        MiruField<BM> pivotField,
+        String streamField,
+        CallbackStream<TermCount> terms)
+        throws Exception {
 
         boolean traceEnabled = LOG.isTraceEnabled();
         boolean debugEnabled = LOG.isDebugEnabled();
@@ -44,16 +44,22 @@ public class MiruFilterUtils {
         int fieldId = stream.schema.getFieldId(streamField);
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
         LOG.debug("stream: field={} fieldId={} beforeCount={}", streamField, fieldId, beforeCount);
+        int priorLastSetBit = Integer.MAX_VALUE;
         while (true) {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
             LOG.trace("stream: lastSetBit={}", lastSetBit);
+            if (priorLastSetBit <= lastSetBit) {
+                LOG.error("Failed to make forward progress removing lastSetBit:{} answer:{}", lastSetBit, answer);
+                break;
+            }
+            priorLastSetBit = lastSetBit;
             if (lastSetBit < 0) {
                 break;
             }
 
             MiruTermId[] fieldValues = stream.activityIndex.get(tenantId, lastSetBit, fieldId);
             if (traceEnabled) {
-                LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
+                LOG.trace("stream: fieldValues={}", new Object[]{ fieldValues });
             }
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
