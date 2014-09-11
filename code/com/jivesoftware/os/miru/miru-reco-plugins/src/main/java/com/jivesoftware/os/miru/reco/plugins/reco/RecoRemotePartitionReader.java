@@ -26,16 +26,16 @@ public class RecoRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId,
+    public RecoAnswer collaborativeFilteringRecommendations(MiruPartitionId partitionId,
             RecoQuery query,
-            Optional<RecoResult> lastResult)
+            Optional<RecoAnswer> lastResult)
             throws MiruQueryServiceException {
         RecoQueryAndResult params = new RecoQueryAndResult(query, lastResult.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
                     RECO_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    RecoResult.class, RecoResult.EMPTY_RESULTS);
+                    RecoAnswer.class, RecoAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed score reco stream for partition: " + partitionId.getId(), e);
         } finally {

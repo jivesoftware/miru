@@ -17,7 +17,7 @@ public class TrendingClientReader {
         this.clusterReader = clusterReader;
     }
 
-    public TrendingResult scoreTrending(MiruTenantId tenantId,
+    public TrendingAnswer scoreTrending(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
             TrendingQuery query)
             throws MiruQueryServiceException {
@@ -25,7 +25,7 @@ public class TrendingClientReader {
         try {
             return clusterReader.read(tenantId, actorId, query,
                     TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
-                    TrendingResult.class, TrendingResult.EMPTY_RESULTS);
+                    TrendingAnswer.class, TrendingAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed score trending stream", e);
         }

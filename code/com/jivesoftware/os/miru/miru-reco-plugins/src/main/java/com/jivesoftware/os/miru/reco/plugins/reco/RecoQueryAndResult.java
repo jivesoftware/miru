@@ -6,12 +6,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class RecoQueryAndResult {
 
     public final RecoQuery query;
-    public final RecoResult lastResult;
+    public final RecoAnswer lastResult;
 
     @JsonCreator
     public RecoQueryAndResult(
             @JsonProperty("query") RecoQuery query,
-            @JsonProperty("lastResult") RecoResult lastResult) {
+            @JsonProperty("lastResult") RecoAnswer lastResult) {
         this.query = query;
         this.lastResult = lastResult;
     }

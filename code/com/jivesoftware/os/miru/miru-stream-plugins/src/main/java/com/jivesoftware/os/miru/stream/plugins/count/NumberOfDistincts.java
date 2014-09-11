@@ -24,7 +24,7 @@ public class NumberOfDistincts {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM> DistinctCountResult numberOfDistincts(MiruBitmaps<BM> bitmaps,
+    public <BM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM> bitmaps,
             MiruQueryStream<BM> stream,
             DistinctCountQuery query,
             Optional<DistinctCountReport> lastReport,
@@ -97,7 +97,7 @@ public class NumberOfDistincts {
                 }
             }
         }
-        DistinctCountResult result = new DistinctCountResult(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
+        DistinctCountAnswer result = new DistinctCountAnswer(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
         log.debug("result={}", result);
         return result;
     }

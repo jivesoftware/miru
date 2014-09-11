@@ -10,7 +10,6 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
-import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
 import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.MiruJustInTimeBackfillerizer;
@@ -18,13 +17,14 @@ import com.jivesoftware.os.miru.query.MiruQueryHandle;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
 import com.jivesoftware.os.miru.query.MiruTimeIndex;
 import com.jivesoftware.os.miru.query.MiruTimeRange;
+import com.jivesoftware.os.miru.query.Question;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author jonathan
  */
-public class CountInboxExecuteQuery implements ExecuteQuery<DistinctCountResult, DistinctCountReport> {
+public class CountInboxQuestion implements Question<DistinctCountAnswer, DistinctCountReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -34,7 +34,7 @@ public class CountInboxExecuteQuery implements ExecuteQuery<DistinctCountResult,
     private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
-    public CountInboxExecuteQuery(NumberOfDistincts numberOfDistincts,
+    public CountInboxQuestion(NumberOfDistincts numberOfDistincts,
             MiruJustInTimeBackfillerizer backfillerizer,
             DistinctCountQuery query,
             boolean unreadOnly) {
@@ -47,7 +47,7 @@ public class CountInboxExecuteQuery implements ExecuteQuery<DistinctCountResult,
     }
 
     @Override
-    public <BM> DistinctCountResult executeLocal(MiruQueryHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM> DistinctCountAnswer askLocal(MiruQueryHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
         MiruQueryStream<BM> stream = handle.getQueryStream();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
@@ -100,22 +100,22 @@ public class CountInboxExecuteQuery implements ExecuteQuery<DistinctCountResult,
     }
 
     @Override
-    public DistinctCountResult executeRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountResult> lastResult)
+    public DistinctCountAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountAnswer> lastAnswer)
             throws Exception {
         DistinctCountRemotePartitionReader reader = new DistinctCountRemotePartitionReader(requestHelper);
         if (unreadOnly) {
-            return reader.countInboxStreamUnread(partitionId, query, lastResult);
+            return reader.countInboxStreamUnread(partitionId, query, lastAnswer);
         }
-        return reader.countInboxStreamAll(partitionId, query, lastResult);
+        return reader.countInboxStreamAll(partitionId, query, lastAnswer);
     }
 
     @Override
-    public Optional<DistinctCountReport> createReport(Optional<DistinctCountResult> result) {
+    public Optional<DistinctCountReport> createReport(Optional<DistinctCountAnswer> answer) {
         Optional<DistinctCountReport> report = Optional.absent();
-        if (result.isPresent()) {
+        if (answer.isPresent()) {
             report = Optional.of(new DistinctCountReport(
-                    result.get().collectedDistincts,
-                    result.get().aggregateTerms));
+                    answer.get().collectedDistincts,
+                    answer.get().aggregateTerms));
         }
         return report;
     }

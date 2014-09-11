@@ -15,9 +15,9 @@ import java.util.Set;
 /**
  *
  */
-public class TrendingResult {
+public class TrendingAnswer {
 
-    public static final TrendingResult EMPTY_RESULTS = new TrendingResult(ImmutableList.<Trendy>of(),
+    public static final TrendingAnswer EMPTY_RESULTS = new TrendingAnswer(ImmutableList.<Trendy>of(),
             ImmutableSet.<MiruTermId>of(), 0, true);
 
     public final ImmutableList<Trendy> results;
@@ -25,7 +25,7 @@ public class TrendingResult {
     public final int collectedDistincts;
     public final boolean resultsExhausted;
 
-    public TrendingResult(
+    public TrendingAnswer(
             ImmutableList<Trendy> results,
             ImmutableSet<MiruTermId> aggregateTerms,
             int collectedDistincts,
@@ -37,17 +37,17 @@ public class TrendingResult {
     }
 
     @JsonCreator
-    public static TrendingResult fromJson(
+    public static TrendingAnswer fromJson(
             @JsonProperty("results") List<Trendy> results,
             @JsonProperty("aggregateTerms") Set<MiruTermId> aggregateTerms,
             @JsonProperty("collectedDistincts") int collectedDistincts,
             @JsonProperty("resultsExhausted") boolean resultsExhausted) {
-        return new TrendingResult(ImmutableList.copyOf(results), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
+        return new TrendingAnswer(ImmutableList.copyOf(results), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
     }
 
     @Override
     public String toString() {
-        return "TrendingResult{" +
+        return "TrendingAnswer{" +
                 "results=" + results +
                 ", aggregateTerms=" + aggregateTerms +
                 ", collectedDistincts=" + collectedDistincts +

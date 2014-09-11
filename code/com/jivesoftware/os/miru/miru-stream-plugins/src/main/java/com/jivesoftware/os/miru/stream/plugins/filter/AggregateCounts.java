@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsResult.AggregateCount;
+import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 
 /**
  *
@@ -37,7 +37,7 @@ public class AggregateCounts {
         this.miruProvider = miruProvider;
     }
 
-    public <BM> AggregateCountsResult getAggregateCounts(MiruBitmaps<BM> bitmaps,
+    public <BM> AggregateCountsAnswer getAggregateCounts(MiruBitmaps<BM> bitmaps,
             MiruQueryStream<BM> stream,
             AggregateCountsQuery query,
             Optional<AggregateCountsReport> lastReport,
@@ -184,7 +184,7 @@ public class AggregateCounts {
             }
         }
 
-        AggregateCountsResult result = new AggregateCountsResult(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms),
+        AggregateCountsAnswer result = new AggregateCountsAnswer(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms),
                 skippedDistincts, collectedDistincts);
         log.debug("result={}", result);
         return result;

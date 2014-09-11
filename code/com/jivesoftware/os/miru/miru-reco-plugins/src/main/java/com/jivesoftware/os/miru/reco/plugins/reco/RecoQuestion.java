@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.reco.plugins.trending;
+package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
@@ -7,49 +7,38 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
-import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruBitmaps;
 import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.MiruQueryHandle;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.MiruTimeIndex;
-import com.jivesoftware.os.miru.query.MiruTimeRange;
+import com.jivesoftware.os.miru.query.Question;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  *
  */
-public class TrendingExecuteQuery implements ExecuteQuery<TrendingResult, TrendingReport> {
+public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final Trending trending;
-    private final TrendingQuery query;
+    private final CollaborativeFiltering collaborativeFiltering;
+    private final RecoQuery query;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
-    public TrendingExecuteQuery(Trending trending,
-            TrendingQuery query) {
-        this.trending = trending;
+    public RecoQuestion(CollaborativeFiltering collaborativeFiltering,
+            RecoQuery query) {
+        this.collaborativeFiltering = collaborativeFiltering;
         this.query = query;
     }
 
     @Override
-    public <BM> TrendingResult executeLocal(MiruQueryHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
+    public <BM> RecoAnswer askLocal(MiruQueryHandle<BM> handle, Optional<RecoReport> report) throws Exception {
         MiruQueryStream<BM> stream = handle.getQueryStream();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run
         List<BM> ands = new ArrayList<>();
-
-        MiruTimeRange timeRange = query.timeRange;
-
-        // Short-circuit if the time range doesn't live here
-        if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
-            LOG.debug("No time index intersection");
-            return trending.trending(bitmaps, stream, query, report, bitmaps.create());
-        }
-        ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
@@ -69,27 +58,20 @@ public class TrendingExecuteQuery implements ExecuteQuery<TrendingResult, Trendi
         bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return trending.trending(bitmaps, stream, query, report, answer);
+        return collaborativeFiltering.collaborativeFiltering(bitmaps, stream, query, report, answer);
     }
 
     @Override
-    public TrendingResult executeRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<TrendingResult> lastResult) throws Exception {
-        return new TrendingRemotePartitionReader(requestHelper).scoreTrending(partitionId, query, lastResult);
+    public RecoAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<RecoAnswer> lastAnswer) throws Exception {
+        return new RecoRemotePartitionReader(requestHelper).collaborativeFilteringRecommendations(partitionId, query, lastAnswer);
     }
 
     @Override
-    public Optional<TrendingReport> createReport(Optional<TrendingResult> result) {
-        Optional<TrendingReport> report = Optional.absent();
-        if (result.isPresent()) {
-            report = Optional.of(new TrendingReport(
-                    result.get().collectedDistincts,
-                    result.get().aggregateTerms));
+    public Optional<RecoReport> createReport(Optional<RecoAnswer> answer) {
+        Optional<RecoReport> report = Optional.absent();
+        if (answer.isPresent()) {
+            report = Optional.of(new RecoReport());
         }
         return report;
-    }
-
-    private boolean timeIndexIntersectsTimeRange(MiruTimeIndex timeIndex, MiruTimeRange timeRange) {
-        return timeRange.smallestTimestamp <= timeIndex.getLargestTimestamp() &&
-                timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
     }
 }

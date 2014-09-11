@@ -18,12 +18,12 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.query.MiruTimeRange;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
-import com.jivesoftware.os.miru.reco.plugins.reco.RecoResult;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
-import com.jivesoftware.os.miru.reco.plugins.trending.TrendingResult;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
@@ -79,11 +79,11 @@ public class RemoteRecoHttpTest {
 
         int numQueries = 1;
         for (int i = 0; i < numQueries; i++) {
-            TrendingResult trendingResult = requestHelper.executeRequest(query,
+            TrendingAnswer trendingAnswer = requestHelper.executeRequest(query,
                     TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
-                    TrendingResult.class, TrendingResult.EMPTY_RESULTS);
-            System.out.println(trendingResult);
-            assertNotNull(trendingResult);
+                    TrendingAnswer.class, TrendingAnswer.EMPTY_RESULTS);
+            System.out.println(trendingAnswer);
+            assertNotNull(trendingAnswer);
         }
     }
 
@@ -122,11 +122,11 @@ public class RemoteRecoHttpTest {
                 "parent", "parent",
                 100);
 
-        RecoResult recoResult = requestHelper.executeRequest(query,
+        RecoAnswer recoAnswer = requestHelper.executeRequest(query,
                 RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
-                RecoResult.class, RecoResult.EMPTY_RESULTS);
-        System.out.println(recoResult);
-        assertNotNull(recoResult);
+                RecoAnswer.class, RecoAnswer.EMPTY_RESULTS);
+        System.out.println(recoAnswer);
+        assertNotNull(recoAnswer);
     }
 
 }

@@ -6,25 +6,25 @@ import java.util.concurrent.Callable;
 /**
  *
  */
-public class MiruSolvableFactory<R, P> {
+public class MiruSolvableFactory<A, P> {
 
     private final String queryKey;
-    private final ExecuteQuery<R, P> executeQuery;
+    private final Question<A, P> question;
 
-    public MiruSolvableFactory(String queryKey, ExecuteQuery<R, P> executeQuery) {
+    public MiruSolvableFactory(String queryKey, Question<A, P> question) {
         this.queryKey = queryKey;
-        this.executeQuery = executeQuery;
+        this.question = question;
     }
 
-    public <BM> MiruSolvable<R> create(final MiruHostedPartition<BM> replica, final Optional<R> result) {
-        Callable<R> callable = new Callable<R>() {
+    public <BM> MiruSolvable<A> create(final MiruHostedPartition<BM> replica, final Optional<A> answer) {
+        Callable<A> callable = new Callable<A>() {
             @Override
-            public R call() throws Exception {
+            public A call() throws Exception {
                 try (MiruQueryHandle<BM> handle = replica.getQueryHandle()) {
                     if (handle.isLocal()) {
-                        return executeQuery.executeLocal(handle, executeQuery.createReport(result));
+                        return question.askLocal(handle, question.createReport(answer));
                     } else {
-                        return executeQuery.executeRemote(handle.getRequestHelper(), handle.getCoord().partitionId, result);
+                        return question.askRemote(handle.getRequestHelper(), handle.getCoord().partitionId, answer);
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);

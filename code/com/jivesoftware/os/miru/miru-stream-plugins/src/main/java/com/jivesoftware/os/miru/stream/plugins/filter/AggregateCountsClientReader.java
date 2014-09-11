@@ -22,7 +22,7 @@ public class AggregateCountsClientReader {
         this.clusterReader = clusterReader;
     }
 
-    public AggregateCountsResult filterCustomStream(MiruTenantId tenantId,
+    public AggregateCountsAnswer filterCustomStream(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
             AggregateCountsQuery query)
             throws MiruQueryServiceException {
@@ -30,13 +30,13 @@ public class AggregateCountsClientReader {
         try {
             return clusterReader.read(tenantId, actorId, query,
                     FILTER_PREFIX + CUSTOM_QUERY_ENDPOINT,
-                    AggregateCountsResult.class, AggregateCountsResult.EMPTY_RESULTS);
+                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter custom stream", e);
         }
     }
 
-    public AggregateCountsResult filterInboxStreamAll(MiruTenantId tenantId,
+    public AggregateCountsAnswer filterInboxStreamAll(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
             AggregateCountsQuery query)
             throws MiruQueryServiceException {
@@ -44,13 +44,13 @@ public class AggregateCountsClientReader {
         try {
             return clusterReader.read(tenantId, actorId, query,
                     FILTER_PREFIX + INBOX_ALL_QUERY_ENDPOINT,
-                    AggregateCountsResult.class, AggregateCountsResult.EMPTY_RESULTS);
+                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter inbox all stream", e);
         }
     }
 
-    public AggregateCountsResult filterInboxStreamUnread(MiruTenantId tenantId,
+    public AggregateCountsAnswer filterInboxStreamUnread(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
             AggregateCountsQuery query)
             throws MiruQueryServiceException {
@@ -58,7 +58,7 @@ public class AggregateCountsClientReader {
         try {
             return clusterReader.read(tenantId, actorId, query,
                     FILTER_PREFIX + INBOX_UNREAD_QUERY_ENDPOINT,
-                    AggregateCountsResult.class, AggregateCountsResult.EMPTY_RESULTS);
+                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter inbox unread stream", e);
         }

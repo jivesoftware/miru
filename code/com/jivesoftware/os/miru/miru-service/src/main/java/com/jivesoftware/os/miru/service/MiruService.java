@@ -11,6 +11,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -19,6 +20,8 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.query.Miru;
+import com.jivesoftware.os.miru.query.MiruAnswerEvaluator;
+import com.jivesoftware.os.miru.query.MiruAnswerMerger;
 import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.MiruField;
 import com.jivesoftware.os.miru.query.MiruHostedPartition;
@@ -26,13 +29,13 @@ import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.query.MiruPartitionDirector;
 import com.jivesoftware.os.miru.query.MiruQueryHandle;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.MiruResultEvaluator;
-import com.jivesoftware.os.miru.query.MiruResultMerger;
+import com.jivesoftware.os.miru.query.MiruResponse;
+import com.jivesoftware.os.miru.query.MiruSolution;
 import com.jivesoftware.os.miru.query.MiruSolvable;
 import com.jivesoftware.os.miru.query.MiruSolvableFactory;
 import com.jivesoftware.os.miru.query.OrderedPartitions;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
-import com.jivesoftware.os.miru.service.stream.factory.MiruSolution;
+import com.jivesoftware.os.miru.service.stream.factory.MiruSolved;
 import com.jivesoftware.os.miru.service.stream.factory.MiruSolver;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import java.util.Collection;
@@ -94,83 +97,97 @@ public class MiruService implements Miru {
     }
 
     @Override
-    public <R, P> R callAndMerge(
+    public <A, P> MiruResponse<A> askAndMerge(
             MiruTenantId tenantId,
-            final MiruSolvableFactory<R, P> solvableFactory,
-            MiruResultEvaluator<R> evaluator,
-            MiruResultMerger<R> merger,
-            R defaultValue) throws Exception {
-        Iterable<OrderedPartitions> partitionReplicas = partitionDirector.allQueryablePartitionsInOrder(tenantId);
+            final MiruSolvableFactory<A, P> solvableFactory,
+            MiruAnswerEvaluator<A> evaluator,
+            MiruAnswerMerger<A> merger,
+            A defaultValue) throws Exception {
 
-        Optional<R> lastResult = Optional.absent();
-        int numSearchedPartitions = 0;
-        List<MiruSolution<R>> solutions = Lists.newArrayList();
-        for (OrderedPartitions orderedPartitions : partitionReplicas) {
+        log.startTimer("askAndMerge");
 
-            final Optional<R> result = lastResult;
-            Collection<MiruSolvable<R>> solvables = Collections2.transform(orderedPartitions.partitions,
-                    new Function<MiruHostedPartition<?>, MiruSolvable<R>>() {
-                        @Override
-                        public MiruSolvable<R> apply(final MiruHostedPartition<?> replica) {
-                            return solvableFactory.create(replica, result);
-                        }
-                    });
+        A answer = null;
+        List<MiruSolution> solutions = Lists.newArrayList();
+        long totalElapsed;
 
-            Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
-                    solvableFactory.getQueryKey());
-            MiruSolution<R> solution = solver.solve(solvables.iterator(), suggestedTimeoutInMillis);
+        try {
+            Iterable<OrderedPartitions> partitionReplicas = partitionDirector.allQueryablePartitionsInOrder(tenantId);
 
-            numSearchedPartitions++;
+            Optional<A> lastAnswer = Optional.absent();
 
-            if (solution == null) {
-                // fatal timeout
-                //TODO annotate result to indicate partial failure
-                break;
+            for (OrderedPartitions orderedPartitions : partitionReplicas) {
+
+                final Optional<A> optionalAnswer = lastAnswer;
+                Collection<MiruSolvable<A>> solvables = Collections2.transform(orderedPartitions.partitions,
+                        new Function<MiruHostedPartition<?>, MiruSolvable<A>>() {
+                            @Override
+                            public MiruSolvable<A> apply(final MiruHostedPartition<?> replica) {
+                                return solvableFactory.create(replica, optionalAnswer);
+                            }
+                        });
+                List<MiruPartition> ordered = Lists.transform(orderedPartitions.partitions, new Function<MiruHostedPartition<?>, MiruPartition>() {
+                    @Override
+                    public MiruPartition apply(MiruHostedPartition<?> input) {
+                        return new MiruPartition(input.getCoord(), new MiruPartitionCoordInfo(input.getState(), input.getStorage()));
+                    }
+                });
+
+                Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
+                        solvableFactory.getQueryKey());
+                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered);
+
+                if (solved == null) {
+                    // fatal timeout
+                    //TODO annotate answer to indicate partial failure
+                    break;
+                }
+
+                solutions.add(solved.solution);
+
+                A currentAnswer = solved.answer;
+                A merged = merger.merge(lastAnswer, currentAnswer);
+
+                lastAnswer = Optional.of(merged);
+                if (evaluator.isDone(merged)) {
+                    break;
+                }
             }
 
-            solutions.add(solution);
+            partitionComparison.analyzeSolutions(solutions, solvableFactory.getQueryKey());
 
-            R currentResult = solution.getResult();
-            R merged = merger.merge(lastResult, currentResult);
+            answer = merger.done(lastAnswer, defaultValue);
 
-            lastResult = Optional.of(merged);
-            if (evaluator.isDone(merged)) {
-                break;
-            }
+        } finally {
+            totalElapsed = log.stopTimer("askAndMerge");
         }
 
-        debugPath(solutions);
-        partitionComparison.analyzeSolutions(solutions, solvableFactory.getQueryKey());
+        log.inc("askAndMerge>all");
+        log.inc("askAndMerge>tenant>" + tenantId);
+        log.inc("askAndMerge>query>" + solvableFactory.getQueryKey());
+        log.inc("askAndMerge>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
 
-        R result = merger.done(lastResult, defaultValue);
-
-        log.inc("callAndMerge>all");
-        log.inc("callAndMerge>tenant>" + tenantId);
-        log.inc("callAndMerge>query>" + solvableFactory.getQueryKey());
-        log.inc("callAndMerge>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
-
-        return result;
+        return new MiruResponse<>(answer, solutions, totalElapsed);
     }
 
     @Override
-    public <R, P> R callImmediate(
+    public <A, P> A askImmediate(
             MiruTenantId tenantId,
             MiruPartitionId partitionId,
-            MiruSolvableFactory<R, P> solvableFactory,
-            Optional<R> lastResult,
-            R defaultValue) throws Exception {
+            MiruSolvableFactory<A, P> solvableFactory,
+            Optional<A> lastAnswer,
+            A defaultValue) throws Exception {
         Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
-            Callable<R> callable = solvableFactory.create(partition.get(), lastResult);
-            R result = callable.call();
+            Callable<A> callable = solvableFactory.create(partition.get(), lastAnswer);
+            A answer = callable.call();
 
-            log.inc("callImmediate>all");
-            log.inc("callImmediate>tenant>" + tenantId);
-            log.inc("callImmediate>query>" + solvableFactory.getQueryKey());
-            log.inc("callImmediate>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
+            log.inc("askImmediate>all");
+            log.inc("askImmediate>tenant>" + tenantId);
+            log.inc("askImmediate>query>" + solvableFactory.getQueryKey());
+            log.inc("askImmediate>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
 
-            return result;
+            return answer;
         } else {
             return defaultValue;
         }
@@ -239,18 +256,6 @@ public class MiruService implements Miru {
     private Optional<MiruHostedPartition<?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) {
         MiruPartitionCoord localPartitionCoord = new MiruPartitionCoord(tenantId, partitionId, localhost);
         return partitionDirector.getQueryablePartition(localPartitionCoord);
-    }
-
-    private <R> void debugPath(List<MiruSolution<R>> solutions) {
-        if (log.isDebugEnabled()) {
-            StringBuilder buf = new StringBuilder();
-            int i = 0;
-            for (MiruSolution<R> solution : solutions) {
-                buf.append("\n  ").append(++i).append(". ").append(solution.getCoord()).append(" = ").append(solution.getResult());
-            }
-
-            log.debug("Partition path from {}:{}", localhost, buf);
-        }
     }
 
 }

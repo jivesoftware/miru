@@ -7,28 +7,28 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Set;
 
 /** @author jonathan */
-public class DistinctCountResult {
+public class DistinctCountAnswer {
 
-    public static final DistinctCountResult EMPTY_RESULTS = new DistinctCountResult(ImmutableSet.<MiruTermId>of(), 0);
+    public static final DistinctCountAnswer EMPTY_RESULTS = new DistinctCountAnswer(ImmutableSet.<MiruTermId>of(), 0);
 
     public final ImmutableSet<MiruTermId> aggregateTerms;
     public final int collectedDistincts;
 
-    public DistinctCountResult(ImmutableSet<MiruTermId> aggregateTerms, int collectedDistincts) {
+    public DistinctCountAnswer(ImmutableSet<MiruTermId> aggregateTerms, int collectedDistincts) {
         this.aggregateTerms = aggregateTerms;
         this.collectedDistincts = collectedDistincts;
     }
 
     @JsonCreator
-    public static DistinctCountResult fromJson(
+    public static DistinctCountAnswer fromJson(
         @JsonProperty("aggregateTerms") Set<MiruTermId> aggregateTerms,
         @JsonProperty("collectedDistincts") int collectedDistincts) {
-        return new DistinctCountResult(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
+        return new DistinctCountAnswer(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
     }
 
     @Override
     public String toString() {
-        return "DistinctCountResult{" +
+        return "DistinctCountAnswer{" +
             "aggregateTerms=" + aggregateTerms +
             ", collectedDistincts=" + collectedDistincts +
             '}';
@@ -43,7 +43,7 @@ public class DistinctCountResult {
             return false;
         }
 
-        DistinctCountResult that = (DistinctCountResult) o;
+        DistinctCountAnswer that = (DistinctCountAnswer) o;
 
         if (collectedDistincts != that.collectedDistincts) {
             return false;

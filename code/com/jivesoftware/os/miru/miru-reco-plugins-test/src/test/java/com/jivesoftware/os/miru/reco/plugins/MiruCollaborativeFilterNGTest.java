@@ -20,10 +20,11 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.query.MiruFilterUtils;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.MiruResponse;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
-import com.jivesoftware.os.miru.reco.plugins.reco.RecoResult;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Collections;
@@ -124,7 +125,7 @@ public class MiruCollaborativeFilterNGTest {
                     Optional.<ImmutableList<MiruFilter>>absent());
 
             long s = System.currentTimeMillis();
-            RecoResult recoResult = injectable.collaborativeFilteringRecommendations(new RecoQuery(tenant1,
+            MiruResponse<RecoAnswer> recoResult = injectable.collaborativeFilteringRecommendations(new RecoQuery(tenant1,
                     filter,
                     MiruAuthzExpression.NOT_PROVIDED,
                     "doc", "doc", "doc",

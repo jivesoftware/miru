@@ -9,25 +9,25 @@ import java.util.List;
 /**
  *
  */
-public class RecoResult {
+public class RecoAnswer {
 
-    public static final RecoResult EMPTY_RESULTS = new RecoResult(ImmutableList.<Recommendation>of());
+    public static final RecoAnswer EMPTY_RESULTS = new RecoAnswer(ImmutableList.<Recommendation>of());
 
     public final ImmutableList<Recommendation> results;
 
-    public RecoResult(List<Recommendation> results) {
+    public RecoAnswer(List<Recommendation> results) {
         this.results = ImmutableList.copyOf(results);
     }
 
     @JsonCreator
-    public static RecoResult fromJson(
+    public static RecoAnswer fromJson(
             @JsonProperty("results") List<Recommendation> results) {
-        return new RecoResult(ImmutableList.copyOf(results));
+        return new RecoAnswer(ImmutableList.copyOf(results));
     }
 
     @Override
     public String toString() {
-        return "RecoResult{"
+        return "RecoAnswer{"
                 + "results=" + results
                 + '}';
     }

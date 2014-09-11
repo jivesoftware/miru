@@ -26,7 +26,7 @@ public class TrendingRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public TrendingResult scoreTrending(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingResult> lastResult)
+    public TrendingAnswer scoreTrending(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingAnswer> lastResult)
             throws MiruQueryServiceException {
 
         TrendingQueryAndResult params = new TrendingQueryAndResult(query, lastResult.orNull());
@@ -34,7 +34,7 @@ public class TrendingRemotePartitionReader {
         try {
             return requestHelper.executeRequest(params,
                     TRENDING_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    TrendingResult.class, TrendingResult.EMPTY_RESULTS);
+                    TrendingAnswer.class, TrendingAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed score trending stream for partition: " + partitionId.getId(), e);
         } finally {

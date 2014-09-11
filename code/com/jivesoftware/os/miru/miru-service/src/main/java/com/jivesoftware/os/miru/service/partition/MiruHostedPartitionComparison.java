@@ -11,9 +11,9 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.query.ExecuteQuery;
 import com.jivesoftware.os.miru.query.MiruHostedPartition;
-import com.jivesoftware.os.miru.service.stream.factory.MiruSolution;
+import com.jivesoftware.os.miru.query.MiruSolution;
+import com.jivesoftware.os.miru.query.Question;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -92,9 +92,9 @@ public class MiruHostedPartitionComparison {
      * @param solutions the latest winning solutions
      * @param queryClass the query class
      */
-    public <R> void analyzeSolutions(List<MiruSolution<R>> solutions, String queryClass) {
-        for (MiruSolution<R> solution : solutions) {
-            MiruPartitionCoord coord = solution.getCoord();
+    public void analyzeSolutions(List<MiruSolution> solutions, String queryClass) {
+        for (MiruSolution solution : solutions) {
+            MiruPartitionCoord coord = solution.coord;
             coordRecency.put(coord, timestamper.get());
 
             TenantPartitionAndQuery key = new TenantPartitionAndQuery(coord.tenantId, coord.partitionId, queryClass);
@@ -103,11 +103,11 @@ public class MiruHostedPartitionComparison {
                 queryPercentile.putIfAbsent(key, new RunningPercentile(windowSize, percentile));
                 runningPercentile = queryPercentile.get(key);
             }
-            runningPercentile.add(solution.getElapsed());
+            runningPercentile.add(solution.usedResultElapsed);
         }
     }
 
-    public <T extends ExecuteQuery<?, ?>> Optional<Long> suggestTimeout(MiruTenantId tenantId, MiruPartitionId partitionId, String queryClass) {
+    public <T extends Question<?, ?>> Optional<Long> suggestTimeout(MiruTenantId tenantId, MiruPartitionId partitionId, String queryClass) {
         RunningPercentile runningPercentile = queryPercentile.get(new TenantPartitionAndQuery(tenantId, partitionId, queryClass));
         if (runningPercentile != null) {
             long suggestion = runningPercentile.get();

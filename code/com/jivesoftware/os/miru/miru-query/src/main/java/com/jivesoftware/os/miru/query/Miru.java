@@ -9,14 +9,14 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
  */
 public interface Miru {
 
-    <R, P> R callAndMerge(
+    <R, P> MiruResponse<R> askAndMerge(
             MiruTenantId tenantId,
             MiruSolvableFactory<R, P> solvableFactory,
-            MiruResultEvaluator<R> evaluator,
-            MiruResultMerger<R> merger,
+            MiruAnswerEvaluator<R> evaluator,
+            MiruAnswerMerger<R> merger,
             R defaultValue) throws Exception;
 
-    <R, P> R callImmediate(
+    <R, P> R askImmediate(
             MiruTenantId tenantId,
             MiruPartitionId partitionId,
             MiruSolvableFactory<R, P> factory,

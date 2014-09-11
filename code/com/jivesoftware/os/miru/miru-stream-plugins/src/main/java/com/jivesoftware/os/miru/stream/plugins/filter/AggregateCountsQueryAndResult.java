@@ -6,12 +6,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class AggregateCountsQueryAndResult {
 
     public final AggregateCountsQuery query;
-    public final AggregateCountsResult lastResult;
+    public final AggregateCountsAnswer lastResult;
 
     @JsonCreator
     public AggregateCountsQueryAndResult(
             @JsonProperty("query") AggregateCountsQuery query,
-            @JsonProperty("lastResult") AggregateCountsResult lastResult) {
+            @JsonProperty("lastResult") AggregateCountsAnswer lastResult) {
         this.query = query;
         this.lastResult = lastResult;
     }

@@ -15,7 +15,7 @@ import com.jivesoftware.os.miru.query.MiruIntIterator;
 import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
 import com.jivesoftware.os.miru.query.TermCount;
-import com.jivesoftware.os.miru.reco.plugins.reco.RecoResult.Recommendation;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer.Recommendation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -38,7 +38,7 @@ public class CollaborativeFiltering {
     /**
      * I have viewed these things; among others who have also viewed these things, what have they viewed that I have not?
      */
-    public <BM> RecoResult collaborativeFiltering(MiruBitmaps<BM> bitmaps,
+    public <BM> RecoAnswer collaborativeFiltering(MiruBitmaps<BM> bitmaps,
             MiruQueryStream<BM> stream,
             final RecoQuery query,
             Optional<RecoReport> report,
@@ -137,7 +137,7 @@ public class CollaborativeFiltering {
         return r;
     }
 
-    private <BM> RecoResult score(MiruBitmaps<BM> bitmaps, final RecoQuery query, BM join2, MiruQueryStream<BM> stream,
+    private <BM> RecoAnswer score(MiruBitmaps<BM> bitmaps, final RecoQuery query, BM join2, MiruQueryStream<BM> stream,
             final BloomIndex<BM> bloomIndex, final List<BloomIndex.Mights<TermCount>> wantBits) throws Exception {
 
         int fieldId = stream.schema.getFieldId(query.aggregateFieldName3);
@@ -189,7 +189,7 @@ public class CollaborativeFiltering {
             results.add(new Recommendation(result.termId, result.count));
         }
         log.debug("score: results.size={}", results.size());
-        return new RecoResult(results);
+        return new RecoAnswer(results);
     }
 
 }

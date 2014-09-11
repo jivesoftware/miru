@@ -28,7 +28,7 @@ public class AggregateCountsRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public AggregateCountsResult filterCustomStream(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
+    public AggregateCountsAnswer filterCustomStream(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsAnswer> lastResult)
             throws MiruQueryServiceException {
 
         AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
@@ -36,7 +36,7 @@ public class AggregateCountsRemotePartitionReader {
         try {
             return requestHelper.executeRequest(params,
                     FILTER_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    AggregateCountsResult.class, AggregateCountsResult.EMPTY_RESULTS);
+                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter custom stream for partition: " + partitionId.getId(), e);
         } finally {
@@ -44,7 +44,7 @@ public class AggregateCountsRemotePartitionReader {
         }
     }
 
-    public AggregateCountsResult filterInboxStreamAll(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
+    public AggregateCountsAnswer filterInboxStreamAll(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsAnswer> lastResult)
             throws MiruQueryServiceException {
 
         AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
@@ -52,7 +52,7 @@ public class AggregateCountsRemotePartitionReader {
         try {
             return requestHelper.executeRequest(params,
                     FILTER_PREFIX + INBOX_ALL_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    AggregateCountsResult.class, AggregateCountsResult.EMPTY_RESULTS);
+                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter inbox all stream for partition: " + partitionId.getId(), e);
         } finally {
@@ -60,7 +60,7 @@ public class AggregateCountsRemotePartitionReader {
         }
     }
 
-    public AggregateCountsResult filterInboxStreamUnread(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsResult> lastResult)
+    public AggregateCountsAnswer filterInboxStreamUnread(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsAnswer> lastResult)
             throws MiruQueryServiceException {
 
         AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
@@ -68,7 +68,7 @@ public class AggregateCountsRemotePartitionReader {
         try {
             return requestHelper.executeRequest(params,
                     FILTER_PREFIX + INBOX_UNREAD_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    AggregateCountsResult.class, AggregateCountsResult.EMPTY_RESULTS);
+                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter inbox unread stream for partition: " + partitionId.getId(), e);
         } finally {

@@ -12,11 +12,10 @@ import com.google.common.base.Optional;
  *
  * @author jonathan
  */
-public interface MiruResultMerger<R> {
+public interface MiruAnswerMerger<A> {
 
-    R merge(Optional<R> last, R current);
+    A merge(Optional<A> last, A current);
 
-    R done(Optional<R> last, R alternative);
+    A done(Optional<A> last, A alternative);
 
 }
-

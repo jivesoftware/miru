@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.Miru;
 import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.MiruResponse;
 import com.jivesoftware.os.miru.query.MiruSolvableFactory;
 
 /**
@@ -22,15 +23,15 @@ public class RecoInjectable {
         this.collaborativeFiltering = collaborativeFiltering;
     }
 
-    public RecoResult collaborativeFilteringRecommendations(RecoQuery query) throws MiruQueryServiceException {
+    public MiruResponse<RecoAnswer> collaborativeFilteringRecommendations(RecoQuery query) throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
-            return miru.callAndMerge(tenantId,
-                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoExecuteQuery(collaborativeFiltering, query)),
-                    new RecoResultEvaluator(query),
-                    new MergeRecoResults(query.desiredNumberOfDistincts),
-                    RecoResult.EMPTY_RESULTS);
+            return miru.askAndMerge(tenantId,
+                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, query)),
+                    new RecoAnswerEvaluator(query),
+                    new RecoAnswerMerger(query.desiredNumberOfDistincts),
+                    RecoAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -39,16 +40,16 @@ public class RecoInjectable {
         }
     }
 
-    public RecoResult collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQueryAndResult queryAndResult)
+    public RecoAnswer collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQueryAndResult queryAndResult)
             throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = queryAndResult.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
-            return miru.callImmediate(tenantId,
+            return miru.askImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoExecuteQuery(collaborativeFiltering, queryAndResult.query)),
+                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, queryAndResult.query)),
                     Optional.fromNullable(queryAndResult.lastResult),
-                    RecoResult.EMPTY_RESULTS);
+                    RecoAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

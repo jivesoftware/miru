@@ -14,7 +14,7 @@ import com.jivesoftware.os.miru.query.MiruIntIterator;
 import com.jivesoftware.os.miru.query.MiruInvertedIndex;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
 import com.jivesoftware.os.miru.query.ReusableBuffers;
-import com.jivesoftware.os.miru.reco.plugins.trending.TrendingResult.Trendy;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +30,7 @@ public class Trending {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM> TrendingResult trending(MiruBitmaps<BM> bitmaps,
+    public <BM> TrendingAnswer trending(MiruBitmaps<BM> bitmaps,
         MiruQueryStream<BM> stream,
         TrendingQuery query,
         Optional<TrendingReport> lastReport,
@@ -142,7 +142,7 @@ public class Trending {
         }
 
         boolean resultsExhausted = query.timeRange.smallestTimestamp >= stream.timeIndex.getSmallestTimestamp();
-        TrendingResult result = new TrendingResult(ImmutableList.copyOf(trendies), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
+        TrendingAnswer result = new TrendingAnswer(ImmutableList.copyOf(trendies), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
         log.debug("result={}", result);
         return result;
     }

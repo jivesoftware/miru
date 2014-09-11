@@ -17,13 +17,13 @@ public class RecoClientReader {
         this.clusterReader = clusterReader;
     }
 
-    public RecoResult collaborativeFilteringRecommendations(MiruTenantId tenantId,
+    public RecoAnswer collaborativeFilteringRecommendations(MiruTenantId tenantId,
             Optional<MiruActorId> actorId,
             RecoQuery query)
             throws MiruQueryServiceException {
         try {
             return clusterReader.read(tenantId, actorId, query, RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
-                    RecoResult.class, RecoResult.EMPTY_RESULTS);
+                    RecoAnswer.class, RecoAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed score reco stream", e);
         }

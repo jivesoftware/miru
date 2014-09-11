@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -21,16 +22,17 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.MiruResponse;
 import com.jivesoftware.os.miru.query.MiruTimeRange;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCounts;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsEndpoints;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
-import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsResult;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -101,6 +103,8 @@ public class InMemoryEndpointsTest {
         assertNotNull(addResponse);
         assertEquals(addResponse.getStatus(), 200);
 
+        JavaType type = objectMapper.getTypeFactory().constructParametricType(MiruResponse.class, AggregateCountsAnswer.class);
+
         // Request 1
         Response getResponse = aggregateCountsEndpoints.filterCustomStream(new AggregateCountsQuery(
                 tenantId,
@@ -117,8 +121,8 @@ public class InMemoryEndpointsTest {
                 0,
                 100));
         assertNotNull(getResponse);
-        AggregateCountsResult aggregateCountsResult = objectMapper.readValue(getResponse.getEntity().toString(), AggregateCountsResult.class);
-        assertEquals(aggregateCountsResult.collectedDistincts, 1);
+        MiruResponse<AggregateCountsAnswer> result = objectMapper.readValue(getResponse.getEntity().toString(), type);
+        assertEquals(result.answer.collectedDistincts, 1);
 
         // Request 2
         getResponse = aggregateCountsEndpoints.filterCustomStream(new AggregateCountsQuery(
@@ -137,8 +141,8 @@ public class InMemoryEndpointsTest {
                 0,
                 100));
         assertNotNull(getResponse);
-        aggregateCountsResult = objectMapper.readValue(getResponse.getEntity().toString(), AggregateCountsResult.class);
-        assertEquals(aggregateCountsResult.collectedDistincts, 2);
+        result = objectMapper.readValue(getResponse.getEntity().toString(), type);
+        assertEquals(result.answer.collectedDistincts, 2);
     }
 
 }

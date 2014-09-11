@@ -3,6 +3,9 @@ package com.jivesoftware.os.miru.service.stream.factory;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.query.MiruSolution;
 import com.jivesoftware.os.miru.query.MiruSolvable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -39,20 +42,24 @@ public class MiruLowestLatencySolver implements MiruSolver {
     }
 
     @Override
-    public <R> MiruSolution<R> solve(Iterator<MiruSolvable<R>> solvables, Optional<Long> suggestedTimeoutInMillis) throws InterruptedException {
+    public <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables, Optional<Long> suggestedTimeoutInMillis, List<MiruPartition> orderedPartitions)
+            throws InterruptedException {
+
         int solvers = initialSolvers;
         long failAfterTime = System.currentTimeMillis() + failAfterNMillis;
         long addAnotherSolverAfterNMillis = suggestedTimeoutInMillis.or(defaultAddAnotherSolverAfterNMillis);
 
         CompletionService<R> completionService = new ExecutorCompletionService<>(executor);
         int n = 0;
+        long startTime = System.currentTimeMillis();
         List<SolvableFuture<R>> futures = new ArrayList<>(n);
-        MiruSolution<R> result = null;
+        List<MiruPartitionCoord> triedPartitions = new ArrayList<>(n);
+        MiruSolved<R> solved = null;
         try {
             while (solvables.hasNext() && solvers > 0) {
                 MiruSolvable<R> solvable = solvables.next();
                 log.debug("Initial solver index={} coord={}", n, solvable.getCoord());
-                futures.add(new SolvableFuture<R>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
+                futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                 solvers--;
                 n++;
             }
@@ -75,17 +82,21 @@ public class MiruLowestLatencySolver implements MiruSolver {
                     }
                 } else {
                     try {
-                        R r = future.get();
-                        if (r != null) {
+                        R result = future.get();
+                        if (result != null) {
                             // should be few enough of these that we prefer a linear lookup
                             for (SolvableFuture<R> f : futures) {
                                 if (f.future == future) {
                                     log.debug("Got a solution coord={}", f.solvable.getCoord());
-                                    result = new MiruSolution<>(r, f.solvable.getCoord(), System.currentTimeMillis() - f.startTime);
+                                    long usedResultElapsed = System.currentTimeMillis() - f.startTime;
+                                    long totalElapsed = System.currentTimeMillis() - startTime;
+                                    solved = new MiruSolved<>(
+                                            new MiruSolution(f.solvable.getCoord(), orderedPartitions, triedPartitions, usedResultElapsed, totalElapsed),
+                                            result);
                                     break;
                                 }
                             }
-                            if (result == null) {
+                            if (solved == null) {
                                 log.error("Unmatched future");
                             }
                             break;
@@ -101,7 +112,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
             }
         }
 
-        return result;
+        return solved;
     }
 
     private static class SolvableFuture<R> {

@@ -20,11 +20,12 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.MiruResponse;
 import com.jivesoftware.os.miru.query.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trending;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
-import com.jivesoftware.os.miru.reco.plugins.trending.TrendingResult;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Collections;
@@ -140,7 +141,7 @@ public class MiruTrendingNGTest {
                     MiruAuthzExpression.NOT_PROVIDED,
                     "doc",
                     10);
-            TrendingResult trendingResult = injectable.scoreTrending(query);
+            MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(query);
 
             System.out.println("trendingResult:" + trendingResult);
             System.out.println("Took:" + (System.currentTimeMillis() - s));

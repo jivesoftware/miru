@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.Set;
 
 /** @author jonathan */
-public class AggregateCountsResult {
+public class AggregateCountsAnswer {
 
-    public static final AggregateCountsResult EMPTY_RESULTS = new AggregateCountsResult(ImmutableList.<AggregateCount>of(),
+    public static final AggregateCountsAnswer EMPTY_RESULTS = new AggregateCountsAnswer(ImmutableList.<AggregateCount>of(),
             ImmutableSet.<MiruTermId>of(), 0, 0);
 
     public final ImmutableList<AggregateCount> results;
@@ -22,10 +22,10 @@ public class AggregateCountsResult {
     public final int skippedDistincts;
     public final int collectedDistincts;
 
-    public AggregateCountsResult(
-        ImmutableList<AggregateCount> results,
-        ImmutableSet<MiruTermId> aggregateTerms,
-        int skippedDistincts, int collectedDistincts) {
+    public AggregateCountsAnswer(
+            ImmutableList<AggregateCount> results,
+            ImmutableSet<MiruTermId> aggregateTerms,
+            int skippedDistincts, int collectedDistincts) {
         this.results = results;
         this.aggregateTerms = aggregateTerms;
         this.skippedDistincts = skippedDistincts;
@@ -33,17 +33,17 @@ public class AggregateCountsResult {
     }
 
     @JsonCreator
-    public static AggregateCountsResult fromJson(
+    public static AggregateCountsAnswer fromJson(
         @JsonProperty("results") List<AggregateCount> results,
         @JsonProperty("aggregateTerms") Set<MiruTermId> aggregateTerms,
         @JsonProperty("skippedDistincts") int skippedDistincts,
         @JsonProperty("collectedDistincts") int collectedDistincts) {
-        return new AggregateCountsResult(ImmutableList.copyOf(results), ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
+        return new AggregateCountsAnswer(ImmutableList.copyOf(results), ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
     }
 
     @Override
     public String toString() {
-        return "AggregateCountsResult{" +
+        return "AggregateCountsAnswer{" +
             "results=" + results +
             ", aggregateTerms=" + aggregateTerms +
             ", skippedDistincts=" + skippedDistincts +
@@ -60,7 +60,7 @@ public class AggregateCountsResult {
             return false;
         }
 
-        AggregateCountsResult that = (AggregateCountsResult) o;
+        AggregateCountsAnswer that = (AggregateCountsAnswer) o;
 
         if (collectedDistincts != that.collectedDistincts) {
             return false;

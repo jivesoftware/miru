@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.Miru;
 import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.MiruResponse;
 import com.jivesoftware.os.miru.query.MiruSolvableFactory;
 
 /**
@@ -26,16 +27,16 @@ public class TrendingInjectable {
         this.trending = trending;
     }
 
-    public TrendingResult scoreTrending(TrendingQuery query) throws MiruQueryServiceException {
+    public MiruResponse<TrendingAnswer> scoreTrending(TrendingQuery query) throws MiruQueryServiceException {
         try {
-            LOG.debug("callAndMerge: query={}", query);
+            LOG.debug("askAndMerge: query={}", query);
             MiruTenantId tenantId = query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
-            return miru.callAndMerge(tenantId,
-                    new MiruSolvableFactory<>("scoreTrending", new TrendingExecuteQuery(trending, query)),
-                    new TrendingResultEvaluator(),
-                    new MergeTrendingResults(query.timeRange, query.divideTimeRangeIntoNSegments, query.desiredNumberOfDistincts),
-                    TrendingResult.EMPTY_RESULTS);
+            return miru.askAndMerge(tenantId,
+                    new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, query)),
+                    new TrendingAnswerEvaluator(),
+                    new TrendingAnswerMerger(query.timeRange, query.divideTimeRangeIntoNSegments, query.desiredNumberOfDistincts),
+                    TrendingAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -44,19 +45,19 @@ public class TrendingInjectable {
         }
     }
 
-    public TrendingResult scoreTrending(MiruPartitionId partitionId,
+    public TrendingAnswer scoreTrending(MiruPartitionId partitionId,
             TrendingQueryAndResult queryAndResult)
             throws MiruQueryServiceException {
         try {
-            LOG.debug("callImmediate: partitionId={} query={}", partitionId, queryAndResult.query);
-            LOG.trace("callImmediate: lastResult={}", queryAndResult.lastResult);
+            LOG.debug("askImmediate: partitionId={} query={}", partitionId, queryAndResult.query);
+            LOG.trace("askImmediate: lastResult={}", queryAndResult.lastResult);
             MiruTenantId tenantId = queryAndResult.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
-            return miru.callImmediate(tenantId,
+            return miru.askImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("scoreTrending", new TrendingExecuteQuery(trending, queryAndResult.query)),
+                    new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, queryAndResult.query)),
                     Optional.fromNullable(queryAndResult.lastResult),
-                    TrendingResult.EMPTY_RESULTS);
+                    TrendingAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
