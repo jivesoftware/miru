@@ -9,11 +9,11 @@ public class SimpleRegressionTrendTest {
 
     @Test
     public void testMerge() throws Exception {
-        long durationPerBucket = SimpleRegressionTrend.durationPerBucket;
-        int numberOfBuckets = SimpleRegressionTrend.numberOfBuckets;
+        long durationPerBucket = 1L;
+        int numberOfBuckets = 17;
 
-        SimpleRegressionTrend trend1 = new SimpleRegressionTrend();
-        SimpleRegressionTrend trend2 = new SimpleRegressionTrend();
+        SimpleRegressionTrend trend1 = new SimpleRegressionTrend(numberOfBuckets, durationPerBucket * numberOfBuckets);
+        SimpleRegressionTrend trend2 = new SimpleRegressionTrend(numberOfBuckets, durationPerBucket * numberOfBuckets);
 
         long currentT = trend1.getCurrentT();
 
@@ -22,7 +22,7 @@ public class SimpleRegressionTrendTest {
             trend2.add(currentT - i * durationPerBucket, (double) (i + 1));
         }
 
-        SimpleRegressionTrend merged = new SimpleRegressionTrend();
+        SimpleRegressionTrend merged = new SimpleRegressionTrend(numberOfBuckets, durationPerBucket * numberOfBuckets);
         merged.merge(trend1);
         merged.merge(trend2);
 
@@ -35,12 +35,12 @@ public class SimpleRegressionTrendTest {
 
     @Test
     public void testRank() throws Exception {
-        long durationPerBucket = SimpleRegressionTrend.durationPerBucket;
-        int numberOfBuckets = SimpleRegressionTrend.numberOfBuckets;
+        long durationPerBucket = 1L;
+        int numberOfBuckets = 17;
 
-        SimpleRegressionTrend flat = new SimpleRegressionTrend();
-        SimpleRegressionTrend line = new SimpleRegressionTrend();
-        SimpleRegressionTrend quad = new SimpleRegressionTrend();
+        SimpleRegressionTrend flat = new SimpleRegressionTrend(numberOfBuckets, durationPerBucket * numberOfBuckets);
+        SimpleRegressionTrend line = new SimpleRegressionTrend(numberOfBuckets, durationPerBucket * numberOfBuckets);
+        SimpleRegressionTrend quad = new SimpleRegressionTrend(numberOfBuckets, durationPerBucket * numberOfBuckets);
 
         long currentT = flat.getCurrentT();
 
@@ -53,5 +53,27 @@ public class SimpleRegressionTrendTest {
 
         assertTrue(flat.getRank(currentT) < line.getRank(currentT));
         assertTrue(line.getRank(currentT) < quad.getRank(currentT));
+    }
+
+    @Test
+    public void testSerialization() throws Exception {
+        long durationPerBucket = 1L;
+        int numberOfBuckets = 17;
+
+        SimpleRegressionTrend trend1 = new SimpleRegressionTrend(numberOfBuckets, durationPerBucket * numberOfBuckets);
+
+        long currentT = trend1.getCurrentT();
+
+        for (int i = 0; i < numberOfBuckets; i++) {
+            trend1.add(currentT - i * durationPerBucket, (double) (i + 1));
+        }
+
+        byte[] bytes = trend1.toBytes();
+        SimpleRegressionTrend trend2 = new SimpleRegressionTrend(bytes);
+
+        double[] rawSignal = trend2.getRawSignal();
+        for (int i = 0; i < numberOfBuckets; i++) {
+            assertEquals(rawSignal[i], (double) (numberOfBuckets - i));
+        }
     }
 }

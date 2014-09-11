@@ -12,6 +12,8 @@ import com.jivesoftware.os.miru.query.MiruBitmaps;
 import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.MiruQueryHandle;
 import com.jivesoftware.os.miru.query.MiruQueryStream;
+import com.jivesoftware.os.miru.query.MiruTimeIndex;
+import com.jivesoftware.os.miru.query.MiruTimeRange;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +41,15 @@ public class TrendingExecuteQuery implements ExecuteQuery<TrendingResult, Trendi
 
         // Start building up list of bitmap operations to run
         List<BM> ands = new ArrayList<>();
+
+        MiruTimeRange timeRange = query.timeRange;
+
+        // Short-circuit if the time range doesn't live here
+        if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
+            LOG.debug("No time index intersection");
+            return trending.trending(bitmaps, stream, query, report, bitmaps.create());
+        }
+        ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
@@ -75,5 +86,10 @@ public class TrendingExecuteQuery implements ExecuteQuery<TrendingResult, Trendi
                     result.get().aggregateTerms));
         }
         return report;
+    }
+
+    private boolean timeIndexIntersectsTimeRange(MiruTimeIndex timeIndex, MiruTimeRange timeRange) {
+        return timeRange.smallestTimestamp <= timeIndex.getLargestTimestamp() &&
+                timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
     }
 }

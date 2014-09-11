@@ -5,21 +5,15 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.query.MiruResultEvaluator;
 
 /**
-*
-*/
+ *
+ */
 public class TrendingResultEvaluator implements MiruResultEvaluator<TrendingResult> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final TrendingQuery query;
-
-    public TrendingResultEvaluator(TrendingQuery query) {
-        this.query = query;
-    }
-
     @Override
     public boolean isDone(TrendingResult result) {
-        log.debug("Evaluate {} >= {}", result.collectedDistincts, query.desiredNumberOfDistincts);
-        return result.collectedDistincts >= query.desiredNumberOfDistincts;
+        log.debug("Results exhausted = {}", result.resultsExhausted);
+        return result.resultsExhausted;
     }
 }

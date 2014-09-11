@@ -8,12 +8,12 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.query.MiruResultMerger;
+import com.jivesoftware.os.miru.query.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  *
@@ -22,9 +22,13 @@ public class MergeTrendingResults implements MiruResultMerger<TrendingResult> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private final MiruTimeRange timeRange;
+    private final int divideTimeRangeIntoNSegments;
     private final int desiredNumberOfDistincts;
 
-    public MergeTrendingResults(int desiredNumberOfDistincts) {
+    public MergeTrendingResults(MiruTimeRange timeRange, int divideTimeRangeIntoNSegments, int desiredNumberOfDistincts) {
+        this.timeRange = timeRange;
+        this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
 
@@ -51,16 +55,17 @@ public class MergeTrendingResults implements MiruResultMerger<TrendingResult> {
         int size = currentResult.results.size() + (last.isPresent() ? last.get().results.size() : 0);
 
         List<TrendingResult.Trendy> mergedResults = Lists.newArrayListWithCapacity(size);
+        final long trendInterval = timeRange.largestTimestamp - timeRange.smallestTimestamp;
         for (TrendingResult.Trendy trendy : lastResult.results) {
             TrendingResult.Trendy had = carryOverCounts.remove(new MiruIBA(trendy.distinctValue));
             if (had == null) {
                 mergedResults.add(trendy);
             } else {
                 try {
-                    SimpleRegressionTrend merged = new SimpleRegressionTrend();
+                    SimpleRegressionTrend merged = new SimpleRegressionTrend(divideTimeRangeIntoNSegments, trendInterval);
                     merged.merge(trendy.trend);
                     merged.merge(had.trend);
-                    mergedResults.add(new TrendingResult.Trendy(trendy.distinctValue, merged, merged.getRank(merged.getCurrentT())));
+                    mergedResults.add(new TrendingResult.Trendy(trendy.distinctValue, merged, merged.getRank(timeRange.largestTimestamp)));
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to merge", e);
                 }
@@ -72,7 +77,8 @@ public class MergeTrendingResults implements MiruResultMerger<TrendingResult> {
             }
         }
 
-        TrendingResult mergedResult = new TrendingResult(ImmutableList.copyOf(mergedResults), currentResult.aggregateTerms, currentResult.collectedDistincts);
+        TrendingResult mergedResult = new TrendingResult(ImmutableList.copyOf(mergedResults), currentResult.aggregateTerms, currentResult.collectedDistincts,
+                currentResult.resultsExhausted);
 
         logMergeResult(currentResult, lastResult, mergedResult);
 
@@ -82,15 +88,14 @@ public class MergeTrendingResults implements MiruResultMerger<TrendingResult> {
     @Override
     public TrendingResult done(Optional<TrendingResult> last, TrendingResult alternative) {
         return last.transform(new Function<TrendingResult, TrendingResult>() {
-            @Nullable
             @Override
-            public TrendingResult apply(@Nullable TrendingResult result) {
+            public TrendingResult apply(TrendingResult result) {
                 List<TrendingResult.Trendy> results = Lists.newArrayList(result.results);
                 long t = System.currentTimeMillis();
                 Collections.sort(results);
-                log.info("mergeTrending: sorted in " + (System.currentTimeMillis() - t) + " ms");
+                log.debug("Sorted in " + (System.currentTimeMillis() - t) + " ms");
                 results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
-                return new TrendingResult(ImmutableList.copyOf(results), result.aggregateTerms, result.collectedDistincts);
+                return new TrendingResult(ImmutableList.copyOf(results), result.aggregateTerms, result.collectedDistincts, result.resultsExhausted);
             }
         }).or(alternative);
     }

@@ -47,12 +47,13 @@ public class RecoQuery {
         this.lookupFieldNamed2 = Preconditions.checkNotNull(lookupFieldNamed2);
         this.aggregateFieldName3 = Preconditions.checkNotNull(aggregateFieldName3);
         this.retrieveFieldName3 = Preconditions.checkNotNull(retrieveFieldName3);
+        Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
 
     @Override
     public String toString() {
-        return "MiruRecoQueryCriteria{" +
+        return "RecoQuery{" +
                 "tenantId=" + tenantId +
                 ", constraintsFilter=" + constraintsFilter +
                 ", authzExpression=" + authzExpression +

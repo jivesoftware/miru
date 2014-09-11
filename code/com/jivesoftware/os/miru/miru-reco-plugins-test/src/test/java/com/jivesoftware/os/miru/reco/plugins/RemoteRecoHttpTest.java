@@ -10,11 +10,14 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.query.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoResult;
@@ -23,6 +26,7 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingResult;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.Charsets;
 import org.testng.annotations.Test;
 
@@ -38,7 +42,6 @@ public class RemoteRecoHttpTest {
 
     @Test(enabled = false, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
-
         String tenant = "999";
         MiruTenantId tenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
 
@@ -48,7 +51,7 @@ public class RemoteRecoHttpTest {
         objectMapper.registerModule(new GuavaModule());
         RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
 
-        MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.or,
+        MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
                 Optional.of(ImmutableList.of(
                         new MiruFieldFilter("objectType", Lists.transform(
                                 Arrays.asList(102, 1, 18, 38, 801, 1464927464, -960826044),
@@ -62,17 +65,26 @@ public class RemoteRecoHttpTest {
                 )),
                 Optional.<ImmutableList<MiruFilter>>absent());
 
+        SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
+        long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
+        long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
+        long packThreeDays = snowflakeIdPacker.pack(TimeUnit.DAYS.toMillis(3), 0, 0);
         TrendingQuery query = new TrendingQuery(tenantId,
+                new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
+                32,
                 constraintsFilter,
                 MiruAuthzExpression.NOT_PROVIDED,
                 "parent",
                 100);
 
-        TrendingResult trendingResult = requestHelper.executeRequest(query,
-                TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
-                TrendingResult.class, TrendingResult.EMPTY_RESULTS);
-        System.out.println(trendingResult);
-        assertNotNull(trendingResult);
+        int numQueries = 1;
+        for (int i = 0; i < numQueries; i++) {
+            TrendingResult trendingResult = requestHelper.executeRequest(query,
+                    TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
+                    TrendingResult.class, TrendingResult.EMPTY_RESULTS);
+            System.out.println(trendingResult);
+            assertNotNull(trendingResult);
+        }
     }
 
     @Test(enabled = false, description = "Needs REMOTE constants")
@@ -98,7 +110,7 @@ public class RemoteRecoHttpTest {
                                 11, //liked
                                 1, //created
                                 65 //outcome_set
-                        ),Functions.toStringFunction()))
+                        ), Functions.toStringFunction()))
                 )),
                 Optional.<ImmutableList<MiruFilter>>absent());
 
@@ -110,10 +122,11 @@ public class RemoteRecoHttpTest {
                 "parent", "parent",
                 100);
 
-        RecoResult results = requestHelper.executeRequest(query,
+        RecoResult recoResult = requestHelper.executeRequest(query,
                 RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
                 RecoResult.class, RecoResult.EMPTY_RESULTS);
-        assertNotNull(results);
+        System.out.println(recoResult);
+        assertNotNull(recoResult);
     }
 
 }

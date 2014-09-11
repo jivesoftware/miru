@@ -49,6 +49,7 @@ public class Trending {
         }
 
         List<Trendy> trendies = new ArrayList<>();
+        final long trendInterval = query.timeRange.largestTimestamp - query.timeRange.smallestTimestamp;
         int fieldId = stream.schema.getFieldId(query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
@@ -66,7 +67,7 @@ public class Trending {
                 bitmaps.andNot(revisedAnswer, answer, Collections.singletonList(termIndex));
                 answer = revisedAnswer;
 
-                SimpleRegressionTrend trend = new SimpleRegressionTrend();
+                SimpleRegressionTrend trend = new SimpleRegressionTrend(query.divideTimeRangeIntoNSegments, trendInterval);
                 MiruIntIterator iter = bitmaps.intIterator(termIndex);
                 while (iter.hasNext()) {
                     int index = iter.next();
@@ -116,7 +117,7 @@ public class Trending {
 
                     collectedDistincts++;
 
-                    SimpleRegressionTrend trend = new SimpleRegressionTrend();
+                    SimpleRegressionTrend trend = new SimpleRegressionTrend(query.divideTimeRangeIntoNSegments, trendInterval);
                     MiruIntIterator iter = bitmaps.intIterator(termIndex);
                     long minTime = Long.MAX_VALUE;
                     long maxTime = Long.MIN_VALUE;
@@ -131,23 +132,17 @@ public class Trending {
                         }
                         trend.add(timestamp, 1d);
                     }
-                    Trendy trendy = new Trendy(aggregateValue, trend, trend.getRank(trend.getCurrentT()));
+                    Trendy trendy = new Trendy(aggregateValue, trend, trend.getRank(query.timeRange.largestTimestamp));
                     trendies.add(trendy);
                     if (log.isTraceEnabled()) {
                         log.trace("Trend minTime={} maxTime={} currentT={} bucketTimes={}", minTime, maxTime, trend.getCurrentT(), trend.getBucketsT());
                     }
-
-                    //TODO desiredNumberOfDistincts is used to truncate the final list. Do we need a maxDistincts of some sort?
-                    /*
-                     if (trendies.size() >= query.desiredNumberOfDistincts) {
-                     break;
-                     }
-                     */
                 }
             }
         }
 
-        TrendingResult result = new TrendingResult(ImmutableList.copyOf(trendies), ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
+        boolean resultsExhausted = query.timeRange.smallestTimestamp >= stream.timeIndex.getSmallestTimestamp();
+        TrendingResult result = new TrendingResult(ImmutableList.copyOf(trendies), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
         log.debug("result={}", result);
         return result;
     }

@@ -43,13 +43,15 @@ public class AggregateCountsQuery {
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.authzExpression = Preconditions.checkNotNull(authzExpression);
         this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
+        Preconditions.checkArgument(startFromDistinctN >= 0, "Start from distinct must be at least 0");
         this.startFromDistinctN = startFromDistinctN;
+        Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
 
     @Override
     public String toString() {
-        return "MiruAggregateCountsQueryCriteria{" +
+        return "AggregateCountsQuery{" +
                 "tenantId=" + tenantId +
                 ", streamId=" + streamId +
                 ", answerTimeRange=" + answerTimeRange +

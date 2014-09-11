@@ -4,14 +4,19 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.jive.utils.ordered.id.TimestampProvider;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.query.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -22,6 +27,8 @@ public class MiruTestRecoQueryDistributor {
     private final MiruTestFeatureSupplier featureSupplier;
     private final int numResultsGlobalTrendy;
     private final int numResultsCollaborativeFiltering;
+    private final SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
+    private final TimestampProvider timestampProvider = new JiveEpochTimestampProvider();
 
     public MiruTestRecoQueryDistributor(int numQueries, MiruTestFeatureSupplier featureSupplier, int numResultsGlobalTrendy, int
             numResultsCollaborativeFiltering) {
@@ -37,8 +44,12 @@ public class MiruTestRecoQueryDistributor {
 
     public TrendingQuery globalTrending() {
         Id userId = featureSupplier.oldUsers(1).get(0);
+        long packCurrentTime = snowflakeIdPacker.pack(timestampProvider.getTimestamp(), 0, 0);
+        long packThreeDays = snowflakeIdPacker.pack(TimeUnit.DAYS.toMillis(3), 0, 0);
         return new TrendingQuery(
                 featureSupplier.miruTenantId(),
+                new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
+                32,
                 new MiruFilter(
                         MiruFilterOperation.or,
                         Optional.of(ImmutableList.of(viewClassesFilter())),

@@ -33,8 +33,8 @@ public class TrendingInjectable {
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.callAndMerge(tenantId,
                     new MiruSolvableFactory<>("scoreTrending", new TrendingExecuteQuery(trending, query)),
-                    new TrendingResultEvaluator(query),
-                    new MergeTrendingResults(query.desiredNumberOfDistincts),
+                    new TrendingResultEvaluator(),
+                    new MergeTrendingResults(query.timeRange, query.divideTimeRangeIntoNSegments, query.desiredNumberOfDistincts),
                     TrendingResult.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;

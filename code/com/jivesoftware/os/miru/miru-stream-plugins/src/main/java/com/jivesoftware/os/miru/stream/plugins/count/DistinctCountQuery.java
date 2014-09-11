@@ -38,12 +38,13 @@ public class DistinctCountQuery {
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.authzExpression = Preconditions.checkNotNull(authzExpression);
         this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
+        Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
 
     @Override
     public String toString() {
-        return "MiruDistinctCountQueryCriteria{" +
+        return "DistinctCountQuery{" +
                 "tenantId=" + tenantId +
                 ", streamId=" + streamId +
                 ", timeRange=" + timeRange +

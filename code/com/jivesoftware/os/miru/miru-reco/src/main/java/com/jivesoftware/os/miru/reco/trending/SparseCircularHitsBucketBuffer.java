@@ -20,17 +20,17 @@ public class SparseCircularHitsBucketBuffer {
     private long mostRecentTimeStamp = Long.MIN_VALUE;
     private long oldestBucketNumber = Long.MIN_VALUE;
     private long youngestBucketNumber;
-    private long bucketEdgeMillis;
+    private long utcOffset; // shifts alignment of buckets as offset from UTC, e.g. aligning with start of work day in PST
     private long bucketWidthMillis;
     private int cursor; // always points oldest bucket. cursor -1 is the newestBucket
-    private int size;
+    private int numberOfBuckets;
     private double[] hits;
 
-    public SparseCircularHitsBucketBuffer(int size, long bucketEdgeMillis, long bucketWidthMillis) {
-        this.size = size;
-        this.bucketEdgeMillis = bucketEdgeMillis; // supports timezones with use as a offest from UTC
+    public SparseCircularHitsBucketBuffer(int numberOfBuckets, long utcOffset, long bucketWidthMillis) {
+        this.numberOfBuckets = numberOfBuckets;
+        this.utcOffset = utcOffset;
         this.bucketWidthMillis = bucketWidthMillis;
-        hits = new double[size];
+        hits = new double[numberOfBuckets];
     }
 
     public long mostRecentTimestamp() {
@@ -38,19 +38,19 @@ public class SparseCircularHitsBucketBuffer {
     }
 
     public long duration() {
-        return bucketWidthMillis * size;
+        return bucketWidthMillis * numberOfBuckets;
     }
 
     public byte[] toBytes() throws Exception {
-        ByteBuffer bb = ByteBuffer.allocate((8 * 5) + (4 * 2) + (8 * size));
+        ByteBuffer bb = ByteBuffer.allocate((8 * 5) + (4 * 2) + (8 * numberOfBuckets));
         bb.putLong(mostRecentTimeStamp);
         bb.putLong(oldestBucketNumber);
         bb.putLong(youngestBucketNumber);
-        bb.putLong(bucketEdgeMillis);
+        bb.putLong(utcOffset);
         bb.putLong(bucketWidthMillis);
         bb.putInt(cursor);
-        bb.putInt(size);
-        for (int i = 0; i < size; i++) {
+        bb.putInt(numberOfBuckets);
+        for (int i = 0; i < numberOfBuckets; i++) {
             bb.putDouble(hits[i]);
         }
         return bb.array();
@@ -61,12 +61,12 @@ public class SparseCircularHitsBucketBuffer {
         mostRecentTimeStamp = bb.getLong();
         oldestBucketNumber = bb.getLong();
         youngestBucketNumber = bb.getLong();
-        bucketEdgeMillis = bb.getLong();
+        utcOffset = bb.getLong();
         bucketWidthMillis = bb.getLong();
         cursor = bb.getInt();
-        size = bb.getInt();
-        hits = new double[size];
-        for (int i = 0; i < size; i++) {
+        numberOfBuckets = bb.getInt();
+        hits = new double[numberOfBuckets];
+        for (int i = 0; i < numberOfBuckets; i++) {
             hits[i] = bb.getDouble();
         }
     }
@@ -77,11 +77,11 @@ public class SparseCircularHitsBucketBuffer {
         }
         long absBucketNumber = absBucketNumber(time);
         if (oldestBucketNumber == Long.MIN_VALUE) {
-            oldestBucketNumber = absBucketNumber - (size - 1);
+            oldestBucketNumber = absBucketNumber - (numberOfBuckets - 1);
             youngestBucketNumber = absBucketNumber;
         } else {
             if (absBucketNumber < oldestBucketNumber) {
-                logger.warn("Moving backwards is unsupported so we will simply drop the hit on the floor!");
+                logger.debug("Moving backwards is unsupported so we will simply drop the hit on the floor!");
                 return;
             }
             if (absBucketNumber > youngestBucketNumber) {
@@ -104,7 +104,7 @@ public class SparseCircularHitsBucketBuffer {
         long absBucketNumber = time / bucketWidthMillis;
         long absNearestEdge = bucketWidthMillis * absBucketNumber;
         long remainder = time - (absNearestEdge);
-        if (remainder < bucketEdgeMillis) {
+        if (remainder < utcOffset) {
             return absBucketNumber - 1;
         } else {
             return absBucketNumber;
@@ -113,16 +113,16 @@ public class SparseCircularHitsBucketBuffer {
 
     private int nextCursor(int cursor, int move) {
         cursor += move;
-        if (cursor >= size) {
-            cursor = cursor - size;
+        if (cursor >= numberOfBuckets) {
+            cursor = cursor - numberOfBuckets;
         }
         return cursor;
     }
 
     public double[] rawSignal() {
-        double[] copy = new double[size];
+        double[] copy = new double[numberOfBuckets];
         int c = cursor;
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < numberOfBuckets; i++) {
             copy[i] = hits[c];
             c = nextCursor(c, 1);
         }
@@ -130,9 +130,9 @@ public class SparseCircularHitsBucketBuffer {
     }
 
     public long[] bucketTimes() {
-        long[] times = new long[size];
-        long t = mostRecentTimeStamp - (size - 1) * bucketWidthMillis;
-        for (int i = cursor, j = 0; j < size; i = (i + 1) % size, j++) {
+        long[] times = new long[numberOfBuckets];
+        long t = mostRecentTimeStamp - (numberOfBuckets - 1) * bucketWidthMillis;
+        for (int i = cursor, j = 0; j < numberOfBuckets; i = (i + 1) % numberOfBuckets, j++) {
             times[i] = t;
             t += bucketWidthMillis;
         }
@@ -145,10 +145,10 @@ public class SparseCircularHitsBucketBuffer {
             "mostRecentTimeStamp=" + mostRecentTimeStamp +
             ", oldestBucketNumber=" + oldestBucketNumber +
             ", youngestBucketNumber=" + youngestBucketNumber +
-            ", bucketEdgeMillis=" + bucketEdgeMillis +
+            ", utcOffset=" + utcOffset +
             ", bucketWidthMillis=" + bucketWidthMillis +
             ", cursor=" + cursor +
-            ", size=" + size +
+            ", numberOfBuckets=" + numberOfBuckets +
             ", hits=" + Arrays.toString(hits) +
             '}';
     }

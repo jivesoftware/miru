@@ -3,9 +3,10 @@ package com.jivesoftware.os.miru.reco.trending;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.IdPacker;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.jive.utils.ordered.id.TimestampProvider;
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.math.stat.regression.SimpleRegression;
 
 /**
@@ -15,26 +16,65 @@ public class SimpleRegressionTrend implements Trender<Long, GotSimpleRegressionT
 
     private static final MetricLogger logger = MetricLoggerFactory.getLogger();
     private static final IdPacker idPacker = new SnowflakeIdPacker();
+    private static final TimestampProvider timestampProvider = new JiveEpochTimestampProvider();
 
-    public static final int numberOfBuckets = 28;
-    public static final int smoothingWidthInNumberOfBuckets = 8;
-    public static final long durationPerBucket = idPacker.pack(TimeUnit.HOURS.toMillis(3), 0, 0);
+    private static final int DEFAULT_UTC_OFFSET = 0;
 
+    private final int numberOfBuckets;
+    private final long utcOffset;
+    private final long bucketWidthMillis;
     private final SparseCircularHitsBucketBuffer hitsBuffer;
     private final TrendRank<SimpleRegression> trendRanker;
     private final TrendRecency<SimpleRegressionTrend> recencyRanker;
-    private int lookBack;
 
-    public SimpleRegressionTrend() {
-        this(numberOfBuckets, smoothingWidthInNumberOfBuckets, 0, durationPerBucket, new SlopeTrendRank(), new LinearTimeDecayTrendRecency());
+    public SimpleRegressionTrend(int numberOfBuckets, long interval) {
+        this(numberOfBuckets,
+                DEFAULT_UTC_OFFSET,
+                calculateWindowWidth(interval, numberOfBuckets),
+                new SlopeTrendRank(),
+                new LinearTimeDecayTrendRecency());
     }
 
-    public SimpleRegressionTrend(int size, int smoothingLookback, long utcOffset, long windowWidthMillis,
-            TrendRank<SimpleRegression> trendRanker, TrendRecency<SimpleRegressionTrend> recencyRanker) {
-        this.lookBack = smoothingLookback;
+    public SimpleRegressionTrend(int numberOfBuckets,
+            long utcOffset,
+            long bucketWidthMillis,
+            TrendRank<SimpleRegression> trendRanker,
+            TrendRecency<SimpleRegressionTrend> recencyRanker) {
+        this.numberOfBuckets = numberOfBuckets;
+        this.utcOffset = utcOffset;
+        this.bucketWidthMillis = bucketWidthMillis;
+        this.hitsBuffer = new SparseCircularHitsBucketBuffer(numberOfBuckets, utcOffset, bucketWidthMillis);
         this.trendRanker = trendRanker;
         this.recencyRanker = recencyRanker;
-        hitsBuffer = new SparseCircularHitsBucketBuffer(size, utcOffset, windowWidthMillis);
+    }
+
+    public SimpleRegressionTrend(byte[] bytes) throws Exception {
+        ByteBuffer bb = ByteBuffer.wrap(bytes);
+        this.numberOfBuckets = bb.getInt();
+        this.utcOffset = bb.getLong();
+        this.bucketWidthMillis = bb.getLong();
+        this.hitsBuffer = new SparseCircularHitsBucketBuffer(numberOfBuckets, utcOffset, bucketWidthMillis);
+        this.trendRanker = new SlopeTrendRank();
+        this.recencyRanker = new LinearTimeDecayTrendRecency();
+
+        byte[] hitsBufferBytes = new byte[bb.remaining()];
+        bb.get(hitsBufferBytes);
+        this.hitsBuffer.fromBytes(hitsBufferBytes);
+    }
+
+    private static long calculateWindowWidth(long interval, int numberOfBuckets) {
+        return (interval + numberOfBuckets - 1) / numberOfBuckets;
+    }
+
+    @Override
+    public byte[] toBytes() throws Exception {
+        byte[] hitsBufferBytes = hitsBuffer.toBytes();
+        ByteBuffer bb = ByteBuffer.allocate(4 + 8 + 8 + hitsBufferBytes.length);
+        bb.putInt(numberOfBuckets);
+        bb.putLong(utcOffset);
+        bb.putLong(bucketWidthMillis);
+        bb.put(hitsBufferBytes);
+        return bb.array();
     }
 
     @Override
@@ -104,24 +144,6 @@ public class SimpleRegressionTrend implements Trender<Long, GotSimpleRegressionT
             r.addData(s, smooth[i]);
         }
         return r;
-    }
-
-    @Override
-    public byte[] toBytes() throws Exception {
-        byte[] hitsBufferBytes = hitsBuffer.toBytes();
-        ByteBuffer bb = ByteBuffer.allocate(4 + hitsBufferBytes.length);
-        bb.putInt(lookBack);
-        bb.put(hitsBufferBytes);
-        return bb.array();
-    }
-
-    @Override
-    public void initWithBytes(byte[] bytes) throws Exception {
-        ByteBuffer bb = ByteBuffer.wrap(bytes);
-        lookBack = bb.getInt();
-        byte[] hitsBufferBytes = new byte[bb.remaining()];
-        bb.get(hitsBufferBytes);
-        hitsBuffer.fromBytes(hitsBufferBytes);
     }
 
     @Override
@@ -274,7 +296,7 @@ public class SimpleRegressionTrend implements Trender<Long, GotSimpleRegressionT
 
     @Override
     public Long getCurrentT() {
-        return idPacker.pack(System.currentTimeMillis(), 0, 0);
+        return idPacker.pack(timestampProvider.getTimestamp(), 0, 0);
     }
 
     @Override
@@ -293,9 +315,11 @@ public class SimpleRegressionTrend implements Trender<Long, GotSimpleRegressionT
 
     @Override
     public String toString() {
-        return "SimpleRegressionTrend{"
-                + "hitsBuffer=" + hitsBuffer
-                + ", lookBack=" + lookBack
-                + '}';
+        return "SimpleRegressionTrend{" +
+                "numberOfBuckets=" + numberOfBuckets +
+                ", utcOffset=" + utcOffset +
+                ", bucketWidthMillis=" + bucketWidthMillis +
+                ", hitsBuffer=" + hitsBuffer +
+                '}';
     }
 }

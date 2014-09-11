@@ -18,36 +18,41 @@ import java.util.Set;
 public class TrendingResult {
 
     public static final TrendingResult EMPTY_RESULTS = new TrendingResult(ImmutableList.<Trendy>of(),
-        ImmutableSet.<MiruTermId>of(), 0);
+            ImmutableSet.<MiruTermId>of(), 0, true);
 
     public final ImmutableList<Trendy> results;
     public final ImmutableSet<MiruTermId> aggregateTerms;
     public final int collectedDistincts;
+    public final boolean resultsExhausted;
 
     public TrendingResult(
-        ImmutableList<Trendy> results,
-        ImmutableSet<MiruTermId> aggregateTerms,
-        int collectedDistincts) {
+            ImmutableList<Trendy> results,
+            ImmutableSet<MiruTermId> aggregateTerms,
+            int collectedDistincts,
+            boolean resultsExhausted) {
         this.results = results;
         this.aggregateTerms = aggregateTerms;
         this.collectedDistincts = collectedDistincts;
+        this.resultsExhausted = resultsExhausted;
     }
 
     @JsonCreator
     public static TrendingResult fromJson(
-        @JsonProperty("results") List<Trendy> results,
-        @JsonProperty("aggregateTerms") Set<MiruTermId> aggregateTerms,
-        @JsonProperty("collectedDistincts") int collectedDistincts) {
-        return new TrendingResult(ImmutableList.copyOf(results), ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
+            @JsonProperty("results") List<Trendy> results,
+            @JsonProperty("aggregateTerms") Set<MiruTermId> aggregateTerms,
+            @JsonProperty("collectedDistincts") int collectedDistincts,
+            @JsonProperty("resultsExhausted") boolean resultsExhausted) {
+        return new TrendingResult(ImmutableList.copyOf(results), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
     }
 
     @Override
     public String toString() {
         return "TrendingResult{" +
-            "results=" + results +
-            ", aggregateTerms=" + aggregateTerms +
-            ", collectedDistincts=" + collectedDistincts +
-            '}';
+                "results=" + results +
+                ", aggregateTerms=" + aggregateTerms +
+                ", collectedDistincts=" + collectedDistincts +
+                ", resultsExhausted=" + resultsExhausted +
+                '}';
     }
 
     public static class Trendy implements Comparable<Trendy> {
@@ -64,15 +69,11 @@ public class TrendingResult {
 
         @JsonCreator
         public static Trendy fromJson(
-            @JsonProperty("distinctValue") byte[] distinctValue,
-            @JsonProperty("trend") byte[] trendBytes,
-            @JsonProperty("rank") double rank)
-            throws Exception {
-
-            SimpleRegressionTrend trend = new SimpleRegressionTrend();
-            trend.initWithBytes(trendBytes);
-
-            return new Trendy(distinctValue, trend, rank);
+                @JsonProperty("distinctValue") byte[] distinctValue,
+                @JsonProperty("trend") byte[] trendBytes,
+                @JsonProperty("rank") double rank)
+                throws Exception {
+            return new Trendy(distinctValue, new SimpleRegressionTrend(trendBytes), rank);
         }
 
         @JsonGetter("trend")
@@ -89,13 +90,13 @@ public class TrendingResult {
         @Override
         public String toString() {
             String v = (distinctValue.length == 4)
-                ? String.valueOf(FilerIO.bytesInt(distinctValue)) : (distinctValue.length == 8)
-                ? String.valueOf(FilerIO.bytesLong(distinctValue)) : Arrays.toString(distinctValue);
+                    ? String.valueOf(FilerIO.bytesInt(distinctValue)) : (distinctValue.length == 8)
+                    ? String.valueOf(FilerIO.bytesLong(distinctValue)) : Arrays.toString(distinctValue);
             return "Trendy{" +
-                "distinctValue=" + v +
-                ", trend=" + trend +
-                ", rank=" + rank +
-                '}';
+                    "distinctValue=" + v +
+                    ", trend=" + trend +
+                    ", rank=" + rank +
+                    '}';
         }
     }
 

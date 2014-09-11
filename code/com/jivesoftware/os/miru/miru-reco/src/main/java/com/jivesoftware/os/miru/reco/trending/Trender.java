@@ -46,13 +46,6 @@ public interface Trender<T, G> {
 
     /**
      *
-     * @param bytes
-     * @throws Exception
-     */
-    public void initWithBytes(byte[] bytes) throws Exception;
-
-    /**
-     *
      * @param t
      * @return
      * @throws Exception
