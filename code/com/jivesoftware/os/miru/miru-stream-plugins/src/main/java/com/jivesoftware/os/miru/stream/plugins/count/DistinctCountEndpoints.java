@@ -4,8 +4,8 @@ import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
-import com.jivesoftware.os.miru.query.MiruResponse;
+import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -90,10 +90,10 @@ public class DistinctCountEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response countCustomStream(@PathParam("partitionId") int id, DistinctCountQueryAndResult queryAndResult) {
+    public Response countCustomStream(@PathParam("partitionId") int id, DistinctCountQueryAndReport queryAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            DistinctCountAnswer result = injectable.countCustomStream(partitionId, queryAndResult);
+            DistinctCountAnswer result = injectable.countCustomStream(partitionId, queryAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : DistinctCountAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
@@ -108,10 +108,10 @@ public class DistinctCountEndpoints {
     @Path(INBOX_ALL_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response countInboxStreamAll(@PathParam("partitionId") int id, DistinctCountQueryAndResult queryAndResult) {
+    public Response countInboxStreamAll(@PathParam("partitionId") int id, DistinctCountQueryAndReport queryAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            DistinctCountAnswer result = injectable.countInboxStreamAll(partitionId, queryAndResult);
+            DistinctCountAnswer result = injectable.countInboxStreamAll(partitionId, queryAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : DistinctCountAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
@@ -126,10 +126,10 @@ public class DistinctCountEndpoints {
     @Path(INBOX_UNREAD_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response countInboxStreamUnread(@PathParam("partitionId") int id, DistinctCountQueryAndResult queryAndResult) {
+    public Response countInboxStreamUnread(@PathParam("partitionId") int id, DistinctCountQueryAndReport queryAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            DistinctCountAnswer result = injectable.countInboxStreamUnread(partitionId, queryAndResult);
+            DistinctCountAnswer result = injectable.countInboxStreamUnread(partitionId, queryAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : DistinctCountAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {

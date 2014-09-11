@@ -8,7 +8,7 @@ package com.jivesoftware.os.miru.service.stream.factory;
 
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
-import com.jivesoftware.os.miru.service.stream.filter.AnswerCardinalityLastSetBitmapStorage;
+import com.jivesoftware.os.miru.service.bitmap.AnswerCardinalityLastSetBitmapStorage;
 import java.util.Random;
 import org.testng.annotations.Test;
 

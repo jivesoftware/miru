@@ -1,6 +1,6 @@
 package org.roaringbitmap;
 
-import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.query.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Arrays;
 import org.testng.annotations.Test;

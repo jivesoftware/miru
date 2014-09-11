@@ -19,7 +19,7 @@
         <module>miru-client</module>
         <module>miru-cluster</module>
         <module>miru-wal</module>
-        <module>miru-query</module>
+        <module>miru-plugin</module>
         <module>miru-reco</module>
         <module>miru-reader-deployable</module>
         <module>miru-writer-deployable</module>

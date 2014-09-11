@@ -26,10 +26,10 @@ public class TrendingRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public TrendingAnswer scoreTrending(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingAnswer> lastResult)
+    public TrendingAnswer scoreTrending(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingReport> report)
             throws MiruQueryServiceException {
 
-        TrendingQueryAndResult params = new TrendingQueryAndResult(query, lastResult.orNull());
+        TrendingQueryAndReport params = new TrendingQueryAndReport(query, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,

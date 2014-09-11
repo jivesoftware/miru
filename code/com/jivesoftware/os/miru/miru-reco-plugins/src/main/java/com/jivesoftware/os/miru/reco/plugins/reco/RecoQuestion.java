@@ -6,12 +6,12 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
-import com.jivesoftware.os.miru.query.MiruBitmaps;
-import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
-import com.jivesoftware.os.miru.query.MiruQueryHandle;
-import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.Question;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsDebug;
+import com.jivesoftware.os.miru.query.context.MiruRequestContext;
+import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +25,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
     private final CollaborativeFiltering collaborativeFiltering;
     private final RecoQuery query;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
+    private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public RecoQuestion(CollaborativeFiltering collaborativeFiltering,
             RecoQuery query) {
@@ -33,17 +34,17 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
     }
 
     @Override
-    public <BM> RecoAnswer askLocal(MiruQueryHandle<BM> handle, Optional<RecoReport> report) throws Exception {
-        MiruQueryStream<BM> stream = handle.getQueryStream();
+    public <BM> RecoAnswer askLocal(MiruRequestHandle<BM> handle, Optional<RecoReport> report) throws Exception {
+        MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run
         List<BM> ands = new ArrayList<>();
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
-                query.constraintsFilter, Optional.<BM>absent(), -1);
-        ands.add(executeMiruFilter.call());
+        BM filtered = bitmaps.create();
+        aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, query.constraintsFilter, filtered, -1);
+        ands.add(filtered);
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
@@ -62,8 +63,8 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
     }
 
     @Override
-    public RecoAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<RecoAnswer> lastAnswer) throws Exception {
-        return new RecoRemotePartitionReader(requestHelper).collaborativeFilteringRecommendations(partitionId, query, lastAnswer);
+    public RecoAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<RecoReport> report) throws Exception {
+        return new RecoRemotePartitionReader(requestHelper).collaborativeFilteringRecommendations(partitionId, query, report);
     }
 
     @Override

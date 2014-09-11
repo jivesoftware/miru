@@ -4,8 +4,8 @@ import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
-import com.jivesoftware.os.miru.query.MiruResponse;
+import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -53,10 +53,10 @@ public class RecoEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response collaborativeFiltering(@PathParam("partitionId") int id, RecoQueryAndResult queryAndResult) {
+    public Response collaborativeFiltering(@PathParam("partitionId") int id, RecoQueryAndReport queryAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            RecoAnswer result = injectable.collaborativeFilteringRecommendations(partitionId, queryAndResult);
+            RecoAnswer result = injectable.collaborativeFilteringRecommendations(partitionId, queryAndReport);
 
             //log.info("collaborativeFiltering: " + answer.results.size());
             return responseHelper.jsonResponse(result != null ? result : RecoAnswer.EMPTY_RESULTS);

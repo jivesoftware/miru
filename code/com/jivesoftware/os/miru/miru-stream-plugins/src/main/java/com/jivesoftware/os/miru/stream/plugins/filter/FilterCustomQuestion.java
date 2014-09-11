@@ -10,13 +10,13 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
-import com.jivesoftware.os.miru.query.MiruBitmaps;
-import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
-import com.jivesoftware.os.miru.query.MiruQueryHandle;
-import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.MiruTimeRange;
-import com.jivesoftware.os.miru.query.Question;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsDebug;
+import com.jivesoftware.os.miru.query.context.MiruRequestContext;
+import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,6 +31,7 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
     private final AggregateCounts aggregateCounts;
     private final AggregateCountsQuery query;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
+    private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public FilterCustomQuestion(AggregateCounts aggregateCounts, AggregateCountsQuery query) {
         this.aggregateCounts = aggregateCounts;
@@ -38,8 +39,8 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
     }
 
     @Override
-    public <BM> AggregateCountsAnswer askLocal(MiruQueryHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
-        MiruQueryStream<BM> stream = handle.getQueryStream();
+    public <BM> AggregateCountsAnswer askLocal(MiruRequestHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
+        MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         MiruFilter combinedFilter = query.streamFilter;
@@ -49,9 +50,11 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         }
 
         List<BM> ands = new ArrayList<>();
-        ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
-                combinedFilter, Optional.<BM>absent(), -1);
-        ands.add(executeMiruFilter.call());
+
+        BM filtered = bitmaps.create();
+        aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, combinedFilter, filtered, -1);
+        ands.add(filtered);
+
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
@@ -78,9 +81,9 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
     }
 
     @Override
-    public AggregateCountsAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsAnswer> lastAnswer)
+    public AggregateCountsAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsReport> report)
             throws Exception {
-        return new AggregateCountsRemotePartitionReader(requestHelper).filterCustomStream(partitionId, query, lastAnswer);
+        return new AggregateCountsRemotePartitionReader(requestHelper).filterCustomStream(partitionId, query, report);
     }
 
     @Override
@@ -88,9 +91,9 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         Optional<AggregateCountsReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new AggregateCountsReport(
+                    answer.get().aggregateTerms,
                     answer.get().skippedDistincts,
-                    answer.get().collectedDistincts,
-                    answer.get().aggregateTerms));
+                    answer.get().collectedDistincts));
         }
         return report;
     }

@@ -12,7 +12,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.query.MiruTimeRange;
+import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountQuery;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import java.util.Random;

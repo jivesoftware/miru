@@ -7,7 +7,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.query.MiruAnswerMerger;
+import com.jivesoftware.os.miru.query.solution.MiruAnswerMerger;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -76,8 +76,8 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
         return last.transform(new Function<RecoAnswer, RecoAnswer>() {
             @Nullable
             @Override
-            public RecoAnswer apply(@Nullable RecoAnswer result) {
-                List<RecoAnswer.Recommendation> results = Lists.newArrayList(result.results);
+            public RecoAnswer apply(@Nullable RecoAnswer answer) {
+                List<RecoAnswer.Recommendation> results = Lists.newArrayList(answer.results);
                 //long t = System.currentTimeMillis();
                 Collections.sort(results);
                 //log.info("mergeReco: sorted in " + (System.currentTimeMillis() - t) + " ms");

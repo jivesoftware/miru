@@ -28,10 +28,10 @@ public class DistinctCountRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public DistinctCountAnswer countCustomStream(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountAnswer> lastResult)
+    public DistinctCountAnswer countCustomStream(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountReport> report)
             throws MiruQueryServiceException {
 
-        DistinctCountQueryAndResult params = new DistinctCountQueryAndResult(query, lastResult.orNull());
+        DistinctCountQueryAndReport params = new DistinctCountQueryAndReport(query, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
@@ -44,10 +44,10 @@ public class DistinctCountRemotePartitionReader {
         }
     }
 
-    public DistinctCountAnswer countInboxStreamAll(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountAnswer> lastResult)
+    public DistinctCountAnswer countInboxStreamAll(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountReport> report)
             throws MiruQueryServiceException {
 
-        DistinctCountQueryAndResult params = new DistinctCountQueryAndResult(query, lastResult.orNull());
+        DistinctCountQueryAndReport params = new DistinctCountQueryAndReport(query, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
@@ -60,10 +60,10 @@ public class DistinctCountRemotePartitionReader {
         }
     }
 
-    public DistinctCountAnswer countInboxStreamUnread(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountAnswer> lastResult)
+    public DistinctCountAnswer countInboxStreamUnread(MiruPartitionId partitionId, DistinctCountQuery query, Optional<DistinctCountReport> report)
             throws MiruQueryServiceException {
 
-        DistinctCountQueryAndResult params = new DistinctCountQueryAndResult(query, lastResult.orNull());
+        DistinctCountQueryAndReport params = new DistinctCountQueryAndReport(query, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,

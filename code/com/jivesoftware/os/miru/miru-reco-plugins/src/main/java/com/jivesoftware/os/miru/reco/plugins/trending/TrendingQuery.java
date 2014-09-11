@@ -6,7 +6,7 @@ import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.query.MiruTimeRange;
+import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 
 /**
  *

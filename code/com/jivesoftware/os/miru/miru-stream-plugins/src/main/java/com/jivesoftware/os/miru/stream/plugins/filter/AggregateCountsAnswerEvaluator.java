@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.miru.query.MiruAnswerEvaluator;
+import com.jivesoftware.os.miru.query.solution.MiruAnswerEvaluator;
 
 /**
 *
@@ -18,9 +18,9 @@ public class AggregateCountsAnswerEvaluator implements MiruAnswerEvaluator<Aggre
     }
 
     @Override
-    public boolean isDone(AggregateCountsAnswer result) {
+    public boolean isDone(AggregateCountsAnswer answer) {
         int requiredDistincts = query.desiredNumberOfDistincts + query.startFromDistinctN;
-        log.debug("Evaluate {} >= {}", result.collectedDistincts, requiredDistincts);
-        return result.collectedDistincts >= requiredDistincts;
+        log.debug("Evaluate {} >= {}", answer.collectedDistincts, requiredDistincts);
+        return answer.collectedDistincts >= requiredDistincts;
     }
 }

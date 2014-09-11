@@ -5,10 +5,10 @@ import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.Miru;
-import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.query.MiruProvider;
-import com.jivesoftware.os.miru.query.MiruResponse;
-import com.jivesoftware.os.miru.query.MiruSolvableFactory;
+import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruResponse;
+import com.jivesoftware.os.miru.query.solution.MiruSolvableFactory;
 
 /**
  *
@@ -77,15 +77,15 @@ public class AggregateCountsInjectable {
     }
 
     public AggregateCountsAnswer filterCustomStream(MiruPartitionId partitionId,
-            AggregateCountsQueryAndResult queryAndResult)
+            AggregateCountsQueryAndReport queryAndReport)
             throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = queryAndResult.query.tenantId;
+            MiruTenantId tenantId = queryAndReport.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("filterCustomStream", new FilterCustomQuestion(aggregateCounts, queryAndResult.query)),
-                    Optional.fromNullable(queryAndResult.lastResult),
+                    new MiruSolvableFactory<>("filterCustomStream", new FilterCustomQuestion(aggregateCounts, queryAndReport.query)),
+                    Optional.fromNullable(queryAndReport.report),
                     AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
@@ -96,16 +96,16 @@ public class AggregateCountsInjectable {
     }
 
     public AggregateCountsAnswer filterInboxStreamAll(MiruPartitionId partitionId,
-            AggregateCountsQueryAndResult queryAndResult)
+            AggregateCountsQueryAndReport queryAndReport)
             throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = queryAndResult.query.tenantId;
+            MiruTenantId tenantId = queryAndReport.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
                     new MiruSolvableFactory<>("filterInboxStreamAll", new FilterInboxQuestion(aggregateCounts,
-                            miruProvider.getBackfillerizer(tenantId), queryAndResult.query, false)),
-                    Optional.fromNullable(queryAndResult.lastResult),
+                            miruProvider.getBackfillerizer(tenantId), queryAndReport.query, false)),
+                    Optional.fromNullable(queryAndReport.report),
                     AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
@@ -116,16 +116,16 @@ public class AggregateCountsInjectable {
     }
 
     public AggregateCountsAnswer filterInboxStreamUnread(MiruPartitionId partitionId,
-            AggregateCountsQueryAndResult queryAndResult)
+            AggregateCountsQueryAndReport queryAndReport)
             throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = queryAndResult.query.tenantId;
+            MiruTenantId tenantId = queryAndReport.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
                     new MiruSolvableFactory<>("filterInboxStreamUnread", new FilterInboxQuestion(aggregateCounts,
-                            miruProvider.getBackfillerizer(tenantId), queryAndResult.query, true)),
-                    Optional.fromNullable(queryAndResult.lastResult),
+                            miruProvider.getBackfillerizer(tenantId), queryAndReport.query, true)),
+                    Optional.fromNullable(queryAndReport.report),
                     AggregateCountsAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;

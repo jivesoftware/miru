@@ -16,10 +16,10 @@
 package com.jivesoftware.os.miru.service.bitmap;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
-import com.jivesoftware.os.miru.query.MiruBitmaps;
-import com.jivesoftware.os.miru.query.MiruIntIterator;
-import com.jivesoftware.os.miru.query.MiruTimeIndex;
+import com.jivesoftware.os.miru.query.bitmap.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.query.index.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.Arrays;

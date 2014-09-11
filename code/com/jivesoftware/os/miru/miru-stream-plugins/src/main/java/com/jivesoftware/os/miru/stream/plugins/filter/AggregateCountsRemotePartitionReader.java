@@ -28,10 +28,10 @@ public class AggregateCountsRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public AggregateCountsAnswer filterCustomStream(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsAnswer> lastResult)
+    public AggregateCountsAnswer filterCustomStream(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsReport> report)
             throws MiruQueryServiceException {
 
-        AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
+        AggregateCountsQueryAndReport params = new AggregateCountsQueryAndReport(query, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
@@ -44,10 +44,10 @@ public class AggregateCountsRemotePartitionReader {
         }
     }
 
-    public AggregateCountsAnswer filterInboxStreamAll(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsAnswer> lastResult)
+    public AggregateCountsAnswer filterInboxStreamAll(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsReport> report)
             throws MiruQueryServiceException {
 
-        AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
+        AggregateCountsQueryAndReport params = new AggregateCountsQueryAndReport(query, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
@@ -60,10 +60,10 @@ public class AggregateCountsRemotePartitionReader {
         }
     }
 
-    public AggregateCountsAnswer filterInboxStreamUnread(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsAnswer> lastResult)
+    public AggregateCountsAnswer filterInboxStreamUnread(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsReport> report)
             throws MiruQueryServiceException {
 
-        AggregateCountsQueryAndResult params = new AggregateCountsQueryAndResult(query, lastResult.orNull());
+        AggregateCountsQueryAndReport params = new AggregateCountsQueryAndReport(query, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,

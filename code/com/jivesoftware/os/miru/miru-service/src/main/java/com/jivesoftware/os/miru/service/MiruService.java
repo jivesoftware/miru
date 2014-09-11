@@ -20,23 +20,23 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.query.Miru;
-import com.jivesoftware.os.miru.query.MiruAnswerEvaluator;
-import com.jivesoftware.os.miru.query.MiruAnswerMerger;
-import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
-import com.jivesoftware.os.miru.query.MiruField;
-import com.jivesoftware.os.miru.query.MiruHostedPartition;
-import com.jivesoftware.os.miru.query.MiruInvertedIndex;
-import com.jivesoftware.os.miru.query.MiruPartitionDirector;
-import com.jivesoftware.os.miru.query.MiruQueryHandle;
-import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.MiruResponse;
-import com.jivesoftware.os.miru.query.MiruSolution;
-import com.jivesoftware.os.miru.query.MiruSolvable;
-import com.jivesoftware.os.miru.query.MiruSolvableFactory;
-import com.jivesoftware.os.miru.query.OrderedPartitions;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsDebug;
+import com.jivesoftware.os.miru.query.context.MiruRequestContext;
+import com.jivesoftware.os.miru.query.index.MiruField;
+import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.partition.MiruHostedPartition;
+import com.jivesoftware.os.miru.query.partition.MiruPartitionDirector;
+import com.jivesoftware.os.miru.query.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.query.solution.MiruAnswerEvaluator;
+import com.jivesoftware.os.miru.query.solution.MiruAnswerMerger;
+import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruResponse;
+import com.jivesoftware.os.miru.query.solution.MiruSolution;
+import com.jivesoftware.os.miru.query.solution.MiruSolvable;
+import com.jivesoftware.os.miru.query.solution.MiruSolvableFactory;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
-import com.jivesoftware.os.miru.service.stream.factory.MiruSolved;
-import com.jivesoftware.os.miru.service.stream.factory.MiruSolver;
+import com.jivesoftware.os.miru.service.solver.MiruSolved;
+import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import java.util.Collection;
 import java.util.List;
@@ -122,7 +122,7 @@ public class MiruService implements Miru {
                         new Function<MiruHostedPartition<?>, MiruSolvable<A>>() {
                             @Override
                             public MiruSolvable<A> apply(final MiruHostedPartition<?> replica) {
-                                return solvableFactory.create(replica, optionalAnswer);
+                                return solvableFactory.create(replica, solvableFactory.getReport(optionalAnswer));
                             }
                         });
                 List<MiruPartition> ordered = Lists.transform(orderedPartitions.partitions, new Function<MiruHostedPartition<?>, MiruPartition>() {
@@ -174,12 +174,12 @@ public class MiruService implements Miru {
             MiruTenantId tenantId,
             MiruPartitionId partitionId,
             MiruSolvableFactory<A, P> solvableFactory,
-            Optional<A> lastAnswer,
+            Optional<P> report,
             A defaultValue) throws Exception {
         Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
-            Callable<A> callable = solvableFactory.create(partition.get(), lastAnswer);
+            Callable<A> callable = solvableFactory.create(partition.get(), report);
             A answer = callable.call();
 
             log.inc("askImmediate>all");
@@ -213,10 +213,10 @@ public class MiruService implements Miru {
     }
 
     private <BM> String inspect(MiruHostedPartition<BM> partition, String fieldName, String termValue) throws Exception {
-        try (MiruQueryHandle<BM> handle = partition.getQueryHandle()) {
-            MiruQueryStream<BM> queryStream = handle.getQueryStream();
-            int fieldId = queryStream.schema.getFieldId(fieldName);
-            MiruField<BM> field = queryStream.fieldIndex.getField(fieldId);
+        try (MiruRequestHandle<BM> handle = partition.getQueryHandle()) {
+            MiruRequestContext<BM> requestContext = handle.getRequestContext();
+            int fieldId = requestContext.schema.getFieldId(fieldName);
+            MiruField<BM> field = requestContext.fieldIndex.getField(fieldId);
             Optional<? extends MiruInvertedIndex<BM>> invertedIndex = field.getInvertedIndex(new MiruTermId(termValue.getBytes(Charsets.UTF_8)));
             if (invertedIndex.isPresent()) {
                 return bitmapsDebug.toString(handle.getBitmaps(), invertedIndex.get().getIndex());

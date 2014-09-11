@@ -28,9 +28,9 @@ public class RecoRemotePartitionReader {
 
     public RecoAnswer collaborativeFilteringRecommendations(MiruPartitionId partitionId,
             RecoQuery query,
-            Optional<RecoAnswer> lastResult)
+            Optional<RecoReport> report)
             throws MiruQueryServiceException {
-        RecoQueryAndResult params = new RecoQueryAndResult(query, lastResult.orNull());
+        RecoQueryAndReport params = new RecoQueryAndReport(query, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,

@@ -5,7 +5,7 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.query.MiruHostedPartition;
+import com.jivesoftware.os.miru.query.partition.MiruHostedPartition;
 
 /** @author jonathan */
 public class MiruRemotePartitionFactory {

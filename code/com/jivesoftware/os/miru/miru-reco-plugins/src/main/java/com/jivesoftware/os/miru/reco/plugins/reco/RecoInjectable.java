@@ -5,10 +5,10 @@ import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.Miru;
-import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.query.MiruProvider;
-import com.jivesoftware.os.miru.query.MiruResponse;
-import com.jivesoftware.os.miru.query.MiruSolvableFactory;
+import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruResponse;
+import com.jivesoftware.os.miru.query.solution.MiruSolvableFactory;
 
 /**
  *
@@ -40,15 +40,15 @@ public class RecoInjectable {
         }
     }
 
-    public RecoAnswer collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQueryAndResult queryAndResult)
+    public RecoAnswer collaborativeFilteringRecommendations(MiruPartitionId partitionId, RecoQueryAndReport queryAndReport)
             throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = queryAndResult.query.tenantId;
+            MiruTenantId tenantId = queryAndReport.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, queryAndResult.query)),
-                    Optional.fromNullable(queryAndResult.lastResult),
+                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, queryAndReport.query)),
+                    Optional.fromNullable(queryAndReport.report),
                     RecoAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;

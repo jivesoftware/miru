@@ -11,8 +11,9 @@ import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
-import com.jivesoftware.os.miru.query.MiruActivityInternExtern;
-import com.jivesoftware.os.miru.query.MiruBitmapsProvider;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsProvider;
+import com.jivesoftware.os.miru.query.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
@@ -23,10 +24,9 @@ import com.jivesoftware.os.miru.service.partition.MiruRemotePartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
 import com.jivesoftware.os.miru.service.partition.cluster.CachedClusterPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
-import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
-import com.jivesoftware.os.miru.service.stream.factory.MiruLowestLatencySolver;
-import com.jivesoftware.os.miru.service.stream.factory.MiruSolver;
-import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
+import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
+import com.jivesoftware.os.miru.service.solver.MiruSolver;
+import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
@@ -62,7 +62,7 @@ public final class MiruServiceInitializer {
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount());
-        MiruStreamFactory streamFactory = new MiruStreamFactory(
+        MiruContextFactory streamFactory = new MiruContextFactory(
                 schemaProvider,
                 streamFactoryExecutor,
                 readTrackingWALReader,

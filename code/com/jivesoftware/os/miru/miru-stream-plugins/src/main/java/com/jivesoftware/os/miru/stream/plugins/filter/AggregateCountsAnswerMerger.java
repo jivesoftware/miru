@@ -6,7 +6,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
-import com.jivesoftware.os.miru.query.MiruAnswerMerger;
+import com.jivesoftware.os.miru.query.solution.MiruAnswerMerger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.query.MiruBitmapsProvider;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 
 /**

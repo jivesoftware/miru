@@ -7,10 +7,10 @@ import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.Miru;
-import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.query.MiruProvider;
-import com.jivesoftware.os.miru.query.MiruResponse;
-import com.jivesoftware.os.miru.query.MiruSolvableFactory;
+import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruResponse;
+import com.jivesoftware.os.miru.query.solution.MiruSolvableFactory;
 
 /**
  *
@@ -46,17 +46,17 @@ public class TrendingInjectable {
     }
 
     public TrendingAnswer scoreTrending(MiruPartitionId partitionId,
-            TrendingQueryAndResult queryAndResult)
+            TrendingQueryAndReport queryAndReport)
             throws MiruQueryServiceException {
         try {
-            LOG.debug("askImmediate: partitionId={} query={}", partitionId, queryAndResult.query);
-            LOG.trace("askImmediate: lastResult={}", queryAndResult.lastResult);
-            MiruTenantId tenantId = queryAndResult.query.tenantId;
+            LOG.debug("askImmediate: partitionId={} query={}", partitionId, queryAndReport.query);
+            LOG.trace("askImmediate: report={}", queryAndReport.report);
+            MiruTenantId tenantId = queryAndReport.query.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, queryAndResult.query)),
-                    Optional.fromNullable(queryAndResult.lastResult),
+                    new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, queryAndReport.query)),
+                    Optional.fromNullable(queryAndReport.report),
                     TrendingAnswer.EMPTY_RESULTS);
         } catch (MiruPartitionUnavailableException e) {
             throw e;

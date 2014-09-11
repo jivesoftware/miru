@@ -51,7 +51,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-query</artifactId>
+            <artifactId>miru-plugin</artifactId>
             <version>0.32-SNAPSHOT</version>
         </dependency>
         <dependency>

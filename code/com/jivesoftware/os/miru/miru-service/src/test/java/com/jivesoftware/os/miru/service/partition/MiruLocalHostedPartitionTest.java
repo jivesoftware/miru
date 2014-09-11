@@ -20,13 +20,13 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.memory.MiruInMemoryClusterRegistry;
-import com.jivesoftware.os.miru.query.MiruActivityInternExtern;
-import com.jivesoftware.os.miru.query.MiruPartitionUnavailableException;
-import com.jivesoftware.os.miru.query.MiruQueryHandle;
+import com.jivesoftware.os.miru.query.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
-import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
+import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
@@ -56,7 +56,7 @@ import static org.testng.Assert.assertNotNull;
 
 public class MiruLocalHostedPartitionTest {
 
-    private MiruStreamFactory streamFactory;
+    private MiruContextFactory streamFactory;
     private MiruSchema schema;
     private MiruInMemoryClusterRegistry clusterRegistry;
     private MiruPartitionCoord coord;
@@ -101,7 +101,7 @@ public class MiruLocalHostedPartitionTest {
                 // makes sense to share string internment as this is authz in both cases
                 Interners.<String>newWeakInterner());
 
-        streamFactory = new MiruStreamFactory(new SingleSchemaProvider(schema),
+        streamFactory = new MiruContextFactory(new SingleSchemaProvider(schema),
                 Executors.newSingleThreadExecutor(),
                 new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
                 new MiruTempDirectoryResourceLocator(),
@@ -256,9 +256,9 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.mem_mapped);
 
-        try (MiruQueryHandle queryHandle = localHostedPartition.getQueryHandle()) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.getQueryHandle()) {
             assertEquals(queryHandle.getCoord(), coord);
-            assertNotNull(queryHandle.getQueryStream()); // would throw exception if offline
+            assertNotNull(queryHandle.getRequestContext()); // would throw exception if offline
         }
     }
 
@@ -277,8 +277,8 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
 
-        try (MiruQueryHandle queryHandle = localHostedPartition.getQueryHandle()) {
-            queryHandle.getQueryStream(); // throws exception
+        try (MiruRequestHandle queryHandle = localHostedPartition.getQueryHandle()) {
+            queryHandle.getRequestContext(); // throws exception
         }
     }
 

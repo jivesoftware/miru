@@ -9,15 +9,15 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
-import com.jivesoftware.os.miru.query.MiruBitmaps;
-import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
-import com.jivesoftware.os.miru.query.MiruJustInTimeBackfillerizer;
-import com.jivesoftware.os.miru.query.MiruQueryHandle;
-import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.MiruTimeIndex;
-import com.jivesoftware.os.miru.query.MiruTimeRange;
-import com.jivesoftware.os.miru.query.Question;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsDebug;
+import com.jivesoftware.os.miru.query.context.MiruRequestContext;
+import com.jivesoftware.os.miru.query.index.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.query.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +33,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
     private final AggregateCountsQuery query;
     private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
+    private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public FilterInboxQuestion(AggregateCounts aggregateCounts,
             MiruJustInTimeBackfillerizer backfillerizer,
@@ -47,8 +48,8 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
     }
 
     @Override
-    public <BM> AggregateCountsAnswer askLocal(MiruQueryHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
-        MiruQueryStream<BM> stream = handle.getQueryStream();
+    public <BM> AggregateCountsAnswer askLocal(MiruRequestHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
+        MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
@@ -90,9 +91,9 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         }
 
         if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
-            ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
-                    query.constraintsFilter, Optional.<BM>absent(), -1);
-            ands.add(executeMiruFilter.call());
+            BM filtered = bitmaps.create();
+            aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, query.constraintsFilter, filtered, -1);
+            ands.add(filtered);
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
@@ -127,13 +128,13 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
     }
 
     @Override
-    public AggregateCountsAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsAnswer> lastAnswer)
+    public AggregateCountsAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsReport> report)
             throws Exception {
         AggregateCountsRemotePartitionReader reader = new AggregateCountsRemotePartitionReader(requestHelper);
         if (unreadOnly) {
-            return reader.filterInboxStreamUnread(partitionId, query, lastAnswer);
+            return reader.filterInboxStreamUnread(partitionId, query, report);
         }
-        return reader.filterInboxStreamAll(partitionId, query, lastAnswer);
+        return reader.filterInboxStreamAll(partitionId, query, report);
     }
 
     @Override
@@ -141,9 +142,9 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         Optional<AggregateCountsReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new AggregateCountsReport(
+                    answer.get().aggregateTerms,
                     answer.get().skippedDistincts,
-                    answer.get().collectedDistincts,
-                    answer.get().aggregateTerms));
+                    answer.get().collectedDistincts));
         }
         return report;
     }

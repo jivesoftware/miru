@@ -1,10 +1,10 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.query.MiruBitmaps;
-import com.jivesoftware.os.miru.query.MiruHostedPartition;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
-import com.jivesoftware.os.miru.service.stream.MiruStreamFactory;
+import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -14,25 +14,25 @@ import java.util.concurrent.ScheduledExecutorService;
 public class MiruLocalPartitionFactory {
 
     private final MiruServiceConfig config;
-    private final MiruStreamFactory miruStreamFactory;
+    private final MiruContextFactory miruContextFactory;
     private final MiruActivityWALReader activityWALReader;
     private final MiruPartitionEventHandler partitionEventHandler;
     private final ScheduledExecutorService scheduledExecutorService;
 
     public MiruLocalPartitionFactory(MiruServiceConfig config,
-            MiruStreamFactory miruStreamFactory,
+            MiruContextFactory miruContextFactory,
             MiruActivityWALReader activityWALReader,
             MiruPartitionEventHandler partitionEventHandler,
             ScheduledExecutorService scheduledExecutorService) {
         this.config = config;
-        this.miruStreamFactory = miruStreamFactory;
+        this.miruContextFactory = miruContextFactory;
         this.activityWALReader = activityWALReader;
         this.partitionEventHandler = partitionEventHandler;
         this.scheduledExecutorService = scheduledExecutorService;
     }
 
     public <BM> MiruHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return new MiruLocalHostedPartition<>(bitmaps, coord, miruStreamFactory,
+        return new MiruLocalHostedPartition<>(bitmaps, coord, miruContextFactory,
                 activityWALReader, partitionEventHandler, scheduledExecutorService, config.getPartitionRebuildBatchSize(),
                 config.getPartitionBootstrapIntervalInMillis(), config.getPartitionRunnableIntervalInMillis());
     }

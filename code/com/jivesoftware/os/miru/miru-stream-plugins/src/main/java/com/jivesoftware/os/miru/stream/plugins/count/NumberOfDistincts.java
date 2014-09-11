@@ -6,12 +6,12 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
-import com.jivesoftware.os.miru.query.MiruBitmaps;
-import com.jivesoftware.os.miru.query.MiruField;
-import com.jivesoftware.os.miru.query.MiruInvertedIndex;
-import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.ReusableBuffers;
+import com.jivesoftware.os.miru.query.bitmap.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.bitmap.ReusableBuffers;
+import com.jivesoftware.os.miru.query.context.MiruRequestContext;
+import com.jivesoftware.os.miru.query.index.MiruField;
+import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
 import java.util.Collections;
 import java.util.Set;
 
@@ -25,7 +25,7 @@ public class NumberOfDistincts {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     public <BM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM> bitmaps,
-            MiruQueryStream<BM> stream,
+            MiruRequestContext<BM> requestContext,
             DistinctCountQuery query,
             Optional<DistinctCountReport> lastReport,
             BM answer)
@@ -42,10 +42,10 @@ public class NumberOfDistincts {
             aggregateTerms = Sets.newHashSet();
         }
 
-        int fieldId = stream.schema.getFieldId(query.aggregateCountAroundField);
+        int fieldId = requestContext.schema.getFieldId(query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            MiruField<BM> aggregateField = stream.fieldIndex.getField(fieldId);
+            MiruField<BM> aggregateField = requestContext.fieldIndex.getField(fieldId);
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
 
             for (MiruTermId aggregateTermId : aggregateTerms) {
@@ -68,7 +68,7 @@ public class NumberOfDistincts {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruTermId[] fieldValues = stream.activityIndex.get(query.tenantId, lastSetBit, fieldId);
+                MiruTermId[] fieldValues = requestContext.activityIndex.get(query.tenantId, lastSetBit, fieldId);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers

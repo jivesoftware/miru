@@ -16,10 +16,10 @@
 package com.jivesoftware.os.miru.plugin.test;
 
 import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.service.stream.locator.MiruHybridResourceLocator;
-import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocator;
-import com.jivesoftware.os.miru.service.stream.locator.MiruResourceLocatorProvider;
-import com.jivesoftware.os.miru.service.stream.locator.MiruTempDirectoryResourceLocator;
+import com.jivesoftware.os.miru.service.locator.MiruHybridResourceLocator;
+import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
+import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
+import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import java.io.IOException;
 
 /**

@@ -7,13 +7,13 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.query.CardinalityAndLastSetBit;
-import com.jivesoftware.os.miru.query.MiruBitmaps;
-import com.jivesoftware.os.miru.query.MiruField;
-import com.jivesoftware.os.miru.query.MiruIntIterator;
-import com.jivesoftware.os.miru.query.MiruInvertedIndex;
-import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.ReusableBuffers;
+import com.jivesoftware.os.miru.query.bitmap.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.query.bitmap.ReusableBuffers;
+import com.jivesoftware.os.miru.query.context.MiruRequestContext;
+import com.jivesoftware.os.miru.query.index.MiruField;
+import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class Trending {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     public <BM> TrendingAnswer trending(MiruBitmaps<BM> bitmaps,
-        MiruQueryStream<BM> stream,
+        MiruRequestContext<BM> requestContext,
         TrendingQuery query,
         Optional<TrendingReport> lastReport,
         BM answer)
@@ -50,10 +50,10 @@ public class Trending {
 
         List<Trendy> trendies = new ArrayList<>();
         final long trendInterval = query.timeRange.largestTimestamp - query.timeRange.smallestTimestamp;
-        int fieldId = stream.schema.getFieldId(query.aggregateCountAroundField);
+        int fieldId = requestContext.schema.getFieldId(query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            MiruField<BM> aggregateField = stream.fieldIndex.getField(fieldId);
+            MiruField<BM> aggregateField = requestContext.fieldIndex.getField(fieldId);
 
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
             for (MiruTermId aggregateTermId : aggregateTerms) {
@@ -71,7 +71,7 @@ public class Trending {
                 MiruIntIterator iter = bitmaps.intIterator(termIndex);
                 while (iter.hasNext()) {
                     int index = iter.next();
-                    long timestamp = stream.timeIndex.getTimestamp(index);
+                    long timestamp = requestContext.timeIndex.getTimestamp(index);
                     trend.add(timestamp, 1d);
                 }
                 trendies.add(new Trendy(aggregateTermId.getBytes(), trend, trend.getRank(trend.getCurrentT())));
@@ -91,7 +91,7 @@ public class Trending {
                     break;
                 }
 
-                MiruTermId[] fieldValues = stream.activityIndex.get(query.tenantId, lastSetBit, fieldId);
+                MiruTermId[] fieldValues = requestContext.activityIndex.get(query.tenantId, lastSetBit, fieldId);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -123,7 +123,7 @@ public class Trending {
                     long maxTime = Long.MIN_VALUE;
                     while (iter.hasNext()) {
                         int index = iter.next();
-                        long timestamp = stream.timeIndex.getTimestamp(index);
+                        long timestamp = requestContext.timeIndex.getTimestamp(index);
                         if (timestamp < minTime) {
                             minTime = timestamp;
                         }
@@ -141,7 +141,7 @@ public class Trending {
             }
         }
 
-        boolean resultsExhausted = query.timeRange.smallestTimestamp >= stream.timeIndex.getSmallestTimestamp();
+        boolean resultsExhausted = query.timeRange.smallestTimestamp >= requestContext.timeIndex.getSmallestTimestamp();
         TrendingAnswer result = new TrendingAnswer(ImmutableList.copyOf(trendies), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
         log.debug("result={}", result);
         return result;

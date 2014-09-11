@@ -6,7 +6,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import java.util.Map;
 import java.util.Random;
 
-import static com.jivesoftware.os.miru.stream.plugins.benchmark.MiruStreamServiceBenchmarkUtils.generateDisticts;
+import static com.jivesoftware.os.miru.stream.plugins.benchmark.MiruServiceBenchmarkUtils.generateDisticts;
 
 public enum MiruFollowables {
 

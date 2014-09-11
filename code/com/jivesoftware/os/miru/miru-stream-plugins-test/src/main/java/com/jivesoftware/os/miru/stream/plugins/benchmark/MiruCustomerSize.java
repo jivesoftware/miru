@@ -13,14 +13,14 @@ import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.query.MiruTimeRange;
+import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import static com.jivesoftware.os.miru.stream.plugins.benchmark.MiruStreamServiceBenchmarkUtils.generateActivity;
+import static com.jivesoftware.os.miru.stream.plugins.benchmark.MiruServiceBenchmarkUtils.generateActivity;
 
 public enum MiruCustomerSize {
     SMALL_CUSTOMER {

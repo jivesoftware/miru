@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.miru.query.MiruAnswerEvaluator;
+import com.jivesoftware.os.miru.query.solution.MiruAnswerEvaluator;
 
 /**
 *
@@ -18,8 +18,8 @@ public class RecoAnswerEvaluator implements MiruAnswerEvaluator<RecoAnswer> {
     }
 
     @Override
-    public boolean isDone(RecoAnswer result) {
-        log.debug("Evaluate {} >= {}", result.results.size(), query.desiredNumberOfDistincts);
-        return result.results.size() >= query.desiredNumberOfDistincts; // TODO fix, this exits too fast!
+    public boolean isDone(RecoAnswer answer) {
+        log.debug("Evaluate {} >= {}", answer.results.size(), query.desiredNumberOfDistincts);
+        return answer.results.size() >= query.desiredNumberOfDistincts; // TODO fix, this exits too fast!
     }
 }

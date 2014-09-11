@@ -9,15 +9,15 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.query.ExecuteMiruFilter;
-import com.jivesoftware.os.miru.query.MiruBitmaps;
-import com.jivesoftware.os.miru.query.MiruBitmapsDebug;
-import com.jivesoftware.os.miru.query.MiruJustInTimeBackfillerizer;
-import com.jivesoftware.os.miru.query.MiruQueryHandle;
-import com.jivesoftware.os.miru.query.MiruQueryStream;
-import com.jivesoftware.os.miru.query.MiruTimeIndex;
-import com.jivesoftware.os.miru.query.MiruTimeRange;
-import com.jivesoftware.os.miru.query.Question;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsDebug;
+import com.jivesoftware.os.miru.query.context.MiruRequestContext;
+import com.jivesoftware.os.miru.query.index.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.query.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +33,7 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
     private final DistinctCountQuery query;
     private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
+    private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public CountInboxQuestion(NumberOfDistincts numberOfDistincts,
             MiruJustInTimeBackfillerizer backfillerizer,
@@ -47,8 +48,8 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
     }
 
     @Override
-    public <BM> DistinctCountAnswer askLocal(MiruQueryHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
-        MiruQueryStream<BM> stream = handle.getQueryStream();
+    public <BM> DistinctCountAnswer askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
+        MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
@@ -77,9 +78,9 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
         }
 
         if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
-            ExecuteMiruFilter<BM> executeMiruFilter = new ExecuteMiruFilter<>(bitmaps, stream.schema, stream.fieldIndex, stream.executorService,
-                    query.constraintsFilter, Optional.<BM>absent(), -1);
-            ands.add(executeMiruFilter.call());
+            BM filtered = bitmaps.create();
+            aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, query.constraintsFilter, filtered, -1);
+            ands.add(filtered);
         }
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
             ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
@@ -100,13 +101,13 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
     }
 
     @Override
-    public DistinctCountAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountAnswer> lastAnswer)
+    public DistinctCountAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountReport> report)
             throws Exception {
         DistinctCountRemotePartitionReader reader = new DistinctCountRemotePartitionReader(requestHelper);
         if (unreadOnly) {
-            return reader.countInboxStreamUnread(partitionId, query, lastAnswer);
+            return reader.countInboxStreamUnread(partitionId, query, report);
         }
-        return reader.countInboxStreamAll(partitionId, query, lastAnswer);
+        return reader.countInboxStreamAll(partitionId, query, report);
     }
 
     @Override
@@ -114,8 +115,8 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
         Optional<DistinctCountReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new DistinctCountReport(
-                    answer.get().collectedDistincts,
-                    answer.get().aggregateTerms));
+                    answer.get().aggregateTerms,
+                    answer.get().collectedDistincts));
         }
         return report;
     }
