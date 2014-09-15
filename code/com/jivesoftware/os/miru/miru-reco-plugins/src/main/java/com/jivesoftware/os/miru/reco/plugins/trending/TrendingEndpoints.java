@@ -5,6 +5,9 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -34,10 +37,10 @@ public class TrendingEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response scoreTrending(TrendingQuery query) {
+    public Response scoreTrending(MiruRequest<TrendingQuery> request) {
         try {
             long t = System.currentTimeMillis();
-            MiruResponse<TrendingAnswer> response = injectable.scoreTrending(query);
+            MiruResponse<TrendingAnswer> response = injectable.scoreTrending(request);
 
             log.info("scoreTrending: " + response.answer.results.size() + " / " + response.answer.collectedDistincts +
                     " in " + (System.currentTimeMillis() - t) + " ms");
@@ -54,13 +57,13 @@ public class TrendingEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response scoreTrending(@PathParam("partitionId") int id, TrendingQueryAndReport queryAndReport) {
+    public Response scoreTrending(@PathParam("partitionId") int id, MiruRequestAndReport<TrendingQuery,TrendingReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            TrendingAnswer result = injectable.scoreTrending(partitionId, queryAndReport);
+            MiruPartitionResponse<TrendingAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
 
             //log.info("scoreTrending: " + answer.collectedDistincts);
-            return responseHelper.jsonResponse(result != null ? result : TrendingAnswer.EMPTY_RESULTS);
+            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(TrendingAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {

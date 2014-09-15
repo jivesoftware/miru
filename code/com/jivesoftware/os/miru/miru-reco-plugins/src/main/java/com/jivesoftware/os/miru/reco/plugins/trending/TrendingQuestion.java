@@ -11,7 +11,11 @@ import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
@@ -25,41 +29,43 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final Trending trending;
-    private final TrendingQuery query;
+    private final MiruRequest<TrendingQuery> request;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public TrendingQuestion(Trending trending,
-            TrendingQuery query) {
+            MiruRequest<TrendingQuery> request) {
         this.trending = trending;
-        this.query = query;
+        this.request = request;
     }
 
     @Override
-    public <BM> TrendingAnswer askLocal(MiruRequestHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<TrendingAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
+        MiruSolutionLog  solutionLog = new MiruSolutionLog(request.debug);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run
         List<BM> ands = new ArrayList<>();
 
-        MiruTimeRange timeRange = query.timeRange;
+        MiruTimeRange timeRange = request.query.timeRange;
 
         // Short-circuit if the time range doesn't live here
         if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
             LOG.debug("No time index intersection");
-            return trending.trending(bitmaps, stream, query, report, bitmaps.create());
+            return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, bitmaps.create()),
+                solutionLog.asList());
         }
         ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, query.constraintsFilter, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, request.query.constraintsFilter, filtered, -1);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
-        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
@@ -70,12 +76,13 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
         bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return trending.trending(bitmaps, stream, query, report, answer);
+        return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, answer),solutionLog.asList());
+
     }
 
     @Override
-    public TrendingAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<TrendingReport> report) throws Exception {
-        return new TrendingRemotePartitionReader(requestHelper).scoreTrending(partitionId, query, report);
+    public MiruPartitionResponse<TrendingAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<TrendingReport> report) throws Exception {
+        return new TrendingRemotePartitionReader(requestHelper).scoreTrending(partitionId, request, report);
     }
 
     @Override

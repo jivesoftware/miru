@@ -7,11 +7,13 @@ import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampProvider;
+import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -31,8 +33,8 @@ public class MiruTestRecoQueryDistributor {
     private final SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
     private final TimestampProvider timestampProvider = new JiveEpochTimestampProvider();
 
-    public MiruTestRecoQueryDistributor(int numQueries, MiruTestFeatureSupplier featureSupplier, int numResultsGlobalTrendy, int
-            numResultsCollaborativeFiltering) {
+    public MiruTestRecoQueryDistributor(int numQueries, MiruTestFeatureSupplier featureSupplier, int numResultsGlobalTrendy,
+        int numResultsCollaborativeFiltering) {
         this.numQueries = numQueries;
         this.featureSupplier = featureSupplier;
         this.numResultsGlobalTrendy = numResultsGlobalTrendy;
@@ -43,33 +45,35 @@ public class MiruTestRecoQueryDistributor {
         return numQueries;
     }
 
-    public TrendingQuery globalTrending() {
+    public MiruRequest<TrendingQuery> globalTrending() {
         Id userId = featureSupplier.oldUsers(1).get(0);
         long packCurrentTime = snowflakeIdPacker.pack(timestampProvider.getTimestamp(), 0, 0);
         long packThreeDays = snowflakeIdPacker.pack(TimeUnit.DAYS.toMillis(3), 0, 0);
-        return new TrendingQuery(
-                featureSupplier.miruTenantId(),
+        return new MiruRequest<>(featureSupplier.miruTenantId(),
+            new MiruActorId(userId),
+            new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
+            new TrendingQuery(
                 new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
                 32,
                 new MiruFilter(
-                        MiruFilterOperation.or,
-                        Optional.of(Arrays.asList(viewClassesFilter())),
-                        Optional.<List<MiruFilter>>absent()),
-                new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
+                    MiruFilterOperation.or,
+                    Optional.of(Arrays.asList(viewClassesFilter())),
+                    Optional.<List<MiruFilter>>absent()),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
-                numResultsGlobalTrendy);
+                numResultsGlobalTrendy), false);
     }
 
-    public RecoQuery collaborativeFiltering() {
+    public MiruRequest<RecoQuery> collaborativeFiltering() {
         Id userId = featureSupplier.oldUsers(1).get(0);
         MiruFieldFilter miruFieldFilter = new MiruFieldFilter(
-                MiruFieldName.AUTHOR_ID.getFieldName(), Arrays.asList(userId.toStringForm()));
+            MiruFieldName.AUTHOR_ID.getFieldName(), Arrays.asList(userId.toStringForm()));
         MiruFilter filter = new MiruFilter(MiruFilterOperation.or, Optional.of(Arrays.asList(miruFieldFilter)),
-                Optional.<List<MiruFilter>>absent());
-        return new RecoQuery(
-                featureSupplier.miruTenantId(),
+            Optional.<List<MiruFilter>>absent());
+        return new MiruRequest<>(featureSupplier.miruTenantId(),
+            new MiruActorId(userId),
+            new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
+            new RecoQuery(
                 filter,
-                new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
@@ -78,17 +82,18 @@ public class MiruTestRecoQueryDistributor {
                 MiruFieldName.AUTHOR_ID.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
-                numResultsCollaborativeFiltering);
+                numResultsCollaborativeFiltering),
+            false);
     }
 
     private MiruFieldFilter viewClassesFilter() {
         return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.of(
-                        "ContentVersionActivitySearchView",
-                        "CommentVersionActivitySearchView",
-                        "LikeActivitySearchView",
-                        "UserFollowActivitySearchView",
-                        "MembershipActivitySearchView",
-                        "PlaceActivitySearchView"));
+            "ContentVersionActivitySearchView",
+            "CommentVersionActivitySearchView",
+            "LikeActivitySearchView",
+            "UserFollowActivitySearchView",
+            "MembershipActivitySearchView",
+            "PlaceActivitySearchView"));
     }
 
 }

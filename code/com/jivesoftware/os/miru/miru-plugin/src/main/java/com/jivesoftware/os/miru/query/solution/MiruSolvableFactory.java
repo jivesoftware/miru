@@ -18,9 +18,9 @@ public class MiruSolvableFactory<A, P> {
     }
 
     public <BM> MiruSolvable<A> create(final MiruHostedPartition<BM> replica, final Optional<P> report) {
-        Callable<A> callable = new Callable<A>() {
+        Callable<MiruPartitionResponse<A>> callable = new Callable<MiruPartitionResponse<A>>() {
             @Override
-            public A call() throws Exception {
+            public MiruPartitionResponse<A> call() throws Exception {
                 try (MiruRequestHandle<BM> handle = replica.getQueryHandle()) {
                     if (handle.isLocal()) {
                         return question.askLocal(handle, report);

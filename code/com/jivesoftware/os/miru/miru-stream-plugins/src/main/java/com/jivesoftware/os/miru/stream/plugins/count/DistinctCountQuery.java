@@ -13,30 +13,24 @@ import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
  */
 public class DistinctCountQuery {
 
-    public final MiruTenantId tenantId;
     public final MiruStreamId streamId;
     public final MiruTimeRange timeRange;
     public final MiruFilter streamFilter;
     public final MiruFilter constraintsFilter;
-    public final MiruAuthzExpression authzExpression;
     public final String aggregateCountAroundField;
     public final int desiredNumberOfDistincts;
 
     public DistinctCountQuery(
-            @JsonProperty("tenantId") MiruTenantId tenantId,
             @JsonProperty("streamId") MiruStreamId streamId,
             @JsonProperty("timeRange") MiruTimeRange timeRange,
             @JsonProperty("streamFilter") MiruFilter streamFilter,
             @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
-            @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
             @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
             @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
-        this.tenantId = Preconditions.checkNotNull(tenantId);
         this.streamId = Preconditions.checkNotNull(streamId);
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.streamFilter = Preconditions.checkNotNull(streamFilter);
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
-        this.authzExpression = Preconditions.checkNotNull(authzExpression);
         this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
         Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
@@ -45,12 +39,10 @@ public class DistinctCountQuery {
     @Override
     public String toString() {
         return "DistinctCountQuery{" +
-                "tenantId=" + tenantId +
-                ", streamId=" + streamId +
+                "streamId=" + streamId +
                 ", timeRange=" + timeRange +
                 ", streamFilter=" + streamFilter +
                 ", constraintsFilter=" + constraintsFilter +
-                ", authzExpression=" + authzExpression +
                 ", aggregateCountAroundField='" + aggregateCountAroundField + '\'' +
                 ", desiredNumberOfDistincts=" + desiredNumberOfDistincts +
                 '}';

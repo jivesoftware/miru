@@ -7,6 +7,9 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.Miru;
 import com.jivesoftware.os.miru.query.MiruProvider;
 import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import com.jivesoftware.os.miru.query.solution.MiruSolvableFactory;
 
@@ -23,15 +26,15 @@ public class AggregateCountsInjectable {
         this.aggregateCounts = aggregateCounts;
     }
 
-    public MiruResponse<AggregateCountsAnswer> filterCustomStream(AggregateCountsQuery query) throws MiruQueryServiceException {
+    public MiruResponse<AggregateCountsAnswer> filterCustomStream(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = query.tenantId;
+            MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>("filterCustomStream", new FilterCustomQuestion(aggregateCounts, query)),
-                    new AggregateCountsAnswerEvaluator(query),
+                    new MiruSolvableFactory<>("filterCustomStream", new FilterCustomQuestion(aggregateCounts, request)),
+                    new AggregateCountsAnswerEvaluator(request.query),
                     new AggregateCountsAnswerMerger(),
-                    AggregateCountsAnswer.EMPTY_RESULTS);
+                    AggregateCountsAnswer.EMPTY_RESULTS, false);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -40,16 +43,16 @@ public class AggregateCountsInjectable {
         }
     }
 
-    public MiruResponse<AggregateCountsAnswer> filterInboxStreamAll(AggregateCountsQuery query) throws MiruQueryServiceException {
+    public MiruResponse<AggregateCountsAnswer> filterInboxStreamAll(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = query.tenantId;
+            MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
                     new MiruSolvableFactory<>("filterInboxStreamAll", new FilterInboxQuestion(aggregateCounts,
-                            miruProvider.getBackfillerizer(tenantId), query, false)),
-                    new AggregateCountsAnswerEvaluator(query),
+                            miruProvider.getBackfillerizer(tenantId), request, false)),
+                    new AggregateCountsAnswerEvaluator(request.query),
                     new AggregateCountsAnswerMerger(),
-                    AggregateCountsAnswer.EMPTY_RESULTS);
+                    AggregateCountsAnswer.EMPTY_RESULTS, false);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -58,16 +61,16 @@ public class AggregateCountsInjectable {
         }
     }
 
-    public MiruResponse<AggregateCountsAnswer> filterInboxStreamUnread(AggregateCountsQuery query) throws MiruQueryServiceException {
+    public MiruResponse<AggregateCountsAnswer> filterInboxStreamUnread(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = query.tenantId;
+            MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
                     new MiruSolvableFactory<>("filterInboxStreamUnread", new FilterInboxQuestion(aggregateCounts,
-                            miruProvider.getBackfillerizer(tenantId), query, true)),
-                    new AggregateCountsAnswerEvaluator(query),
+                            miruProvider.getBackfillerizer(tenantId), request, true)),
+                    new AggregateCountsAnswerEvaluator(request.query),
                     new AggregateCountsAnswerMerger(),
-                    AggregateCountsAnswer.EMPTY_RESULTS);
+                    AggregateCountsAnswer.EMPTY_RESULTS, false);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -76,17 +79,17 @@ public class AggregateCountsInjectable {
         }
     }
 
-    public AggregateCountsAnswer filterCustomStream(MiruPartitionId partitionId,
-            AggregateCountsQueryAndReport queryAndReport)
+    public MiruPartitionResponse<AggregateCountsAnswer> filterCustomStream(MiruPartitionId partitionId,
+            MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport)
             throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = queryAndReport.query.tenantId;
+            MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("filterCustomStream", new FilterCustomQuestion(aggregateCounts, queryAndReport.query)),
-                    Optional.fromNullable(queryAndReport.report),
-                    AggregateCountsAnswer.EMPTY_RESULTS);
+                    new MiruSolvableFactory<>("filterCustomStream", new FilterCustomQuestion(aggregateCounts, requestAndReport.request)),
+                    Optional.fromNullable(requestAndReport.report),
+                    AggregateCountsAnswer.EMPTY_RESULTS, false);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -95,18 +98,18 @@ public class AggregateCountsInjectable {
         }
     }
 
-    public AggregateCountsAnswer filterInboxStreamAll(MiruPartitionId partitionId,
-            AggregateCountsQueryAndReport queryAndReport)
+    public MiruPartitionResponse<AggregateCountsAnswer> filterInboxStreamAll(MiruPartitionId partitionId,
+            MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport)
             throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = queryAndReport.query.tenantId;
+            MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
                     new MiruSolvableFactory<>("filterInboxStreamAll", new FilterInboxQuestion(aggregateCounts,
-                            miruProvider.getBackfillerizer(tenantId), queryAndReport.query, false)),
-                    Optional.fromNullable(queryAndReport.report),
-                    AggregateCountsAnswer.EMPTY_RESULTS);
+                            miruProvider.getBackfillerizer(tenantId), requestAndReport.request, false)),
+                    Optional.fromNullable(requestAndReport.report),
+                    AggregateCountsAnswer.EMPTY_RESULTS, false);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -115,18 +118,18 @@ public class AggregateCountsInjectable {
         }
     }
 
-    public AggregateCountsAnswer filterInboxStreamUnread(MiruPartitionId partitionId,
-            AggregateCountsQueryAndReport queryAndReport)
+    public MiruPartitionResponse<AggregateCountsAnswer> filterInboxStreamUnread(MiruPartitionId partitionId,
+            MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport)
             throws MiruQueryServiceException {
         try {
-            MiruTenantId tenantId = queryAndReport.query.tenantId;
+            MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
                     new MiruSolvableFactory<>("filterInboxStreamUnread", new FilterInboxQuestion(aggregateCounts,
-                            miruProvider.getBackfillerizer(tenantId), queryAndReport.query, true)),
-                    Optional.fromNullable(queryAndReport.report),
-                    AggregateCountsAnswer.EMPTY_RESULTS);
+                            miruProvider.getBackfillerizer(tenantId), requestAndReport.request, true)),
+                    Optional.fromNullable(requestAndReport.report),
+                    AggregateCountsAnswer.EMPTY_RESULTS, false);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

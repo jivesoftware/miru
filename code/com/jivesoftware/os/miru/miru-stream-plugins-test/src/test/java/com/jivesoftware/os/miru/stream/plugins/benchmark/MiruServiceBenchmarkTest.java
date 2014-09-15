@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.stream.plugins.benchmark.caliper.BenchmarkSpec;
@@ -59,7 +60,7 @@ public class MiruServiceBenchmarkTest {
             500
     );
 
-    private List<AggregateCountsQuery> inboxAggregateCountsQueries;
+    private List< MiruRequest<AggregateCountsQuery>> inboxAggregateCountsQueries;
 
     private MiruService miruService;
     private AggregateCountsInjectable injectable;

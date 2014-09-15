@@ -7,6 +7,9 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.FILTER_PREFIX;
@@ -28,15 +31,16 @@ public class AggregateCountsRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public AggregateCountsAnswer filterCustomStream(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsReport> report)
+    public MiruPartitionResponse<AggregateCountsAnswer> filterCustomStream(MiruPartitionId partitionId, MiruRequest<AggregateCountsQuery> request, Optional<AggregateCountsReport> report)
             throws MiruQueryServiceException {
 
-        AggregateCountsQueryAndReport params = new AggregateCountsQueryAndReport(query, report.orNull());
+        MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> params = new MiruRequestAndReport<>(request, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
                     FILTER_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
+                    MiruPartitionResponse.class, new Class[]{AggregateCountsAnswer.class},
+                    new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter custom stream for partition: " + partitionId.getId(), e);
         } finally {
@@ -44,15 +48,16 @@ public class AggregateCountsRemotePartitionReader {
         }
     }
 
-    public AggregateCountsAnswer filterInboxStreamAll(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsReport> report)
+    public MiruPartitionResponse<AggregateCountsAnswer> filterInboxStreamAll(MiruPartitionId partitionId, MiruRequest<AggregateCountsQuery> request, Optional<AggregateCountsReport> report)
             throws MiruQueryServiceException {
 
-        AggregateCountsQueryAndReport params = new AggregateCountsQueryAndReport(query, report.orNull());
+        MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> params = new MiruRequestAndReport<>(request, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
                     FILTER_PREFIX + INBOX_ALL_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
+                    MiruPartitionResponse.class, new Class[]{AggregateCountsAnswer.class},
+                    new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS,null));
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter inbox all stream for partition: " + partitionId.getId(), e);
         } finally {
@@ -60,15 +65,16 @@ public class AggregateCountsRemotePartitionReader {
         }
     }
 
-    public AggregateCountsAnswer filterInboxStreamUnread(MiruPartitionId partitionId, AggregateCountsQuery query, Optional<AggregateCountsReport> report)
+    public MiruPartitionResponse<AggregateCountsAnswer> filterInboxStreamUnread(MiruPartitionId partitionId, MiruRequest<AggregateCountsQuery> request, Optional<AggregateCountsReport> report)
             throws MiruQueryServiceException {
 
-        AggregateCountsQueryAndReport params = new AggregateCountsQueryAndReport(query, report.orNull());
+        MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> params = new MiruRequestAndReport<>(request, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
                     FILTER_PREFIX + INBOX_UNREAD_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);
+                    MiruPartitionResponse.class, new Class[]{AggregateCountsAnswer.class},
+                    new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS,null));
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed filter inbox unread stream for partition: " + partitionId.getId(), e);
         } finally {

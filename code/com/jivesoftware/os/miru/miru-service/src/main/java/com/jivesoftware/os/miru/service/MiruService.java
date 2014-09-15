@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.query.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.query.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.query.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.query.solution.MiruAnswerMerger;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import com.jivesoftware.os.miru.query.solution.MiruSolution;
@@ -38,6 +39,7 @@ import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.solver.MiruSolved;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -98,11 +100,7 @@ public class MiruService implements Miru {
 
     @Override
     public <A, P> MiruResponse<A> askAndMerge(
-            MiruTenantId tenantId,
-            final MiruSolvableFactory<A, P> solvableFactory,
-            MiruAnswerEvaluator<A> evaluator,
-            MiruAnswerMerger<A> merger,
-            A defaultValue) throws Exception {
+        MiruTenantId tenantId, final MiruSolvableFactory<A, P> solvableFactory, MiruAnswerEvaluator<A> evaluator, MiruAnswerMerger<A> merger, A defaultValue, boolean debug) throws Exception {
 
         log.startTimer("askAndMerge");
 
@@ -134,7 +132,7 @@ public class MiruService implements Miru {
 
                 Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
                         solvableFactory.getQueryKey());
-                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered);
+                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered, debug);
 
                 if (solved == null) {
                     // fatal timeout
@@ -170,26 +168,23 @@ public class MiruService implements Miru {
     }
 
     @Override
-    public <A, P> A askImmediate(
-            MiruTenantId tenantId,
-            MiruPartitionId partitionId,
-            MiruSolvableFactory<A, P> solvableFactory,
-            Optional<P> report,
-            A defaultValue) throws Exception {
+    public <A, P> MiruPartitionResponse<A> askImmediate(
+        MiruTenantId tenantId, MiruPartitionId partitionId, MiruSolvableFactory<A, P> factory, Optional<P> report, A defaultValue, boolean debug) throws Exception {
         Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
-            Callable<A> callable = solvableFactory.create(partition.get(), report);
-            A answer = callable.call();
+            Callable<MiruPartitionResponse<A>> callable = factory.create(partition.get(), report);
+            MiruPartitionResponse<A> answer = callable.call();
 
             log.inc("askImmediate>all");
             log.inc("askImmediate>tenant>" + tenantId);
-            log.inc("askImmediate>query>" + solvableFactory.getQueryKey());
-            log.inc("askImmediate>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
+            log.inc("askImmediate>query>" + factory.getQueryKey());
+            log.inc("askImmediate>tenantAndQuery>" + tenantId + '>' + factory.getQueryKey());
 
             return answer;
         } else {
-            return defaultValue;
+            return new MiruPartitionResponse<>(defaultValue,
+                (debug) ? Arrays.asList("partition is NOT present. partitionId:"+partitionId) : null);
         }
     }
 

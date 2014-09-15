@@ -15,7 +15,10 @@ import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.query.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
@@ -30,78 +33,82 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
 
     private final AggregateCounts aggregateCounts;
     private final MiruJustInTimeBackfillerizer backfillerizer;
-    private final AggregateCountsQuery query;
+    private final MiruRequest<AggregateCountsQuery> request;
     private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public FilterInboxQuestion(AggregateCounts aggregateCounts,
             MiruJustInTimeBackfillerizer backfillerizer,
-            AggregateCountsQuery query,
+            MiruRequest<AggregateCountsQuery> request,
             boolean unreadOnly) {
 
-        Preconditions.checkArgument(!MiruStreamId.NULL.equals(query.streamId), "Inbox queries require a streamId");
+        Preconditions.checkArgument(!MiruStreamId.NULL.equals(request.query.streamId), "Inbox queries require a streamId");
         this.aggregateCounts = aggregateCounts;
         this.backfillerizer = backfillerizer;
-        this.query = query;
+        this.request = request;
         this.unreadOnly = unreadOnly;
     }
 
     @Override
-    public <BM> AggregateCountsAnswer askLocal(MiruRequestHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
-            backfillerizer.backfill(bitmaps, stream, query.streamFilter, query.tenantId, handle.getCoord().partitionId, query.streamId);
+            backfillerizer.backfill(bitmaps, stream, request.query.streamFilter, request.tenantId, handle.getCoord().partitionId, request.query.streamId);
         }
 
         List<BM> ands = new ArrayList<>();
         List<BM> counterAnds = new ArrayList<>();
 
-        if (!MiruTimeRange.ALL_TIME.equals(query.answerTimeRange)) {
-            MiruTimeRange timeRange = query.answerTimeRange;
+        if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
+            MiruTimeRange timeRange = request.query.answerTimeRange;
 
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
                 LOG.debug("No answer time index intersection");
-                return aggregateCounts.getAggregateCounts(bitmaps, stream, query, report, bitmaps.create(), Optional.of(bitmaps.create()));
+                return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                solutionLog.asList());
             }
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
-        if (!MiruTimeRange.ALL_TIME.equals(query.countTimeRange)) {
-            MiruTimeRange timeRange = query.countTimeRange;
+        if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
+            MiruTimeRange timeRange = request.query.countTimeRange;
 
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
                 LOG.debug("No count time index intersection");
-                return aggregateCounts.getAggregateCounts(bitmaps, stream, query, report, bitmaps.create(), Optional.of(bitmaps.create()));
+                return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                    solutionLog.asList());
             }
             counterAnds.add(bitmaps.buildTimeRangeMask(
-                    stream.timeIndex, query.countTimeRange.smallestTimestamp, query.countTimeRange.largestTimestamp));
+                    stream.timeIndex, request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp));
         }
 
-        Optional<BM> inbox = stream.inboxIndex.getInbox(query.streamId);
+        Optional<BM> inbox = stream.inboxIndex.getInbox(request.query.streamId);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
-            return aggregateCounts.getAggregateCounts(bitmaps, stream, query, report, bitmaps.create(), Optional.of(bitmaps.create()));
+            return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                solutionLog.asList());
         }
 
-        if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
+        if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, query.constraintsFilter, filtered, -1);
+            aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, request.query.constraintsFilter, filtered, -1);
             ands.add(filtered);
         }
 
-        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
         }
 
         if (unreadOnly) {
-            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId);
+            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(request.query.streamId);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
@@ -115,7 +122,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         counterAnds.add(answer);
         if (!unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
-            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId);
+            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(request.query.streamId);
             if (unreadIndex.isPresent()) {
                 counterAnds.add(unreadIndex.get());
             }
@@ -124,17 +131,18 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         bitmapsDebug.debug(LOG, bitmaps, "counterAnds", ands);
         bitmaps.and(counter, counterAnds);
 
-        return aggregateCounts.getAggregateCounts(bitmaps, stream, query, report, answer, Optional.of(counter));
+        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.of(counter)),
+            solutionLog.asList());
     }
 
     @Override
-    public AggregateCountsAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsReport> report)
+    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsReport> report)
             throws Exception {
         AggregateCountsRemotePartitionReader reader = new AggregateCountsRemotePartitionReader(requestHelper);
         if (unreadOnly) {
-            return reader.filterInboxStreamUnread(partitionId, query, report);
+            return reader.filterInboxStreamUnread(partitionId, request, report);
         }
-        return reader.filterInboxStreamAll(partitionId, query, report);
+        return reader.filterInboxStreamAll(partitionId, request, report);
     }
 
     @Override

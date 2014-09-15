@@ -15,11 +15,15 @@ import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.query.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
 import java.util.List;
+
 
 /**
  * @author jonathan
@@ -30,63 +34,64 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
 
     private final NumberOfDistincts numberOfDistincts;
     private final MiruJustInTimeBackfillerizer backfillerizer;
-    private final DistinctCountQuery query;
+    private final MiruRequest<DistinctCountQuery> request;
     private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public CountInboxQuestion(NumberOfDistincts numberOfDistincts,
             MiruJustInTimeBackfillerizer backfillerizer,
-            DistinctCountQuery query,
+            MiruRequest<DistinctCountQuery> request,
             boolean unreadOnly) {
 
-        Preconditions.checkArgument(!MiruStreamId.NULL.equals(query.streamId), "Inbox queries require a streamId");
+        Preconditions.checkArgument(!MiruStreamId.NULL.equals(request.query.streamId), "Inbox queries require a streamId");
         this.numberOfDistincts = numberOfDistincts;
         this.backfillerizer = backfillerizer;
-        this.query = query;
+        this.request = request;
         this.unreadOnly = unreadOnly;
     }
 
     @Override
-    public <BM> DistinctCountAnswer askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
-            backfillerizer.backfill(bitmaps, stream, query.streamFilter, query.tenantId, handle.getCoord().partitionId, query.streamId);
+            backfillerizer.backfill(bitmaps, stream, request.query.streamFilter, request.tenantId, handle.getCoord().partitionId, request.query.streamId);
         }
 
         List<BM> ands = new ArrayList<>();
-        if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {
-            MiruTimeRange timeRange = query.timeRange;
+        if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
+            MiruTimeRange timeRange = request.query.timeRange;
 
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
                 LOG.debug("No time index intersection");
-                return numberOfDistincts.numberOfDistincts(bitmaps, stream, query, report, bitmaps.create());
+                return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, bitmaps.create()),solutionLog.asList());
             }
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
-        Optional<BM> inbox = stream.inboxIndex.getInbox(query.streamId);
+        Optional<BM> inbox = stream.inboxIndex.getInbox(request.query.streamId);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
-            return numberOfDistincts.numberOfDistincts(bitmaps, stream, query, report, bitmaps.create());
+            return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, bitmaps.create()),solutionLog.asList());
         }
 
-        if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
+        if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, query.constraintsFilter, filtered, -1);
+            aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, request.query.constraintsFilter, filtered, -1);
             ands.add(filtered);
         }
-        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
         }
         if (unreadOnly) {
-            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(query.streamId);
+            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(request.query.streamId);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
@@ -97,17 +102,17 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
         bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return numberOfDistincts.numberOfDistincts(bitmaps, stream, query, report, answer);
+        return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());
     }
 
     @Override
-    public DistinctCountAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountReport> report)
+    public MiruPartitionResponse<DistinctCountAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountReport> report)
             throws Exception {
         DistinctCountRemotePartitionReader reader = new DistinctCountRemotePartitionReader(requestHelper);
         if (unreadOnly) {
-            return reader.countInboxStreamUnread(partitionId, query, report);
+            return reader.countInboxStreamUnread(partitionId, request, report);
         }
-        return reader.countInboxStreamAll(partitionId, query, report);
+        return reader.countInboxStreamAll(partitionId, request, report);
     }
 
     @Override

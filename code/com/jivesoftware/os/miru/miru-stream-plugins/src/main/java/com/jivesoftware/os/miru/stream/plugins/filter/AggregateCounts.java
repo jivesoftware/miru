@@ -16,13 +16,14 @@ import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.index.MiruField;
 import com.jivesoftware.os.miru.query.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 
 /**
  *
@@ -39,13 +40,13 @@ public class AggregateCounts {
 
     public <BM> AggregateCountsAnswer getAggregateCounts(MiruBitmaps<BM> bitmaps,
             MiruRequestContext<BM> requestContext,
-            AggregateCountsQuery query,
+            MiruRequest<AggregateCountsQuery> request,
             Optional<AggregateCountsReport> lastReport,
             BM answer,
             Optional<BM> counter)
             throws Exception {
 
-        log.debug("Get aggregate counts for answer={} query={}", answer, query);
+        log.debug("Get aggregate counts for answer={} request={}", answer, request);
 
         int collectedDistincts = 0;
         int skippedDistincts = 0;
@@ -59,14 +60,14 @@ public class AggregateCounts {
         }
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
-        int fieldId = requestContext.schema.getFieldId(query.aggregateCountAroundField);
+        int fieldId = requestContext.schema.getFieldId(request.query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             MiruField<BM> aggregateField = requestContext.fieldIndex.getField(fieldId);
 
             BM unreadIndex = null;
-            if (!MiruStreamId.NULL.equals(query.streamId)) {
-                Optional<BM> unread = requestContext.unreadTrackingIndex.getUnread(query.streamId);
+            if (!MiruStreamId.NULL.equals(request.query.streamId)) {
+                Optional<BM> unread = requestContext.unreadTrackingIndex.getUnread(request.query.streamId);
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }
@@ -119,7 +120,7 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruInternalActivity activity = requestContext.activityIndex.get(query.tenantId, lastSetBit);
+                MiruInternalActivity activity = requestContext.activityIndex.get(request.tenantId, lastSetBit);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
@@ -156,7 +157,7 @@ public class AggregateCounts {
                     }
 
                     collectedDistincts++;
-                    if (collectedDistincts > query.startFromDistinctN) {
+                    if (collectedDistincts > request.query.startFromDistinctN) {
                         boolean unread = false;
                         if (unreadIndex != null) {
                             BM unreadAnswer = reusable.next();
@@ -167,13 +168,13 @@ public class AggregateCounts {
                         }
 
                         AggregateCount aggregateCount = new AggregateCount(
-                                miruProvider.getActivityInternExtern(query.tenantId).extern(activity, requestContext.schema),
+                                miruProvider.getActivityInternExtern(request.tenantId).extern(activity, requestContext.schema),
                                 aggregateValue,
                                 beforeCount - afterCount,
                                 unread);
                         aggregateCounts.add(aggregateCount);
 
-                        if (aggregateCounts.size() >= query.desiredNumberOfDistincts) {
+                        if (aggregateCounts.size() >= request.query.desiredNumberOfDistincts) {
                             break;
                         }
                     } else {

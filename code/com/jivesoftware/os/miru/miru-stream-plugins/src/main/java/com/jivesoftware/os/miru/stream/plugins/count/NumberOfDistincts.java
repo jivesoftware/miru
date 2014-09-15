@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.query.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.index.MiruField;
 import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import java.util.Collections;
 import java.util.Set;
 
@@ -26,12 +27,12 @@ public class NumberOfDistincts {
 
     public <BM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM> bitmaps,
             MiruRequestContext<BM> requestContext,
-            DistinctCountQuery query,
+            MiruRequest<DistinctCountQuery> request,
             Optional<DistinctCountReport> lastReport,
             BM answer)
             throws Exception {
 
-        log.debug("Get number of distincts for answer={} query={}", answer, query);
+        log.debug("Get number of distincts for answer={} query={}", answer, request);
 
         int collectedDistincts = 0;
         Set<MiruTermId> aggregateTerms;
@@ -42,7 +43,7 @@ public class NumberOfDistincts {
             aggregateTerms = Sets.newHashSet();
         }
 
-        int fieldId = requestContext.schema.getFieldId(query.aggregateCountAroundField);
+        int fieldId = requestContext.schema.getFieldId(request.query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             MiruField<BM> aggregateField = requestContext.fieldIndex.getField(fieldId);
@@ -68,7 +69,7 @@ public class NumberOfDistincts {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruTermId[] fieldValues = requestContext.activityIndex.get(query.tenantId, lastSetBit, fieldId);
+                MiruTermId[] fieldValues = requestContext.activityIndex.get(request.tenantId, lastSetBit, fieldId);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -91,7 +92,7 @@ public class NumberOfDistincts {
 
                     collectedDistincts++;
 
-                    if (collectedDistincts > query.desiredNumberOfDistincts) {
+                    if (collectedDistincts > request.query.desiredNumberOfDistincts) {
                         break;
                     }
                 }

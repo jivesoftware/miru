@@ -16,19 +16,23 @@ public class MiruSolution {
     public final long totalElapsed;
     public final List<MiruPartition> orderedPartitions;
     public final List<MiruPartitionCoord> triedPartitions;
+    public final List<String> log;
 
     @JsonCreator
     public MiruSolution(@JsonProperty (value = "usedPartition") MiruPartitionCoord usedPartition,
         @JsonProperty (value = "usedResultElapsed") long usedResultElapsed,
         @JsonProperty (value = "totalElapsed") long totalElapsed,
         @JsonProperty (value = "orderedPartitions") List<MiruPartition> orderedPartitions,
-        @JsonProperty (value = "triedPartitions") List<MiruPartitionCoord> triedPartitions) {
+        @JsonProperty (value = "triedPartitions") List<MiruPartitionCoord> triedPartitions,
+        @JsonProperty (value = "log") List<String> log
+    ) {
 
         this.usedPartition = usedPartition;
         this.orderedPartitions = orderedPartitions;
         this.triedPartitions = triedPartitions;
         this.usedResultElapsed = usedResultElapsed;
         this.totalElapsed = totalElapsed;
+        this.log = log;
     }
 
     @Override
@@ -39,6 +43,7 @@ public class MiruSolution {
             + ", totalElapsed=" + totalElapsed
             + ", orderedPartitions=" + orderedPartitions
             + ", triedPartitions=" + triedPartitions
+            + ", log=" + log
             + '}';
     }
 }

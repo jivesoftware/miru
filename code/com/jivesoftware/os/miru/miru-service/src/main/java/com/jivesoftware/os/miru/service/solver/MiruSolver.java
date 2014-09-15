@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface MiruSolver {
 
-    <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables, Optional<Long> suggestedTimeoutInMillis, List<MiruPartition> considered)
+    <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables, Optional<Long> suggestedTimeoutInMillis, List<MiruPartition> orderedPartitions, boolean debug)
             throws InterruptedException;
 
 }

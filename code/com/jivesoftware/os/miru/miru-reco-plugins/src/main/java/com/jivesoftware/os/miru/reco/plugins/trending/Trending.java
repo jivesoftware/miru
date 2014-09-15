@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.query.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.index.MiruField;
 import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.ArrayList;
@@ -32,12 +33,12 @@ public class Trending {
 
     public <BM> TrendingAnswer trending(MiruBitmaps<BM> bitmaps,
         MiruRequestContext<BM> requestContext,
-        TrendingQuery query,
+        MiruRequest<TrendingQuery> request,
         Optional<TrendingReport> lastReport,
         BM answer)
         throws Exception {
 
-        log.debug("Get trending for answer={} query={}", answer, query);
+        log.debug("Get trending for answer={} query={}", answer, request);
 
         int collectedDistincts = 0;
         Set<MiruTermId> aggregateTerms;
@@ -49,8 +50,8 @@ public class Trending {
         }
 
         List<Trendy> trendies = new ArrayList<>();
-        final long trendInterval = query.timeRange.largestTimestamp - query.timeRange.smallestTimestamp;
-        int fieldId = requestContext.schema.getFieldId(query.aggregateCountAroundField);
+        final long trendInterval = request.query.timeRange.largestTimestamp - request.query.timeRange.smallestTimestamp;
+        int fieldId = requestContext.schema.getFieldId(request.query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             MiruField<BM> aggregateField = requestContext.fieldIndex.getField(fieldId);
@@ -67,7 +68,7 @@ public class Trending {
                 bitmaps.andNot(revisedAnswer, answer, Collections.singletonList(termIndex));
                 answer = revisedAnswer;
 
-                SimpleRegressionTrend trend = new SimpleRegressionTrend(query.divideTimeRangeIntoNSegments, trendInterval);
+                SimpleRegressionTrend trend = new SimpleRegressionTrend(request.query.divideTimeRangeIntoNSegments, trendInterval);
                 MiruIntIterator iter = bitmaps.intIterator(termIndex);
                 while (iter.hasNext()) {
                     int index = iter.next();
@@ -91,7 +92,7 @@ public class Trending {
                     break;
                 }
 
-                MiruTermId[] fieldValues = requestContext.activityIndex.get(query.tenantId, lastSetBit, fieldId);
+                MiruTermId[] fieldValues = requestContext.activityIndex.get(request.tenantId, lastSetBit, fieldId);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -117,7 +118,7 @@ public class Trending {
 
                     collectedDistincts++;
 
-                    SimpleRegressionTrend trend = new SimpleRegressionTrend(query.divideTimeRangeIntoNSegments, trendInterval);
+                    SimpleRegressionTrend trend = new SimpleRegressionTrend(request.query.divideTimeRangeIntoNSegments, trendInterval);
                     MiruIntIterator iter = bitmaps.intIterator(termIndex);
                     long minTime = Long.MAX_VALUE;
                     long maxTime = Long.MIN_VALUE;
@@ -132,7 +133,7 @@ public class Trending {
                         }
                         trend.add(timestamp, 1d);
                     }
-                    Trendy trendy = new Trendy(aggregateValue, trend, trend.getRank(query.timeRange.largestTimestamp));
+                    Trendy trendy = new Trendy(aggregateValue, trend, trend.getRank(request.query.timeRange.largestTimestamp));
                     trendies.add(trendy);
                     if (log.isTraceEnabled()) {
                         log.trace("Trend minTime={} maxTime={} currentT={} bucketTimes={}", minTime, maxTime, trend.getCurrentT(), trend.getBucketsT());
@@ -141,7 +142,7 @@ public class Trending {
             }
         }
 
-        boolean resultsExhausted = query.timeRange.smallestTimestamp >= requestContext.timeIndex.getSmallestTimestamp();
+        boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= requestContext.timeIndex.getSmallestTimestamp();
         TrendingAnswer result = new TrendingAnswer(ImmutableList.copyOf(trendies), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
         log.debug("result={}", result);
         return result;

@@ -5,6 +5,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.query.solution.MiruSolution;
 import com.jivesoftware.os.miru.query.solution.MiruSolvable;
 import java.util.ArrayList;
@@ -42,14 +43,17 @@ public class MiruLowestLatencySolver implements MiruSolver {
     }
 
     @Override
-    public <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables, Optional<Long> suggestedTimeoutInMillis, List<MiruPartition> orderedPartitions)
+    public <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables,
+        Optional<Long> suggestedTimeoutInMillis,
+        List<MiruPartition> orderedPartitions,
+        boolean debug)
             throws InterruptedException {
 
         int solvers = initialSolvers;
         long failAfterTime = System.currentTimeMillis() + failAfterNMillis;
         long addAnotherSolverAfterNMillis = suggestedTimeoutInMillis.or(defaultAddAnotherSolverAfterNMillis);
 
-        CompletionService<R> completionService = new ExecutorCompletionService<>(executor);
+        CompletionService<MiruPartitionResponse<R>> completionService = new ExecutorCompletionService<>(executor);
         int n = 0;
         long startTime = System.currentTimeMillis();
         List<SolvableFuture<R>> futures = new ArrayList<>(n);
@@ -73,7 +77,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 if (mayAddSolver) {
                     timeout = Math.min(timeout, addAnotherSolverAfterNMillis);
                 }
-                Future<R> future = completionService.poll(timeout, TimeUnit.MILLISECONDS);
+                Future<MiruPartitionResponse<R>> future = completionService.poll(timeout, TimeUnit.MILLISECONDS);
                 if (future == null) {
                     if (mayAddSolver) {
                         MiruSolvable<R> solvable = solvables.next();
@@ -84,8 +88,8 @@ public class MiruLowestLatencySolver implements MiruSolver {
                     }
                 } else {
                     try {
-                        R result = future.get();
-                        if (result != null) {
+                        MiruPartitionResponse<R> response = future.get();
+                        if (response != null) {
                             // should be few enough of these that we prefer a linear lookup
                             for (SolvableFuture<R> f : futures) {
                                 if (f.future == future) {
@@ -93,8 +97,13 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                     long usedResultElapsed = System.currentTimeMillis() - f.startTime;
                                     long totalElapsed = System.currentTimeMillis() - startTime;
                                     solved = new MiruSolved<>(
-                                            new MiruSolution(f.solvable.getCoord(), usedResultElapsed, totalElapsed, orderedPartitions, triedPartitions),
-                                            result);
+                                            new MiruSolution(f.solvable.getCoord(),
+                                                usedResultElapsed,
+                                                totalElapsed,
+                                                orderedPartitions,
+                                                triedPartitions,
+                                                response.log),
+                                            response.answer);
                                     break;
                                 }
                             }
@@ -120,10 +129,10 @@ public class MiruLowestLatencySolver implements MiruSolver {
     private static class SolvableFuture<R> {
 
         private final MiruSolvable<R> solvable;
-        private final Future<R> future;
+        private final Future<MiruPartitionResponse<R>> future;
         private final long startTime;
 
-        private SolvableFuture(MiruSolvable<R> solvable, Future<R> future, long startTime) {
+        private SolvableFuture(MiruSolvable<R> solvable, Future<MiruPartitionResponse<R>> future, long startTime) {
             this.solvable = solvable;
             this.future = future;
             this.startTime = startTime;

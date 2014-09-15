@@ -5,6 +5,9 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -36,9 +39,9 @@ public class AggregateCountsEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterCustomStream(AggregateCountsQuery query) {
+    public Response filterCustomStream(MiruRequest<AggregateCountsQuery> request) {
         try {
-            MiruResponse<AggregateCountsAnswer> result = injectable.filterCustomStream(query);
+            MiruResponse<AggregateCountsAnswer> result = injectable.filterCustomStream(request);
 
             //log.info("filterCustomStream: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
@@ -54,9 +57,9 @@ public class AggregateCountsEndpoints {
     @Path(INBOX_ALL_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamAll(AggregateCountsQuery query) {
+    public Response filterInboxStreamAll(MiruRequest<AggregateCountsQuery> request) {
         try {
-            MiruResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamAll(query);
+            MiruResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamAll(request);
 
             //log.info("filterInboxStreamAll: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
@@ -72,9 +75,9 @@ public class AggregateCountsEndpoints {
     @Path(INBOX_UNREAD_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamUnread(AggregateCountsQuery query) {
+    public Response filterInboxStreamUnread(MiruRequest<AggregateCountsQuery> request) {
         try {
-            MiruResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamUnread(query);
+            MiruResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamUnread(request);
 
             //log.info("filterInboxStreamUnread: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
@@ -90,12 +93,12 @@ public class AggregateCountsEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterCustomStream(@PathParam("partitionId") int id, AggregateCountsQueryAndReport queryAndReport) {
+    public Response filterCustomStream(@PathParam("partitionId") int id, MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            AggregateCountsAnswer result = injectable.filterCustomStream(partitionId, queryAndReport);
+            MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterCustomStream(partitionId, requestAndReport);
 
-            return responseHelper.jsonResponse(result != null ? result : AggregateCountsAnswer.EMPTY_RESULTS);
+            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {
@@ -108,12 +111,12 @@ public class AggregateCountsEndpoints {
     @Path(INBOX_ALL_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamAll(@PathParam("partitionId") int id, AggregateCountsQueryAndReport queryAndReport) {
+    public Response filterInboxStreamAll(@PathParam("partitionId") int id, MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            AggregateCountsAnswer result = injectable.filterInboxStreamAll(partitionId, queryAndReport);
+            MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamAll(partitionId, requestAndReport);
 
-            return responseHelper.jsonResponse(result != null ? result : AggregateCountsAnswer.EMPTY_RESULTS);
+            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {
@@ -126,12 +129,12 @@ public class AggregateCountsEndpoints {
     @Path(INBOX_UNREAD_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamUnread(@PathParam("partitionId") int id, AggregateCountsQueryAndReport queryAndReport) {
+    public Response filterInboxStreamUnread(@PathParam("partitionId") int id, MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            AggregateCountsAnswer result = injectable.filterInboxStreamUnread(partitionId, queryAndReport);
+            MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamUnread(partitionId, requestAndReport);
 
-            return responseHelper.jsonResponse(result != null ? result : AggregateCountsAnswer.EMPTY_RESULTS);
+            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {

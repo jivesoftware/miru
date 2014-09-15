@@ -7,7 +7,9 @@ package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -20,6 +22,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trending;
@@ -37,15 +40,14 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-
 /**
  * @author jonathan
  */
 public class MiruTrendingNGTest {
 
     MiruSchema miruSchema = new MiruSchema(
-            new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
-            new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
+        new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
+        new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
@@ -58,13 +60,13 @@ public class MiruTrendingNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-                miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring());
+            miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring());
 
         this.service = miruProvider.getMiru(tenant1);
         this.injectable = new TrendingInjectable(miruProvider, new Trending());
     }
 
-    @Test(enabled = true)
+    @Test (enabled = true)
     public void basicTest() throws Exception {
 
         Random rand = new Random(1234);
@@ -131,19 +133,21 @@ public class MiruTrendingNGTest {
             String user = "bob" + rand.nextInt(numberOfUsers);
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(user));
             MiruFilter filter = new MiruFilter(
-                    MiruFilterOperation.or,
-                    Optional.of(Arrays.asList(miruFieldFilter)),
-                    Optional.<List<MiruFilter>>absent());
+                MiruFilterOperation.or,
+                Optional.of(Arrays.asList(miruFieldFilter)),
+                Optional.<List<MiruFilter>>absent());
 
             long s = System.currentTimeMillis();
-            TrendingQuery query = new TrendingQuery(tenant1,
+            MiruRequest<TrendingQuery> request = new MiruRequest<>(tenant1,
+                new MiruActorId(new Id(1)),
+                MiruAuthzExpression.NOT_PROVIDED,
+                new TrendingQuery(
                     timeRange,
                     32,
                     filter,
-                    MiruAuthzExpression.NOT_PROVIDED,
                     "doc",
-                    10);
-            MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(query);
+                    10), true);
+            MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);
 
             System.out.println("trendingResult:" + trendingResult);
             System.out.println("Took:" + (System.currentTimeMillis() - s));

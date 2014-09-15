@@ -6,12 +6,12 @@ import java.util.concurrent.Callable;
 /**
  *
  */
-public class MiruSolvable<R> implements Callable<R> {
+public class MiruSolvable<R> implements Callable<MiruPartitionResponse<R>> {
 
     private final MiruPartitionCoord coord;
-    private final Callable<R> callable;
+    private final Callable<MiruPartitionResponse<R>> callable;
 
-    public MiruSolvable(MiruPartitionCoord coord, Callable<R> callable) {
+    public MiruSolvable(MiruPartitionCoord coord, Callable<MiruPartitionResponse<R>> callable) {
         this.coord = coord;
         this.callable = callable;
     }
@@ -21,7 +21,7 @@ public class MiruSolvable<R> implements Callable<R> {
     }
 
     @Override
-    public R call() throws Exception {
+    public MiruPartitionResponse<R> call() throws Exception {
         return callable.call();
     }
 }

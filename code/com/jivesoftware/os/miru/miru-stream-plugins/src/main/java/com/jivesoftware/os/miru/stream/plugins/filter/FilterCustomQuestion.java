@@ -13,7 +13,10 @@ import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
@@ -28,24 +31,25 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final AggregateCounts aggregateCounts;
-    private final AggregateCountsQuery query;
+    private final MiruRequest<AggregateCountsQuery> request;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
-    public FilterCustomQuestion(AggregateCounts aggregateCounts, AggregateCountsQuery query) {
+    public FilterCustomQuestion(AggregateCounts aggregateCounts, MiruRequest<AggregateCountsQuery> request) {
         this.aggregateCounts = aggregateCounts;
-        this.query = query;
+        this.request = request;
     }
 
     @Override
-    public <BM> AggregateCountsAnswer askLocal(MiruRequestHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
-        MiruFilter combinedFilter = query.streamFilter;
-        if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
+        MiruFilter combinedFilter = request.query.streamFilter;
+        if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<List<MiruFieldFilter>>absent(),
-                    Optional.of(Arrays.asList(query.streamFilter, query.constraintsFilter)));
+                    Optional.of(Arrays.asList(request.query.streamFilter, request.query.constraintsFilter)));
         }
 
         List<BM> ands = new ArrayList<>();
@@ -56,12 +60,12 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
 
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
-        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
         }
 
-        if (!MiruTimeRange.ALL_TIME.equals(query.answerTimeRange)) {
-            MiruTimeRange timeRange = query.answerTimeRange;
+        if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
+            MiruTimeRange timeRange = request.query.answerTimeRange;
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
@@ -70,19 +74,20 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         bitmaps.and(answer, ands);
 
         BM counter = null;
-        if (!MiruTimeRange.ALL_TIME.equals(query.countTimeRange)) {
+        if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
             counter = bitmaps.create();
             bitmaps.and(counter, Arrays.asList(answer, bitmaps.buildTimeRangeMask(
-                    stream.timeIndex, query.countTimeRange.smallestTimestamp, query.countTimeRange.largestTimestamp)));
+                    stream.timeIndex, request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp)));
         }
 
-        return aggregateCounts.getAggregateCounts(bitmaps, stream, query, report, answer, Optional.fromNullable(counter));
+        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.fromNullable(counter)),
+        solutionLog.asList());
     }
 
     @Override
-    public AggregateCountsAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsReport> report)
+    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsReport> report)
             throws Exception {
-        return new AggregateCountsRemotePartitionReader(requestHelper).filterCustomStream(partitionId, query, report);
+        return new AggregateCountsRemotePartitionReader(requestHelper).filterCustomStream(partitionId, request, report);
     }
 
     @Override

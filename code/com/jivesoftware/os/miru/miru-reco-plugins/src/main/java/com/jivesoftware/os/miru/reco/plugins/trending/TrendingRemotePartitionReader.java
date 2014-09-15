@@ -7,6 +7,9 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 
 import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.TRENDING_PREFIX;
@@ -26,15 +29,15 @@ public class TrendingRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public TrendingAnswer scoreTrending(MiruPartitionId partitionId, TrendingQuery query, Optional<TrendingReport> report)
+    public MiruPartitionResponse<TrendingAnswer> scoreTrending(MiruPartitionId partitionId, MiruRequest<TrendingQuery> request, Optional<TrendingReport> report)
             throws MiruQueryServiceException {
 
-        TrendingQueryAndReport params = new TrendingQueryAndReport(query, report.orNull());
+        MiruRequestAndReport<TrendingQuery, TrendingReport> params = new MiruRequestAndReport<>(request, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
                     TRENDING_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    TrendingAnswer.class, TrendingAnswer.EMPTY_RESULTS);
+                    MiruPartitionResponse.class, new Class[]{TrendingAnswer.class}, new MiruPartitionResponse<>(TrendingAnswer.EMPTY_RESULTS, null));
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed score trending stream for partition: " + partitionId.getId(), e);
         } finally {

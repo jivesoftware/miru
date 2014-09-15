@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruWriter;
@@ -22,6 +24,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.query.MiruProvider;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.MiruService;
@@ -65,40 +68,40 @@ public class InMemoryEndpointsTest {
         MiruSchema schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenantId, partitionId, miruHost, schema, desiredStorage,
-                new MiruBitmapsRoaring());
+            new MiruBitmapsRoaring());
 
         MiruService miruService = miruProvider.getMiru(tenantId);
 
         MiruWriter miruWriter = new MiruWriterImpl(miruService);
         this.aggregateCountsEndpoints = new AggregateCountsEndpoints(
-                new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider)));
+            new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider)));
         this.miruWriterEndpoints = new MiruWriterEndpoints(miruWriter);
     }
 
-    @Test(enabled = true, description = "Disabled until we can figure out a  better solution for bootstrapping instead of sleeping.")
+    @Test (enabled = true, description = "Disabled until we can figure out a  better solution for bootstrapping instead of sleeping.")
     public void testSimpleAddActivities() throws Exception {
         AtomicLong time = new AtomicLong(0);
         AtomicInteger index = new AtomicInteger(0);
 
         List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(
-                activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                        new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
-                                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                                .build()
-                ),
-                activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                        new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
-                                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                                .build()
-                ),
-                activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                        new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
-                                .putFieldValue(OBJECT_ID.getFieldName(), "value2")
-                                .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
-                                .build()
-                )
+            activityFactory.activity(1, partitionId, index.incrementAndGet(),
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                .build()
+            ),
+            activityFactory.activity(1, partitionId, index.incrementAndGet(),
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                .build()
+            ),
+            activityFactory.activity(1, partitionId, index.incrementAndGet(),
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value2")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
+                .build()
+            )
         );
         Response addResponse = miruWriterEndpoints.addActivities(partitionedActivities);
         assertNotNull(addResponse);
@@ -107,40 +110,42 @@ public class InMemoryEndpointsTest {
         JavaType type = objectMapper.getTypeFactory().constructParametricType(MiruResponse.class, AggregateCountsAnswer.class);
 
         // Request 1
-        Response getResponse = aggregateCountsEndpoints.filterCustomStream(new AggregateCountsQuery(
-                tenantId,
+        Response getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>(tenantId,
+            new MiruActorId(Id.NULL),
+            MiruAuthzExpression.NOT_PROVIDED,
+            new AggregateCountsQuery(
                 MiruStreamId.NULL,
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
-                        Optional.of(Arrays.asList(
-                                new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")))),
-                        Optional.<List<MiruFilter>>absent()),
+                    Optional.of(Arrays.asList(
+                            new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")))),
+                    Optional.<List<MiruFilter>>absent()),
                 MiruFilter.NO_FILTER,
-                MiruAuthzExpression.NOT_PROVIDED,
                 OBJECT_ID.getFieldName(),
                 0,
-                100));
+                100), false));
         assertNotNull(getResponse);
         MiruResponse<AggregateCountsAnswer> result = objectMapper.readValue(getResponse.getEntity().toString(), type);
         assertEquals(result.answer.collectedDistincts, 1);
 
         // Request 2
-        getResponse = aggregateCountsEndpoints.filterCustomStream(new AggregateCountsQuery(
-                tenantId,
+        getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>(tenantId,
+            new MiruActorId(Id.NULL),
+            MiruAuthzExpression.NOT_PROVIDED,
+            new AggregateCountsQuery(
                 MiruStreamId.NULL,
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
-                        Optional.of(Arrays.asList(
-                                new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
-                                new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of("value2")))),
-                        Optional.<List<MiruFilter>>absent()),
+                    Optional.of(Arrays.asList(
+                            new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
+                            new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of("value2")))),
+                    Optional.<List<MiruFilter>>absent()),
                 MiruFilter.NO_FILTER,
-                MiruAuthzExpression.NOT_PROVIDED,
                 OBJECT_ID.getFieldName(),
                 0,
-                100));
+                100), false));
         assertNotNull(getResponse);
         result = objectMapper.readValue(getResponse.getEntity().toString(), type);
         assertEquals(result.answer.collectedDistincts, 2);

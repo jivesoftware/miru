@@ -5,6 +5,9 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -34,7 +37,7 @@ public class RecoEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response collaborativeFiltering(RecoQuery query) {
+    public Response collaborativeFiltering(MiruRequest<RecoQuery> query) {
         try {
             long t = System.currentTimeMillis();
             MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(query);
@@ -53,13 +56,13 @@ public class RecoEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response collaborativeFiltering(@PathParam("partitionId") int id, RecoQueryAndReport queryAndReport) {
+    public Response collaborativeFiltering(@PathParam("partitionId") int id, MiruRequestAndReport<RecoQuery, RecoReport> queryAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            RecoAnswer result = injectable.collaborativeFilteringRecommendations(partitionId, queryAndReport);
+            MiruPartitionResponse<RecoAnswer> result = injectable.collaborativeFilteringRecommendations(partitionId, queryAndReport);
 
             //log.info("collaborativeFiltering: " + answer.results.size());
-            return responseHelper.jsonResponse(result != null ? result : RecoAnswer.EMPTY_RESULTS);
+            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse(RecoAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {

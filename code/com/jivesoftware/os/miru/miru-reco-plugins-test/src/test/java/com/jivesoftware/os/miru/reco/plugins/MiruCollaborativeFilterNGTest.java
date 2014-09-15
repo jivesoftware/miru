@@ -7,6 +7,8 @@ package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -21,6 +23,7 @@ import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.query.MiruProvider;
 import com.jivesoftware.os.miru.query.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
@@ -36,15 +39,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-
 /**
  * @author jonathan
  */
 public class MiruCollaborativeFilterNGTest {
 
     MiruSchema miruSchema = new MiruSchema(
-            new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
-            new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
+        new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
+        new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
@@ -57,13 +59,13 @@ public class MiruCollaborativeFilterNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-                miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring());
+            miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring());
 
         this.service = miruProvider.getMiru(tenant1);
         this.injectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil()));
     }
 
-    @Test(enabled = true)
+    @Test (enabled = true)
     public void basicTest() throws Exception {
 
         AtomicInteger time = new AtomicInteger();
@@ -123,18 +125,22 @@ public class MiruCollaborativeFilterNGTest {
             String user = "bob" + rand.nextInt(numberOfUsers);
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(util.makeComposite(user, "^", "doc")));
             MiruFilter filter = new MiruFilter(
-                    MiruFilterOperation.or,
-                    Optional.of(Arrays.asList(miruFieldFilter)),
-                    Optional.<List<MiruFilter>>absent());
+                MiruFilterOperation.or,
+                Optional.of(Arrays.asList(miruFieldFilter)),
+                Optional.<List<MiruFilter>>absent());
 
             long s = System.currentTimeMillis();
-            MiruResponse<RecoAnswer> recoResult = injectable.collaborativeFilteringRecommendations(new RecoQuery(tenant1,
+            MiruResponse<RecoAnswer> recoResult = injectable.collaborativeFilteringRecommendations(new MiruRequest<>(
+                tenant1,
+                new MiruActorId(new Id(1)),
+                MiruAuthzExpression.NOT_PROVIDED,
+                new RecoQuery(
                     filter,
-                    MiruAuthzExpression.NOT_PROVIDED,
                     "doc", "doc", "doc",
                     "user", "user", "user",
                     "doc", "doc",
-                    10));
+                    10),
+                true));
 
             System.out.println("recoResult:" + recoResult);
             System.out.println("Took:" + (System.currentTimeMillis() - s));

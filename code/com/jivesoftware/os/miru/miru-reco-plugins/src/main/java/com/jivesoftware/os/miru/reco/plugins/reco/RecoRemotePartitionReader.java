@@ -7,6 +7,9 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 
 import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.RECO_PREFIX;
@@ -26,16 +29,17 @@ public class RecoRemotePartitionReader {
         this.processMetrics = new EndPointMetrics("process", LOG);
     }
 
-    public RecoAnswer collaborativeFilteringRecommendations(MiruPartitionId partitionId,
-            RecoQuery query,
+    public MiruPartitionResponse<RecoAnswer> collaborativeFilteringRecommendations(MiruPartitionId partitionId,
+            MiruRequest<RecoQuery> request,
             Optional<RecoReport> report)
             throws MiruQueryServiceException {
-        RecoQueryAndReport params = new RecoQueryAndReport(query, report.orNull());
+        MiruRequestAndReport<RecoQuery, RecoReport> params = new MiruRequestAndReport<>(request, report.orNull());
         processMetrics.start();
         try {
             return requestHelper.executeRequest(params,
                     RECO_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId(),
-                    RecoAnswer.class, RecoAnswer.EMPTY_RESULTS);
+                    MiruPartitionResponse.class, new Class[]{RecoAnswer.class},
+                    new MiruPartitionResponse(RecoAnswer.EMPTY_RESULTS, null));
         } catch (RuntimeException e) {
             throw new MiruQueryServiceException("Failed score reco stream for partition: " + partitionId.getId(), e);
         } finally {

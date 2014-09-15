@@ -2,8 +2,6 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 
 /**
@@ -11,9 +9,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
  */
 public class RecoQuery {
 
-    public final MiruTenantId tenantId;
     public final MiruFilter constraintsFilter;
-    public final MiruAuthzExpression authzExpression;
     public final String aggregateFieldName1;
     public final String retrieveFieldName1;
     public final String lookupFieldNamed1;
@@ -24,9 +20,7 @@ public class RecoQuery {
     public final String retrieveFieldName3;
     public final int desiredNumberOfDistincts;
 
-    public RecoQuery(@JsonProperty("tenantId") MiruTenantId tenantId,
-            @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
-            @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
+    public RecoQuery(@JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
             @JsonProperty("aggregateFieldName1") String aggregateFieldName1,
             @JsonProperty("retrieveFieldName1") String retrieveFieldName1,
             @JsonProperty("lookupFieldNamed1") String lookupFieldNamed1,
@@ -36,9 +30,7 @@ public class RecoQuery {
             @JsonProperty("aggregateFieldName3") String aggregateFieldName3,
             @JsonProperty("retrieveFieldName3") String retrieveFieldName3,
             @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
-        this.tenantId = Preconditions.checkNotNull(tenantId);
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
-        this.authzExpression = Preconditions.checkNotNull(authzExpression);
         this.aggregateFieldName1 = Preconditions.checkNotNull(aggregateFieldName1);
         this.retrieveFieldName1 = Preconditions.checkNotNull(retrieveFieldName1);
         this.lookupFieldNamed1 = Preconditions.checkNotNull(lookupFieldNamed1);
@@ -54,9 +46,7 @@ public class RecoQuery {
     @Override
     public String toString() {
         return "RecoQuery{" +
-                "tenantId=" + tenantId +
-                ", constraintsFilter=" + constraintsFilter +
-                ", authzExpression=" + authzExpression +
+                "constraintsFilter=" + constraintsFilter +
                 ", aggregateFieldName1='" + aggregateFieldName1 + '\'' +
                 ", retrieveFieldName1='" + retrieveFieldName1 + '\'' +
                 ", lookupFieldNamed1='" + lookupFieldNamed1 + '\'' +

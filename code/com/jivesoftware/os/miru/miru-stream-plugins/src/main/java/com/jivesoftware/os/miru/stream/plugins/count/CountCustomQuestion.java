@@ -13,7 +13,10 @@ import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.query.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
 import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
@@ -28,28 +31,29 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final NumberOfDistincts numberOfDistincts;
-    private final DistinctCountQuery query;
+    private final MiruRequest<DistinctCountQuery> request;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public CountCustomQuestion(NumberOfDistincts numberOfDistincts,
-            DistinctCountQuery query) {
+            MiruRequest<DistinctCountQuery> request) {
         this.numberOfDistincts = numberOfDistincts;
-        this.query = query;
+        this.request = request;
     }
 
     @Override
-    public <BM> DistinctCountAnswer askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // First grab the stream filter (required)
-        MiruFilter combinedFilter = query.streamFilter;
+        MiruFilter combinedFilter = request.query.streamFilter;
 
         // If we have a constraints filter grab that as well and AND it to the stream filter
-        if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
+        if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<List<MiruFieldFilter>>absent(),
-                    Optional.of(Arrays.asList(query.streamFilter, query.constraintsFilter)));
+                    Optional.of(Arrays.asList(request.query.streamFilter, request.query.constraintsFilter)));
         }
 
         // Start building up list of bitmap operations to run
@@ -61,13 +65,13 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
-        if (!MiruAuthzExpression.NOT_PROVIDED.equals(query.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(query.authzExpression));
+        if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
+            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
         }
 
         // 3) Add in a time-range mask if we have it
-        if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {
-            MiruTimeRange timeRange = query.timeRange;
+        if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
+            MiruTimeRange timeRange = request.query.timeRange;
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
@@ -79,13 +83,13 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
         bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return numberOfDistincts.numberOfDistincts(bitmaps, stream, query, report, answer);
+        return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());
     }
 
     @Override
-    public DistinctCountAnswer askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountReport> report)
+    public MiruPartitionResponse<DistinctCountAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountReport> report)
             throws Exception {
-        return new DistinctCountRemotePartitionReader(requestHelper).countCustomStream(partitionId, query, report);
+        return new DistinctCountRemotePartitionReader(requestHelper).countCustomStream(partitionId, request, report);
     }
 
     @Override

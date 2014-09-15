@@ -9,6 +9,9 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.query.Miru;
 import com.jivesoftware.os.miru.query.MiruProvider;
 import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import com.jivesoftware.os.miru.query.solution.MiruSolvableFactory;
 
@@ -27,16 +30,16 @@ public class TrendingInjectable {
         this.trending = trending;
     }
 
-    public MiruResponse<TrendingAnswer> scoreTrending(TrendingQuery query) throws MiruQueryServiceException {
+    public MiruResponse<TrendingAnswer> scoreTrending(MiruRequest<TrendingQuery> request) throws MiruQueryServiceException {
         try {
-            LOG.debug("askAndMerge: query={}", query);
-            MiruTenantId tenantId = query.tenantId;
+            LOG.debug("askAndMerge: request={}", request);
+            MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, query)),
+                    new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, request)),
                     new TrendingAnswerEvaluator(),
-                    new TrendingAnswerMerger(query.timeRange, query.divideTimeRangeIntoNSegments, query.desiredNumberOfDistincts),
-                    TrendingAnswer.EMPTY_RESULTS);
+                    new TrendingAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments, request.query.desiredNumberOfDistincts),
+                    TrendingAnswer.EMPTY_RESULTS, false);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -45,19 +48,19 @@ public class TrendingInjectable {
         }
     }
 
-    public TrendingAnswer scoreTrending(MiruPartitionId partitionId,
-            TrendingQueryAndReport queryAndReport)
+    public MiruPartitionResponse<TrendingAnswer> scoreTrending(MiruPartitionId partitionId,
+            MiruRequestAndReport<TrendingQuery,TrendingReport> requestAndReport)
             throws MiruQueryServiceException {
         try {
-            LOG.debug("askImmediate: partitionId={} query={}", partitionId, queryAndReport.query);
-            LOG.trace("askImmediate: report={}", queryAndReport.report);
-            MiruTenantId tenantId = queryAndReport.query.tenantId;
+            LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
+            LOG.trace("askImmediate: report={}", requestAndReport.report);
+            MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                     partitionId,
-                    new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, queryAndReport.query)),
-                    Optional.fromNullable(queryAndReport.report),
-                    TrendingAnswer.EMPTY_RESULTS);
+                    new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, requestAndReport.request)),
+                    Optional.fromNullable(requestAndReport.report),
+                    TrendingAnswer.EMPTY_RESULTS, false);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

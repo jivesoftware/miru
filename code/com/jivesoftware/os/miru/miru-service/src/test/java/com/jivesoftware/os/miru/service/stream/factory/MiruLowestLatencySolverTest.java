@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.query.solution.MiruSolvable;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolved;
@@ -47,11 +48,11 @@ public class MiruLowestLatencySolverTest {
             MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(1), new MiruHost("localhost", 49600 + i));
             solvables.add(new MiruSolvable<>(
                     coord,
-                    new Callable<Integer>() {
+                    new Callable<MiruPartitionResponse<Integer>>() {
                         @Override
-                        public Integer call() throws Exception {
+                        public MiruPartitionResponse<Integer> call() throws Exception {
                             Thread.sleep(id * 1000); // Fake latency for each callable, 0 should always win
-                            return id;
+                            return new MiruPartitionResponse<>(id, null);
                         }
                     }));
             orderedPartitions.add(new MiruPartition(coord, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory)));
@@ -60,7 +61,7 @@ public class MiruLowestLatencySolverTest {
         Collections.shuffle(solvables, new Random(1234)); // randomize the solvers
         Collections.shuffle(orderedPartitions, new Random(1234)); // same randomization
 
-        MiruSolved<Integer> solved = solver.solve(solvables.iterator(), Optional.<Long>absent(), orderedPartitions);
+        MiruSolved<Integer> solved = solver.solve(solvables.iterator(), Optional.<Long>absent(), orderedPartitions, false);
         assertNotNull(solved.answer, "The answer was null, this probably means that the solver timed out when it shouldn't have.");
         assertEquals((int) solved.answer, 0);
         assertNotNull(solved.solution, "The solution was null");
