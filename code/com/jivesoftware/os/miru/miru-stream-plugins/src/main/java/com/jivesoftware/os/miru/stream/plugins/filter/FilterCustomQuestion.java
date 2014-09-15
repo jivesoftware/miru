@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -45,8 +44,8 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
 
         MiruFilter combinedFilter = query.streamFilter;
         if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
-            combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<ImmutableList<MiruFieldFilter>>absent(),
-                    Optional.of(ImmutableList.of(query.streamFilter, query.constraintsFilter)));
+            combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<List<MiruFieldFilter>>absent(),
+                    Optional.of(Arrays.asList(query.streamFilter, query.constraintsFilter)));
         }
 
         List<BM> ands = new ArrayList<>();

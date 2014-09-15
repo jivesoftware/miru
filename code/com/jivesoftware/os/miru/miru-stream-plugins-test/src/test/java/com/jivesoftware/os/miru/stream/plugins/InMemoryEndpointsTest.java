@@ -33,6 +33,7 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsEndpoints;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -112,9 +113,9 @@ public class InMemoryEndpointsTest {
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
-                        Optional.of(ImmutableList.of(
+                        Optional.of(Arrays.asList(
                                 new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")))),
-                        Optional.<ImmutableList<MiruFilter>>absent()),
+                        Optional.<List<MiruFilter>>absent()),
                 MiruFilter.NO_FILTER,
                 MiruAuthzExpression.NOT_PROVIDED,
                 OBJECT_ID.getFieldName(),
@@ -131,10 +132,10 @@ public class InMemoryEndpointsTest {
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
-                        Optional.of(ImmutableList.of(
+                        Optional.of(Arrays.asList(
                                 new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
                                 new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of("value2")))),
-                        Optional.<ImmutableList<MiruFilter>>absent()),
+                        Optional.<List<MiruFilter>>absent()),
                 MiruFilter.NO_FILTER,
                 MiruAuthzExpression.NOT_PROVIDED,
                 OBJECT_ID.getFieldName(),

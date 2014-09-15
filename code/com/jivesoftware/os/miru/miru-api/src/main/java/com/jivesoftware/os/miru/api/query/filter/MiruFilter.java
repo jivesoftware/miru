@@ -15,13 +15,13 @@ public class MiruFilter {
         Optional.<List<MiruFilter>>absent());
 
     public final MiruFilterOperation operation;
-    public final Optional<List<MiruFieldFilter>> fieldFilters;
-    public final Optional<List<MiruFilter>> subFilter;
+    public final Optional<? extends List<MiruFieldFilter>> fieldFilters;
+    public final Optional<? extends List<MiruFilter>> subFilter;
 
     public MiruFilter(
         MiruFilterOperation operation,
-        Optional<List<MiruFieldFilter>> fieldFilters,
-        Optional<List<MiruFilter>> subFilter) {
+        Optional<? extends List<MiruFieldFilter>> fieldFilters,
+        Optional<? extends List<MiruFilter>> subFilter) {
         this.operation = operation;
         this.fieldFilters = fieldFilters;
         this.subFilter = subFilter;

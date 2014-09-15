@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -52,8 +53,8 @@ public class MiruTestRecoQueryDistributor {
                 32,
                 new MiruFilter(
                         MiruFilterOperation.or,
-                        Optional.of(ImmutableList.of(viewClassesFilter())),
-                        Optional.<ImmutableList<MiruFilter>>absent()),
+                        Optional.of(Arrays.asList(viewClassesFilter())),
+                        Optional.<List<MiruFilter>>absent()),
                 new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 numResultsGlobalTrendy);
@@ -63,8 +64,8 @@ public class MiruTestRecoQueryDistributor {
         Id userId = featureSupplier.oldUsers(1).get(0);
         MiruFieldFilter miruFieldFilter = new MiruFieldFilter(
                 MiruFieldName.AUTHOR_ID.getFieldName(), Arrays.asList(userId.toStringForm()));
-        MiruFilter filter = new MiruFilter(MiruFilterOperation.or, Optional.of(ImmutableList.of(miruFieldFilter)),
-                Optional.<ImmutableList<MiruFilter>>absent());
+        MiruFilter filter = new MiruFilter(MiruFilterOperation.or, Optional.of(Arrays.asList(miruFieldFilter)),
+                Optional.<List<MiruFilter>>absent());
         return new RecoQuery(
                 featureSupplier.miruTenantId(),
                 filter,

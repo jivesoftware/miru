@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -18,6 +17,7 @@ import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.query.solution.Question;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -48,8 +48,8 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
 
         // If we have a constraints filter grab that as well and AND it to the stream filter
         if (!MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
-            combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<ImmutableList<MiruFieldFilter>>absent(),
-                    Optional.of(ImmutableList.of(query.streamFilter, query.constraintsFilter)));
+            combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<List<MiruFieldFilter>>absent(),
+                    Optional.of(Arrays.asList(query.streamFilter, query.constraintsFilter)));
         }
 
         // Start building up list of bitmap operations to run

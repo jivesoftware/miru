@@ -15,6 +15,8 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountQuery;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import javax.annotation.Nullable;
 
@@ -76,12 +78,12 @@ public class MiruTestStreamQueryDistributor {
                 countTimeRange,
                 new MiruFilter(
                         MiruFilterOperation.and,
-                        Optional.of(ImmutableList.of(viewClassesFilter())),
-                        Optional.of(ImmutableList.of(
+                        Optional.of(Arrays.asList(viewClassesFilter())),
+                        Optional.of(Arrays.asList(
                                 new MiruFilter(
                                         MiruFilterOperation.or,
                                         Optional.of(buildFieldFilters(inbox, userId)),
-                                        Optional.<ImmutableList<MiruFilter>>absent())))),
+                                        Optional.<List<MiruFilter>>absent())))),
                 constraintsFilter.orNull(),
                 new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
@@ -107,12 +109,12 @@ public class MiruTestStreamQueryDistributor {
                 timeRange,
                 new MiruFilter(
                         MiruFilterOperation.and,
-                        Optional.of(ImmutableList.of(viewClassesFilter())),
-                        Optional.of(ImmutableList.of(
+                        Optional.of(Arrays.asList(viewClassesFilter())),
+                        Optional.of(Arrays.asList(
                                 new MiruFilter(
                                         MiruFilterOperation.or,
                                         Optional.of(buildFieldFilters(inbox, userId)),
-                                        Optional.<ImmutableList<MiruFilter>>absent())))),
+                                        Optional.<List<MiruFilter>>absent())))),
                 constraintsFilter.or(MiruFilter.NO_FILTER),
                 new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
@@ -137,7 +139,7 @@ public class MiruTestStreamQueryDistributor {
                 "PlaceActivitySearchView"));
     }
 
-    private ImmutableList<MiruFieldFilter> buildFieldFilters(boolean inbox, Id userId) {
+    private List<MiruFieldFilter> buildFieldFilters(boolean inbox, Id userId) {
         if (inbox) {
             return ImmutableList.of(new MiruFieldFilter(MiruFieldName.PARTICIPANT_IDS.getFieldName(),
                     ImmutableList.of(userId.toStringForm())));
@@ -175,14 +177,14 @@ public class MiruTestStreamQueryDistributor {
             // activity filters?
         }
 
-        ImmutableList<MiruFieldFilter> fieldFilters = fieldFiltersBuilder.build();
+        List<MiruFieldFilter> fieldFilters = fieldFiltersBuilder.build();
         if (fieldFilters.isEmpty()) {
             return Optional.absent();
         } else {
             return Optional.of(new MiruFilter(
                     MiruFilterOperation.and,
                     Optional.of(fieldFilters),
-                    Optional.<ImmutableList<MiruFilter>>absent()));
+                    Optional.<List<MiruFilter>>absent()));
         }
     }
 

@@ -36,6 +36,7 @@ import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountQuery;
 import com.jivesoftware.os.miru.stream.plugins.count.NumberOfDistincts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCounts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import java.text.DecimalFormat;
@@ -48,8 +49,6 @@ import java.util.Random;
 import java.util.Set;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-
-import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 
 /**
  * @author jonathan
@@ -154,8 +153,8 @@ public class MiruStreamServiceNGTest {
                 fieldFilters.add(new MiruFieldFilter("target", ImmutableList.copyOf(following)));
 
                 MiruFilter filter = new MiruFilter(MiruFilterOperation.or,
-                        Optional.of(ImmutableList.copyOf(fieldFilters)),
-                        Optional.<ImmutableList<MiruFilter>>absent());
+                        Optional.of(fieldFilters),
+                        Optional.<List<MiruFilter>>absent());
                 AggregateCountsQuery query = new AggregateCountsQuery(tenant1,
                         streamId,
                         new MiruTimeRange(0, capacity),
@@ -248,20 +247,20 @@ public class MiruStreamServiceNGTest {
         following.add(String.valueOf(container1));
         fieldFilters.add(new MiruFieldFilter("container", ImmutableList.copyOf(following)));
         MiruFilter followingFilter = new MiruFilter(MiruFilterOperation.or,
-                Optional.of(ImmutableList.copyOf(fieldFilters)),
-                Optional.<ImmutableList<MiruFilter>>absent());
+                Optional.of(fieldFilters),
+                Optional.<List<MiruFilter>>absent());
 
         fieldFilters = new ArrayList<>();
         List<String> authors = new ArrayList<>();
         authors.add(String.valueOf(author1));
         fieldFilters.add(new MiruFieldFilter("author", ImmutableList.copyOf(authors)));
         MiruFilter authoredByFilter = new MiruFilter(MiruFilterOperation.or,
-                Optional.of(ImmutableList.copyOf(fieldFilters)),
-                Optional.<ImmutableList<MiruFilter>>absent());
+                Optional.of(fieldFilters),
+                Optional.<List<MiruFilter>>absent());
 
         MiruFilter filter = new MiruFilter(MiruFilterOperation.and,
-                Optional.<ImmutableList<MiruFieldFilter>>absent(),
-                Optional.of(ImmutableList.of(followingFilter, authoredByFilter)));
+                Optional.<List<MiruFieldFilter>>absent(),
+                Optional.of(Arrays.asList(followingFilter, authoredByFilter)));
 
         //aggregateQuery:
         {

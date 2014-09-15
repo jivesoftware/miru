@@ -198,8 +198,8 @@ public enum MiruCustomerSize {
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(1));
         for (int i = 0; i < distinctQueries; i++) {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or,
-                    Optional.of(ImmutableList.copyOf(followables.getFieldFilters(random, miruCustomerSize))),
-                    Optional.<ImmutableList<MiruFilter>>absent());
+                    Optional.of(followables.getFieldFilters(random, miruCustomerSize)),
+                    Optional.<List<MiruFilter>>absent());
 
             AggregateCountsQuery aggregateCountsQuery = new AggregateCountsQuery(miruTenantId,
                     streamId,
