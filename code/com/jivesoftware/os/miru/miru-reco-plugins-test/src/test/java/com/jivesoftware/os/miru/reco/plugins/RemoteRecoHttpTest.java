@@ -39,8 +39,8 @@ import static org.testng.Assert.assertNotNull;
  */
 public class RemoteRecoHttpTest {
 
-    private static final String REMOTE_HOST = "soa-prime-data6.phx1.jivehosted.com";
-    private static final int REMOTE_PORT = 10004;
+    private static final String REMOTE_HOST = ""; //soa-prime-data6.phx1.jivehosted.com";
+    private static final int REMOTE_PORT = -1; //10004;
 
     @Test(enabled = false, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
@@ -92,7 +92,7 @@ public class RemoteRecoHttpTest {
         }
     }
 
-    @Test(enabled = true, description = "Needs REMOTE constants")
+    @Test(enabled = false, description = "Needs REMOTE constants")
     public void testSystemRecommended() throws Exception {
 
         String tenant = "999";
@@ -130,7 +130,7 @@ public class RemoteRecoHttpTest {
         ObjectMapper mapper = new ObjectMapper();
         JavaType responseType = mapper.getTypeFactory().constructParametricType(MiruResponse.class, RecoAnswer.class);
 
-        RecoAnswer recoAnswer = requestHelper.executeRequest(query,
+        MiruResponse<RecoAnswer>  recoAnswer = requestHelper.executeRequest(query,
                 RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
                 responseType, null);
         System.out.println(recoAnswer);
