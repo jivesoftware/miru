@@ -18,9 +18,9 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
+import com.jivesoftware.os.miru.query.MiruProvider;
 import com.jivesoftware.os.miru.query.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
-import com.jivesoftware.os.miru.query.MiruProvider;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
@@ -28,7 +28,9 @@ import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.testng.annotations.BeforeMethod;
@@ -122,8 +124,8 @@ public class MiruCollaborativeFilterNGTest {
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(util.makeComposite(user, "^", "doc")));
             MiruFilter filter = new MiruFilter(
                     MiruFilterOperation.or,
-                    Optional.of(ImmutableList.of(miruFieldFilter)),
-                    Optional.<ImmutableList<MiruFilter>>absent());
+                    Optional.of(Arrays.asList(miruFieldFilter)),
+                    Optional.<List<MiruFilter>>absent());
 
             long s = System.currentTimeMillis();
             MiruResponse<RecoAnswer> recoResult = injectable.collaborativeFilteringRecommendations(new RecoQuery(tenant1,

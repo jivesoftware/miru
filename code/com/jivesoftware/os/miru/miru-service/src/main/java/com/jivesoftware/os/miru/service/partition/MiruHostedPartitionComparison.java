@@ -94,7 +94,7 @@ public class MiruHostedPartitionComparison {
      */
     public void analyzeSolutions(List<MiruSolution> solutions, String queryClass) {
         for (MiruSolution solution : solutions) {
-            MiruPartitionCoord coord = solution.coord;
+            MiruPartitionCoord coord = solution.usedPartition;
             coordRecency.put(coord, timestamper.get());
 
             TenantPartitionAndQuery key = new TenantPartitionAndQuery(coord.tenantId, coord.partitionId, queryClass);

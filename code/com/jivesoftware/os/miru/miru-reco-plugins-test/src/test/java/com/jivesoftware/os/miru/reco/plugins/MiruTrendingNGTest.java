@@ -28,7 +28,9 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -130,8 +132,8 @@ public class MiruTrendingNGTest {
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(user));
             MiruFilter filter = new MiruFilter(
                     MiruFilterOperation.or,
-                    Optional.of(ImmutableList.of(miruFieldFilter)),
-                    Optional.<ImmutableList<MiruFilter>>absent());
+                    Optional.of(Arrays.asList(miruFieldFilter)),
+                    Optional.<List<MiruFilter>>absent());
 
             long s = System.currentTimeMillis();
             TrendingQuery query = new TrendingQuery(tenant1,

@@ -11,19 +11,20 @@ import java.util.List;
  */
 public class MiruSolution {
 
-    public final MiruPartitionCoord coord;
-    public final List<MiruPartition> orderedPartitions;
-    public final List<MiruPartitionCoord> triedPartitions;
+    public final MiruPartitionCoord usedPartition;
     public final long usedResultElapsed;
     public final long totalElapsed;
+    public final List<MiruPartition> orderedPartitions;
+    public final List<MiruPartitionCoord> triedPartitions;
 
     @JsonCreator
-    public MiruSolution(@JsonProperty("coord") MiruPartitionCoord coord,
-            @JsonProperty("orderedPartitions") List<MiruPartition> orderedPartitions,
-            @JsonProperty("triedPartitions") List<MiruPartitionCoord> triedPartitions,
-            @JsonProperty("usedResultElapsed") long usedResultElapsed,
-            @JsonProperty("totalElapsed") long totalElapsed) {
-        this.coord = coord;
+    public MiruSolution(@JsonProperty (value = "usedPartition") MiruPartitionCoord usedPartition,
+        @JsonProperty (value = "usedResultElapsed") long usedResultElapsed,
+        @JsonProperty (value = "totalElapsed") long totalElapsed,
+        @JsonProperty (value = "orderedPartitions") List<MiruPartition> orderedPartitions,
+        @JsonProperty (value = "triedPartitions") List<MiruPartitionCoord> triedPartitions) {
+
+        this.usedPartition = usedPartition;
         this.orderedPartitions = orderedPartitions;
         this.triedPartitions = triedPartitions;
         this.usedResultElapsed = usedResultElapsed;
@@ -32,12 +33,12 @@ public class MiruSolution {
 
     @Override
     public String toString() {
-        return "MiruSolution{" +
-                "coord=" + coord +
-                ", orderedPartitions=" + orderedPartitions +
-                ", triedPartitions=" + triedPartitions +
-                ", usedResultElapsed=" + usedResultElapsed +
-                ", totalElapsed=" + totalElapsed +
-                '}';
+        return "MiruSolution{"
+            + "usedPartition=" + usedPartition
+            + ", usedResultElapsed=" + usedResultElapsed
+            + ", totalElapsed=" + totalElapsed
+            + ", orderedPartitions=" + orderedPartitions
+            + ", triedPartitions=" + triedPartitions
+            + '}';
     }
 }

@@ -64,6 +64,6 @@ public class MiruLowestLatencySolverTest {
         assertNotNull(solved.answer, "The answer was null, this probably means that the solver timed out when it shouldn't have.");
         assertEquals((int) solved.answer, 0);
         assertNotNull(solved.solution, "The solution was null");
-        assertEquals(solved.solution.coord.host.getPort(), 49600);
+        assertEquals(solved.solution.usedPartition.host.getPort(), 49600);
     }
 }
