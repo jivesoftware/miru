@@ -72,7 +72,7 @@ public class RemoteRecoHttpTest {
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
         long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
         long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
-        long packThreeDays = snowflakeIdPacker.pack(TimeUnit.DAYS.toMillis(3), 0, 0);
+        long packThreeDays = snowflakeIdPacker.pack(TimeUnit.DAYS.toMillis(30), 0, 0);
         MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3765)),
             MiruAuthzExpression.NOT_PROVIDED,
             new TrendingQuery(
@@ -106,16 +106,17 @@ public class RemoteRecoHttpTest {
 
         MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
             Optional.of(Arrays.asList(
-                    new MiruFieldFilter("user", Arrays.asList(String.valueOf(3765))),
-                    new MiruFieldFilter("objectType", Lists.transform(
+                    new MiruFieldFilter("user", Arrays.asList(String.valueOf(3181))), //   3765  2902 3251 3816 3181 5723
+                    /*new MiruFieldFilter("objectType", Lists.transform(
                             Arrays.asList(102, 1, 18, 38, 801, 1464927464, -960826044),
-                            Functions.toStringFunction())),
+                            Functions.toStringFunction())),*/
                     new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
-                                0, //viewed
-                                11, //liked
-                                1, //created
-                                65 //outcome_set
-                            ), Functions.toStringFunction()))
+                                0 //viewed
+                                //11, //liked
+                                //1, //created
+                                //65 //outcome_set
+                            ),
+                        Functions.toStringFunction()))
                 )),
             Optional.<List<MiruFilter>>absent());
 
@@ -126,7 +127,7 @@ public class RemoteRecoHttpTest {
                 "parent", "parent", "parent",
                 "user", "user", "user",
                 "parent", "parent",
-                100), true);
+                1000000), true);
 
         MiruResponse<RecoAnswer> recoAnswer = requestHelper.executeRequest(request,
             RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,

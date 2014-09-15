@@ -56,11 +56,19 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
+            BM compositeAuthz = stream.authzIndex.getCompositeAuthz(request.authzExpression);
+            if (solutionLog.isEnabled()) {
+                solutionLog.log("compositeAuthz contains "+bitmaps.cardinality(compositeAuthz)+" items.");
+            }
+            ands.add(compositeAuthz);
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
-        ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
+        BM buildIndexMask = bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex()));
+        if (solutionLog.isEnabled()) {
+            solutionLog.log("indexMask contains " + bitmaps.cardinality(buildIndexMask) + " items.");
+        }
+        ands.add(buildIndexMask);
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
@@ -86,7 +94,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
     public Optional<RecoReport> createReport(Optional<RecoAnswer> answer) {
         Optional<RecoReport> report = Optional.absent();
         if (answer.isPresent()) {
-            report = Optional.of(new RecoReport());
+            report = Optional.of(new RecoReport(answer.get().results.size()));
         }
         return report;
     }

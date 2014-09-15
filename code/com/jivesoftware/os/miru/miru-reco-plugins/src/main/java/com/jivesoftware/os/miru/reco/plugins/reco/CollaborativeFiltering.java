@@ -61,8 +61,9 @@ public class CollaborativeFiltering {
         bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
         // at this point we have all activity for all my viewed documents in 'contributors', and all activity not my own in 'otherContributors'.
         MinMaxPriorityQueue<MiruTermCount> contributorHeap = rankContributors(bitmaps, request, requestContext, otherContributors);
-
-
+        if (solutionLog.isEnabled()) {
+            solutionLog.log("not my self "+bitmaps.cardinality(otherContributors)+".");
+        }
 
         BM contributions = contributions(bitmaps, contributorHeap, requestContext, request.query);
         if (solutionLog.isEnabled()) {
