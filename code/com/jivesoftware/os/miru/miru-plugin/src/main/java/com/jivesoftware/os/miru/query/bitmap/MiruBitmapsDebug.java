@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.query.bitmap;
 
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 
 /**
  *
@@ -17,8 +18,8 @@ public class MiruBitmapsDebug {
         return buf.toString();
     }
 
-    public <BM> void debug(MetricLogger log, MiruBitmaps<BM> bitmaps, String message, Iterable<BM> iter) {
-        if (log.isDebugEnabled()) {
+    public <BM> void debug(MiruSolutionLog log, MiruBitmaps<BM> bitmaps, String message, Iterable<BM> iter) {
+        if (log.isEnabled()) {
             StringBuilder buf = new StringBuilder(message);
             int i = 0;
             for (BM bitmap : iter) {
@@ -30,19 +31,19 @@ public class MiruBitmapsDebug {
             if (i == 0) {
                 buf.append(" -0-");
             }
-            log.debug(buf.toString());
+            log.log(buf.toString());
         }
-        if (log.isTraceEnabled()) {
-            StringBuilder buf = new StringBuilder(message);
-            int i = 0;
-            for (BM bitmap : iter) {
-                buf.append("\n  ").append(++i).append('.')
-                        .append(" bits=").append(bitmap);
-            }
-            if (i == 0) {
-                buf.append(" -0-");
-            }
-            log.trace(buf.toString());
-        }
+//        if (log.isTraceEnabled()) {
+//            StringBuilder buf = new StringBuilder(message);
+//            int i = 0;
+//            for (BM bitmap : iter) {
+//                buf.append("\n  ").append(++i).append('.')
+//                        .append(" bits=").append(bitmap);
+//            }
+//            if (i == 0) {
+//                buf.append(" -0-");
+//            }
+//            log.trace(buf.toString());
+//        }
     }
 }

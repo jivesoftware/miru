@@ -100,7 +100,7 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
         BM answer = bitmaps.create();
-        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
+        bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());

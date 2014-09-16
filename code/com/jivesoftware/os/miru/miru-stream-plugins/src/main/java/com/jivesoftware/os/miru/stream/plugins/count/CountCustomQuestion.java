@@ -80,7 +80,7 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
-        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
+        bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());

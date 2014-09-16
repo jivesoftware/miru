@@ -70,7 +70,7 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         }
 
         BM answer = bitmaps.create();
-        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
+        bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         BM counter = null;

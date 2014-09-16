@@ -51,11 +51,12 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
 
         // Short-circuit if the time range doesn't live here
         if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
-            LOG.debug("No time index intersection");
-            return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, bitmaps.create()),
+            solutionLog.log("No time index intersection");
+            return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, bitmaps.create(), solutionLog),
                     solutionLog.asList());
         }
         ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
+
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
@@ -72,10 +73,13 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
-        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
+        bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, answer), solutionLog.asList());
+        if (solutionLog.isEnabled()) {
+            solutionLog.log("trending {} items.", bitmaps.cardinality(answer));
+        }
+        return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, answer, solutionLog), solutionLog.asList());
 
     }
 

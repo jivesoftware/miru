@@ -119,7 +119,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
         BM answer = bitmaps.create();
-        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
+        bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         counterAnds.add(answer);
@@ -131,7 +131,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
             }
         }
         BM counter = bitmaps.create();
-        bitmapsDebug.debug(LOG, bitmaps, "counterAnds", ands);
+        bitmapsDebug.debug(solutionLog, bitmaps, "counterAnds", ands);
         bitmaps.and(counter, counterAnds);
 
         return new MiruPartitionResponse<>(

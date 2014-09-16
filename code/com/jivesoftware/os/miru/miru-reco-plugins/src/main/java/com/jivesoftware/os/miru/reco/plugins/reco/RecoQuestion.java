@@ -72,7 +72,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
-        bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
+        bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
         if (solutionLog.isEnabled()) {

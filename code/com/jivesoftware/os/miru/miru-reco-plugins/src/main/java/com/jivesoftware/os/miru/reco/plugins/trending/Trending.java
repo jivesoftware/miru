@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.query.context.MiruRequestContext;
 import com.jivesoftware.os.miru.query.index.MiruField;
 import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.query.solution.MiruRequest;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.ArrayList;
@@ -35,7 +36,8 @@ public class Trending {
         MiruRequestContext<BM> requestContext,
         MiruRequest<TrendingQuery> request,
         Optional<TrendingReport> lastReport,
-        BM answer)
+        BM answer,
+        MiruSolutionLog solutionLog)
         throws Exception {
 
         log.debug("Get trending for answer={} query={}", answer, request);
