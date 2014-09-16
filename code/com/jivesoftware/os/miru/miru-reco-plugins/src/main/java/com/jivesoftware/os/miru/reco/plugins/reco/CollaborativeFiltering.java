@@ -225,7 +225,7 @@ public class CollaborativeFiltering {
             results.add(new Recommendation(result.termId, result.count));
         }
         log.debug("score: results.size={}", results.size());
-        return new RecoAnswer(results);
+        return new RecoAnswer(results, 1);
     }
 
 }

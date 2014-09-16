@@ -11,26 +11,23 @@ import java.util.List;
  */
 public class RecoAnswer {
 
-    public static final RecoAnswer EMPTY_RESULTS = new RecoAnswer(ImmutableList.<Recommendation>of());
+    public static final RecoAnswer EMPTY_RESULTS = new RecoAnswer(ImmutableList.<Recommendation>of() , 0);
 
     public final ImmutableList<Recommendation> results;
-
-    public RecoAnswer(List<Recommendation> results) {
-        this.results = ImmutableList.copyOf(results);
-    }
+    public final int partitionsVisited;
 
     @JsonCreator
-    public static RecoAnswer fromJson(
-            @JsonProperty("results") List<Recommendation> results) {
-        return new RecoAnswer(ImmutableList.copyOf(results));
+    public RecoAnswer(@JsonProperty("results")List<Recommendation> results,
+        @JsonProperty("partitionsVisited") int partitionsVisited) {
+        this.results = ImmutableList.copyOf(results);
+        this.partitionsVisited = partitionsVisited;
     }
 
     @Override
     public String toString() {
-        return "RecoAnswer{"
-                + "results=" + results
-                + '}';
+        return "RecoAnswer{" + "results=" + results + ", partitionsVisited=" + partitionsVisited + '}';
     }
+
 
     public static class Recommendation implements Comparable<Recommendation> {
 

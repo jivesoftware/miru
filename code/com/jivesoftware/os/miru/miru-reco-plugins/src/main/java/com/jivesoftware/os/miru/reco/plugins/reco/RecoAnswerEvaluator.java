@@ -16,7 +16,11 @@ public class RecoAnswerEvaluator implements MiruAnswerEvaluator<RecoAnswer> {
 
     @Override
     public boolean isDone(RecoAnswer answer, MiruSolutionLog solutionLog) {
-        solutionLog.log("Evaluate {} >= {}", answer.results.size(), query.desiredNumberOfDistincts);
-        return answer.results.size() >= query.desiredNumberOfDistincts; // TODO fix, this exits too fast!
+        solutionLog.log("Evaluate partitionsVisited {} < {}", answer.partitionsVisited, 2);
+        if (answer.partitionsVisited < 2) { // TODO expose to query or config?
+            return false;
+        }
+        solutionLog.log("Evaluate results size {} >= {}", answer.results.size(), query.desiredNumberOfDistincts);
+        return answer.results.size() >= query.desiredNumberOfDistincts;
     }
 }

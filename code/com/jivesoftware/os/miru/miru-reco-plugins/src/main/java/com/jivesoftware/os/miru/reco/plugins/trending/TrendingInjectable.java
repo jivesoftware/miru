@@ -39,7 +39,7 @@ public class TrendingInjectable {
                     new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, request)),
                     new TrendingAnswerEvaluator(),
                     new TrendingAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments, request.query.desiredNumberOfDistincts),
-                    TrendingAnswer.EMPTY_RESULTS, false);
+                    TrendingAnswer.EMPTY_RESULTS, request.debug);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

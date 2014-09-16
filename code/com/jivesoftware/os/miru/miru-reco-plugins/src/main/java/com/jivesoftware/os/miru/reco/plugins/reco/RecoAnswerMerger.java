@@ -28,6 +28,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
      *
      * @param last          the last merge result
      * @param currentAnswer the next result to merge
+     * @param solutionLog
      * @return the merged result
      */
     @Override
@@ -59,8 +60,8 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
                 mergedResults.add(recommendation);
             }
         }
-
-        RecoAnswer mergedAnswer = new RecoAnswer(ImmutableList.copyOf(mergedResults));
+        int partitionsVisited = lastAnswer.partitionsVisited + 1;
+        RecoAnswer mergedAnswer = new RecoAnswer(ImmutableList.copyOf(mergedResults), partitionsVisited);
 
         logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
@@ -77,7 +78,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
                 Collections.sort(results);
                 solutionLog.log("mergeReco: sorted in {} ms", (System.currentTimeMillis() - t));
                 results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
-                return new RecoAnswer(ImmutableList.copyOf(results));
+                return new RecoAnswer(ImmutableList.copyOf(results), answer.partitionsVisited);
             }
         }).or(alternative);
     }

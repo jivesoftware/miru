@@ -34,7 +34,7 @@ public class RecoInjectable {
                     new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, request)),
                     new RecoAnswerEvaluator(request.query),
                     new RecoAnswerMerger(request.query.desiredNumberOfDistincts),
-                    RecoAnswer.EMPTY_RESULTS, false);
+                    RecoAnswer.EMPTY_RESULTS, request.debug);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

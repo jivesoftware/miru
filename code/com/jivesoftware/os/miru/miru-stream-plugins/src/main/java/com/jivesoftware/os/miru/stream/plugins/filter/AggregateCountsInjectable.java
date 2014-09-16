@@ -34,7 +34,7 @@ public class AggregateCountsInjectable {
                     new MiruSolvableFactory<>("filterCustomStream", new FilterCustomQuestion(aggregateCounts, request)),
                     new AggregateCountsAnswerEvaluator(request.query),
                     new AggregateCountsAnswerMerger(),
-                    AggregateCountsAnswer.EMPTY_RESULTS, false);
+                    AggregateCountsAnswer.EMPTY_RESULTS, request.debug);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -52,7 +52,7 @@ public class AggregateCountsInjectable {
                             miruProvider.getBackfillerizer(tenantId), request, false)),
                     new AggregateCountsAnswerEvaluator(request.query),
                     new AggregateCountsAnswerMerger(),
-                    AggregateCountsAnswer.EMPTY_RESULTS, false);
+                    AggregateCountsAnswer.EMPTY_RESULTS, request.debug);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -70,7 +70,7 @@ public class AggregateCountsInjectable {
                             miruProvider.getBackfillerizer(tenantId), request, true)),
                     new AggregateCountsAnswerEvaluator(request.query),
                     new AggregateCountsAnswerMerger(),
-                    AggregateCountsAnswer.EMPTY_RESULTS, false);
+                    AggregateCountsAnswer.EMPTY_RESULTS, request.debug);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

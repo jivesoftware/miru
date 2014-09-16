@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Functions;
 import com.google.common.base.Optional;
@@ -44,7 +42,7 @@ import static org.testng.Assert.assertNotNull;
 public class RemoteRecoHttpTest {
 
     private static final String REMOTE_HOST = ""; //soa-prime-data6.phx1.jivehosted.com";
-    private static final int REMOTE_PORT = -1; //10004;
+    private static final int REMOTE_PORT = -1;//10004;
 
     @Test (enabled = false, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
@@ -122,6 +120,12 @@ public class RemoteRecoHttpTest {
                 )),
             Optional.<List<MiruFilter>>absent());
 
+        MiruFilter resultConstraintFilter = new MiruFilter(MiruFilterOperation.and,
+                    Optional.of(Arrays.asList(
+                        new MiruFieldFilter("objectType", Lists.transform(Arrays.asList(102), Functions.toStringFunction())))),
+                Optional.<List<MiruFilter>>absent());
+
+
         MiruRequest<RecoQuery> request = new MiruRequest<>(tenantId,
             new MiruActorId(new Id(3765)),
             MiruAuthzExpression.NOT_PROVIDED,
@@ -129,12 +133,13 @@ public class RemoteRecoHttpTest {
                 "parent", "parent", "parent",
                 "user", "user", "user",
                 "parent", "parent",
-                MiruFilter.NO_FILTER,
-                1000000), true);
+                resultConstraintFilter,
+                100), true);
 
         MiruResponse<RecoAnswer> recoAnswer = requestHelper.executeRequest(request,
             RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
             MiruResponse.class, new Class[]{ RecoAnswer.class }, null);
+        System.out.println(recoAnswer);
         System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(recoAnswer));
         assertNotNull(recoAnswer);
     }
