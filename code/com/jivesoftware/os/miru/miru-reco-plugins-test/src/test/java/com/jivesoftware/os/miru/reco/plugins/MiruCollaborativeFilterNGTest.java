@@ -139,6 +139,7 @@ public class MiruCollaborativeFilterNGTest {
                     "doc", "doc", "doc",
                     "user", "user", "user",
                     "doc", "doc",
+                    MiruFilter.NO_FILTER,
                     10),
                 true));
 

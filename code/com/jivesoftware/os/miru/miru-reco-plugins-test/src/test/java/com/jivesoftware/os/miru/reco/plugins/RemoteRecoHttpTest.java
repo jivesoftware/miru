@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Functions;
 import com.google.common.base.Optional;
@@ -87,7 +89,7 @@ public class RemoteRecoHttpTest {
             MiruResponse<TrendingAnswer> response = requestHelper.executeRequest(query,
                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
                 MiruResponse.class, new Class[]{ TrendingAnswer.class }, null);
-            System.out.println(response);
+            System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(response));
             assertNotNull(response);
         }
     }
@@ -127,12 +129,13 @@ public class RemoteRecoHttpTest {
                 "parent", "parent", "parent",
                 "user", "user", "user",
                 "parent", "parent",
+                MiruFilter.NO_FILTER,
                 1000000), true);
 
         MiruResponse<RecoAnswer> recoAnswer = requestHelper.executeRequest(request,
             RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
             MiruResponse.class, new Class[]{ RecoAnswer.class }, null);
-        System.out.println(recoAnswer);
+        System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(recoAnswer));
         assertNotNull(recoAnswer);
     }
 

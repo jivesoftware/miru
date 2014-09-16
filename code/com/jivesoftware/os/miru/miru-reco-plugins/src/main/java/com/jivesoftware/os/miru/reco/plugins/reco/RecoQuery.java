@@ -18,6 +18,7 @@ public class RecoQuery {
     public final String lookupFieldNamed2;
     public final String aggregateFieldName3;
     public final String retrieveFieldName3;
+    public final MiruFilter constrainResults;
     public final int desiredNumberOfDistincts;
 
     public RecoQuery(@JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
@@ -29,6 +30,7 @@ public class RecoQuery {
             @JsonProperty("lookupFieldNamed2") String lookupFieldNamed2,
             @JsonProperty("aggregateFieldName3") String aggregateFieldName3,
             @JsonProperty("retrieveFieldName3") String retrieveFieldName3,
+            @JsonProperty("constrainResults") MiruFilter constrainResults,
             @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.aggregateFieldName1 = Preconditions.checkNotNull(aggregateFieldName1);
@@ -40,6 +42,7 @@ public class RecoQuery {
         this.aggregateFieldName3 = Preconditions.checkNotNull(aggregateFieldName3);
         this.retrieveFieldName3 = Preconditions.checkNotNull(retrieveFieldName3);
         Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
+        this.constrainResults = constrainResults;
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
 
@@ -55,6 +58,7 @@ public class RecoQuery {
                 ", lookupFieldNamed2='" + lookupFieldNamed2 + '\'' +
                 ", aggregateFieldName3='" + aggregateFieldName3 + '\'' +
                 ", retrieveFieldName3='" + retrieveFieldName3 + '\'' +
+                ", constrainResults='" + constrainResults + '\'' +
                 ", desiredNumberOfDistincts=" + desiredNumberOfDistincts +
                 '}';
     }

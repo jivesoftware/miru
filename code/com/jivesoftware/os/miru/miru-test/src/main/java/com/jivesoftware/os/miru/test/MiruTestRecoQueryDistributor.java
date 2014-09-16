@@ -82,6 +82,7 @@ public class MiruTestRecoQueryDistributor {
                 MiruFieldName.AUTHOR_ID.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
+                MiruFilter.NO_FILTER,
                 numResultsCollaborativeFiltering),
             false);
     }

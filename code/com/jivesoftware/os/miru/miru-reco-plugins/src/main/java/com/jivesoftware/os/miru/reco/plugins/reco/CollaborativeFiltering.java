@@ -7,6 +7,7 @@ import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.query.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.query.context.MiruRequestContext;
@@ -20,6 +21,7 @@ import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruTermCount;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer.Recommendation;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -76,9 +78,25 @@ public class CollaborativeFiltering {
         BM othersContributions = bitmaps.create();
         bitmaps.andNot(othersContributions, contributions, Collections.singletonList(contributors)); // remove activity for my viewed documents
         if (solutionLog.isEnabled()) {
-            solutionLog.log("scorable {}.", bitmaps.cardinality(othersContributions));
+            solutionLog.log("othersContributions {}.", bitmaps.cardinality(othersContributions));
         }
-        return score(bitmaps, request, othersContributions, requestContext, bloomIndex, wantBits);
+        BM scorable  = othersContributions;
+        MiruFilter constrainScorableFilter = request.query.constrainResults;
+        if (!MiruFilter.NO_FILTER.equals(constrainScorableFilter)) {
+            BM possible = bitmaps.create();
+            aggregateUtil.filter(bitmaps, requestContext.schema, requestContext.fieldIndex, constrainScorableFilter, possible, -1);
+            if (solutionLog.isEnabled()) {
+                solutionLog.log("possible {}.", bitmaps.cardinality(possible));
+            }
+
+            scorable = bitmaps.create();
+            bitmaps.and(scorable, Arrays.asList(possible, othersContributions));
+            if (solutionLog.isEnabled()) {
+                solutionLog.log("scorable {}.", bitmaps.cardinality(othersContributions));
+            }
+        }
+
+        return score(bitmaps, request, scorable, requestContext, bloomIndex, wantBits);
 
     }
 
