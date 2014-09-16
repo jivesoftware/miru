@@ -33,6 +33,7 @@ import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.query.solution.MiruResponse;
 import com.jivesoftware.os.miru.query.solution.MiruSolution;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruSolvable;
 import com.jivesoftware.os.miru.query.solution.MiruSolvableFactory;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
@@ -128,6 +129,7 @@ public class MiruService implements Miru {
 
         A answer = null;
         List<MiruSolution> solutions = Lists.newArrayList();
+        MiruSolutionLog solutionLog = new MiruSolutionLog(debug);
         long totalElapsed;
 
         try {
@@ -154,7 +156,7 @@ public class MiruService implements Miru {
 
                 Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
                         solvableFactory.getQueryKey());
-                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered, debug);
+                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered, solutionLog);
 
                 if (solved == null) {
                     // fatal timeout
@@ -165,17 +167,17 @@ public class MiruService implements Miru {
                 solutions.add(solved.solution);
 
                 A currentAnswer = solved.answer;
-                A merged = merger.merge(lastAnswer, currentAnswer);
+                A merged = merger.merge(lastAnswer, currentAnswer, solutionLog);
 
                 lastAnswer = Optional.of(merged);
-                if (evaluator.isDone(merged)) {
+                if (evaluator.isDone(merged, solutionLog)) {
                     break;
                 }
             }
 
             partitionComparison.analyzeSolutions(solutions, solvableFactory.getQueryKey());
 
-            answer = merger.done(lastAnswer, defaultValue);
+            answer = merger.done(lastAnswer, defaultValue, solutionLog);
 
         } finally {
             totalElapsed = log.stopTimer("askAndMerge");
@@ -186,7 +188,7 @@ public class MiruService implements Miru {
         log.inc("askAndMerge>query>" + solvableFactory.getQueryKey());
         log.inc("askAndMerge>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
 
-        return new MiruResponse<>(answer, solutions, totalElapsed);
+        return new MiruResponse<>(answer, solutions, totalElapsed, solutionLog.asList());
     }
 
     @Override

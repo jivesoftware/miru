@@ -1,5 +1,8 @@
 package com.jivesoftware.os.miru.query.solution;
 
+import com.jivesoftware.os.jive.utils.logger.MessageFormatter;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +11,8 @@ import java.util.List;
  * @author jonathan.colt
  */
 public class MiruSolutionLog {
+
+    private static final MetricLogger METRIC_LOGGER = MetricLoggerFactory.getLogger();
 
     private final boolean enabled;
     private final List<String> log = new ArrayList<>();
@@ -21,8 +26,16 @@ public class MiruSolutionLog {
     }
 
     public void log(String message) {
+        METRIC_LOGGER.debug(message);
         if (enabled) {
             log.add(message);
+        }
+    }
+
+    public void log(String message, Object... args) {
+        METRIC_LOGGER.debug(message, args);
+        if (enabled) {
+            log.add(MessageFormatter.format(message, args));
         }
     }
 

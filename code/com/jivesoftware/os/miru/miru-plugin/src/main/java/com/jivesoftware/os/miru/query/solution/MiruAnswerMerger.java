@@ -14,8 +14,8 @@ import com.google.common.base.Optional;
  */
 public interface MiruAnswerMerger<A> {
 
-    A merge(Optional<A> last, A current);
+    A merge(Optional<A> last, A current, MiruSolutionLog solutionLog);
 
-    A done(Optional<A> last, A alternative);
+    A done(Optional<A> last, A alternative, MiruSolutionLog solutionLog);
 
 }

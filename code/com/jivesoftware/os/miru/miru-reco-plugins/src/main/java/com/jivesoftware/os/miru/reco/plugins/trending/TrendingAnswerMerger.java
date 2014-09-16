@@ -4,10 +4,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.query.solution.MiruAnswerMerger;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.Collections;
@@ -19,8 +18,6 @@ import java.util.Map;
  *
  */
 public class TrendingAnswerMerger implements MiruAnswerMerger<TrendingAnswer> {
-
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruTimeRange timeRange;
     private final int divideTimeRangeIntoNSegments;
@@ -35,12 +32,12 @@ public class TrendingAnswerMerger implements MiruAnswerMerger<TrendingAnswer> {
     /**
      * Merges the last and current results, returning the merged result.
      *
-     * @param last the last merge result
+     * @param last          the last merge result
      * @param currentAnswer the next result to merge
      * @return the merged result
      */
     @Override
-    public TrendingAnswer merge(Optional<TrendingAnswer> last, TrendingAnswer currentAnswer) {
+    public TrendingAnswer merge(Optional<TrendingAnswer> last, TrendingAnswer currentAnswer, MiruSolutionLog solutionLog) {
         if (!last.isPresent()) {
             return currentAnswer;
         }
@@ -80,34 +77,33 @@ public class TrendingAnswerMerger implements MiruAnswerMerger<TrendingAnswer> {
         TrendingAnswer mergedAnswer = new TrendingAnswer(ImmutableList.copyOf(mergedResults), currentAnswer.aggregateTerms, currentAnswer.collectedDistincts,
                 currentAnswer.resultsExhausted);
 
-        logMergeResult(currentAnswer, lastAnswer, mergedAnswer);
+        logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
         return mergedAnswer;
     }
 
     @Override
-    public TrendingAnswer done(Optional<TrendingAnswer> last, TrendingAnswer alternative) {
+    public TrendingAnswer done(Optional<TrendingAnswer> last, TrendingAnswer alternative, final MiruSolutionLog solutionLog) {
         return last.transform(new Function<TrendingAnswer, TrendingAnswer>() {
             @Override
             public TrendingAnswer apply(TrendingAnswer result) {
                 List<TrendingAnswer.Trendy> results = Lists.newArrayList(result.results);
                 long t = System.currentTimeMillis();
                 Collections.sort(results);
-                log.debug("Sorted in " + (System.currentTimeMillis() - t) + " ms");
+                solutionLog.log("mergeTrendy: Sorted in {} ms", (System.currentTimeMillis() - t));
                 results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
                 return new TrendingAnswer(ImmutableList.copyOf(results), result.aggregateTerms, result.collectedDistincts, result.resultsExhausted);
             }
         }).or(alternative);
     }
 
-    private void logMergeResult(TrendingAnswer currentAnswer, TrendingAnswer lastAnswer, TrendingAnswer mergedAnswer) {
-        log.debug("Merged:" +
+    private void logMergeResult(TrendingAnswer currentAnswer, TrendingAnswer lastAnswer, TrendingAnswer mergedAnswer, MiruSolutionLog solutionLog) {
+        solutionLog.log("Merged:" +
                         "\n  From: terms={} results={} collected={}" +
                         "\n  With: terms={} results={} collected={}" +
                         "\n  To:   terms={} results={} collected={}",
                 lastAnswer.aggregateTerms.size(), lastAnswer.results.size(), lastAnswer.collectedDistincts,
                 currentAnswer.aggregateTerms.size(), currentAnswer.results.size(), currentAnswer.collectedDistincts,
-                mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts
-        );
+                mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts);
     }
 }

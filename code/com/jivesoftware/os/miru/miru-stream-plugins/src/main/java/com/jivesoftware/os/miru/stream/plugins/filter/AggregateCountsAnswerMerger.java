@@ -3,10 +3,9 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.query.solution.MiruAnswerMerger;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,17 +17,15 @@ import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnsw
  */
 public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCountsAnswer> {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
-
     /**
      * Merges the last and current results, returning the merged result.
      *
-     * @param last the last merge result
+     * @param last          the last merge result
      * @param currentAnswer the next result to merge
      * @return the merged result
      */
     @Override
-    public AggregateCountsAnswer merge(Optional<AggregateCountsAnswer> last, AggregateCountsAnswer currentAnswer) {
+    public AggregateCountsAnswer merge(Optional<AggregateCountsAnswer> last, AggregateCountsAnswer currentAnswer, MiruSolutionLog solutionLog) {
         if (!last.isPresent()) {
             return currentAnswer;
         }
@@ -47,7 +44,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                 mergedResults.add(aggregateCount);
             } else {
                 mergedResults.add(new AggregateCount(aggregateCount.mostRecentActivity, aggregateCount.distinctValue, aggregateCount.count + had.count,
-                    aggregateCount.unread || had.unread));
+                        aggregateCount.unread || had.unread));
             }
         }
         for (AggregateCount aggregateCount : currentAnswer.results) {
@@ -57,26 +54,28 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
         }
 
         AggregateCountsAnswer mergedAnswer = new AggregateCountsAnswer(ImmutableList.copyOf(mergedResults), currentAnswer.aggregateTerms,
-            currentAnswer.skippedDistincts, currentAnswer.collectedDistincts);
+                currentAnswer.skippedDistincts, currentAnswer.collectedDistincts);
 
-        logMergeResult(currentAnswer, lastAnswer, mergedAnswer);
+        logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
         return mergedAnswer;
     }
 
     @Override
-    public AggregateCountsAnswer done(Optional<AggregateCountsAnswer> last, AggregateCountsAnswer alternative) {
+    public AggregateCountsAnswer done(Optional<AggregateCountsAnswer> last, AggregateCountsAnswer alternative, MiruSolutionLog solutionLog) {
         return last.or(alternative);
     }
 
-    private void logMergeResult(AggregateCountsAnswer currentAnswer, AggregateCountsAnswer lastAnswer, AggregateCountsAnswer mergedAnswer) {
-        log.debug("Merged:" +
+    private void logMergeResult(AggregateCountsAnswer currentAnswer,
+            AggregateCountsAnswer lastAnswer,
+            AggregateCountsAnswer mergedAnswer,
+            MiruSolutionLog solutionLog) {
+        solutionLog.log("Merged:" +
                         "\n  From: terms={} results={} collected={} skipped={}" +
                         "\n  With: terms={} results={} collected={} skipped={}" +
                         "\n  To:   terms={} results={} collected={} skipped={}",
                 lastAnswer.aggregateTerms.size(), lastAnswer.results.size(), lastAnswer.collectedDistincts, lastAnswer.skippedDistincts,
                 currentAnswer.aggregateTerms.size(), currentAnswer.results.size(), currentAnswer.collectedDistincts, currentAnswer.skippedDistincts,
-                mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts, mergedAnswer.skippedDistincts
-        );
+                mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts, mergedAnswer.skippedDistincts);
     }
 }

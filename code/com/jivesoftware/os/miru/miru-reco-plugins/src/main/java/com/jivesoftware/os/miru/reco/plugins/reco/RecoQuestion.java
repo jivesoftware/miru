@@ -50,7 +50,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         BM filtered = bitmaps.create();
         aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, request.query.constraintsFilter, filtered, -1);
         if (solutionLog.isEnabled()) {
-            solutionLog.log("constrained down to " + bitmaps.cardinality(filtered) + " items.");
+            solutionLog.log("constrained down to {} items.", bitmaps.cardinality(filtered));
         }
         ands.add(filtered);
 
@@ -58,7 +58,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             BM compositeAuthz = stream.authzIndex.getCompositeAuthz(request.authzExpression);
             if (solutionLog.isEnabled()) {
-                solutionLog.log("compositeAuthz contains " + bitmaps.cardinality(compositeAuthz) + " items.");
+                solutionLog.log("compositeAuthz contains {} items.", bitmaps.cardinality(compositeAuthz));
             }
             ands.add(compositeAuthz);
         }
@@ -66,7 +66,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         // 3) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
         BM buildIndexMask = bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex()));
         if (solutionLog.isEnabled()) {
-            solutionLog.log("indexMask contains " + bitmaps.cardinality(buildIndexMask) + " items.");
+            solutionLog.log("indexMask contains {} items.", bitmaps.cardinality(buildIndexMask));
         }
         ands.add(buildIndexMask);
 
@@ -76,7 +76,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         bitmaps.and(answer, ands);
 
         if (solutionLog.isEnabled()) {
-            solutionLog.log("considering " + bitmaps.cardinality(answer) + " items.");
+            solutionLog.log("considering {} items.", bitmaps.cardinality(answer));
         }
 
         return new MiruPartitionResponse<>(

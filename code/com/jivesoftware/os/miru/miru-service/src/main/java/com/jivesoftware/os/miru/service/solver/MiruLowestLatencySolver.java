@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.query.solution.MiruSolution;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruSolvable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -18,7 +19,9 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 public class MiruLowestLatencySolver implements MiruSolver {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -30,11 +33,11 @@ public class MiruLowestLatencySolver implements MiruSolver {
     private final long failAfterNMillis;
 
     public MiruLowestLatencySolver(
-        Executor executor,
-        int initialSolvers,
-        int maxNumberOfSolvers,
-        long defaultAddAnotherSolverAfterNMillis,
-        long failAfterNMillis) {
+            Executor executor,
+            int initialSolvers,
+            int maxNumberOfSolvers,
+            long defaultAddAnotherSolverAfterNMillis,
+            long failAfterNMillis) {
         this.executor = executor;
         this.initialSolvers = initialSolvers;
         this.maxNumberOfSolvers = maxNumberOfSolvers;
@@ -44,9 +47,9 @@ public class MiruLowestLatencySolver implements MiruSolver {
 
     @Override
     public <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables,
-        Optional<Long> suggestedTimeoutInMillis,
-        List<MiruPartition> orderedPartitions,
-        boolean debug)
+            Optional<Long> suggestedTimeoutInMillis,
+            List<MiruPartition> orderedPartitions,
+            MiruSolutionLog solutionLog)
             throws InterruptedException {
 
         int solvers = initialSolvers;
@@ -62,7 +65,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
         try {
             while (solvables.hasNext() && solvers > 0) {
                 MiruSolvable<R> solvable = solvables.next();
-                log.debug("Initial solver index={} coord={}", n, solvable.getCoord());
+                solutionLog.log("Initial solver index={} coord={}", n, solvable.getCoord());
                 triedPartitions.add(solvable.getCoord());
                 futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                 solvers--;
@@ -81,7 +84,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 if (future == null) {
                     if (mayAddSolver) {
                         MiruSolvable<R> solvable = solvables.next();
-                        log.debug("Added a solver coord={}", solvable.getCoord());
+                        solutionLog.log("Added a solver coord={}", solvable.getCoord());
                         triedPartitions.add(solvable.getCoord());
                         futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                         n++;
@@ -93,27 +96,29 @@ public class MiruLowestLatencySolver implements MiruSolver {
                             // should be few enough of these that we prefer a linear lookup
                             for (SolvableFuture<R> f : futures) {
                                 if (f.future == future) {
-                                    log.debug("Got a solution coord={}", f.solvable.getCoord());
+                                    solutionLog.log("Got a solution coord={}.", f.solvable.getCoord());
                                     long usedResultElapsed = System.currentTimeMillis() - f.startTime;
                                     long totalElapsed = System.currentTimeMillis() - startTime;
                                     solved = new MiruSolved<>(
                                             new MiruSolution(f.solvable.getCoord(),
-                                                usedResultElapsed,
-                                                totalElapsed,
-                                                orderedPartitions,
-                                                triedPartitions,
-                                                response.log),
+                                                    usedResultElapsed,
+                                                    totalElapsed,
+                                                    orderedPartitions,
+                                                    triedPartitions,
+                                                    response.log),
                                             response.answer);
                                     break;
                                 }
                             }
                             if (solved == null) {
                                 log.error("Unmatched future");
+                                solutionLog.log("Unmatched future.");
                             }
                             break;
                         }
                     } catch (ExecutionException e) {
                         log.debug("Solver failed to execute", e.getCause());
+                        solutionLog.log("Solver failed to execute.");
                     }
                 }
             }

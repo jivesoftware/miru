@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.solver;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruSolvable;
 import java.util.Iterator;
 import java.util.List;
@@ -11,7 +12,10 @@ import java.util.List;
  */
 public interface MiruSolver {
 
-    <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables, Optional<Long> suggestedTimeoutInMillis, List<MiruPartition> orderedPartitions, boolean debug)
+    <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables,
+            Optional<Long> suggestedTimeoutInMillis,
+            List<MiruPartition> orderedPartitions,
+            MiruSolutionLog solutionLog)
             throws InterruptedException;
 
 }

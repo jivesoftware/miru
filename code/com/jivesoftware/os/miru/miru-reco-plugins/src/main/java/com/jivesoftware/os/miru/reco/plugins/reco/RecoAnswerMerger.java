@@ -4,22 +4,18 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.query.solution.MiruAnswerMerger;
+import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  *
  */
 public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
-
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final int desiredNumberOfDistincts;
 
@@ -30,12 +26,12 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
     /**
      * Merges the last and current results, returning the merged result.
      *
-     * @param last the last merge result
+     * @param last          the last merge result
      * @param currentAnswer the next result to merge
      * @return the merged result
      */
     @Override
-    public RecoAnswer merge(Optional<RecoAnswer> last, RecoAnswer currentAnswer) {
+    public RecoAnswer merge(Optional<RecoAnswer> last, RecoAnswer currentAnswer, MiruSolutionLog solutionLog) {
         if (!last.isPresent()) {
             return currentAnswer;
         }
@@ -66,35 +62,33 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
 
         RecoAnswer mergedAnswer = new RecoAnswer(ImmutableList.copyOf(mergedResults));
 
-        logMergeResult(currentAnswer, lastAnswer, mergedAnswer);
+        logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
         return mergedAnswer;
     }
 
     @Override
-    public RecoAnswer done(Optional<RecoAnswer> last, RecoAnswer alternative) {
+    public RecoAnswer done(Optional<RecoAnswer> last, RecoAnswer alternative, final MiruSolutionLog solutionLog) {
         return last.transform(new Function<RecoAnswer, RecoAnswer>() {
-            @Nullable
             @Override
-            public RecoAnswer apply(@Nullable RecoAnswer answer) {
+            public RecoAnswer apply(RecoAnswer answer) {
                 List<RecoAnswer.Recommendation> results = Lists.newArrayList(answer.results);
-                //long t = System.currentTimeMillis();
+                long t = System.currentTimeMillis();
                 Collections.sort(results);
-                //log.info("mergeReco: sorted in " + (System.currentTimeMillis() - t) + " ms");
+                solutionLog.log("mergeReco: sorted in {} ms", (System.currentTimeMillis() - t));
                 results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
                 return new RecoAnswer(ImmutableList.copyOf(results));
             }
         }).or(alternative);
     }
 
-    private void logMergeResult(RecoAnswer currentAnswer, RecoAnswer lastAnswer, RecoAnswer mergedAnswer) {
-        log.debug("Merged:"
+    private void logMergeResult(RecoAnswer currentAnswer, RecoAnswer lastAnswer, RecoAnswer mergedAnswer, MiruSolutionLog solutionLog) {
+        solutionLog.log("Merged:"
                         + "\n  From: results={}"
                         + "\n  With: results={}"
                         + "\n  To:   results={}",
                 lastAnswer.results.size(),
                 currentAnswer.results.size(),
-                mergedAnswer.results.size()
-        );
+                mergedAnswer.results.size());
     }
 }

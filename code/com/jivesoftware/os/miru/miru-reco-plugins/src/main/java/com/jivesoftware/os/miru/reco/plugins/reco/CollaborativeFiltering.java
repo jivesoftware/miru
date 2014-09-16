@@ -55,19 +55,19 @@ public class CollaborativeFiltering {
 
         BM contributors = possibleContributors(bitmaps, requestContext, request, answer);
         if (solutionLog.isEnabled()) {
-            solutionLog.log("constributors " + bitmaps.cardinality(contributors) + ".");
+            solutionLog.log("constributors {}.", bitmaps.cardinality(contributors));
         }
         BM otherContributors = bitmaps.create();
         bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
         // at this point we have all activity for all my viewed documents in 'contributors', and all activity not my own in 'otherContributors'.
         MinMaxPriorityQueue<MiruTermCount> contributorHeap = rankContributors(bitmaps, request, requestContext, otherContributors);
         if (solutionLog.isEnabled()) {
-            solutionLog.log("not my self " + bitmaps.cardinality(otherContributors) + ".");
+            solutionLog.log("not my self {}.", bitmaps.cardinality(otherContributors));
         }
 
         BM contributions = contributions(bitmaps, contributorHeap, requestContext, request.query);
         if (solutionLog.isEnabled()) {
-            solutionLog.log("contributions " + bitmaps.cardinality(contributions) + ".");
+            solutionLog.log("contributions {}.", bitmaps.cardinality(contributions));
         }
         final List<MiruTermCount> mostLike = new ArrayList<>(contributorHeap);
         final BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100000, 0.01f); // TODO fix somehow
@@ -76,7 +76,7 @@ public class CollaborativeFiltering {
         BM othersContributions = bitmaps.create();
         bitmaps.andNot(othersContributions, contributions, Collections.singletonList(contributors)); // remove activity for my viewed documents
         if (solutionLog.isEnabled()) {
-            solutionLog.log("scorable " + bitmaps.cardinality(othersContributions) + ".");
+            solutionLog.log("scorable {}.", bitmaps.cardinality(othersContributions));
         }
         return score(bitmaps, request, othersContributions, requestContext, bloomIndex, wantBits);
 
