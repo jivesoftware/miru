@@ -50,7 +50,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         BM filtered = bitmaps.create();
         aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, request.query.constraintsFilter, filtered, -1);
         if (solutionLog.isEnabled()) {
-            solutionLog.log("constrained down to "+bitmaps.cardinality(filtered)+" items.");
+            solutionLog.log("constrained down to " + bitmaps.cardinality(filtered) + " items.");
         }
         ands.add(filtered);
 
@@ -58,7 +58,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             BM compositeAuthz = stream.authzIndex.getCompositeAuthz(request.authzExpression);
             if (solutionLog.isEnabled()) {
-                solutionLog.log("compositeAuthz contains "+bitmaps.cardinality(compositeAuthz)+" items.");
+                solutionLog.log("compositeAuthz contains " + bitmaps.cardinality(compositeAuthz) + " items.");
             }
             ands.add(compositeAuthz);
         }
@@ -76,12 +76,12 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         bitmaps.and(answer, ands);
 
         if (solutionLog.isEnabled()) {
-            solutionLog.log("considering "+bitmaps.cardinality(answer)+" items.");
+            solutionLog.log("considering " + bitmaps.cardinality(answer) + " items.");
         }
 
         return new MiruPartitionResponse<>(
-            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, stream, request, report, answer),
-            solutionLog.asList()
+                collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, stream, request, report, answer),
+                solutionLog.asList()
         );
     }
 

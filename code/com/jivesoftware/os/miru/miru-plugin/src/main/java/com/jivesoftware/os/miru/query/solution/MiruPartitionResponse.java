@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
- *
  * @author jonathan.colt
  */
 public class MiruPartitionResponse<A> {
@@ -14,8 +13,8 @@ public class MiruPartitionResponse<A> {
     public final List<String> log;
 
     @JsonCreator
-    public MiruPartitionResponse(@JsonProperty ("answer") A answer,
-        @JsonProperty ("log") List<String> log) {
+    public MiruPartitionResponse(@JsonProperty("answer") A answer,
+            @JsonProperty("log") List<String> log) {
         this.answer = answer;
         this.log = log;
     }

@@ -13,7 +13,6 @@ import com.jivesoftware.os.miru.query.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.query.solution.MiruRequest;
-import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
@@ -41,7 +40,7 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
 
     @Override
     public <BM> MiruPartitionResponse<TrendingAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
-        MiruSolutionLog  solutionLog = new MiruSolutionLog(request.debug);
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
@@ -54,7 +53,7 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
         if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
             LOG.debug("No time index intersection");
             return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, bitmaps.create()),
-                solutionLog.asList());
+                    solutionLog.asList());
         }
         ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
 
@@ -76,12 +75,13 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
         bitmapsDebug.debug(LOG, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, answer),solutionLog.asList());
+        return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, answer), solutionLog.asList());
 
     }
 
     @Override
-    public MiruPartitionResponse<TrendingAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<TrendingReport> report) throws Exception {
+    public MiruPartitionResponse<TrendingAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<TrendingReport> report)
+            throws Exception {
         return new TrendingRemotePartitionReader(requestHelper).scoreTrending(partitionId, request, report);
     }
 

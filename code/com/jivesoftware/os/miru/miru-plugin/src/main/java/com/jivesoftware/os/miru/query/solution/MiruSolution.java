@@ -19,14 +19,12 @@ public class MiruSolution {
     public final List<String> log;
 
     @JsonCreator
-    public MiruSolution(@JsonProperty (value = "usedPartition") MiruPartitionCoord usedPartition,
-        @JsonProperty (value = "usedResultElapsed") long usedResultElapsed,
-        @JsonProperty (value = "totalElapsed") long totalElapsed,
-        @JsonProperty (value = "orderedPartitions") List<MiruPartition> orderedPartitions,
-        @JsonProperty (value = "triedPartitions") List<MiruPartitionCoord> triedPartitions,
-        @JsonProperty (value = "log") List<String> log
-    ) {
-
+    public MiruSolution(@JsonProperty("usedPartition") MiruPartitionCoord usedPartition,
+            @JsonProperty("usedResultElapsed") long usedResultElapsed,
+            @JsonProperty("totalElapsed") long totalElapsed,
+            @JsonProperty("orderedPartitions") List<MiruPartition> orderedPartitions,
+            @JsonProperty("triedPartitions") List<MiruPartitionCoord> triedPartitions,
+            @JsonProperty("log") List<String> log) {
         this.usedPartition = usedPartition;
         this.orderedPartitions = orderedPartitions;
         this.triedPartitions = triedPartitions;
@@ -38,12 +36,12 @@ public class MiruSolution {
     @Override
     public String toString() {
         return "MiruSolution{"
-            + "usedPartition=" + usedPartition
-            + ", usedResultElapsed=" + usedResultElapsed
-            + ", totalElapsed=" + totalElapsed
-            + ", orderedPartitions=" + orderedPartitions
-            + ", triedPartitions=" + triedPartitions
-            + ", log=" + log
-            + '}';
+                + "usedPartition=" + usedPartition
+                + ", usedResultElapsed=" + usedResultElapsed
+                + ", totalElapsed=" + totalElapsed
+                + ", orderedPartitions=" + orderedPartitions
+                + ", triedPartitions=" + triedPartitions
+                + ", log=" + log
+                + '}';
     }
 }

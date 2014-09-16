@@ -129,7 +129,9 @@ public class MiruStreamServiceNGTest {
                     int indexSize = p * (capacity / passes) + i;
                     System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
                         + " millis ratePerSecond:" + formatter.format(1000 * (activities.size() / e)));
-                    System.out.println("\t\tIndexSize:" + formatter.format(indexSize) + " sizeInBytes:" + formatter.format(service.sizeInBytes()));
+                    System.out.println("\t\tIndexSize:" + formatter.format(indexSize) +
+                            " sizeInMemory:" + formatter.format(service.sizeInMemory(tenant1)) +
+                            " sizeOnDisk:" + formatter.format(service.sizeOnDisk(tenant1)));
 
                     activities.clear();
                 }
@@ -142,7 +144,9 @@ public class MiruStreamServiceNGTest {
                 int indexSize = (p + 1) * (capacity / passes);
                 System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
                     + " millis ratePerSecond:" + formatter.format(1000 * (activities.size() / e)));
-                System.out.println("\t\tIndexSize:" + formatter.format(indexSize) + " sizeInBytes:" + formatter.format(service.sizeInBytes()));
+                System.out.println("\t\tIndexSize:" + formatter.format(indexSize) +
+                        " sizeInMemory:" + formatter.format(service.sizeInMemory(tenant1)) +
+                        " sizeOnDisk:" + formatter.format(service.sizeOnDisk(tenant1)));
             }
 
             //System.out.println("Adding " + activities.size() + " activities.");

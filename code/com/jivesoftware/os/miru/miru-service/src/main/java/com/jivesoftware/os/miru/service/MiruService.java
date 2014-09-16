@@ -94,13 +94,35 @@ public class MiruService implements Miru {
         }
     }
 
-    public long sizeInBytes() {
-        return -1;
+    public long sizeInMemory(MiruTenantId tenantId) throws Exception {
+        long size = 0;
+        for (OrderedPartitions orderedPartitions : partitionDirector.allQueryablePartitionsInOrder(tenantId)) {
+            for (MiruHostedPartition<?> partition : orderedPartitions.partitions) {
+                size += partition.sizeInMemory();
+            }
+        }
+        return size;
+    }
+
+    public long sizeOnDisk(MiruTenantId tenantId) throws Exception {
+        long size = 0;
+        for (OrderedPartitions orderedPartitions : partitionDirector.allQueryablePartitionsInOrder(tenantId)) {
+            for (MiruHostedPartition<?> partition : orderedPartitions.partitions) {
+                size += partition.sizeOnDisk();
+            }
+        }
+        return size;
     }
 
     @Override
     public <A, P> MiruResponse<A> askAndMerge(
-        MiruTenantId tenantId, final MiruSolvableFactory<A, P> solvableFactory, MiruAnswerEvaluator<A> evaluator, MiruAnswerMerger<A> merger, A defaultValue, boolean debug) throws Exception {
+            MiruTenantId tenantId,
+            final MiruSolvableFactory<A, P> solvableFactory,
+            MiruAnswerEvaluator<A> evaluator,
+            MiruAnswerMerger<A> merger,
+            A defaultValue,
+            boolean debug)
+            throws Exception {
 
         log.startTimer("askAndMerge");
 
@@ -169,7 +191,13 @@ public class MiruService implements Miru {
 
     @Override
     public <A, P> MiruPartitionResponse<A> askImmediate(
-        MiruTenantId tenantId, MiruPartitionId partitionId, MiruSolvableFactory<A, P> factory, Optional<P> report, A defaultValue, boolean debug) throws Exception {
+            MiruTenantId tenantId,
+            MiruPartitionId partitionId,
+            MiruSolvableFactory<A, P> factory,
+            Optional<P> report,
+            A defaultValue,
+            boolean debug)
+            throws Exception {
         Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
@@ -184,7 +212,7 @@ public class MiruService implements Miru {
             return answer;
         } else {
             return new MiruPartitionResponse<>(defaultValue,
-                (debug) ? Arrays.asList("partition is NOT present. partitionId:"+partitionId) : null);
+                    (debug) ? Arrays.asList("partition is NOT present. partitionId:" + partitionId) : null);
         }
     }
 

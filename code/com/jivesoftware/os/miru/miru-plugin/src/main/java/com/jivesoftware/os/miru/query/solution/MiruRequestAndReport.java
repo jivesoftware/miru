@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- *
  * @author jonathan.colt
  */
 public class MiruRequestAndReport<Q, R> {
@@ -14,8 +13,8 @@ public class MiruRequestAndReport<Q, R> {
 
     @JsonCreator
     public MiruRequestAndReport(
-        @JsonProperty ("request") MiruRequest<Q> request,
-        @JsonProperty ("report") R report) {
+            @JsonProperty("request") MiruRequest<Q> request,
+            @JsonProperty("report") R report) {
         this.request = request;
         this.report = report;
     }

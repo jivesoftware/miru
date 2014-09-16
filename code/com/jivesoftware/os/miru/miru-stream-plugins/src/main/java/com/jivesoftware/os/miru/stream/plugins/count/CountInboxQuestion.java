@@ -68,7 +68,8 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
                 LOG.debug("No time index intersection");
-                return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, bitmaps.create()),solutionLog.asList());
+                return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(
+                        bitmaps, stream, request, report, bitmaps.create()), solutionLog.asList());
             }
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
@@ -79,7 +80,7 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
         } else {
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
-            return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, bitmaps.create()),solutionLog.asList());
+            return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, bitmaps.create()), solutionLog.asList());
         }
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {

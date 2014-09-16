@@ -81,11 +81,13 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         }
 
         return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.fromNullable(counter)),
-        solutionLog.asList());
+                solutionLog.asList());
     }
 
     @Override
-    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsReport> report)
+    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper,
+            MiruPartitionId partitionId,
+            Optional<AggregateCountsReport> report)
             throws Exception {
         return new AggregateCountsRemotePartitionReader(requestHelper).filterCustomStream(partitionId, request, report);
     }

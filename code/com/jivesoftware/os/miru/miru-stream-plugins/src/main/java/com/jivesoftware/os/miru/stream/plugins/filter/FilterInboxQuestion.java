@@ -69,8 +69,9 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
                 LOG.debug("No answer time index intersection");
-                return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
-                solutionLog.asList());
+                return new MiruPartitionResponse<>(
+                        aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                        solutionLog.asList());
             }
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
@@ -80,8 +81,9 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
             // Short-circuit if the time range doesn't live here
             if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
                 LOG.debug("No count time index intersection");
-                return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
-                    solutionLog.asList());
+                return new MiruPartitionResponse<>(
+                        aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                        solutionLog.asList());
             }
             counterAnds.add(bitmaps.buildTimeRangeMask(
                     stream.timeIndex, request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp));
@@ -93,8 +95,9 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         } else {
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
-            return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
-                solutionLog.asList());
+            return new MiruPartitionResponse<>(
+                    aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                    solutionLog.asList());
         }
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
@@ -131,12 +134,15 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         bitmapsDebug.debug(LOG, bitmaps, "counterAnds", ands);
         bitmaps.and(counter, counterAnds);
 
-        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.of(counter)),
-            solutionLog.asList());
+        return new MiruPartitionResponse<>(
+                aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.of(counter)),
+                solutionLog.asList());
     }
 
     @Override
-    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AggregateCountsReport> report)
+    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper,
+            MiruPartitionId partitionId,
+            Optional<AggregateCountsReport> report)
             throws Exception {
         AggregateCountsRemotePartitionReader reader = new AggregateCountsRemotePartitionReader(requestHelper);
         if (unreadOnly) {
