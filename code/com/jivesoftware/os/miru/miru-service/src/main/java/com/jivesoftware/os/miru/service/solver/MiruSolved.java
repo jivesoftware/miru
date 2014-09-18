@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.solver;
 
-import com.jivesoftware.os.miru.query.solution.MiruSolution;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
 
 /**
  *

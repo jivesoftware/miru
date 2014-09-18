@@ -12,9 +12,9 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.query.partition.MiruHostedPartition;
-import com.jivesoftware.os.miru.query.partition.MiruPartitionDirector;
-import com.jivesoftware.os.miru.query.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
+import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
+import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import java.util.Collections;
 import java.util.List;
 

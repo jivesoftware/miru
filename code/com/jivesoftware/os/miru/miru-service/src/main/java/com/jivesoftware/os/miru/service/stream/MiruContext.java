@@ -2,9 +2,9 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.miru.query.context.MiruReadTrackContext;
-import com.jivesoftware.os.miru.query.context.MiruRequestContext;
-import com.jivesoftware.os.miru.query.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.context.MiruReadTrackContext;
+import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;

@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -18,10 +17,6 @@ import java.util.Map;
 public class CollaborativeFilterUtil {
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
-
-    public String makeComposite(String fieldValue, String separator, String fieldName) {
-        return Joiner.on("").join(fieldValue, separator, fieldName);
-    }
 
     public MiruPartitionedActivity viewActivity(MiruTenantId tenantId, MiruPartitionId partitionId, long time, String user, String doc) {
         Map<String, List<String>> fieldsValues = Maps.newHashMap();

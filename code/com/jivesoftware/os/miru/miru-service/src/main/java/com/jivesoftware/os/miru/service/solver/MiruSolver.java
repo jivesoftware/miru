@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.service.solver;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
-import com.jivesoftware.os.miru.query.solution.MiruSolvable;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolvable;
 import java.util.Iterator;
 import java.util.List;
 

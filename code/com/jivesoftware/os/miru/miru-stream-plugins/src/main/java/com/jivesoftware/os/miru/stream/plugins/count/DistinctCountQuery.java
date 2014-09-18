@@ -3,10 +3,8 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 
 /**
  *

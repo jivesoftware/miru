@@ -19,7 +19,7 @@ import com.jivesoftware.os.jive.utils.io.ByteArrayFiler;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.query.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

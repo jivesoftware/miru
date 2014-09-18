@@ -5,6 +5,7 @@
  */
 package com.jivesoftware.os.miru.reco.plugins;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.jivesoftware.os.jive.utils.id.Id;
@@ -15,16 +16,17 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
-import com.jivesoftware.os.miru.query.MiruProvider;
-import com.jivesoftware.os.miru.query.index.MiruIndexUtil;
-import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
-import com.jivesoftware.os.miru.query.solution.MiruRequest;
-import com.jivesoftware.os.miru.query.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
+import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
@@ -52,6 +54,7 @@ public class MiruCollaborativeFilterNGTest {
     MiruPartitionId partitionId = MiruPartitionId.of(1);
     MiruHost miruHost = new MiruHost("logicalName", 1234);
     CollaborativeFilterUtil util = new CollaborativeFilterUtil();
+    MiruIndexUtil indexUtil = new MiruIndexUtil();
 
     MiruService service;
     RecoInjectable injectable;
@@ -123,7 +126,8 @@ public class MiruCollaborativeFilterNGTest {
 
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + rand.nextInt(numberOfUsers);
-            MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(util.makeComposite(user, "^", "doc")));
+            MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(
+                    indexUtil.makeFieldValueAggregate(new MiruTermId(user.getBytes(Charsets.UTF_8)), "doc").toString()));
             MiruFilter filter = new MiruFilter(
                 MiruFilterOperation.or,
                 Optional.of(Arrays.asList(miruFieldFilter)),

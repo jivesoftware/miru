@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.query.index.MiruActivityIndex;
-import com.jivesoftware.os.miru.query.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.util.Arrays;

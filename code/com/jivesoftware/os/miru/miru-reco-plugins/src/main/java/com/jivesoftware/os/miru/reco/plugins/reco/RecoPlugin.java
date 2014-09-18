@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
-import com.jivesoftware.os.miru.query.Miru;
-import com.jivesoftware.os.miru.query.MiruProvider;
-import com.jivesoftware.os.miru.query.index.MiruIndexUtil;
-import com.jivesoftware.os.miru.query.plugin.MiruEndpointInjectable;
-import com.jivesoftware.os.miru.query.plugin.MiruPlugin;
-import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.plugin.Miru;
+import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
+import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
+import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import java.util.Collection;
 import java.util.Collections;
 

@@ -6,14 +6,14 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.query.Miru;
-import com.jivesoftware.os.miru.query.MiruProvider;
-import com.jivesoftware.os.miru.query.partition.MiruPartitionUnavailableException;
-import com.jivesoftware.os.miru.query.solution.MiruPartitionResponse;
-import com.jivesoftware.os.miru.query.solution.MiruRequest;
-import com.jivesoftware.os.miru.query.solution.MiruRequestAndReport;
-import com.jivesoftware.os.miru.query.solution.MiruResponse;
-import com.jivesoftware.os.miru.query.solution.MiruSolvableFactory;
+import com.jivesoftware.os.miru.plugin.Miru;
+import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
+import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 
 /**
  *
@@ -49,7 +49,7 @@ public class TrendingInjectable {
     }
 
     public MiruPartitionResponse<TrendingAnswer> scoreTrending(MiruPartitionId partitionId,
-            MiruRequestAndReport<TrendingQuery,TrendingReport> requestAndReport)
+            MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport)
             throws MiruQueryServiceException {
         try {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);

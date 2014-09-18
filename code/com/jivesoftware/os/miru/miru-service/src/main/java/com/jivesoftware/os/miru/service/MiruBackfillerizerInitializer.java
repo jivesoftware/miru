@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.query.index.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 

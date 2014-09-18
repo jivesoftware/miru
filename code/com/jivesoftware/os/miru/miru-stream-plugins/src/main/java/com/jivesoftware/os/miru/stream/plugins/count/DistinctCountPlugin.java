@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.stream.plugins.count;
 
-import com.jivesoftware.os.miru.query.Miru;
-import com.jivesoftware.os.miru.query.MiruProvider;
-import com.jivesoftware.os.miru.query.plugin.MiruEndpointInjectable;
-import com.jivesoftware.os.miru.query.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.Miru;
+import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
+import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import java.util.Collection;
 import java.util.Collections;
 

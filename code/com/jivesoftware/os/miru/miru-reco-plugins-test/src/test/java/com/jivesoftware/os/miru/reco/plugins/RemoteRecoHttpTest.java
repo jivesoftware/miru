@@ -18,9 +18,9 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.query.solution.MiruRequest;
-import com.jivesoftware.os.miru.query.solution.MiruResponse;
-import com.jivesoftware.os.miru.query.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
@@ -61,12 +61,12 @@ public class RemoteRecoHttpTest {
                             Arrays.asList(102, 1, 18, 38, 801, 1464927464, -960826044),
                             Functions.toStringFunction())),
                     new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
-                                0, //viewed
-                                11, //liked
-                                1, //created
-                                65 //outcome_set
-                            ), Functions.toStringFunction()))
-                )),
+                            0, //viewed
+                            11, //liked
+                            1, //created
+                            65 //outcome_set
+                    ), Functions.toStringFunction()))
+            )),
             Optional.<List<MiruFilter>>absent());
 
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();

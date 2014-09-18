@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.service.bitmap;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.query.bitmap.CardinalityAndLastSetBit;
-import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import java.util.Collections;
 import java.util.List;
 import org.testng.annotations.DataProvider;

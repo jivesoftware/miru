@@ -9,17 +9,17 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.query.index.BloomIndex;
-import com.jivesoftware.os.miru.query.index.MiruActivityIndex;
-import com.jivesoftware.os.miru.query.index.MiruActivityInternExtern;
-import com.jivesoftware.os.miru.query.index.MiruAuthzIndex;
-import com.jivesoftware.os.miru.query.index.MiruField;
-import com.jivesoftware.os.miru.query.index.MiruFields;
-import com.jivesoftware.os.miru.query.index.MiruIndexUtil;
-import com.jivesoftware.os.miru.query.index.MiruInternalActivity;
-import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.query.index.MiruRemovalIndex;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BloomIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruField;
+import com.jivesoftware.os.miru.plugin.index.MiruFields;
+import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
+import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 import java.util.List;
 import java.util.Set;
 
@@ -165,7 +165,7 @@ public class MiruIndexContext<BM> {
                     MiruTermId[] bloomFieldValues = activity.fieldsValues[bloomsFieldId];
                     if (bloomFieldValues != null && bloomFieldValues.length > 0) {
                         for (MiruTermId fieldValue : fieldValues) {
-                            MiruTermId compositeBloomId = indexUtil.makeComposite(fieldValue, "|", bloomsFieldName);
+                            MiruTermId compositeBloomId = indexUtil.makeBloomComposite(fieldValue, bloomsFieldName);
                             MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeBloomId);
                             bloomIndex.put(invertedIndex, bloomFieldValues);
                         }
@@ -185,8 +185,7 @@ public class MiruIndexContext<BM> {
                 // "What is the latest activity against each distinct value of this field?"
                 boolean writeTimeAggregate = miruField.getFieldDefinition().writeTimeAggregate;
                 if (writeTimeAggregate) {
-                    MiruTermId miruTermId = indexUtil.makeComposite(
-                            new MiruTermId(MiruSchema.RESERVED_AGGREGATE.getBytes()), "~", MiruSchema.RESERVED_AGGREGATE);
+                    MiruTermId miruTermId = indexUtil.makeFieldAggregate();
                     MiruInvertedIndex<BM> aggregateIndex = miruField.getOrCreateInvertedIndex(miruTermId);
 
                     // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
@@ -211,7 +210,7 @@ public class MiruIndexContext<BM> {
                             for (MiruTermId aggregateFieldValue : aggregateFieldValues) {
                                 MiruInvertedIndex<BM> aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
                                 for (MiruTermId fieldValue : fieldValues) {
-                                    MiruTermId compositeAggregateId = indexUtil.makeComposite(fieldValue, "^", aggregateFieldName);
+                                    MiruTermId compositeAggregateId = indexUtil.makeFieldValueAggregate(fieldValue, aggregateFieldName);
                                     MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeAggregateId);
 
                                     invertedIndex.andNotToSourceSize(aggregateInvertedIndex.getIndex());

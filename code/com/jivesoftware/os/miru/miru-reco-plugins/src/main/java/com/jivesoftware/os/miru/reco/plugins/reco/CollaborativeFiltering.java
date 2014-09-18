@@ -8,17 +8,17 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.query.bitmap.MiruIntIterator;
-import com.jivesoftware.os.miru.query.context.MiruRequestContext;
-import com.jivesoftware.os.miru.query.index.BloomIndex;
-import com.jivesoftware.os.miru.query.index.MiruField;
-import com.jivesoftware.os.miru.query.index.MiruIndexUtil;
-import com.jivesoftware.os.miru.query.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.query.solution.MiruAggregateUtil;
-import com.jivesoftware.os.miru.query.solution.MiruRequest;
-import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
-import com.jivesoftware.os.miru.query.solution.MiruTermCount;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BloomIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruField;
+import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruTermCount;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer.Recommendation;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,7 +57,7 @@ public class CollaborativeFiltering {
 
         BM contributors = possibleContributors(bitmaps, requestContext, request, answer);
         if (solutionLog.isEnabled()) {
-            solutionLog.log("constributors {}.", bitmaps.cardinality(contributors));
+            solutionLog.log("contributors {}.", bitmaps.cardinality(contributors));
         }
         BM otherContributors = bitmaps.create();
         bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
@@ -106,7 +106,8 @@ public class CollaborativeFiltering {
 
         List<BM> toBeORed = new ArrayList<>();
         for (MiruTermCount tc : userHeap) {
-            Optional<MiruInvertedIndex<BM>> invertedIndex = lookupField2.getInvertedIndex(indexUtil.makeComposite(tc.termId, "^", query.aggregateFieldName3));
+            Optional<MiruInvertedIndex<BM>> invertedIndex = lookupField2.getInvertedIndex(
+                    indexUtil.makeFieldValueAggregate(tc.termId, query.aggregateFieldName3));
             if (invertedIndex.isPresent()) {
                 toBeORed.add(invertedIndex.get().getIndex());
             }
@@ -146,21 +147,21 @@ public class CollaborativeFiltering {
         return userHeap;
     }
 
-    private <BM> BM possibleContributors(MiruBitmaps<BM> bitmaps, MiruRequestContext<BM> requestContext, final MiruRequest<RecoQuery> request, BM answer) throws
-            Exception {
+    private <BM> BM possibleContributors(MiruBitmaps<BM> bitmaps, MiruRequestContext<BM> requestContext, final MiruRequest<RecoQuery> request, BM answer)
+            throws Exception {
         MiruField<BM> aggregateField1 = requestContext.fieldIndex.getField(requestContext.schema.getFieldId(request.query.aggregateFieldName1));
-        // feeds us our docIds
         List<BM> toBeORed = new ArrayList<>();
         MiruIntIterator answerIterator = bitmaps.intIterator(answer);
         int fieldId = requestContext.schema.getFieldId(request.query.aggregateFieldName1);
         log.debug("possibleContributors: fieldId={}", fieldId);
+        // feeds us our docIds
         while (answerIterator.hasNext()) {
             int id = answerIterator.next();
             MiruTermId[] fieldValues = requestContext.activityIndex.get(request.tenantId, id, fieldId);
             log.trace("possibleContributors: fieldValues={}", (Object) fieldValues);
             if (fieldValues != null && fieldValues.length > 0) {
                 Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField1.getInvertedIndex(
-                        indexUtil.makeComposite(fieldValues[0], "^", request.query.aggregateFieldName2));
+                        indexUtil.makeFieldValueAggregate(fieldValues[0], request.query.aggregateFieldName2));
                 if (invertedIndex.isPresent()) {
                     toBeORed.add(invertedIndex.get().getIndex());
                 }
@@ -197,7 +198,7 @@ public class CollaborativeFiltering {
                             log.trace("score.fieldValues={}", (Object) fieldValues);
                             if (fieldValues != null && fieldValues.length > 0) {
                                 Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField3.getInvertedIndex(
-                                        indexUtil.makeComposite(fieldValues[0], "|", request.query.retrieveFieldName2));
+                                        indexUtil.makeBloomComposite(fieldValues[0], request.query.retrieveFieldName2));
                                 if (invertedIndex.isPresent()) {
                                     MiruInvertedIndex<BM> index = invertedIndex.get();
                                     final MutableInt count = new MutableInt(0);

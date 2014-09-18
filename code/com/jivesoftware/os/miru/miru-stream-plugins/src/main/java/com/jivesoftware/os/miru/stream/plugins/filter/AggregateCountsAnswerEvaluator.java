@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
-import com.jivesoftware.os.miru.query.solution.MiruAnswerEvaluator;
-import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 
 /**
 *

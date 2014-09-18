@@ -9,10 +9,10 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.query.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.query.context.MiruRequestContext;
-import com.jivesoftware.os.miru.query.partition.MiruHostedPartition;
-import com.jivesoftware.os.miru.query.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 

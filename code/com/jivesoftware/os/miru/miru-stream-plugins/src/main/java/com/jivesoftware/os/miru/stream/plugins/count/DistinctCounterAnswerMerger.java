@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.query.solution.MiruAnswerMerger;
-import com.jivesoftware.os.miru.query.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 
 /**
  * @author jonathan
