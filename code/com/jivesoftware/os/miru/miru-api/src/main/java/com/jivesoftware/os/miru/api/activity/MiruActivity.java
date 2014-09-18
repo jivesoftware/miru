@@ -114,7 +114,7 @@ public class MiruActivity {
                 + '}';
     }
 
-    public static final class Builder {
+    public static class Builder {
 
         private final MiruTenantId tenantId;
         private final long time;

@@ -9,7 +9,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Taken from Google Caliper so we can upload our own results
  */
-public final class Scenario {
+public class Scenario {
     static final Scenario DEFAULT = new Scenario();
 
     private BenchmarkSpec benchmarkSpec;
@@ -59,7 +59,7 @@ public final class Scenario {
             .toString();
     }
 
-    public static final class Builder {
+    public static class Builder {
         private BenchmarkSpec benchmarkSpec;
 
         public Builder benchmarkSpec(BenchmarkSpec.Builder benchmarkSpecBuilder) {

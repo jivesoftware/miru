@@ -153,7 +153,7 @@ public class MiruIndexContext<BM> {
     }
 
     private void indexBloomins(MiruInternalActivity activity) throws Exception {
-        BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100000, 0.01f); // TODO fix so how
+        BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix so how
 
         for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
             MiruField<BM> miruField = fieldIndex.getField(fieldId);

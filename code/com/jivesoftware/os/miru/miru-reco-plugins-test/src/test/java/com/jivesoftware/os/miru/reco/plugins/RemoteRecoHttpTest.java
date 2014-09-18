@@ -42,7 +42,7 @@ import static org.testng.Assert.assertNotNull;
 public class RemoteRecoHttpTest {
 
     private static final String REMOTE_HOST = "soa-prime-data6.phx1.jivehosted.com";
-    private static final int REMOTE_PORT = 10004;
+    private static final int REMOTE_PORT = 10_004;
 
     @Test (enabled = false, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
@@ -58,7 +58,7 @@ public class RemoteRecoHttpTest {
         MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
             Optional.of(Arrays.asList(
                     new MiruFieldFilter("objectType", Lists.transform(
-                            Arrays.asList(102, 1, 18, 38, 801, 1464927464, -960826044),
+                            Arrays.asList(102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
                             Functions.toStringFunction())),
                     new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
                             0, //viewed
@@ -73,7 +73,7 @@ public class RemoteRecoHttpTest {
         long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
         long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
         long packThreeDays = snowflakeIdPacker.pack(TimeUnit.DAYS.toMillis(30), 0, 0);
-        MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3765)),
+        MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3_765)),
             MiruAuthzExpression.NOT_PROVIDED,
             new TrendingQuery(
                 new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
@@ -92,7 +92,7 @@ public class RemoteRecoHttpTest {
         }
     }
 
-    @Test (enabled = true, description = "Needs REMOTE constants")
+    @Test (enabled = false, description = "Needs REMOTE constants")
     public void testSystemRecommended() throws Exception {
 
         String tenant = "999";
@@ -106,7 +106,7 @@ public class RemoteRecoHttpTest {
 
         MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
             Optional.of(Arrays.asList(
-                    new MiruFieldFilter("user", Arrays.asList(String.valueOf(3181))), //   3765  2902 3251 3816 3181 5723
+                    new MiruFieldFilter("user", Arrays.asList(String.valueOf(3_181))), //   3765  2902 3251 3816 3181 5723
                     /*new MiruFieldFilter("objectType", Lists.transform(
                             Arrays.asList(102, 1, 18, 38, 801, 1464927464, -960826044),
                             Functions.toStringFunction())),*/
@@ -127,7 +127,7 @@ public class RemoteRecoHttpTest {
 
 
         MiruRequest<RecoQuery> request = new MiruRequest<>(tenantId,
-            new MiruActorId(new Id(3765)),
+            new MiruActorId(new Id(3_765)),
             MiruAuthzExpression.NOT_PROVIDED,
             new RecoQuery(constraintsFilter,
                 "parent", "parent", "parent",

@@ -13,7 +13,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Taken from Google Caliper so we can upload our own results
  */
-public final class InstrumentSpec {
+public class InstrumentSpec {
     static final InstrumentSpec DEFAULT = new InstrumentSpec();
 
     private int id;
@@ -73,7 +73,7 @@ public final class InstrumentSpec {
             .toString();
     }
 
-    public static final class Builder {
+    public static class Builder {
         private String className;
         private final SortedMap<String, String> options = Maps.newTreeMap();
 

@@ -140,7 +140,7 @@ public class SimpleRegressionTrend implements Trender<Long, GotSimpleRegressionT
         double[] smooth = raw; // with low hit counts this does more harm than good! MathFunctions.ema(raw, lookBack);
         int l = smooth.length;
         for (int i = 0; i < l; i++) {
-            double s = (double) i / (double) (l - 1);
+            double s = i / (l - 1);
             r.addData(s, smooth[i]);
         }
         return r;
@@ -272,10 +272,10 @@ public class SimpleRegressionTrend implements Trender<Long, GotSimpleRegressionT
             }
         }
         int l = raw.length;
-        double gainPerStep = max / (double) l;
+        double gainPerStep = max / l;
         double v = 0;
         for (int i = 0; i < l; i++) {
-            double s = (double) i / (double) (l - 1);
+            double s = i / (l - 1);
             r.addData(s, v);
             v += gainPerStep;
         }

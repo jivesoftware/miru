@@ -149,7 +149,7 @@ public class MiruInternalActivity {
         return sb.toString();
     }
 
-    public static final class Builder {
+    public static class Builder {
 
         private final MiruSchema schema;
         private final MiruTenantId tenantId;

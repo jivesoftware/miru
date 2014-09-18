@@ -12,7 +12,7 @@ public interface MiruClientConfig extends Config {
     @IntDefault(10)
     Integer getSendActivitiesThreadPoolSize();
 
-    @IntDefault(10000)
+    @IntDefault(10_000)
     Integer getSocketTimeoutInMillis();
 
     @IntDefault(100)

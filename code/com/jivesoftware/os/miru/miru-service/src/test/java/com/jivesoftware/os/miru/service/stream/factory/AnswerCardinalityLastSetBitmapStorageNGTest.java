@@ -19,8 +19,8 @@ public class AnswerCardinalityLastSetBitmapStorageNGTest {
 
     @Test
     public void testLastSet() {
-        Random random = new Random(1234);
-        for (int maxSize = 10; maxSize < 1000000; maxSize *= 2) {
+        Random random = new Random(1_234);
+        for (int maxSize = 10; maxSize < 1_000_000; maxSize *= 2) {
             for (int i = 0; i < 10; i++) {
                 int lastSetA = maxSize + random.nextInt(3);
                 EWAHCompressedBitmap a = randoBagoBitso(random, maxSize, lastSetA);
@@ -35,7 +35,7 @@ public class AnswerCardinalityLastSetBitmapStorageNGTest {
 
                 result = new EWAHCompressedBitmap();
                 answerCollector = new AnswerCardinalityLastSetBitmapStorage(result);
-                FastAggregation.bufferedorWithContainer(answerCollector, 1024, a, b);
+                FastAggregation.bufferedorWithContainer(answerCollector, 1_024, a, b);
 
             }
         }

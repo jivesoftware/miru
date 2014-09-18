@@ -76,7 +76,7 @@ public class MiruFieldTest {
         File chunkFile = new File(chunkDirectory, "chunk");
         File fieldMapDirectory = Files.createTempDirectory(getClass().getSimpleName()).toFile();
 
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), 5120, false); // 512 min size, times 10 field indexes
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), 5_120, false); // 512 min size, times 10 field indexes
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskField<EWAHCompressedBitmap> miruOnDiskField = new MiruOnDiskField<>(
                 fieldDefinition,

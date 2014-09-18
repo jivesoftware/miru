@@ -52,7 +52,7 @@ public class MiruIBA implements Comparable {
         }
 
         int hash = 0;
-        long randMult = 0x5DEECE66DL;
+        long randMult = 0x5_DEEC_E66DL;
         long randAdd = 0xBL;
         long randMask = (1L << 48) - 1;
         long seed = bytes.length;

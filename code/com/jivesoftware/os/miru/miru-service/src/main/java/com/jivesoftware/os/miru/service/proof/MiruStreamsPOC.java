@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MiruStreamsPOC {
 
     public static void main(String[] args) {
-        Random rand = new Random(123345);
+        Random rand = new Random(123_345);
 
         MiruStreamsPOC streamsPOC = new MiruStreamsPOC();
 
@@ -30,7 +30,7 @@ public class MiruStreamsPOC {
                 int term = rand.nextInt(numTermsPerField[field]);
                 streamsPOC.add(id, field, new int[] { term });
             }
-            if (docId % 1000 == 0) {
+            if (docId % 1_000 == 0) {
                 System.out.println("indexed " + docId);
             }
         }
@@ -88,11 +88,11 @@ public class MiruStreamsPOC {
         System.out.println("Query fieldQuerys:" + fieldQuerys.size() + " lookingIn:" + bitmaps.size());
         EWAHCompressedBitmap answer = new EWAHCompressedBitmap();
         if (resultCount < 1) {
-            FastAggregation.bufferedorWithContainer(answer, 1024, bitmaps.toArray(new EWAHCompressedBitmap[bitmaps.size()]));
+            FastAggregation.bufferedorWithContainer(answer, 1_024, bitmaps.toArray(new EWAHCompressedBitmap[bitmaps.size()]));
         } else {
             BitmapCollector collector = new BitmapCollector(answer, resultCount);
             try {
-                FastAggregation.bufferedorWithContainer(collector, 1024, bitmaps.toArray(new EWAHCompressedBitmap[bitmaps.size()]));
+                FastAggregation.bufferedorWithContainer(collector, 1_024, bitmaps.toArray(new EWAHCompressedBitmap[bitmaps.size()]));
             } catch (StopCollecting sc) {
             }
         }
@@ -109,7 +109,7 @@ public class MiruStreamsPOC {
         private final int maxHitCount;
         private int oneBitsHits;
 
-        public BitmapCollector(BitmapStorage delegateStoreage, int maxHitCount) {
+        BitmapCollector(BitmapStorage delegateStoreage, int maxHitCount) {
             this.delegateStoreage = delegateStoreage;
             this.maxHitCount = maxHitCount;
         }
@@ -171,7 +171,7 @@ public class MiruStreamsPOC {
         int fieldId;
         int[] termIds;
 
-        public FieldQuery(int fieldId, int[] termIds) {
+        FieldQuery(int fieldId, int[] termIds) {
             this.fieldId = fieldId;
             this.termIds = termIds;
         }

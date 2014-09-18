@@ -20,11 +20,11 @@ public class MiruWriteToActivityAndSipWAL implements MiruActivityWALWriter {
         RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
         RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
 
-        this.activityWALWriter = new MiruActivityWALWriterImpl<MiruActivityWALColumnKey>(activityWAL,
+        this.activityWALWriter = new MiruActivityWALWriterImpl<>(activityWAL,
             ACTIVITY_WAL_COLUMN_KEY,
             ACTIVITY_WAL_COLLISIONID);
 
-        this.activitySipWALWriter = new MiruActivityWALWriterImpl<MiruActivitySipWALColumnKey>(activitySipWAL,
+        this.activitySipWALWriter = new MiruActivityWALWriterImpl<>(activitySipWAL,
             ACTIVITY_SIP_WAL_COLUMN_KEY,
             ACTIVITY_SIP_WAL_COLLISIONID);
     }

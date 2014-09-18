@@ -18,8 +18,8 @@ public class SimpleRegressionTrendTest {
         long currentT = trend1.getCurrentT();
 
         for (int i = 0; i < numberOfBuckets; i++) {
-            trend1.add(currentT - i * durationPerBucket, (double) (i + 1));
-            trend2.add(currentT - i * durationPerBucket, (double) (i + 1));
+            trend1.add(currentT - i * durationPerBucket, (i + 1));
+            trend2.add(currentT - i * durationPerBucket, (i + 1));
         }
 
         SimpleRegressionTrend merged = new SimpleRegressionTrend(numberOfBuckets, durationPerBucket * numberOfBuckets);
@@ -48,7 +48,7 @@ public class SimpleRegressionTrendTest {
             long time = currentT - (numberOfBuckets - i - 1) * durationPerBucket;
             flat.add(time, 1d);
             line.add(time, 1d * i);
-            quad.add(time, (double) (i * i));
+            quad.add(time, (i * i));
         }
 
         assertTrue(flat.getRank(currentT) < line.getRank(currentT));
@@ -65,7 +65,7 @@ public class SimpleRegressionTrendTest {
         long currentT = trend1.getCurrentT();
 
         for (int i = 0; i < numberOfBuckets; i++) {
-            trend1.add(currentT - i * durationPerBucket, (double) (i + 1));
+            trend1.add(currentT - i * durationPerBucket, (i + 1));
         }
 
         byte[] bytes = trend1.toBytes();

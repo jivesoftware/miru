@@ -20,11 +20,11 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trending;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
@@ -51,7 +51,7 @@ public class MiruTrendingNGTest {
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
-    MiruHost miruHost = new MiruHost("logicalName", 1234);
+    MiruHost miruHost = new MiruHost("logicalName", 1_234);
     CollaborativeFilterUtil util = new CollaborativeFilterUtil();
 
     MiruService service;
@@ -69,7 +69,7 @@ public class MiruTrendingNGTest {
     @Test (enabled = true)
     public void basicTest() throws Exception {
 
-        Random rand = new Random(1234);
+        Random rand = new Random(1_234);
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
         int numqueries = 2;
         int numberOfUsers = 2;

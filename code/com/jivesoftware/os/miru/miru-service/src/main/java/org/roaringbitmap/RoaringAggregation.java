@@ -206,7 +206,7 @@ public class RoaringAggregation {
             return;
         }
 
-        PriorityQueue<RoaringBitmap> pq = new PriorityQueue<RoaringBitmap>(bitmaps.length, new Comparator<RoaringBitmap>() {
+        PriorityQueue<RoaringBitmap> pq = new PriorityQueue<>(bitmaps.length, new Comparator<RoaringBitmap>() {
             @Override
             public int compare(RoaringBitmap a,
                     RoaringBitmap b) {

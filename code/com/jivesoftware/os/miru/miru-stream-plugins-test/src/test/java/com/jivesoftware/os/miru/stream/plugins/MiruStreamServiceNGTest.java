@@ -26,11 +26,11 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountAnswer;
@@ -63,7 +63,7 @@ public class MiruStreamServiceNGTest {
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
-    MiruHost miruHost = new MiruHost("logicalName", 1234);
+    MiruHost miruHost = new MiruHost("logicalName", 1_234);
 
     int verb1 = 1;
     int verb2 = 2;
@@ -74,12 +74,12 @@ public class MiruStreamServiceNGTest {
     int target1 = 100;
     int target2 = 200;
     int target3 = 300;
-    int tag1 = 1000;
-    int tag2 = 2000;
-    int tag3 = 3000;
-    int author1 = 10000;
-    int author2 = 20000;
-    int author3 = 30000;
+    int tag1 = 1_000;
+    int tag2 = 2_000;
+    int tag3 = 3_000;
+    int author1 = 10_000;
+    int author2 = 20_000;
+    int author3 = 30_000;
 
     MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
     MiruService service;
@@ -111,7 +111,7 @@ public class MiruStreamServiceNGTest {
         final int numQueries = 1_000;
 
         DecimalFormat formatter = new DecimalFormat("###,###,###");
-        Random rand = new Random(1234);
+        Random rand = new Random(1_234);
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(1));
         List<MiruPartitionedActivity> activities = new ArrayList<>();
         int passes = 1;
@@ -128,7 +128,7 @@ public class MiruStreamServiceNGTest {
                     long e = (System.currentTimeMillis() - t);
                     int indexSize = p * (capacity / passes) + i;
                     System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
-                        + " millis ratePerSecond:" + formatter.format(1000 * (activities.size() / e)));
+                        + " millis ratePerSecond:" + formatter.format(1_000 * (activities.size() / e)));
                     System.out.println("\t\tIndexSize:" + formatter.format(indexSize) +
                             " sizeInMemory:" + formatter.format(service.sizeInMemory(tenant1)) +
                             " sizeOnDisk:" + formatter.format(service.sizeOnDisk(tenant1)));
@@ -143,7 +143,7 @@ public class MiruStreamServiceNGTest {
                 long e = (System.currentTimeMillis() - t);
                 int indexSize = (p + 1) * (capacity / passes);
                 System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
-                    + " millis ratePerSecond:" + formatter.format(1000 * (activities.size() / e)));
+                    + " millis ratePerSecond:" + formatter.format(1_000 * (activities.size() / e)));
                 System.out.println("\t\tIndexSize:" + formatter.format(indexSize) +
                         " sizeInMemory:" + formatter.format(service.sizeInMemory(tenant1)) +
                         " sizeOnDisk:" + formatter.format(service.sizeOnDisk(tenant1)));
@@ -185,7 +185,7 @@ public class MiruStreamServiceNGTest {
                 System.out.println("\t\t\tQuery:" + (q + 1) + " latency:" + elapse
                     + " count:" + results.answer.results.size()
                     + " all:" + formatter.format(count(results.answer.results))
-                    + " indexSizeToLatencyRatio:" + ((double) indexSize / (double) elapse));
+                    + " indexSizeToLatencyRatio:" + (indexSize / elapse));
             }
         }
     }
@@ -208,7 +208,7 @@ public class MiruStreamServiceNGTest {
      * schema.put("tag", 3); <br>
      * schema.put("author", 4); <br>
      */
-    private final int[] fieldCardinality = new int[]{ 10, 10_000, 1_000_000, 10_000, 1000 };
+    private final int[] fieldCardinality = new int[]{ 10, 10_000, 1_000_000, 10_000, 1_000};
     private final int[] fieldFrequency = new int[]{ 1, 1, 1, 10, 1 };
 
     private MiruPartitionedActivity generateActivity(int time, Random rand) {
@@ -279,8 +279,8 @@ public class MiruStreamServiceNGTest {
                 new MiruActorId(Id.NULL),
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
                     streamId,
-                    new MiruTimeRange(0, 1000),
-                    new MiruTimeRange(0, 1000),
+                    new MiruTimeRange(0, 1_000),
+                    new MiruTimeRange(0, 1_000),
                     filter,
                     MiruFilter.NO_FILTER,
                     "container", 0, 10), false);
@@ -300,7 +300,7 @@ public class MiruStreamServiceNGTest {
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctCountQuery(
                     streamId,
-                    new MiruTimeRange(0, 1000),
+                    new MiruTimeRange(0, 1_000),
                     filter,
                     MiruFilter.NO_FILTER,
                     "container",
@@ -320,8 +320,8 @@ public class MiruStreamServiceNGTest {
                 new MiruActorId(Id.NULL),
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
                     streamId,
-                    new MiruTimeRange(0, 1000),
-                    new MiruTimeRange(0, 1000),
+                    new MiruTimeRange(0, 1_000),
+                    new MiruTimeRange(0, 1_000),
                     filter,
                     MiruFilter.NO_FILTER,
                     "container", 0, 10), false);
@@ -341,7 +341,7 @@ public class MiruStreamServiceNGTest {
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctCountQuery(
                     streamId,
-                    new MiruTimeRange(0, 1000),
+                    new MiruTimeRange(0, 1_000),
                     filter,
                     MiruFilter.NO_FILTER,
                     "container",

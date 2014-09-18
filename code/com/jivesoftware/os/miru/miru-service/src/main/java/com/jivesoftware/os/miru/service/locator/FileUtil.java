@@ -8,8 +8,8 @@ public class FileUtil {
             if (_remove.isDirectory()) {
                 File[] array = _remove.listFiles();
                 if (array != null) {
-                    for (int i = 0; i < array.length; i++) {
-                        remove(array[i]);
+                    for (File array1 : array) {
+                        remove(array1);
                     }
                 }
             }

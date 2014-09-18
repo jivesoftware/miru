@@ -7,7 +7,6 @@ import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.Con
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -54,7 +53,7 @@ public class MiruRCVSActivityLookupTable implements MiruActivityLookupTable {
     @Override
     public void stream(MiruTenantId tenantId, long afterTimestamp, final StreamLookupEntry streamLookupEntry) throws Exception {
 
-        lookupTable.getEntrys(MiruVoidByte.INSTANCE, tenantId, afterTimestamp, Long.MAX_VALUE, 1000, false, null, null,
+        lookupTable.getEntrys(MiruVoidByte.INSTANCE, tenantId, afterTimestamp, Long.MAX_VALUE, 1_000, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<Long, MiruActivityLookupEntry, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<Long, MiruActivityLookupEntry, Long> callback(

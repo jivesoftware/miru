@@ -130,7 +130,7 @@ public class BloomIndex<BM> {
 
     }
 
-    public static final class Mights<K extends HasValue> implements Comparable<Mights<K>> {
+    public static class Mights<K extends HasValue> implements Comparable<Mights<K>> {
 
         final int bitIndex;
         final List<Might<K>> mights;

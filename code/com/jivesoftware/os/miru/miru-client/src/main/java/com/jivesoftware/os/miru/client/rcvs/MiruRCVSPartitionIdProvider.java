@@ -20,7 +20,6 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -99,7 +98,7 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
         return tenantLargestPartition.get(tenantId, new Callable<MiruPartitionId>() {
             @Override
             public MiruPartitionId call() throws Exception {
-                final AtomicReference<MiruPartitionId> largestPartitionId = new AtomicReference<MiruPartitionId>(MiruPartitionId.of(0));
+                final AtomicReference<MiruPartitionId> largestPartitionId = new AtomicReference<>(MiruPartitionId.of(0));
 
                 writerPartitionRegistry.getValues(MiruVoidByte.INSTANCE, tenantId, null, 100L, 100, false, null, null, new CallbackStream<MiruPartitionId>() {
                     @Override

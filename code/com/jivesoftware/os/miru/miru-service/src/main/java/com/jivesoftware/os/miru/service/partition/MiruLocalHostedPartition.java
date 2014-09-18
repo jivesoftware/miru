@@ -79,7 +79,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.scheduledExecutorService = scheduledExecutorService;
         this.partitionRebuildBatchSize = partitionRebuildBatchSize;
         this.partitionRunnableIntervalInMillis = partitionRunnableIntervalInMillis;
-        this.partitionMigrationWaitInMillis = 3000; //TODO config
+        this.partitionMigrationWaitInMillis = 3_000; //TODO config
         this.maxSipClockSkew = TimeUnit.SECONDS.toMillis(10); //TODO config
         this.maxSipReplaySize = 100; //TODO config
 
@@ -112,7 +112,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 MiruContext<BM> stream = streamFactory.allocate(bitmaps, coord, accessor.info.storage);
                 optionalStream = Optional.of(stream);
             }
-            MiruPartitionAccessor<BM> opened = new MiruPartitionAccessor<BM>(bitmaps, coord, coordInfo.copyToState(openingState), optionalStream.orNull(),
+            MiruPartitionAccessor<BM> opened = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo.copyToState(openingState), optionalStream.orNull(),
                     streamFactory.getSip(coord));
             if (updatePartition(accessor, opened)) {
                 clearFutures();
@@ -128,6 +128,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
     }
 
+    @Override
     public MiruRequestHandle<BM> getQueryHandle() throws Exception {
         MiruPartitionAccessor<BM> accessor = accessorRef.get();
         if (!removed.get() && accessor.needsHotDeploy()) {

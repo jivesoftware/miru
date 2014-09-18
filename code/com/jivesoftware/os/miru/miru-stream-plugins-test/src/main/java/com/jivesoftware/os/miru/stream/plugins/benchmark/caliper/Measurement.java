@@ -75,7 +75,7 @@ public class Measurement {
         return description;
     }
 
-    public static final class Builder {
+    public static class Builder {
         private Value value;
         private Double weight;
         private String description;

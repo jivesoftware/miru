@@ -7,7 +7,7 @@ import org.merlin.config.defaults.StringDefault;
 
 public interface MiruServiceConfig extends Config {
 
-    @IntDefault(8192)
+    @IntDefault(8_192)
     int getBitsetBufferSize();
 
     @IntDefault(10)
@@ -22,16 +22,16 @@ public interface MiruServiceConfig extends Config {
     @StringDefault("var/lib/miru/transient")
     String getTransientResourceLocatorPath();
 
-    @LongDefault(33554432) // 32 MB
+    @LongDefault(33_554_432) // 32 MB
     long getDiskResourceInitialChunkSize();
 
-    @LongDefault(4096) // 4 KB
+    @LongDefault(4_096) // 4 KB
     long getTransientResourceInitialChunkSize();
 
-    @LongDefault(5000)
+    @LongDefault(5_000)
     long getHeartbeatIntervalInMillis();
 
-    @LongDefault(5000)
+    @LongDefault(5_000)
     long getEnsurePartitionsIntervalInMillis();
 
     @IntDefault(1)
@@ -43,27 +43,27 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(100)
     long getDefaultAddAnotherSolverAfterNMillis();
 
-    @LongDefault(3000)
+    @LongDefault(3_000)
     long getDefaultFailAfterNMillis();
     void setDefaultFailAfterNMillis(long millis);
 
-    @IntDefault(1000)
+    @IntDefault(1_000)
     int getPartitionRebuildBatchSize();
 
-    @LongDefault(5000)
+    @LongDefault(5_000)
     long getPartitionBootstrapIntervalInMillis();
 
-    @LongDefault(5000)
+    @LongDefault(5_000)
     long getPartitionRunnableIntervalInMillis();
 
-    @IntDefault(10000)
+    @IntDefault(10_000)
     int getPartitionAuthzCacheSize();
 
     @StringDefault("hybrid")
     String getDefaultStorage();
     void setDefaultStorage(String storageType);
 
-    @IntDefault(1000)
+    @IntDefault(1_000)
     int getLongTailSolverWindowSize();
 
     @IntDefault(95)

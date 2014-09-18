@@ -92,7 +92,7 @@ public class MiruInboxIndexTest {
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
     public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
 
-        MiruStreamId newStreamId = new MiruStreamId(new Id(1337).toBytes());
+        MiruStreamId newStreamId = new MiruStreamId(new Id(1_337).toBytes());
         int lastActivityIndex = miruInboxIndex.getLastActivityIndex(newStreamId);
         assertEquals(lastActivityIndex, -1);
 
@@ -113,7 +113,7 @@ public class MiruInboxIndexTest {
 
     @DataProvider(name = "miruInboxIndexDataProvider")
     public Object[][] miruInboxIndexDataProvider() throws Exception {
-        MiruStreamId miruStreamId = new MiruStreamId(new Id(12345).toBytes());
+        MiruStreamId miruStreamId = new MiruStreamId(new Id(12_345).toBytes());
         MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
         MiruInMemoryInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = new MiruInMemoryInboxIndex<>(bitmaps);
@@ -122,7 +122,7 @@ public class MiruInboxIndexTest {
         File swapDir = Files.createTempDirectory("swap").toFile();
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4_096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDir, swapDir, multiChunkStore);
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
@@ -135,7 +135,7 @@ public class MiruInboxIndexTest {
 
     @DataProvider(name = "miruInboxIndexDataProviderWithData")
     public Object[][] miruInboxIndexDataProviderWithData() throws Exception {
-        MiruStreamId streamId = new MiruStreamId(new Id(12345).toBytes());
+        MiruStreamId streamId = new MiruStreamId(new Id(12_345).toBytes());
 
         // Create in-memory inbox index
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
@@ -167,7 +167,7 @@ public class MiruInboxIndexTest {
         File swapDir = Files.createTempDirectory("swap").toFile();
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4_096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDir, swapDir, multiChunkStore);
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);

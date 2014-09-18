@@ -67,7 +67,7 @@ public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader 
 
         MiruReadTrackingWALColumnKey start = new MiruReadTrackingWALColumnKey(afterEventId);
 
-        readTrackingWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1000, false, null, null,
+        readTrackingWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1_000, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruReadTrackingWALColumnKey, MiruPartitionedActivity, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruReadTrackingWALColumnKey, MiruPartitionedActivity, Long> callback(
@@ -89,7 +89,7 @@ public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader 
 
         MiruReadTrackingSipWALColumnKey start = new MiruReadTrackingSipWALColumnKey(afterTimestamp);
 
-        readTrackingSipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1000, false, null, null,
+        readTrackingSipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1_000, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruReadTrackingSipWALColumnKey, Long, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruReadTrackingSipWALColumnKey, Long, Long> callback(

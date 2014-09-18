@@ -177,7 +177,7 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<long[]>,
         };
     }
 
-    private static final class TLongIntIteratorAdapter implements Iterator<Entry> {
+    private static class TLongIntIteratorAdapter implements Iterator<Entry> {
 
         private final TLongIntIterator iter;
 

@@ -17,19 +17,19 @@ public class MiruSoyRendererTest {
     public void testConvertMiruHost() throws Exception {
         SoyFileSet.Builder builder = new SoyFileSet.Builder();
         File soyFile = File.createTempFile("dumb", "soy");
-        FileWriter writer = new FileWriter(soyFile);
-        writer.write("{namespace miru}\n\n" +
+        try (FileWriter writer = new FileWriter(soyFile)) {
+            writer.write("{namespace miru}\n\n" +
                 "/**\n" +
                 " * @param host\n" +
                 " */\n" +
                 "{template .test}\n" +
                 "{$host.logicalName}:{$host.port}\n" +
                 "{/template}\n");
-        writer.close();
+        }
         builder.add(soyFile);
         MiruSoyRenderer renderer = new MiruSoyRenderer(builder.build().compileToTofu(), new SoyDataUtils());
 
-        MiruHost host = new MiruHost("localhost", 10001);
+        MiruHost host = new MiruHost("localhost", 10_001);
         Map<String, ?> data = ImmutableMap.of("host", host);
         String rendered = renderer.render("miru.test", data);
         assertEquals(rendered, host.toStringForm());
@@ -39,15 +39,15 @@ public class MiruSoyRendererTest {
     public void testConvertMiruBackingStorage() throws Exception {
         SoyFileSet.Builder builder = new SoyFileSet.Builder();
         File soyFile = File.createTempFile("dumb", "soy");
-        FileWriter writer = new FileWriter(soyFile);
-        writer.write("{namespace miru}\n\n" +
+        try (FileWriter writer = new FileWriter(soyFile)) {
+            writer.write("{namespace miru}\n\n" +
                 "/**\n" +
                 " * @param storage\n" +
                 " */\n" +
                 "{template .test}\n" +
                 "{$storage}\n" +
                 "{/template}\n");
-        writer.close();
+        }
         builder.add(soyFile);
         MiruSoyRenderer renderer = new MiruSoyRenderer(builder.build().compileToTofu(), new SoyDataUtils());
 

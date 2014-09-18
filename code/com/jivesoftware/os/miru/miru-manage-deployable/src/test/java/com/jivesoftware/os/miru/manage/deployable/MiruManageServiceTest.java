@@ -14,15 +14,15 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer.MiruManageConfig;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer.MiruManageConfig;
-import static com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -53,7 +53,7 @@ public class MiruManageServiceTest {
         hosts = Lists.newArrayList();
 
         for (int i = 0; i < numberOfReplicas; i++) {
-            MiruHost host = new MiruHost("host" + i, 10000 + i);
+            MiruHost host = new MiruHost("host" + i, 10_000 + i);
             clusterRegistry.sendHeartbeatForHost(host, i, i);
             hosts.add(host);
         }

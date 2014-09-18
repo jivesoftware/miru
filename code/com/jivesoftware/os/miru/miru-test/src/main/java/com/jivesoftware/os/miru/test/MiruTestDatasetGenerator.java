@@ -188,7 +188,7 @@ public class MiruTestDatasetGenerator {
 
         final Configuration hadoopConfiguration = new Configuration();
         hadoopConfiguration.set("fs.hdfs.impl", "org.apache.hadoop.fs.LocalFileSystem");
-        hadoopConfiguration.set("dfs.block.size", String.valueOf(128 * 1024 * 1024));
+        hadoopConfiguration.set("dfs.block.size", String.valueOf(128 * 1_024 * 1_024));
         FileSystem fileSystem = FileSystem.get(hadoopConfiguration);
         generator.generate(
             writer(hadoopConfiguration, outputPath, tenantId + ".meta", Text.class, Text.class, fileSystem),
@@ -315,7 +315,7 @@ public class MiruTestDatasetGenerator {
     private void activityProduceAndConsume(SequenceFile.Writer activityWriter, AtomicInteger index, Optional<MiruTestActivityDistributor.Revisitor> revisitor,
         ExecutorService executor) throws ExecutionException, InterruptedException, IOException {
 
-        BlockingQueue<MiruPartitionedActivity> queue = Queues.newArrayBlockingQueue(1000);
+        BlockingQueue<MiruPartitionedActivity> queue = Queues.newArrayBlockingQueue(1_000);
         AtomicBoolean done = new AtomicBoolean(false);
 
         Future<?> producer = executor.submit(new ActivityProducerRunnable(activityDistributor, featureSupplier, numPartitions, closeFinalPartition, writerId,
@@ -337,7 +337,7 @@ public class MiruTestDatasetGenerator {
     private void queryProduceAndConsume(SequenceFile.Writer queryWriter, ExecutorService executor, int numQueries, Callable<Object> callable)
         throws ExecutionException, InterruptedException, IOException {
 
-        BlockingQueue<Object> queue = Queues.newArrayBlockingQueue(1000);
+        BlockingQueue<Object> queue = Queues.newArrayBlockingQueue(1_000);
         AtomicBoolean done = new AtomicBoolean(false);
 
         Future<?> producer = executor.submit(new QueryProducerRunnable(numQueries, queue, done, callable));

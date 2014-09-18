@@ -13,7 +13,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Taken from Google Caliper so we can upload our own results
  */
-public final class Trial { // used to be Result
+public class Trial { // used to be Result
     public static final Trial DEFAULT = new Trial();
 
     private UUID id;
@@ -87,7 +87,7 @@ public final class Trial { // used to be Result
             .toString();
     }
 
-    public static final class Builder {
+    public static class Builder {
         private final UUID id;
         private Run run;
         private InstrumentSpec instrumentSpec;

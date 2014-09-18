@@ -34,7 +34,6 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
-
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +88,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         final LinkedHashSet<HostHeartbeat> hostHeartbeats = Sets.newLinkedHashSet();
         final List<KeyedColumnValueCallbackStream<MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, Long>> streams = Lists.newArrayList();
 
-        hostsRegistry.getAllRowKeys(1000, null, new CallbackStream<TenantIdAndRow<MiruVoidByte, MiruHost>>() {
+        hostsRegistry.getAllRowKeys(1_000, null, new CallbackStream<TenantIdAndRow<MiruVoidByte, MiruHost>>() {
             @Override
             public TenantIdAndRow<MiruVoidByte, MiruHost> callback(TenantIdAndRow<MiruVoidByte, MiruHost> value) throws Exception {
                 if (value != null) {
@@ -122,7 +121,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     @Override
     public List<MiruTenantId> getTenantsForHost(MiruHost miruHost) throws Exception {
         final List<MiruTenantId> tenants = Lists.newArrayList();
-        expectedTenantsRegistry.getEntrys(MiruVoidByte.INSTANCE, miruHost, null, null, 1000, false, null, null,
+        expectedTenantsRegistry.getEntrys(MiruVoidByte.INSTANCE, miruHost, null, null, 1_000, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(
@@ -480,7 +479,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             this.host = host;
         }
 
-        public TenantPartitionHostKey(MiruPartitionCoord coord) {
+        TenantPartitionHostKey(MiruPartitionCoord coord) {
             this(coord.tenantId, coord.partitionId, coord.host);
         }
 

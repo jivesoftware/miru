@@ -88,7 +88,7 @@ public class MiruClusterReader implements MiruReader {
         this.warmOfflineHostExecutor = warmOfflineHostExecutor;
         this.objectMapper = objectMapper;
         this.mostRecentCache = CacheBuilder.newBuilder() //TODO config
-                .maximumSize(1000)
+                .maximumSize(1_000)
                 .expireAfterWrite(1, TimeUnit.MINUTES)
                 .build();
         this.userNodeAffinity = readerConfig.getUserNodeAffinity();

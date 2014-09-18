@@ -122,6 +122,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     }
 
     /** Check if the given tenant partition is in the desired state */
+    @Override
     public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) {
         MiruTenantTopology<?> topology = expectedTenants.getTopology(tenantId);
         if (topology != null) {

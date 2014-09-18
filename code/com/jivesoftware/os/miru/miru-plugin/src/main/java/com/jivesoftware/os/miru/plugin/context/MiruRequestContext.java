@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-
 import java.util.concurrent.ExecutorService;
 
 /**

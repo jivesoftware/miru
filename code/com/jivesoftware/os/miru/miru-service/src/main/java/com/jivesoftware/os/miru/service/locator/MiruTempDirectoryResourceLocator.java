@@ -72,7 +72,7 @@ public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocat
 
     @Override
     public long getInitialChunkSize() {
-        return 4096;
+        return 4_096;
     }
 
     @Override

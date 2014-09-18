@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.wal.readtracking.hbase;
 
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
-
 import java.util.Comparator;
 
 public class MiruReadTrackingWALRow implements Comparable<MiruReadTrackingWALRow> {

@@ -21,9 +21,9 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.stream.plugins.benchmark.caliper.BenchmarkSpec;
@@ -133,7 +133,7 @@ public class MiruServiceBenchmarkTest {
         forceGc();
 
         // Initialize the MiruService
-        MiruHost miruHost = new MiruHost("logicalName", 1234);
+        MiruHost miruHost = new MiruHost("logicalName", 1_234);
         MiruTenantId tenantId = new MiruTenantId("benchmark".getBytes());
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         MiruSchema schema = new MiruSchema(FIELDS);
@@ -212,7 +212,7 @@ public class MiruServiceBenchmarkTest {
 
         Collection<HttpClientConfiguration> configurations = Lists.newArrayList();
         HttpClientConfig baseConfig = HttpClientConfig.newBuilder()
-                .setSocketTimeoutInMillis(10000)
+                .setSocketTimeoutInMillis(10_000)
                 .setMaxConnections(10)
                 .build();
         configurations.add(baseConfig);
@@ -345,8 +345,8 @@ public class MiruServiceBenchmarkTest {
         new Object() {
             @Override
             protected void finalize() {
-                latch.countDown();
-            }
+                    latch.countDown();
+                }
         };
         System.gc();
         System.runFinalization();

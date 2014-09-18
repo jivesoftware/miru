@@ -20,9 +20,7 @@ public class MiruBitsAggregation {
                         return a.sizeInBytes() - b.sizeInBytes();
                     }
                 });
-        for (EWAHCompressedBitmap x : bitmaps) {
-            pq.add(x);
-        }
+        pq.addAll(Arrays.asList(bitmaps));
         while (pq.size() > 2) {
             EWAHCompressedBitmap x1 = pq.poll();
             EWAHCompressedBitmap x2 = pq.poll();
@@ -70,9 +68,7 @@ public class MiruBitsAggregation {
                         return a.sizeInBytes() - b.sizeInBytes();
                     }
                 });
-        for (EWAHCompressedBitmap x : bitmaps) {
-            pq.add(x);
-        }
+        pq.addAll(Arrays.asList(bitmaps));
         while (pq.size() > 2) {
             EWAHCompressedBitmap x1 = pq.poll();
             EWAHCompressedBitmap x2 = pq.poll();
@@ -93,9 +89,7 @@ public class MiruBitsAggregation {
                         return a.sizeInBytes() - b.sizeInBytes();
                     }
                 });
-        for (EWAHCompressedBitmap x : bitmaps) {
-            pq.add(x);
-        }
+        pq.addAll(Arrays.asList(bitmaps));
         while (pq.size() > 2) {
             EWAHCompressedBitmap x1 = pq.poll();
             EWAHCompressedBitmap x2 = pq.poll();

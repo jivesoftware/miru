@@ -48,7 +48,7 @@ public class MiruActivityWALColumnKey {
 
     @Override
     public int hashCode() {
-        int result = (int) sort;
+        int result = sort;
         result = 31 * result + (int) (collisionId ^ (collisionId >>> 32));
         return result;
     }

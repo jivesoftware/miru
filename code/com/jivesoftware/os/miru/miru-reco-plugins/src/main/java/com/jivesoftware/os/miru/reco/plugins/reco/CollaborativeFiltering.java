@@ -72,7 +72,7 @@ public class CollaborativeFiltering {
             solutionLog.log("contributions {}.", bitmaps.cardinality(contributions));
         }
         final List<MiruTermCount> mostLike = new ArrayList<>(contributorHeap);
-        final BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100000, 0.01f); // TODO fix somehow
+        final BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
         final List<BloomIndex.Mights<MiruTermCount>> wantBits = bloomIndex.wantBits(mostLike);
         // TODO handle authz
         BM othersContributions = bitmaps.create();

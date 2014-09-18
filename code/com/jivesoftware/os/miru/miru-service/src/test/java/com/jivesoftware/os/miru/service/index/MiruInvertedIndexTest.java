@@ -7,10 +7,10 @@ import com.jivesoftware.os.jive.utils.keyed.store.RandomAccessSwappableFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.bitmap.AnswerCardinalityLastSetBitmapStorage;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInvertedIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
-import com.jivesoftware.os.miru.service.bitmap.AnswerCardinalityLastSetBitmapStorage;
 import java.io.File;
 import java.util.List;
 import java.util.Random;
@@ -34,7 +34,7 @@ public class MiruInvertedIndexTest {
     @Test(dataProvider = "miruInvertedIndexDataProvider",
             groups = "slow", enabled = false, description = "Performance test")
     public void testSetId(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, int appends, int sets) throws Exception {
-        Random r = new Random(1234);
+        Random r = new Random(1_234);
         int id = 0;
         int[] ids = new int[sets + appends];
         for (int i = 0; i < appends; i++) {
@@ -59,7 +59,7 @@ public class MiruInvertedIndexTest {
             miruInvertedIndex.append(id);
             ids[appends + i] = id;
 
-            if (i % 1000 == 0) {
+            if (i % 1_000 == 0) {
                 //System.out.println("set " + i);
                 System.out.println(String.format("set 1000, elapsed = %s, max id = %s, bitmap size = %s",
                         (System.currentTimeMillis() - subTimestamp), id, miruInvertedIndex.getIndex().sizeInBytes()));
@@ -169,14 +169,14 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.append(100);
         miruInvertedIndex.getIndex(); // force merge
         assertEquals(miruInvertedIndex.sizeInMemory() + miruInvertedIndex.sizeOnDisk(), 24 + overhead);
-        miruInvertedIndex.append(1000);
+        miruInvertedIndex.append(1_000);
         miruInvertedIndex.getIndex(); // force merge
         assertEquals(miruInvertedIndex.sizeInMemory() + miruInvertedIndex.sizeOnDisk(), 40 + overhead);
     }
 
     @DataProvider(name = "miruInvertedIndexDataProviderWithScale")
     public Object[][] miruInvertedIndexDataProviderWithScale() throws Exception {
-        int memoryAppends = 1000;
+        int memoryAppends = 1_000;
         int memorySets = 100_000;
         int diskAppends = 100;
         int diskSets = 1_000;
@@ -315,7 +315,7 @@ public class MiruInvertedIndexTest {
     public void testInMemoryAppenderSpeed() throws Exception {
         MiruInMemoryInvertedIndex<EWAHCompressedBitmap> miruInMemoryInvertedIndex = new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(100));
 
-        Random r = new Random(1249871239817231827l);
+        Random r = new Random(1_249_871_239_817_231_827l);
         long t = System.currentTimeMillis();
         for (int i = 0; i < 1_000_000; i++) {
             if (r.nextBoolean()) {

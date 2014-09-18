@@ -22,7 +22,6 @@ import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruPartitioner;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -53,11 +52,11 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
         this.activitySenderProvider = activitySenderProvider;
         this.miruPartitioner = miruPartitioner;
         this.replicaCache = CacheBuilder.newBuilder() //TODO config
-            .maximumSize(1000)
+            .maximumSize(1_000)
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
         this.latestAlignmentCache = CacheBuilder.newBuilder() // TODO config
-            .maximumSize(1000)
+            .maximumSize(1_000)
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
     }

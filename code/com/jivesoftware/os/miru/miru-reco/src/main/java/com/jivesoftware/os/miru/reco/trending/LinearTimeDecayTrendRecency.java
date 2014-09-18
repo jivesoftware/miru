@@ -11,7 +11,7 @@ public class LinearTimeDecayTrendRecency implements TrendRecency<SimpleRegressio
         if (elapse > trend.getDuration()) {
             return 0d; // no data
         }
-        double normailzedTimeRank = (double) (trend.getDuration() - elapse) / (double) trend.getDuration();
+        double normailzedTimeRank = (trend.getDuration() - elapse) / trend.getDuration();
         return normailzedTimeRank;
     }
 

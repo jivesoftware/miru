@@ -40,7 +40,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public final class MiruServiceInitializer {
+public class MiruServiceInitializer {
 
     public MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
             MiruRegistryStore registryStore,

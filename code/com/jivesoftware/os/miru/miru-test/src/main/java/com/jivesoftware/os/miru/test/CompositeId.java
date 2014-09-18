@@ -5,7 +5,6 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.id.TenantId;
-
 import java.nio.charset.Charset;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -13,7 +12,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
 *
 */
-public final class CompositeId {
+public class CompositeId {
 
     private static final Charset UTF8 = Charset.forName("UTF-8");
     private static final HashFunction hash = Hashing.murmur3_128();

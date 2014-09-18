@@ -30,7 +30,7 @@ import static org.testng.Assert.assertTrue;
 
 public class MiruIndexTest {
 
-    private long initialChunkStoreSizeInBytes = 4096;
+    private long initialChunkStoreSizeInBytes = 4_096;
 
     @Test(dataProvider = "miruIndexDataProvider")
     public <BM> void testGetMissingFieldTerm(MiruBitmaps<BM> bitmaps, MiruIndex<BM> miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
@@ -73,7 +73,7 @@ public class MiruIndexTest {
             assertEquals(sizeInBytes, expectedSizeInBytes);
         } else if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
             // See MapStore.cost() for more information. FileBackedMemMappedByteBufferFactory.allocate() adds the extra byte
-            long initialMapStoreSizeInBytes = 2426 + 1;
+            long initialMapStoreSizeInBytes = 2_426 + 1;
 
             assertEquals(sizeInBytes, initialMapStoreSizeInBytes); // chunk store is shared and not included in index size
         }

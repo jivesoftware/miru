@@ -16,7 +16,6 @@
 package com.jivesoftware.os.miru.plugin.bitmap;
 
 import com.google.common.base.Optional;
-
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;

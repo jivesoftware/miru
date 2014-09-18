@@ -35,7 +35,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
             throws Exception {
         this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
-        this.keyedStore = new VariableKeySizeFileBackedKeyedStore(mapDirectory, swapDirectory, chunkStore, new int[] { 4, 16, 64, 256, 1024 }, 100, 512);
+        this.keyedStore = new VariableKeySizeFileBackedKeyedStore(mapDirectory, swapDirectory, chunkStore, new int[] { 4, 16, 64, 256, 1_024}, 100, 512);
         this.cache = cache;
     }
 

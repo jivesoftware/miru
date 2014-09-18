@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -79,7 +80,7 @@ public class ActivityProducerRunnable implements Runnable {
                     log.info("End partition {}", p);
                 }
             }
-        } catch (Exception e) {
+        } catch (InterruptedException | IOException e) {
             log.error("Activity producer died", e);
         }
 

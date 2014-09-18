@@ -20,8 +20,8 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
@@ -45,7 +45,7 @@ public class MiruContextFactoryTest {
 
     private MiruSchema schema;
     private MiruContextFactory streamFactory;
-    private MiruHost host = new MiruHost("localhost", 49600);
+    private MiruHost host = new MiruHost("localhost", 49_600);
     private MiruBitmaps<EWAHCompressedBitmap> bitmaps;
 
     @BeforeMethod

@@ -55,7 +55,7 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
 
         MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp);
 
-        activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1000, false, null, null,
+        activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1_000, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> callback(
@@ -76,7 +76,7 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
 
         MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp);
 
-        activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1000, false, null, null,
+        activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1_000, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback(

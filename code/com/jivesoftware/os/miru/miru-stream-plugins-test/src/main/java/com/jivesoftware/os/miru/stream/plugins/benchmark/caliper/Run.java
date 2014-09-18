@@ -12,7 +12,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Taken from Google Caliper so we can upload our own results
  */
-public final class Run {
+public class Run {
     static final Run DEFAULT = new Run();
 
     private UUID id;
@@ -72,7 +72,7 @@ public final class Run {
             .toString();
     }
 
-    public static final class Builder {
+    public static class Builder {
         private UUID id;
         private String label = "";
         private Date startTime;

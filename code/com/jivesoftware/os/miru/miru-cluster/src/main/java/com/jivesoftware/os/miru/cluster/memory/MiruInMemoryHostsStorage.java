@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.cluster.memory;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.cluster.MiruHostsStorage;
-
+import java.util.Collections;
 import java.util.List;
 
 /** @author jonathan */
@@ -27,6 +27,6 @@ public class MiruInMemoryHostsStorage implements MiruHostsStorage {
 
     @Override
     public List<MiruHost> allHosts() {
-        return hosts;
+        return Collections.unmodifiableList(hosts);
     }
 }

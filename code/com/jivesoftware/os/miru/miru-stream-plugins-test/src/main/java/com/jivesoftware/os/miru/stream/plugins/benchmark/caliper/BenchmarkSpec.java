@@ -15,7 +15,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Taken from Google Caliper so we can upload our own results
  */
-public final class BenchmarkSpec {
+public class BenchmarkSpec {
     static final BenchmarkSpec DEFAULT = new BenchmarkSpec();
 
     private String className;
@@ -90,7 +90,7 @@ public final class BenchmarkSpec {
         }
     }
 
-    public static final class Builder {
+    public static class Builder {
         private String className;
         private String methodName;
         private final SortedMap<String, String> parameters = Maps.newTreeMap();

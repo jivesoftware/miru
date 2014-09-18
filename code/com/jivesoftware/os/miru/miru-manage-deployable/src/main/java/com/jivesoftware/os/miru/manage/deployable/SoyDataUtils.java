@@ -26,8 +26,10 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Primitives;
 import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,7 +126,7 @@ public class SoyDataUtils {
                     map.put(pd.getName(), pd.getReadMethod().invoke(pojo));
                 }
             }
-        } catch (Exception e) {
+        } catch (IntrospectionException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
         return map;

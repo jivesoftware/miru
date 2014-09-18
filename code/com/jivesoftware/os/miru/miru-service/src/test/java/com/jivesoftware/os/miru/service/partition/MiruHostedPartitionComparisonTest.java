@@ -22,7 +22,7 @@ import static org.testng.Assert.assertEquals;
 
 public class MiruHostedPartitionComparisonTest {
 
-    private final int windowSize = 1000;
+    private final int windowSize = 1_000;
     private final int percentile = 95;
     private final String queryKey = "TestExecuteQuery";
 
@@ -40,8 +40,8 @@ public class MiruHostedPartitionComparisonTest {
 
     @Test
     public void testComparatorOrdering() throws Exception {
-        MiruHostedPartition p1 = mockPartition(49601);
-        MiruHostedPartition p2 = mockPartition(49602);
+        MiruHostedPartition p1 = mockPartition(49_601);
+        MiruHostedPartition p2 = mockPartition(49_602);
 
         assertEquals(partitionComparison.getComparator().compare(p1, p2), 0);
 
@@ -57,8 +57,8 @@ public class MiruHostedPartitionComparisonTest {
 
     @Test
     public void testComparatorStability() throws Exception {
-        MiruHostedPartition p1 = mockPartition(49601);
-        MiruHostedPartition p2 = mockPartition(49602);
+        MiruHostedPartition p1 = mockPartition(49_601);
+        MiruHostedPartition p2 = mockPartition(49_602);
 
         timestamper.set(0);
         partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p1.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
@@ -76,7 +76,7 @@ public class MiruHostedPartitionComparisonTest {
     public void testSuggestedTimeout() throws Exception {
         List<MiruSolution> solutions = Lists.newArrayList();
         for (int i = 1; i <= 100; i++) {
-            MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49600 + i));
+            MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49_600 + i));
             solutions.add(new MiruSolution(coord, i, i, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null));
         }
         partitionComparison.analyzeSolutions(solutions, queryKey);

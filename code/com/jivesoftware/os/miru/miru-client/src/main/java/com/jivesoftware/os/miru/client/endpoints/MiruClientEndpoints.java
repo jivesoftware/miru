@@ -21,7 +21,6 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.client.MiruClient;
-
 import java.util.List;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;

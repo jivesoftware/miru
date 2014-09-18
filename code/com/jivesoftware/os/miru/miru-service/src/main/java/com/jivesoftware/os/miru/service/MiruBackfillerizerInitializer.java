@@ -7,7 +7,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public final class MiruBackfillerizerInitializer {
+public class MiruBackfillerizerInitializer {
 
     public MiruLifecyle<MiruJustInTimeBackfillerizer> initialize(final MiruServiceConfig config, MiruHost miruHost) {
 

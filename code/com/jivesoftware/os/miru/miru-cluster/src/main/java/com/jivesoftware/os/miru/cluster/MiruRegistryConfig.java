@@ -9,6 +9,6 @@ public interface MiruRegistryConfig extends Config {
     @IntDefault(3)
     int getDefaultNumberOfReplicas();
 
-    @LongDefault(3600000) // 1 hour
+    @LongDefault(3_600_000) // 1 hour
     long getDefaultTopologyIsStaleAfterMillis();
 }

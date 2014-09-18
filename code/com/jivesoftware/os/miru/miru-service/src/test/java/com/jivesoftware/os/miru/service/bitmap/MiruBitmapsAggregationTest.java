@@ -156,7 +156,7 @@ public class MiruBitmapsAggregationTest {
     @DataProvider(name = "bitmapsProvider")
     public Object[][] bitmapsProvider() {
         return new Object[][] {
-                new Object[] { new MiruBitmapsEWAH(1024) },
+                new Object[] { new MiruBitmapsEWAH(1_024) },
                 new Object[] { new MiruBitmapsRoaring() }
         };
     }

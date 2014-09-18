@@ -21,12 +21,12 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
@@ -52,7 +52,7 @@ public class MiruCollaborativeFilterNGTest {
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
-    MiruHost miruHost = new MiruHost("logicalName", 1234);
+    MiruHost miruHost = new MiruHost("logicalName", 1_234);
     CollaborativeFilterUtil util = new CollaborativeFilterUtil();
     MiruIndexUtil indexUtil = new MiruIndexUtil();
 
@@ -72,7 +72,7 @@ public class MiruCollaborativeFilterNGTest {
     public void basicTest() throws Exception {
 
         AtomicInteger time = new AtomicInteger();
-        Random rand = new Random(1234);
+        Random rand = new Random(1_234);
         int numqueries = 2;
         int numberOfUsers = 2;
         int numberOfDocument = 500_000;

@@ -37,7 +37,7 @@ public class MiruLowestLatencySolverTest {
         int initialSolvers = 2;
         int maxNumberOfSolvers = 10;
         long addAnotherSolverAfterNMillis = 100;
-        long failAfterNMillis = 3000;
+        long failAfterNMillis = 3_000;
 
         MiruLowestLatencySolver solver = new MiruLowestLatencySolver(executor, initialSolvers, maxNumberOfSolvers,
                 addAnotherSolverAfterNMillis, failAfterNMillis);
@@ -46,27 +46,27 @@ public class MiruLowestLatencySolverTest {
         List<MiruPartition> orderedPartitions = Lists.newArrayList();
         for (int i = 0; i < 10; i++) {
             final int id = i;
-            MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(1), new MiruHost("localhost", 49600 + i));
+            MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(1), new MiruHost("localhost", 49_600 + i));
             solvables.add(new MiruSolvable<>(
                     coord,
                     new Callable<MiruPartitionResponse<Integer>>() {
                         @Override
                         public MiruPartitionResponse<Integer> call() throws Exception {
-                            Thread.sleep(id * 1000); // Fake latency for each callable, 0 should always win
+                            Thread.sleep(id * 1_000); // Fake latency for each callable, 0 should always win
                             return new MiruPartitionResponse<>(id, null);
                         }
                     }));
             orderedPartitions.add(new MiruPartition(coord, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory)));
         }
 
-        Collections.shuffle(solvables, new Random(1234)); // randomize the solvers
-        Collections.shuffle(orderedPartitions, new Random(1234)); // same randomization
+        Collections.shuffle(solvables, new Random(1_234)); // randomize the solvers
+        Collections.shuffle(orderedPartitions, new Random(1_234)); // same randomization
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(false);
         MiruSolved<Integer> solved = solver.solve(solvables.iterator(), Optional.<Long>absent(), orderedPartitions, solutionLog);
         assertNotNull(solved.answer, "The answer was null, this probably means that the solver timed out when it shouldn't have.");
         assertEquals((int) solved.answer, 0);
         assertNotNull(solved.solution, "The solution was null");
-        assertEquals(solved.solution.usedPartition.host.getPort(), 49600);
+        assertEquals(solved.solution.usedPartition.host.getPort(), 49_600);
     }
 }

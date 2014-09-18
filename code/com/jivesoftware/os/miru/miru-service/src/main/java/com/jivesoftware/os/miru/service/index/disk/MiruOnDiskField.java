@@ -21,7 +21,7 @@ import java.util.Map;
  */
 public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Map<MiruTermId, MiruFieldIndexKey>> {
 
-    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1024 }; //TODO make this configurable per field?
+    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024}; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
 
     private final MiruFieldDefinition fieldDefinition;

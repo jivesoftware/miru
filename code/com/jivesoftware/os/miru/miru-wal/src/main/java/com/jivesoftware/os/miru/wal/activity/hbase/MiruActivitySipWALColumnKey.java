@@ -67,7 +67,7 @@ public class MiruActivitySipWALColumnKey {
 
     @Override
     public int hashCode() {
-        int result = (int) sort;
+        int result = sort;
         result = 31 * result + (int) (collisionId ^ (collisionId >>> 32));
         result = 31 * result + (sipId != null ? sipId.hashCode() : 0);
         return result;

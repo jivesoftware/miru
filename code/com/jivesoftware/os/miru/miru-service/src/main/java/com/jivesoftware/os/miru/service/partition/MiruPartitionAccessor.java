@@ -310,7 +310,7 @@ class MiruPartitionAccessor<BM> {
                 if (state.isPresent()) {
                     migratedInfo = migratedInfo.copyToState(state.get());
                 }
-                return new MiruPartitionAccessor<BM>(bitmaps, coord, migratedInfo, stream, sipTimestamp);
+                return new MiruPartitionAccessor<>(bitmaps, coord, migratedInfo, stream, sipTimestamp);
             }
 
             @Override

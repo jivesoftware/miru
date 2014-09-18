@@ -156,7 +156,7 @@ public class MiruTimeIndexTest {
 
         for (int levels : tryLevels) {
             for (int segments : trySegments) {
-                if ((long) Math.pow(segments, levels) > 1048576) {
+                if ((long) Math.pow(segments, levels) > 1_048_576) {
                     continue; // skips 32^5
                 }
 

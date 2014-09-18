@@ -131,7 +131,7 @@ public class MiruRCVSClusterRegistryTest {
     private MiruHost[] addHosts(int numHosts) throws Exception {
         MiruHost[] hosts = new MiruHost[numHosts];
         for (int i = 0; i < numHosts; i++) {
-            hosts[i] = new MiruHost("localhost", 49600 + i);
+            hosts[i] = new MiruHost("localhost", 49_600 + i);
             registry.sendHeartbeatForHost(hosts[i], -1, -1);
         }
         return hosts;

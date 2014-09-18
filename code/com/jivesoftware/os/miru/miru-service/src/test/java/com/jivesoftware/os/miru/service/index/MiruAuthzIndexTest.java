@@ -12,9 +12,9 @@ import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
-import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
@@ -51,7 +51,7 @@ public class MiruAuthzIndexTest {
 
     @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
-        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8192);
+        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8_192);
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -82,7 +82,7 @@ public class MiruAuthzIndexTest {
         File swapDir = Files.createTempDirectory("swap").toFile();
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 16384, false);
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 16_384, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex
                 = new MiruOnDiskAuthzIndex<>(bitmaps, mapDir, swapDir, multiChunkStore, cache(bitmaps, miruAuthzUtils, 10));
@@ -101,7 +101,7 @@ public class MiruAuthzIndexTest {
                 .expireAfterAccess(1, TimeUnit.MINUTES)
                 .build();
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(null, null, null, Interners.<String>newWeakInterner());
-        return new MiruAuthzCache<BM>(bitmaps, cache, activityInternExtern, miruAuthzUtils);
+        return new MiruAuthzCache<>(bitmaps, cache, activityInternExtern, miruAuthzUtils);
     }
 
     private <BM> InvertedIndexData<BM> buildInMemoryInvertedIndexes(MiruBitmaps<BM> bitmaps, Map<Integer, BM> bitsIn, MiruAuthzUtils<BM> miruAuthzUtils,

@@ -63,7 +63,7 @@ import static org.testng.AssertJUnit.fail;
 
 public class MiruIndexContextTest {
 
-    private long initialChunkStoreSizeInBytes = 4096;
+    private long initialChunkStoreSizeInBytes = 4_096;
     private MiruFieldDefinition[] fieldDefinitions;
     private MiruSchema miruSchema;
 
@@ -89,12 +89,12 @@ public class MiruIndexContextTest {
             assertEquals(sizeInBytes, expectedSizeInBytes);
         } else if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
             // See MapStore.cost() for more information. FileBackedMemMappedByteBufferFactory.allocate() adds the extra byte
-            long initialAuthzMapStoreSizeInBytes = 3547;
+            long initialAuthzMapStoreSizeInBytes = 3_547;
             long authzSizeInBytes = initialAuthzMapStoreSizeInBytes;
 
             // See MapStore.cost() for more information. FileBackedMemMappedByteBufferFactory.allocate() adds the extra byte
             long initialFieldIndexMapStoreSizeInBytes = 16;
-            long initialTermIndexSizeInBytes = 3547;
+            long initialTermIndexSizeInBytes = 3_547;
             long fieldIndexSizeInBytes = initialFieldIndexMapStoreSizeInBytes + initialTermIndexSizeInBytes;
 
             // 1 authz index, 3 field indexes
@@ -112,7 +112,6 @@ public class MiruIndexContextTest {
                 miruIndexContext.index(buildMiruActivity(tenantId, 4, new String[0], ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4);
                 fail("This index type is supposed to be readOnly");
             } catch (UnsupportedOperationException e) {
-                return;
             }
         } else {
             long expectedSizeInBytes = (52 * 3) + (42 * 3); // See testSizeInBytes();
@@ -149,7 +148,6 @@ public class MiruIndexContextTest {
                 miruIndexContext.index(buildMiruActivity(tenantId, 4, new String[0], ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4);
                 fail("This index type is supposed to be readOnly");
             } catch (UnsupportedOperationException e) {
-                return;
             }
         } else {
             // Next add new data and check it

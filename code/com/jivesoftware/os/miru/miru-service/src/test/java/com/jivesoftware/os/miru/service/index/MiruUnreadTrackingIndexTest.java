@@ -137,7 +137,7 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     private Object[][] generateUnreadIndexes(MiruTenantId tenantId, EWAHCompressedBitmap bitmap, boolean autoCreate) throws Exception {
-        final MiruStreamId streamId = new MiruStreamId(new Id(12345).toBytes());
+        final MiruStreamId streamId = new MiruStreamId(new Id(12_345).toBytes());
         MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
         MiruInMemoryUnreadTrackingIndex<EWAHCompressedBitmap> miruInMemoryUnreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex<>(bitmaps);
 
@@ -160,7 +160,7 @@ public class MiruUnreadTrackingIndexTest {
         File swapDir = Files.createTempDirectory("swap").toFile();
         Path chunksDir = Files.createTempDirectory("chunks");
         File chunks = new File(chunksDir.toFile(), "chunks.data");
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4096, false);
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4_096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
         MiruOnDiskUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(
                 bitmaps, mapDir, swapDir, multiChunkStore);

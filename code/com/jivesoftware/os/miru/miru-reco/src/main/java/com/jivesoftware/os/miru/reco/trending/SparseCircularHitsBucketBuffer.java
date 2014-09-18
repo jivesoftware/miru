@@ -114,7 +114,7 @@ public class SparseCircularHitsBucketBuffer {
     private int nextCursor(int cursor, int move) {
         cursor += move;
         if (cursor >= numberOfBuckets) {
-            cursor = cursor - numberOfBuckets;
+            cursor -= numberOfBuckets;
         }
         return cursor;
     }

@@ -9,7 +9,7 @@ public interface MiruHttpClientConfigReaderConfig extends Config {
     @StringDefault("localhost")
     public String getHost();
 
-    @IntDefault(49600)
+    @IntDefault(49_600)
     public Integer getPort();
 
     @IntDefault(-1)
