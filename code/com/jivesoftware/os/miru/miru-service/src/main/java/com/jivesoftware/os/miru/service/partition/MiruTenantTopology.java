@@ -128,7 +128,7 @@ public class MiruTenantTopology<BM> {
 
         List<OrderedPartitions> allPartitions = Lists.newArrayList();
         List<MiruHostedPartition<?>> partitions = Lists.newArrayList();
-        MiruHostedPartition lastPartition = null;
+        MiruHostedPartition<BM> lastPartition = null;
         for (MiruHostedPartition<BM> partition : sortedPartitions) {
             if (lastPartition == null) {
                 lastPartition = partition;
@@ -144,7 +144,7 @@ public class MiruTenantTopology<BM> {
                 lastPartition = partition;
             }
         }
-        if (!partitions.isEmpty()) {
+        if (!partitions.isEmpty() && lastPartition != null) {
             allPartitions.add(new OrderedPartitions(tenantId, lastPartition.getPartitionId(), partitions));
         }
         return allPartitions;

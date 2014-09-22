@@ -15,11 +15,11 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
  */
 public interface MiruPartitionDirector {
 
-    Optional<MiruHostedPartition<?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord);
+    Optional<MiruHostedPartition<?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord) throws Exception;
 
     void index(ListMultimap<MiruTenantId, MiruPartitionedActivity> perTenantPartitionedActivities) throws Exception;
 
-    Iterable<OrderedPartitions> allQueryablePartitionsInOrder(MiruTenantId tenantId);
+    Iterable<OrderedPartitions> allQueryablePartitionsInOrder(MiruTenantId tenantId) throws Exception;
 
     void warm(MiruTenantId tenantId) throws Exception;
 
@@ -33,5 +33,5 @@ public interface MiruPartitionDirector {
 
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
 
-    boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info);
+    boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;
 }

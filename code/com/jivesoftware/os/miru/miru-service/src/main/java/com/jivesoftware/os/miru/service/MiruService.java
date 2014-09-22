@@ -274,11 +274,11 @@ public class MiruService implements Miru {
         partitionDirector.removeTopology(tenantId, partitionId, host);
     }
 
-    public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) {
+    public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception {
         return partitionDirector.checkInfo(tenantId, partitionId, info);
     }
 
-    private Optional<MiruHostedPartition<?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) {
+    private Optional<MiruHostedPartition<?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         MiruPartitionCoord localPartitionCoord = new MiruPartitionCoord(tenantId, partitionId, localhost);
         return partitionDirector.getQueryablePartition(localPartitionCoord);
     }

@@ -60,22 +60,20 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
 
     /** All reads read from here */
     @Override
-    public Iterable<OrderedPartitions> allQueryablePartitionsInOrder(MiruTenantId tenantId) {
+    public Iterable<OrderedPartitions> allQueryablePartitionsInOrder(MiruTenantId tenantId) throws Exception {
         MiruTenantTopology<?> topology = expectedTenants.getTopology(tenantId);
         if (topology == null) {
             return Collections.emptyList();
         }
-        //TODO fix this cast
         return topology.allPartitionsInOrder();
     }
 
     @Override
-    public Optional<MiruHostedPartition<?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord) {
+    public Optional<MiruHostedPartition<?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord) throws Exception {
         MiruTenantTopology<?> topology = expectedTenants.getTopology(miruPartitionCoord.tenantId);
         if (topology == null) {
             return Optional.absent();
         }
-        //TODO fix this cast
         return topology.getPartition(miruPartitionCoord);
     }
 
@@ -123,7 +121,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
 
     /** Check if the given tenant partition is in the desired state */
     @Override
-    public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) {
+    public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception {
         MiruTenantTopology<?> topology = expectedTenants.getTopology(tenantId);
         if (topology != null) {
             Optional<MiruHostedPartition<?>> partition = topology.getPartition(new MiruPartitionCoord(tenantId, partitionId, host));
@@ -147,7 +145,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
                             sizeInMemory += partition.sizeInMemory();
                             sizeOnDisk += partition.sizeOnDisk();
                         } catch (Exception e) {
-                            LOG.warn("Failed to get size in bytes for partition {}", new Object[] { partition }, e);
+                            LOG.warn("Failed to get size in bytes for partition " + partition, e);
                         }
                     }
                 }

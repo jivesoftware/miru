@@ -13,7 +13,7 @@ import java.util.List;
  */
 public interface MiruExpectedTenants {
 
-    MiruTenantTopology<?> getTopology(MiruTenantId tenantId);
+    MiruTenantTopology<?> getTopology(MiruTenantId tenantId) throws Exception;
 
     Collection<MiruTenantTopology<?>> topologies();
 
