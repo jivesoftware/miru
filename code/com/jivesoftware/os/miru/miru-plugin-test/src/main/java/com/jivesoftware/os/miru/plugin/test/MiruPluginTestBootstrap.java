@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
@@ -15,7 +16,6 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.service.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
@@ -61,9 +62,10 @@ public class MiruPluginTestBootstrap {
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
                 .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
+        ObjectMapper mapper = new ObjectMapper();
 
         InMemorySetOfSortedMapsImplInitializer inMemorySetOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer);
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
                 registryStore.getHostsRegistry(),
                 registryStore.getExpectedTenantsRegistry(),
@@ -78,7 +80,7 @@ public class MiruPluginTestBootstrap {
         clusterRegistry.electToReplicaSetForTenantPartition(tenantId, partitionId,
                 new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3));
 
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer);
+        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
 
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer().initialize(config, miruHost);

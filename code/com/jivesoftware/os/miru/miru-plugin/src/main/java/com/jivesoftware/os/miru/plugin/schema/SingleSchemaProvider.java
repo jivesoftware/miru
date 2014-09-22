@@ -1,5 +1,6 @@
-package com.jivesoftware.os.miru.api.activity.schema;
+package com.jivesoftware.os.miru.plugin.schema;
 
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 
 /**

@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
+import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
@@ -391,6 +392,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                 try {
                     checkActive();
+                } catch (MiruSchemaUnvailableException sue) {
+                    log.warn("Tenant is active but schema not available for {}", coord.tenantId);
+                    log.debug("Tenant is active but schema not available", sue);
                 } catch (Throwable t) {
                     log.error("CheckActive encountered a problem", t);
                 }

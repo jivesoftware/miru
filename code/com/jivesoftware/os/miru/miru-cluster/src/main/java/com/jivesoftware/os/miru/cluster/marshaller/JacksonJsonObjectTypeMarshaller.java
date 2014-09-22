@@ -1,26 +1,26 @@
-package com.jivesoftware.os.miru.wal;
+package com.jivesoftware.os.miru.cluster.marshaller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.TypeMarshaller;
 
 public class JacksonJsonObjectTypeMarshaller<T> implements TypeMarshaller<T> {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
     private final Class<T> marshalledClass;
+    private final ObjectMapper objectMapper;
 
-    public JacksonJsonObjectTypeMarshaller(Class<T> marshalledClass) {
+    public JacksonJsonObjectTypeMarshaller(Class<T> marshalledClass, ObjectMapper objectMapper) {
         this.marshalledClass = marshalledClass;
+        this.objectMapper = objectMapper;
     }
 
     @Override
     public T fromBytes(byte[] bytes) throws Exception {
-        return OBJECT_MAPPER.readValue(bytes, marshalledClass);
+        return objectMapper.readValue(bytes, marshalledClass);
     }
 
     @Override
     public byte[] toBytes(T object) throws Exception {
-        return OBJECT_MAPPER.writeValueAsBytes(object);
+        return objectMapper.writeValueAsBytes(object);
     }
 
     @Override

@@ -11,10 +11,12 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.config.PartitionsForTenantResult;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.service.MiruService;
+import com.jivesoftware.os.miru.service.schema.RegistrySchemaProvider;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -35,10 +37,14 @@ public class MiruConfigEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
     private final MiruClusterRegistry clusterRegistry;
     private final MiruService miruService;
+    private final RegistrySchemaProvider registrySchemaProvider;
 
-    public MiruConfigEndpoints(@Context MiruClusterRegistry clusterRegistry, @Context MiruService miruService) {
+    public MiruConfigEndpoints(@Context MiruClusterRegistry clusterRegistry,
+        @Context MiruService miruService,
+        @Context RegistrySchemaProvider registrySchemaProvider) {
         this.clusterRegistry = clusterRegistry;
         this.miruService = miruService;
+        this.registrySchemaProvider = registrySchemaProvider;
     }
 
     @GET
@@ -50,10 +56,42 @@ public class MiruConfigEndpoints {
             MiruTenantId tenantId = new MiruTenantId(tenantIdString.getBytes(Charsets.UTF_8));
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
             PartitionsForTenantResult result = new PartitionsForTenantResult(partitionsForTenant.asMap());
-            return Response.ok(result != null ? result : PartitionsForTenantResult.DEFAULT_RESULT).build();
+            return Response.ok(result).build();
         } catch (Exception e) {
             log.error("Failed to filter custom stream.", e);
             return Response.serverError().build();
+        }
+    }
+
+    @POST
+    @Path("/schema/{tenantId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response setStorage(
+        @PathParam("tenantId") String tenantId,
+        MiruSchema schema) {
+        try {
+            registrySchemaProvider.register(
+                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                schema,
+                //TODO client specified version?
+                System.currentTimeMillis());
+            return Response.ok("ok").build();
+        } catch (Throwable t) {
+            log.error("Failed to set schema for tenant {}", new Object[] { tenantId }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/schema/{tenantId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response setStorage(@PathParam("tenantId") String tenantId) {
+        try {
+            MiruSchema schema = registrySchemaProvider.getSchema(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
+            return Response.ok(schema).build();
+        } catch (Throwable t) {
+            log.error("Failed to get schema for tenant {}", new Object[] { tenantId }, t);
+            return Response.serverError().entity(t.getMessage()).build();
         }
     }
 

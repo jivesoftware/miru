@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.wal;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.jive.utils.id.SaltingDelegatingMarshaller;
 import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.id.TenantIdMarshaller;
@@ -9,6 +10,7 @@ import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMaps
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.primatives.LongTypeMarshaller;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.cluster.marshaller.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKeyMarshaller;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
@@ -25,51 +27,52 @@ import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRowMar
 public class MiruWALInitializer {
 
     public MiruWAL initialize(String tableNameSpace,
-            SetOfSortedMapsImplInitializer<? extends Exception> setOfSortedMapsImplInitializer) throws Exception {
+        SetOfSortedMapsImplInitializer<? extends Exception> setOfSortedMapsImplInitializer,
+        ObjectMapper objectMapper) throws Exception {
 
         // Miru ActivityWAL
-        RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL
-                = setOfSortedMapsImplInitializer.initialize(
-                        tableNameSpace,
-                        "miru.activity.wal", "a", new String[]{"s"}, new DefaultRowColumnValueStoreMarshaller<>(
-                                new TenantIdMarshaller(),
-                                new SaltingDelegatingMarshaller<>(new MiruActivityWALRowMarshaller()),
-                                new MiruActivityWALColumnKeyMarshaller(),
-                                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class)), new CurrentTimestamper()
-                );
+        RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity,
+            ? extends Exception> activityWAL = setOfSortedMapsImplInitializer.initialize(
+            tableNameSpace,
+            "miru.activity.wal", "a", new String[] { "s" }, new DefaultRowColumnValueStoreMarshaller<>(
+                new TenantIdMarshaller(),
+                new SaltingDelegatingMarshaller<>(new MiruActivityWALRowMarshaller()),
+                new MiruActivityWALColumnKeyMarshaller(),
+                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)), new CurrentTimestamper()
+        );
 
         // Miru ActivitySipWAL
-        RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL
-                = setOfSortedMapsImplInitializer.initialize(
-                        tableNameSpace,
-                        "miru.activity.wal", "s", new DefaultRowColumnValueStoreMarshaller<>(
-                                new TenantIdMarshaller(),
-                                new SaltingDelegatingMarshaller<>(new MiruActivityWALRowMarshaller()),
-                                new MiruActivitySipWALColumnKeyMarshaller(),
-                                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class)), new CurrentTimestamper()
-                );
+        RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity,
+            ? extends Exception> activitySipWAL = setOfSortedMapsImplInitializer.initialize(
+            tableNameSpace,
+            "miru.activity.wal", "s", new DefaultRowColumnValueStoreMarshaller<>(
+                new TenantIdMarshaller(),
+                new SaltingDelegatingMarshaller<>(new MiruActivityWALRowMarshaller()),
+                new MiruActivitySipWALColumnKeyMarshaller(),
+                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)), new CurrentTimestamper()
+        );
 
         // Miru ReadTrackingWAL
-        RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL
-                = setOfSortedMapsImplInitializer.initialize(
-                        tableNameSpace,
-                        "miru.readtracking.wal", "r", new String[]{"s"}, new DefaultRowColumnValueStoreMarshaller<>(
-                                new TenantIdMarshaller(),
-                                new SaltingDelegatingMarshaller<>(new MiruReadTrackingWALRowMarshaller()),
-                                new MiruReadTrackingWALColumnKeyMarshaller(),
-                                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class)), new CurrentTimestamper()
-                );
+        RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity,
+            ? extends Exception> readTrackingWAL = setOfSortedMapsImplInitializer.initialize(
+            tableNameSpace,
+            "miru.readtracking.wal", "r", new String[] { "s" }, new DefaultRowColumnValueStoreMarshaller<>(
+                new TenantIdMarshaller(),
+                new SaltingDelegatingMarshaller<>(new MiruReadTrackingWALRowMarshaller()),
+                new MiruReadTrackingWALColumnKeyMarshaller(),
+                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)), new CurrentTimestamper()
+        );
 
         // Miru ReadTrackingSipWAL
-        RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL
-                = setOfSortedMapsImplInitializer.initialize(
-                        tableNameSpace,
-                        "miru.readtracking.wal", "s", new DefaultRowColumnValueStoreMarshaller<>(
-                                new TenantIdMarshaller(),
-                                new SaltingDelegatingMarshaller<>(new MiruReadTrackingWALRowMarshaller()),
-                                new MiruReadTrackingSipWALColumnKeyMarshaller(),
-                                new LongTypeMarshaller()), new CurrentTimestamper()
-                );
+        RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL =
+            setOfSortedMapsImplInitializer.initialize(
+                tableNameSpace,
+                "miru.readtracking.wal", "s", new DefaultRowColumnValueStoreMarshaller<>(
+                    new TenantIdMarshaller(),
+                    new SaltingDelegatingMarshaller<>(new MiruReadTrackingWALRowMarshaller()),
+                    new MiruReadTrackingSipWALColumnKeyMarshaller(),
+                    new LongTypeMarshaller()), new CurrentTimestamper()
+            );
 
         return new MiruWAL(activityWAL, activitySipWAL, readTrackingWAL, readTrackingSipWAL);
     }
@@ -77,14 +80,16 @@ public class MiruWALInitializer {
     static public class MiruWAL {
 
         private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
-        private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL;
-        private final RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL;
+        private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity,
+            ? extends Exception> activitySipWAL;
+        private final RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity,
+            ? extends Exception> readTrackingWAL;
         private final RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL;
 
         public MiruWAL(RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
-                RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL,
-                RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
-                RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {
+            RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL,
+            RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
+            RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {
             this.activityWAL = activityWAL;
             this.activitySipWAL = activitySipWAL;
             this.readTrackingWAL = readTrackingWAL;
@@ -95,11 +100,13 @@ public class MiruWALInitializer {
             return activityWAL;
         }
 
-        public RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> getActivitySipWAL() {
+        public RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity,
+            ? extends Exception> getActivitySipWAL() {
             return activitySipWAL;
         }
 
-        public RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> getReadTrackingWAL() {
+        public RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity,
+            ? extends Exception> getReadTrackingWAL() {
             return readTrackingWAL;
         }
 

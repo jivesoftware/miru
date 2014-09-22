@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -42,12 +43,13 @@ public class MiruManageServiceTest {
         config.setPathToSoyResources("src/main/home/resources/soy");
 
         InMemorySetOfSortedMapsImplInitializer setOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", setOfSortedMapsImplInitializer);
+        ObjectMapper mapper = new ObjectMapper();
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", setOfSortedMapsImplInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
                 registryStore.getHostsRegistry(), registryStore.getExpectedTenantsRegistry(),
                 registryStore.getExpectedTenantPartitionsRegistry(), registryStore.getReplicaRegistry(), registryStore.getTopologyRegistry(),
                 registryStore.getConfigRegistry(), numberOfReplicas, TimeUnit.HOURS.toMillis(1));
-        MiruWAL miruWAL = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer);
+        MiruWAL miruWAL = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer, mapper);
         miruManageService = new MiruManageInitializer().initialize(config, clusterRegistry, registryStore, miruWAL);
 
         tenantId = new MiruTenantId("test1".getBytes());

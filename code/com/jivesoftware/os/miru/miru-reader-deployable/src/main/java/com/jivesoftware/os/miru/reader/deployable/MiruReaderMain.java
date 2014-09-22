@@ -30,9 +30,6 @@ import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSor
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruWriter;
-import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.activity.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -57,11 +54,11 @@ import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProviderInitializer;
+import com.jivesoftware.os.miru.service.schema.RegistrySchemaProvider;
 import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
-import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
@@ -94,10 +91,13 @@ public class MiruReaderMain {
         MiruServiceConfig miruServiceConfig = deployable.config(MiruServiceConfig.class);
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new GuavaModule());
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
-                setOfSortedMapsInitializer);
+                setOfSortedMapsInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
                 registryStore.getHostsRegistry(),
                 registryStore.getExpectedTenantsRegistry(),
@@ -108,7 +108,7 @@ public class MiruReaderMain {
                 3,
                 TimeUnit.HOURS.toMillis(1));
 
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer);
+        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer().initialize(miruServiceConfig, miruHost);
 
@@ -116,41 +116,30 @@ public class MiruReaderMain {
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
 
         MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruResourceLocatorProviderInitializer()
-                .initialize(miruServiceConfig);
+            .initialize(miruServiceConfig);
 
         miruResourceLocatorProviderLifecyle.start();
 
         final MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
-                Interners.<MiruIBA>newWeakInterner(),
-                Interners.<MiruTermId>newWeakInterner(),
-                Interners.<MiruTenantId>newStrongInterner(),
-                // makes sense to share string internment as this is authz in both cases
-                Interners.<String>newWeakInterner());
-
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new GuavaModule());
-
-
-        File schemaFile = new File(System.getProperty("user.home"), "miru-default-schema.json");
-        MiruSchema schema;
-        if (schemaFile.exists()) {
-            schema = mapper.readValue(schemaFile, MiruSchema.class);
-        } else {
-            schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS, DefaultMiruSchemaDefinition.PROPERTIES);
-            mapper.writeValue(schemaFile, schema);
-        }
+            Interners.<MiruIBA>newWeakInterner(),
+            Interners.<MiruTermId>newWeakInterner(),
+            Interners.<MiruTenantId>newStrongInterner(),
+            // makes sense to share string internment as this is authz in both cases
+            Interners.<String>newWeakInterner());
 
         final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+        RegistrySchemaProvider registrySchemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
+
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
-                registryStore,
-                clusterRegistry,
-                miruHost,
-                new SingleSchemaProvider(schema),
-                wal,
-                httpClientFactory,
-                miruResourceLocatorProviderLifecyle.getService(),
-                internExtern,
-                new SingleBitmapsProvider<>(bitmaps));
+            registryStore,
+            clusterRegistry,
+            miruHost,
+            registrySchemaProvider, //TODO configure
+            wal,
+            httpClientFactory,
+            miruResourceLocatorProviderLifecyle.getService(),
+            internExtern,
+            new SingleBitmapsProvider<>(bitmaps));
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();
@@ -180,8 +169,8 @@ public class MiruReaderMain {
 
         for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {
             Reflections reflections = new Reflections(new ConfigurationBuilder()
-                    .setUrls(ClasspathHelper.forPackage(pluginPackage.trim()))
-                    .setScanners(new SubTypesScanner(), new TypesScanner()));
+                .setUrls(ClasspathHelper.forPackage(pluginPackage.trim()))
+                .setScanners(new SubTypesScanner(), new TypesScanner()));
             Set<Class<? extends MiruPlugin>> pluginTypes = reflections.getSubTypesOf(MiruPlugin.class);
             for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
                 LOG.info("Loading plugin {}", pluginType.getSimpleName());
@@ -191,6 +180,7 @@ public class MiruReaderMain {
 
         deployable.addEndpoints(MiruConfigEndpoints.class);
         deployable.addInjectables(MiruClusterRegistry.class, clusterRegistry);
+        deployable.addInjectables(RegistrySchemaProvider.class, registrySchemaProvider);
 
         deployable.buildServer().start();
 

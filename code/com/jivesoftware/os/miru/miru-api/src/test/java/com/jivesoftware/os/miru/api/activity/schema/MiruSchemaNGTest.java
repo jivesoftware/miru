@@ -16,7 +16,6 @@
 
 package com.jivesoftware.os.miru.api.activity.schema;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +29,7 @@ import org.testng.annotations.Test;
 public class MiruSchemaNGTest {
 
     @Test
-    public void testSerDes() throws JsonProcessingException, IOException {
+    public void testSerDes() throws IOException {
 
         MiruSchema write = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS, DefaultMiruSchemaDefinition.PROPERTIES);
         ObjectMapper objectMapper = new ObjectMapper();

@@ -33,6 +33,11 @@
             <version>0.46-SNAPSHOT</version>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-cluster</artifactId>
+            <version>0.40-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
             <artifactId>row-column-value-store-marshall-primatives</artifactId>
         </dependency>

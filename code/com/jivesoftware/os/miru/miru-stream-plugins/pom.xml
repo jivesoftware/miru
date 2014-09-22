@@ -17,10 +17,6 @@
     <dependencies>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>id</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>io</artifactId>
         </dependency>
         <dependency>

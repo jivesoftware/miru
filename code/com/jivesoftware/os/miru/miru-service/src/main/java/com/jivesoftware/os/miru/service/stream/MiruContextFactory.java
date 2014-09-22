@@ -19,7 +19,6 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -28,6 +27,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruReadTrackContext;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFields;
+import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
@@ -91,13 +91,13 @@ public class MiruContextFactory {
     private final MiruBackingStorage defaultStorage;
 
     public MiruContextFactory(MiruSchemaProvider schemaProvider,
-            ExecutorService executorService,
-            MiruReadTrackingWALReader readTrackingWALReader,
-            MiruResourceLocator diskResourceLocator,
-            MiruHybridResourceLocator transientResourceLocator,
-            int partitionAuthzCacheSize,
-            MiruBackingStorage defaultStorage,
-            MiruActivityInternExtern activityInternExtern) {
+        ExecutorService executorService,
+        MiruReadTrackingWALReader readTrackingWALReader,
+        MiruResourceLocator diskResourceLocator,
+        MiruHybridResourceLocator transientResourceLocator,
+        int partitionAuthzCacheSize,
+        MiruBackingStorage defaultStorage,
+        MiruActivityInternExtern activityInternExtern) {
         this.schemaProvider = schemaProvider;
         this.executorService = executorService;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -132,6 +132,9 @@ public class MiruContextFactory {
     }
 
     private <BM> MiruContext<BM> allocateInMemory(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) {
+        // check for schema first
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
+
         Map<String, BulkExport<?>> exportHandles = Maps.newHashMap();
 
         MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent());
@@ -143,7 +146,6 @@ public class MiruContextFactory {
         MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps);
         exportHandles.put("index", index);
 
-        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         MiruInMemoryField<BM>[] fields = new MiruInMemoryField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruInMemoryField<>(schema.getFieldDefinition(fieldId), new ConcurrentHashMap<MiruTermId, MiruFieldIndexKey>(), index);
@@ -155,11 +157,11 @@ public class MiruContextFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-                .maximumSize(partitionAuthzCacheSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-                .build();
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
         MiruInMemoryAuthzIndex<BM> authzIndex = new MiruInMemoryAuthzIndex<>(
-                bitmaps, new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            bitmaps, new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         exportHandles.put("authzIndex", authzIndex);
 
         MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(bitmaps);
@@ -177,13 +179,16 @@ public class MiruContextFactory {
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
 
         MiruRequestContext<BM> requestContext = new MiruRequestContext<>(executorService,
-                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-                readTrackContext, readTrackingWALReader, streamLocks);
+            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+            readTrackContext, readTrackingWALReader, streamLocks);
 
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.<MultiChunkStore>absent()).exportable(exportHandles);
     }
 
     private <BM> MiruContext<BM> allocateHybrid(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+        // check for schema first
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
+
         Map<String, BulkExport<?>> exportHandles = Maps.newHashMap();
 
         MiruResourcePartitionIdentifier identifier = hybridResourceLocator.acquire();
@@ -200,22 +205,21 @@ public class MiruContextFactory {
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStores);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
-                hybridResourceLocator.getMapDirectory(identifier, "activity"),
-                hybridResourceLocator.getSwapDirectory(identifier, "activity"),
-                multiChunkStore,
-                new MiruInternalActivityMarshaller());
+            hybridResourceLocator.getMapDirectory(identifier, "activity"),
+            hybridResourceLocator.getSwapDirectory(identifier, "activity"),
+            multiChunkStore,
+            new MiruInternalActivityMarshaller());
         exportHandles.put("activityIndex", activityIndex);
 
         MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps);
         exportHandles.put("index", index);
 
-        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         MiruHybridField<BM>[] fields = new MiruHybridField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruHybridField<>(
-                    schema.getFieldDefinition(fieldId),
-                    index,
-                    hybridResourceLocator.getMapDirectory(identifier, "field" + fieldId));
+                schema.getFieldDefinition(fieldId),
+                index,
+                hybridResourceLocator.getMapDirectory(identifier, "field" + fieldId));
             exportHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -224,11 +228,11 @@ public class MiruContextFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-                .maximumSize(partitionAuthzCacheSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-                .build();
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
         MiruInMemoryAuthzIndex<BM> authzIndex = new MiruInMemoryAuthzIndex<>(bitmaps,
-                new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         exportHandles.put("authzIndex", authzIndex);
 
         MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(bitmaps);
@@ -246,16 +250,19 @@ public class MiruContextFactory {
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
 
         MiruRequestContext<BM> requestContext = new MiruRequestContext<>(executorService,
-                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-                readTrackContext, readTrackingWALReader, streamLocks);
+            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+            readTrackContext, readTrackingWALReader, streamLocks);
 
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.of(multiChunkStore))
-                .exportable(exportHandles)
-                .withTransientResource(identifier);
+            .exportable(exportHandles)
+            .withTransientResource(identifier);
     }
 
     private <BM> MiruContext<BM> allocateMemMapped(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         //TODO refactor OnDisk impls to take a shared VariableKeySizeFileBackedKeyedStore and a prefixed KeyProvider
+
+        // check for schema first
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
 
@@ -273,31 +280,30 @@ public class MiruContextFactory {
         Map<String, BulkImport<?>> importHandles = Maps.newHashMap();
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
-                new MemMappedFilerProvider(identifier, "timeIndex"),
-                diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
+            new MemMappedFilerProvider(identifier, "timeIndex"),
+            diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
         importHandles.put("timeIndex", timeIndex);
 
         MiruMemMappedActivityIndex activityIndex = new MiruMemMappedActivityIndex(
-                new MemMappedFilerProvider(identifier, "activity"),
-                diskResourceLocator.getMapDirectory(identifier, "activity"),
-                diskResourceLocator.getSwapDirectory(identifier, "activity"),
-                multiChunkStore,
-                objectMapper);
+            new MemMappedFilerProvider(identifier, "activity"),
+            diskResourceLocator.getMapDirectory(identifier, "activity"),
+            diskResourceLocator.getSwapDirectory(identifier, "activity"),
+            multiChunkStore,
+            objectMapper);
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
-                diskResourceLocator.getMapDirectory(identifier, "index"),
-                diskResourceLocator.getSwapDirectory(identifier, "index"),
-                multiChunkStore);
+            diskResourceLocator.getMapDirectory(identifier, "index"),
+            diskResourceLocator.getSwapDirectory(identifier, "index"),
+            multiChunkStore);
         importHandles.put("index", index);
 
-        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         MiruOnDiskField<BM>[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(
-                    schema.getFieldDefinition(fieldId),
-                    index,
-                    diskResourceLocator.getMapDirectory(identifier, "field-" + fieldId));
+                schema.getFieldDefinition(fieldId),
+                index,
+                diskResourceLocator.getMapDirectory(identifier, "field-" + fieldId));
             importHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -306,30 +312,30 @@ public class MiruContextFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-                .maximumSize(partitionAuthzCacheSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-                .build();
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
         MiruOnDiskAuthzIndex<BM> authzIndex = new MiruOnDiskAuthzIndex<>(bitmaps,
-                diskResourceLocator.getMapDirectory(identifier, "authz"),
-                diskResourceLocator.getSwapDirectory(identifier, "authz"),
-                multiChunkStore,
-                new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            diskResourceLocator.getMapDirectory(identifier, "authz"),
+            diskResourceLocator.getSwapDirectory(identifier, "authz"),
+            multiChunkStore,
+            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex<BM> removalIndex = new MiruOnDiskRemovalIndex<>(bitmaps, new RandomAccessSwappableFiler(
-                diskResourceLocator.getFilerFile(identifier, "removal")));
+            diskResourceLocator.getFilerFile(identifier, "removal")));
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
-                diskResourceLocator.getMapDirectory(identifier, "unread"),
-                diskResourceLocator.getSwapDirectory(identifier, "unread"),
-                multiChunkStore);
+            diskResourceLocator.getMapDirectory(identifier, "unread"),
+            diskResourceLocator.getSwapDirectory(identifier, "unread"),
+            multiChunkStore);
         importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
-                diskResourceLocator.getMapDirectory(identifier, "inbox"),
-                diskResourceLocator.getSwapDirectory(identifier, "inbox"),
-                multiChunkStore);
+            diskResourceLocator.getMapDirectory(identifier, "inbox"),
+            diskResourceLocator.getSwapDirectory(identifier, "inbox"),
+            multiChunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
         MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
@@ -338,14 +344,17 @@ public class MiruContextFactory {
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
 
         MiruRequestContext<BM> requestContext = new MiruRequestContext<>(executorService,
-                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-                readTrackContext, readTrackingWALReader, streamLocks);
+            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+            readTrackContext, readTrackingWALReader, streamLocks);
 
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.of(multiChunkStore)).importable(importHandles);
     }
 
     private <BM> MiruContext<BM> allocateOnDisk(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         //TODO refactor OnDisk impls to take a shared VariableKeySizeFileBackedKeyedStore and a prefixed KeyProvider
+
+        // check for schema first
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
         Map<String, BulkImport<?>> importHandles = Maps.newHashMap();
@@ -362,30 +371,29 @@ public class MiruContextFactory {
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStores);
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
-                new OnDiskFilerProvider(identifier, "timeIndex"),
-                diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
+            new OnDiskFilerProvider(identifier, "timeIndex"),
+            diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
         importHandles.put("timeIndex", timeIndex);
 
         MiruMemMappedActivityIndex activityIndex = new MiruMemMappedActivityIndex(
-                new MemMappedFilerProvider(identifier, "activity"),
-                diskResourceLocator.getMapDirectory(identifier, "activity"),
-                diskResourceLocator.getSwapDirectory(identifier, "activity"),
-                multiChunkStore,
-                objectMapper);
+            new MemMappedFilerProvider(identifier, "activity"),
+            diskResourceLocator.getMapDirectory(identifier, "activity"),
+            diskResourceLocator.getSwapDirectory(identifier, "activity"),
+            multiChunkStore,
+            objectMapper);
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
-                diskResourceLocator.getMapDirectory(identifier, "index"),
-                diskResourceLocator.getSwapDirectory(identifier, "index"),
-                multiChunkStore);
+            diskResourceLocator.getMapDirectory(identifier, "index"),
+            diskResourceLocator.getSwapDirectory(identifier, "index"),
+            multiChunkStore);
         importHandles.put("index", index);
 
-        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         MiruOnDiskField<BM>[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(schema.getFieldDefinition(fieldId),
-                    index,
-                    diskResourceLocator.getMapDirectory(identifier, "field-" + fieldId));
+                index,
+                diskResourceLocator.getMapDirectory(identifier, "field-" + fieldId));
             importHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -393,30 +401,30 @@ public class MiruContextFactory {
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-                .maximumSize(partitionAuthzCacheSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-                .build();
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
         MiruOnDiskAuthzIndex<BM> authzIndex = new MiruOnDiskAuthzIndex<>(bitmaps,
-                diskResourceLocator.getMapDirectory(identifier, "authz"),
-                diskResourceLocator.getSwapDirectory(identifier, "authz"),
-                multiChunkStore,
-                new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            diskResourceLocator.getMapDirectory(identifier, "authz"),
+            diskResourceLocator.getSwapDirectory(identifier, "authz"),
+            multiChunkStore,
+            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex<BM> removalIndex = new MiruOnDiskRemovalIndex<>(bitmaps, new RandomAccessSwappableFiler(
-                diskResourceLocator.getFilerFile(identifier, "removal")));
+            diskResourceLocator.getFilerFile(identifier, "removal")));
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
-                diskResourceLocator.getMapDirectory(identifier, "unread"),
-                diskResourceLocator.getSwapDirectory(identifier, "unread"),
-                multiChunkStore);
+            diskResourceLocator.getMapDirectory(identifier, "unread"),
+            diskResourceLocator.getSwapDirectory(identifier, "unread"),
+            multiChunkStore);
         importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
-                diskResourceLocator.getMapDirectory(identifier, "inbox"),
-                diskResourceLocator.getSwapDirectory(identifier, "inbox"),
-                multiChunkStore);
+            diskResourceLocator.getMapDirectory(identifier, "inbox"),
+            diskResourceLocator.getSwapDirectory(identifier, "inbox"),
+            multiChunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
         MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
@@ -425,8 +433,8 @@ public class MiruContextFactory {
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
 
         MiruRequestContext<BM> requestContext = new MiruRequestContext<>(executorService,
-                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-                readTrackContext, readTrackingWALReader, streamLocks);
+            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+            readTrackContext, readTrackingWALReader, streamLocks);
 
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.of(multiChunkStore)).importable(importHandles);
     }
@@ -532,10 +540,10 @@ public class MiruContextFactory {
         }
 
         return diskResourceAnalyzer.checkExists(
-                diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
-                Lists.newArrayList("timeIndex", "activity", "removal"),
-                mapDirectories,
-                chunkNames);
+            diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
+            Lists.newArrayList("timeIndex", "activity", "removal"),
+            mapDirectories,
+            chunkNames);
     }
 
     private boolean checkOnDisk(MiruSchema schema, MiruPartitionCoord coord, int numberOfChunks) throws IOException {
@@ -548,10 +556,10 @@ public class MiruContextFactory {
             chunkNames.add("stream-" + i);
         }
         return diskResourceAnalyzer.checkExists(
-                diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
-                Lists.newArrayList("timeIndex", "activity", "removal"),
-                mapDirectories,
-                chunkNames);
+            diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
+            Lists.newArrayList("timeIndex", "activity", "removal"),
+            mapDirectories,
+            chunkNames);
     }
 
     private class MemMappedFilerProvider implements MiruFilerProvider {
