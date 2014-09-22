@@ -59,7 +59,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
             .build();
         this.latestAlignmentCache = CacheBuilder.newBuilder() // TODO config
             .maximumSize(cacheSize)
-            .expireAfterWrite(cacheExpiresAfterNMillis, TimeUnit.MILLISECONDS)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
     }
 
@@ -87,10 +87,13 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
 
                 if (replicaSet == null) {
                     try {
+                        LOG.info("Refreshing replica cache for tenant:{} partition:{}", tenantId, partitionId);
                         replicaSet = clusterRegistry.getReplicaSet(tenantId, partitionId);
                         if (!replicaSet.get(MiruPartitionState.online).isEmpty()) {
                             // cache only if at least one node is online
                             replicaCache.put(key, replicaSet);
+                        } else {
+                            LOG.warn("Failed cache because no parition is online for tenant:{} partition:{}", tenantId, partitionId);
                         }
                     } catch (Exception x) {
                         LOG.error("Failed to get list of hosts for tenantId:{} and partition:{}", new Object[]{ tenantId, partitionId });
