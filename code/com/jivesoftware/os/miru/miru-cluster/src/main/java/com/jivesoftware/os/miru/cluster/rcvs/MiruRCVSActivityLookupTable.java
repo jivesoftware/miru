@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -22,20 +21,20 @@ public class MiruRCVSActivityLookupTable implements MiruActivityLookupTable {
     }
 
     @Override
-    public MiruVersionedActivityLookupEntry getVersionedEntry(MiruTenantId tenantId, final long activityTimestamp) throws Exception {
-        final AtomicReference<MiruVersionedActivityLookupEntry> entryRef = new AtomicReference<>();
-        lookupTable.getEntrys(MiruVoidByte.INSTANCE, tenantId, activityTimestamp, 1L, 1, false, null, null,
-            new CallbackStream<ColumnValueAndTimestamp<Long, MiruActivityLookupEntry, Long>>() {
-                @Override
-                public ColumnValueAndTimestamp<Long, MiruActivityLookupEntry, Long> callback(
-                    ColumnValueAndTimestamp<Long, MiruActivityLookupEntry, Long> cvat) throws Exception {
-                    if (cvat != null && cvat.getColumn() == activityTimestamp) {
-                        entryRef.set(new MiruVersionedActivityLookupEntry(cvat.getTimestamp(), cvat.getValue()));
-                    }
-                    return cvat;
-                }
-            });
-        return entryRef.get();
+    public MiruVersionedActivityLookupEntry[] getVersionedEntries(MiruTenantId tenantId, final Long[] activityTimestamps) throws Exception {
+
+        ColumnValueAndTimestamp<Long, MiruActivityLookupEntry, Long>[] got = lookupTable.multiGetEntries(MiruVoidByte.INSTANCE,
+            tenantId, activityTimestamps, null, null);
+
+        MiruVersionedActivityLookupEntry[] entrys = new MiruVersionedActivityLookupEntry[activityTimestamps.length];
+        for (int i = 0; i < entrys.length; i++) {
+            if (got[i] == null) {
+                entrys[i] = null;
+            } else {
+                entrys[i] = new MiruVersionedActivityLookupEntry(got[i].getTimestamp(), got[i].getValue());
+            }
+        }
+        return entrys;
     }
 
     @Override
@@ -59,13 +58,13 @@ public class MiruRCVSActivityLookupTable implements MiruActivityLookupTable {
                 public ColumnValueAndTimestamp<Long, MiruActivityLookupEntry, Long> callback(
                     ColumnValueAndTimestamp<Long, MiruActivityLookupEntry, Long> v) throws Exception {
 
-                    if (v != null) {
-                        if (!streamLookupEntry.stream(v.getColumn(), v.getValue(), v.getTimestamp())) {
-                            return null;
+                        if (v != null) {
+                            if (!streamLookupEntry.stream(v.getColumn(), v.getValue(), v.getTimestamp())) {
+                                return null;
+                            }
                         }
+                        return v;
                     }
-                    return v;
-                }
             });
     }
 }

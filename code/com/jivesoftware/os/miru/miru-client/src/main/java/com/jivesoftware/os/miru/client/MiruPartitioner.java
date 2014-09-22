@@ -119,8 +119,18 @@ public class MiruPartitioner {
         synchronized (locks.lock(tenantId)) {
             List<MiruPartitionedActivity> partitionedActivities = new ArrayList<>();
 
+            Long[] times = new Long[activities.size()];
+            int index = 0;
             for (MiruActivity activity : activities) {
-                MiruVersionedActivityLookupEntry versionedEntry = activityLookupTable.getVersionedEntry(tenantId, activity.time);
+                times[index] = activity.time;
+                index++;
+            }
+
+            MiruVersionedActivityLookupEntry[] versionedEntries = activityLookupTable.getVersionedEntries(tenantId, times);
+            index = 0;
+            for (MiruActivity activity : activities) {
+                MiruVersionedActivityLookupEntry versionedEntry = versionedEntries[index];
+                index++;
                 if (versionedEntry != null) {
                     if (activity.version > versionedEntry.version) {
                         MiruPartitionId partitionId = MiruPartitionId.of(versionedEntry.entry.partitionId);
@@ -194,8 +204,19 @@ public class MiruPartitioner {
         List<MiruPartitionedActivity> partitionedRepairs = new ArrayList<>();
         List<MiruPartitionedActivity> partitionedActivities = new ArrayList<>();
 
+        Long[] times = new Long[activities.size()];
+        int index = 0;
         for (MiruActivity activity : activities) {
-            MiruVersionedActivityLookupEntry versionedEntry = activityLookupTable.getVersionedEntry(tenantId, activity.time);
+            times[index] = activity.time;
+            index++;
+        }
+
+        MiruVersionedActivityLookupEntry[] versionedEntries = activityLookupTable.getVersionedEntries(tenantId, times);
+        index = 0;
+
+        for (MiruActivity activity : activities) {
+            MiruVersionedActivityLookupEntry versionedEntry = versionedEntries[index];
+            index++;
             if (versionedEntry != null) {
                 if (activity.version > versionedEntry.version) {
                     if (!versionedEntry.entry.removed || recoverFromRemoval) {

@@ -37,6 +37,12 @@ public class MiruClientInitializer {
                 miruWAL.getActivitySipWAL());
         MiruPartitioner miruPartitioner = new MiruPartitioner(writerId, miruPartitionIdProvider, activityWALWriter, readTrackingWALWriter, activityLookupTable);
 
-        return new MiruBestEffortFailureTolerantClient(sendActivitiesToHostsThreadPool, clusterRegistry, activitySenderProvider, miruPartitioner);
+        return new MiruBestEffortFailureTolerantClient(sendActivitiesToHostsThreadPool,
+            clusterRegistry,
+            activitySenderProvider,
+            miruPartitioner,
+            config.getTopologyCacheSize(),
+            config.getTopologyCacheExpiresInMillis()
+        );
     }
 }

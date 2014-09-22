@@ -46,18 +46,20 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
         ExecutorService sendActivitiesToHostsThreadPool,
         MiruClusterRegistry clusterRegistry,
         MiruActivitySenderProvider activitySenderProvider,
-        MiruPartitioner miruPartitioner) {
+        MiruPartitioner miruPartitioner,
+        int cacheSize,
+        long cacheExpiresAfterNMillis) {
         this.sendActivitiesToHostsThreadPool = sendActivitiesToHostsThreadPool;
         this.clusterRegistry = clusterRegistry;
         this.activitySenderProvider = activitySenderProvider;
         this.miruPartitioner = miruPartitioner;
         this.replicaCache = CacheBuilder.newBuilder() //TODO config
-            .maximumSize(1_000)
-            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .maximumSize(cacheSize)
+            .expireAfterWrite(cacheExpiresAfterNMillis, TimeUnit.MILLISECONDS)
             .build();
         this.latestAlignmentCache = CacheBuilder.newBuilder() // TODO config
-            .maximumSize(1_000)
-            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .maximumSize(cacheSize)
+            .expireAfterWrite(cacheExpiresAfterNMillis, TimeUnit.MILLISECONDS)
             .build();
     }
 
@@ -91,7 +93,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                             replicaCache.put(key, replicaSet);
                         }
                     } catch (Exception x) {
-                        LOG.error("Failed to get list of hosts for tenantId:{} and partition:{}", new Object[] { tenantId, partitionId });
+                        LOG.error("Failed to get list of hosts for tenantId:{} and partition:{}", new Object[]{ tenantId, partitionId });
                         throw new MiruQueryServiceException("Failed to get list of hosts", x);
                     }
                 }
@@ -167,7 +169,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                             activitySenderProvider.get(coord.host).send(tenantPartitionedActivities);
                         } catch (Exception x) {
                             LOG.warn("Failed to send {} activities for tenantId:{} to host:{}",
-                                new Object[] { tenantPartitionedActivities.size(), tenantId, coord.host });
+                                new Object[]{ tenantPartitionedActivities.size(), tenantId, coord.host });
 
                             // invalidate the replica cache since this host might be sick
                             //TODO also need a blacklist
@@ -176,7 +178,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                     }
                 });
             } catch (Exception x) {
-                LOG.warn("Failed to submit runnable to send activities for tenantId:{} to host:{} ", new Object[] { tenantId, coord.host });
+                LOG.warn("Failed to submit runnable to send activities for tenantId:{} to host:{} ", new Object[]{ tenantId, coord.host });
             }
         }
     }

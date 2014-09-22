@@ -12,7 +12,7 @@ import java.util.List;
 public class MiruNoOpActivityLookupTable implements MiruActivityLookupTable {
 
     @Override
-    public MiruVersionedActivityLookupEntry getVersionedEntry(MiruTenantId tenantId, long activityTimestamp) throws Exception {
+    public MiruVersionedActivityLookupEntry[] getVersionedEntries(MiruTenantId tenantId, Long[] activityTimestamp) throws Exception {
         return null;
     }
 
