@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
@@ -79,7 +80,8 @@ public class MiruServiceInitializer {
 
         MiruPartitionInfoProvider partitionInfoProvider = new CachedClusterPartitionInfoProvider();
 
-        MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(config,
+        MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(new CurrentTimestamper(),
+                config,
                 streamFactory,
                 activityWALReader,
                 partitionEventHandler,

@@ -24,6 +24,7 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer.HBaseSetOfSortedMapsConfig;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -97,7 +98,8 @@ public class MiruReaderMain {
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
                 setOfSortedMapsInitializer);
-        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(),
+        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
+                registryStore.getHostsRegistry(),
                 registryStore.getExpectedTenantsRegistry(),
                 registryStore.getExpectedTenantPartitionsRegistry(),
                 registryStore.getReplicaRegistry(),

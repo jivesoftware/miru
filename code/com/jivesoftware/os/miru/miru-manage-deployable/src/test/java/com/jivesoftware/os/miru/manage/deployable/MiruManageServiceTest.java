@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
@@ -42,7 +43,8 @@ public class MiruManageServiceTest {
 
         InMemorySetOfSortedMapsImplInitializer setOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", setOfSortedMapsImplInitializer);
-        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(), registryStore.getExpectedTenantsRegistry(),
+        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
+                registryStore.getHostsRegistry(), registryStore.getExpectedTenantsRegistry(),
                 registryStore.getExpectedTenantPartitionsRegistry(), registryStore.getReplicaRegistry(), registryStore.getTopologyRegistry(),
                 registryStore.getConfigRegistry(), numberOfReplicas, TimeUnit.HOURS.toMillis(1));
         MiruWAL miruWAL = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer);

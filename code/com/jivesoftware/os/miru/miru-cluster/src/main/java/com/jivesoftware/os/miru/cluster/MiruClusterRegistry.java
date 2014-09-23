@@ -11,8 +11,10 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public interface MiruClusterRegistry {
@@ -35,7 +37,7 @@ public interface MiruClusterRegistry {
 
     ListMultimap<MiruPartitionState, MiruTopologyStatus> getTopologyStatusForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception;
 
-    MiruReplicaSet getReplicaSet(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+    Map<MiruPartitionId, MiruReplicaSet> getReplicaSets(MiruTenantId tenantId, Collection<MiruPartitionId> requiredPartitionId) throws Exception;
 
     void updateTopology(MiruPartitionCoord coord, MiruPartitionCoordInfo coordInfo, MiruPartitionCoordMetrics coordMetrics, Optional<Long> refreshTimestamp)
         throws Exception;

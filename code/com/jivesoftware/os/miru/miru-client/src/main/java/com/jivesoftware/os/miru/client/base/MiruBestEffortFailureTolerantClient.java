@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruPartitioner;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -88,12 +89,12 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                 if (replicaSet == null) {
                     try {
                         LOG.info("Refreshing replica cache for tenant:{} partition:{}", tenantId, partitionId);
-                        replicaSet = clusterRegistry.getReplicaSet(tenantId, partitionId);
+                        replicaSet = clusterRegistry.getReplicaSets(tenantId, Arrays.asList(partitionId)).get(partitionId);
                         if (!replicaSet.get(MiruPartitionState.online).isEmpty()) {
                             // cache only if at least one node is online
                             replicaCache.put(key, replicaSet);
                         } else {
-                            LOG.warn("Failed cache because no parition is online for tenant:{} partition:{}", tenantId, partitionId);
+                            LOG.warn("Failed to cache because no paritios are online for tenant:{} partition:{}", tenantId, partitionId);
                         }
                     } catch (Exception x) {
                         LOG.error("Failed to get list of hosts for tenantId:{} and partition:{}", new Object[]{ tenantId, partitionId });

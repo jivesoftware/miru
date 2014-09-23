@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer.HBaseSetOfSortedMapsConfig;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
@@ -51,7 +52,8 @@ public class MiruManageMain {
         MiruManageConfig manageConfig = deployable.config(MiruManageConfig.class);
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer);
-        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(registryStore.getHostsRegistry(),
+        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
+                registryStore.getHostsRegistry(),
                 registryStore.getExpectedTenantsRegistry(),
                 registryStore.getExpectedTenantPartitionsRegistry(),
                 registryStore.getReplicaRegistry(),

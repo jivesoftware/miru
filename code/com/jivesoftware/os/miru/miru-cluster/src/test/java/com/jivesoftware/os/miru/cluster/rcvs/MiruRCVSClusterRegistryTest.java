@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.RowColumnValueStoreImpl;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -17,6 +18,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +40,7 @@ public class MiruRCVSClusterRegistryTest {
     @BeforeMethod
     public void setUp() throws Exception {
         registry = new MiruRCVSClusterRegistry(
+            new CurrentTimestamper(),
             new RowColumnValueStoreImpl<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue>(),
             new RowColumnValueStoreImpl<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte>(),
             new RowColumnValueStoreImpl<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte>(),
@@ -103,7 +106,7 @@ public class MiruRCVSClusterRegistryTest {
         Set<MiruHost> electedHosts = registry.electToReplicaSetForTenantPartition(tenantId, partitionId,
             new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), Sets.<MiruHost>newHashSet(), numReplicas));
 
-        MiruReplicaSet replicaSet = registry.getReplicaSet(tenantId, partitionId);
+        MiruReplicaSet replicaSet = registry.getReplicaSets(tenantId, Arrays.asList(partitionId)).get(partitionId);
 
         assertEquals(replicaSet.getHostsWithReplica(), electedHosts);
 
@@ -121,7 +124,7 @@ public class MiruRCVSClusterRegistryTest {
 
         registry.moveReplica(tenantId, partitionId, Optional.of(fromHost), toHost);
 
-        replicaSet = registry.getReplicaSet(tenantId, partitionId);
+        replicaSet = registry.getReplicaSets(tenantId, Arrays.asList(partitionId)).get(partitionId);
 
         assertEquals(replicaSet.getHostsWithReplica().size(), numReplicas);
         assertFalse(replicaSet.getHostsWithReplica().contains(fromHost));

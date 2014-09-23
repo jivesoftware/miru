@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.Timestamper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -36,6 +37,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private final Timestamper timestamper;
     private final MiruBitmaps<BM> bitmaps;
     private final MiruPartitionCoord coord;
     private final MiruContextFactory streamFactory;
@@ -60,17 +62,19 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final Object factoryLock = new Object();
 
     public MiruLocalHostedPartition(
-            MiruBitmaps<BM> bitmaps,
-            MiruPartitionCoord coord,
-            MiruContextFactory streamFactory,
-            MiruActivityWALReader activityWALReader,
-            MiruPartitionEventHandler partitionEventHandler,
-            ScheduledExecutorService scheduledExecutorService,
-            int partitionRebuildBatchSize,
-            long partitionBootstrapIntervalInMillis,
-            long partitionRunnableIntervalInMillis)
-            throws Exception {
+        Timestamper timestamper,
+        MiruBitmaps<BM> bitmaps,
+        MiruPartitionCoord coord,
+        MiruContextFactory streamFactory,
+        MiruActivityWALReader activityWALReader,
+        MiruPartitionEventHandler partitionEventHandler,
+        ScheduledExecutorService scheduledExecutorService,
+        int partitionRebuildBatchSize,
+        long partitionBootstrapIntervalInMillis,
+        long partitionRunnableIntervalInMillis)
+        throws Exception {
 
+        this.timestamper = timestamper;
         this.bitmaps = bitmaps;
         this.coord = coord;
         this.streamFactory = streamFactory;
@@ -88,7 +92,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.accessorRef.set(accessor);
 
         scheduledExecutorService.scheduleWithFixedDelay(
-                new BootstrapRunnable(), 0, partitionBootstrapIntervalInMillis, TimeUnit.MILLISECONDS);
+            new BootstrapRunnable(), 0, partitionBootstrapIntervalInMillis, TimeUnit.MILLISECONDS);
 
         runnables = ImmutableList.<Runnable>of(new ManageIndexRunnable());
         futures = Lists.newArrayListWithCapacity(runnables.size());
@@ -113,12 +117,12 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 optionalStream = Optional.of(stream);
             }
             MiruPartitionAccessor<BM> opened = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo.copyToState(openingState), optionalStream.orNull(),
-                    streamFactory.getSip(coord));
+                streamFactory.getSip(coord));
             if (updatePartition(accessor, opened)) {
                 clearFutures();
                 for (Runnable runnable : runnables) {
                     ScheduledFuture<?> future = scheduledExecutorService.scheduleWithFixedDelay(
-                            runnable, 0, partitionRunnableIntervalInMillis, TimeUnit.MILLISECONDS);
+                        runnable, 0, partitionRunnableIntervalInMillis, TimeUnit.MILLISECONDS);
                     futures.add(future);
                 }
                 return opened;
@@ -230,9 +234,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     public long sizeInMemory() throws Exception {
         long expiresAfter = sizeInMemoryExpiresAfter.get();
         MiruPartitionAccessor<BM> accessor = accessorRef.get();
-        if (System.currentTimeMillis() > expiresAfter && accessor.info.state == MiruPartitionState.online) {
+        if (timestamper.get() > expiresAfter && accessor.info.state == MiruPartitionState.online) {
             sizeInMemoryBytes.set(accessor.context != null ? accessor.context.sizeInMemory() : 0);
-            sizeInMemoryExpiresAfter.set(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1));
+            sizeInMemoryExpiresAfter.set(timestamper.get() + TimeUnit.MINUTES.toMillis(1));
         }
         return sizeInMemoryBytes.get();
     }
@@ -241,9 +245,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     public long sizeOnDisk() throws Exception {
         long expiresAfter = sizeOnDiskExpiresAfter.get();
         MiruPartitionAccessor<BM> accessor = accessorRef.get();
-        if (System.currentTimeMillis() > expiresAfter && accessor.info.state == MiruPartitionState.online) {
+        if (timestamper.get() > expiresAfter && accessor.info.state == MiruPartitionState.online) {
             sizeOnDiskBytes.set(accessor.context != null ? accessor.context.sizeOnDisk() : 0);
-            sizeOnDiskExpiresAfter.set(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1));
+            sizeOnDiskExpiresAfter.set(timestamper.get() + TimeUnit.MINUTES.toMillis(1));
         }
         return sizeOnDiskBytes.get();
     }
@@ -269,7 +273,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             // same memory storage, or non-identical memory storage, triggers a rebuild
                             MiruContext<BM> toStream = streamFactory.allocate(bitmaps, coord, destinationStorage);
                             MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage),
-                                    Optional.of(MiruPartitionState.bootstrap), 0);
+                                Optional.of(MiruPartitionState.bootstrap), 0);
                             if (updatePartition(accessor, migrated)) {
                                 streamFactory.close(fromStream);
                                 streamFactory.markStorage(coord, destinationStorage);
@@ -280,7 +284,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                         } else {
                             // different but identical storage updates without a rebuild
                             MiruPartitionAccessor<BM> migrated = handle.migrated(fromStream, Optional.of(destinationStorage),
-                                    Optional.<MiruPartitionState>absent(), accessor.sipTimestamp.get());
+                                Optional.<MiruPartitionState>absent(), accessor.sipTimestamp.get());
                             if (updatePartition(accessor, migrated)) {
                                 streamFactory.markStorage(coord, destinationStorage);
                                 updated = true;
@@ -293,8 +297,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                         MiruContext<BM> toStream = streamFactory.allocate(bitmaps, coord, destinationStorage);
                         // transitioning to memory, need to bootstrap and rebuild
                         Optional<MiruPartitionState> migrateToState = (accessor.info.state == MiruPartitionState.offline)
-                                ? Optional.<MiruPartitionState>absent()
-                                : Optional.of(MiruPartitionState.bootstrap);
+                            ? Optional.<MiruPartitionState>absent()
+                            : Optional.of(MiruPartitionState.bootstrap);
                         MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage), migrateToState, 0);
                         if (updatePartition(accessor, migrated)) {
                             streamFactory.close(fromStream);
@@ -320,7 +324,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                         streamFactory.markSip(coord, accessor.sipTimestamp.get());
                         MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage), Optional.<MiruPartitionState>absent(),
-                                accessor.sipTimestamp.get());
+                            accessor.sipTimestamp.get());
 
                         if (updatePartition(accessor, migrated)) {
                             streamFactory.close(fromStream);
@@ -339,7 +343,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                         MiruContext<BM> fromStream = handle.getStream();
                         MiruContext<BM> toStream = streamFactory.allocate(bitmaps, coord, destinationStorage);
                         MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage), Optional.<MiruPartitionState>absent(),
-                                accessor.sipTimestamp.get());
+                            accessor.sipTimestamp.get());
 
                         if (updatePartition(accessor, migrated)) {
                             streamFactory.close(fromStream);
@@ -364,7 +368,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         if (accessorRef.compareAndSet(existing, update)) {
             Optional<Long> refreshTimestamp = Optional.absent();
             if (update.info.state != MiruPartitionState.offline) {
-                refreshTimestamp = Optional.of(System.currentTimeMillis());
+                refreshTimestamp = Optional.of(timestamper.get());
             }
             MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(sizeInMemory(), sizeOnDisk());
             partitionEventHandler.partitionChanged(coord, update.info, metrics, refreshTimestamp);
@@ -375,6 +379,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     }
 
     protected class BootstrapRunnable implements Runnable {
+
         @Override
         public void run() {
             try {
@@ -465,36 +470,36 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             final AtomicLong sipTimestamp = new AtomicLong(accessor.sipTimestamp.get());
 
             activityWALReader.stream(coord.tenantId, coord.partitionId, accessor.rebuildTimestamp.get(),
-                    new MiruActivityWALReader.StreamMiruActivityWAL() {
-                        @Override
-                        public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                            partitionedActivities.add(partitionedActivity);
+                new MiruActivityWALReader.StreamMiruActivityWAL() {
+                    @Override
+                    public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
+                        partitionedActivities.add(partitionedActivity);
 
-                            // only adjust timestamps for activity types
-                            if (partitionedActivity.type.isActivityType()) {
-                                // rebuild offset is based on the activity timestamp
-                                if (partitionedActivity.timestamp > rebuildTimestamp.get()) {
-                                    rebuildTimestamp.set(partitionedActivity.timestamp);
-                                }
-
-                                // activityWAL uses CurrentTimestamper, so column version implies desired sip offset
-                                if (partitionedActivity.clockTimestamp > sipTimestamp.get()) {
-                                    sipTimestamp.set(partitionedActivity.clockTimestamp);
-                                }
+                        // only adjust timestamps for activity types
+                        if (partitionedActivity.type.isActivityType()) {
+                            // rebuild offset is based on the activity timestamp
+                            if (partitionedActivity.timestamp > rebuildTimestamp.get()) {
+                                rebuildTimestamp.set(partitionedActivity.timestamp);
                             }
 
-                            if (partitionedActivities.size() == partitionRebuildBatchSize) {
-                                accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
-                                accessor.rebuildTimestamp.set(rebuildTimestamp.get());
-                                accessor.sipTimestamp.set(sipTimestamp.get());
-                                // indexInternal inherently clears the list by removing elements from the iterator, but just to be safe
-                                partitionedActivities.clear();
+                            // activityWAL uses CurrentTimestamper, so column version implies desired sip offset
+                            if (partitionedActivity.clockTimestamp > sipTimestamp.get()) {
+                                sipTimestamp.set(partitionedActivity.clockTimestamp);
                             }
-
-                            // stop if the accessor has changed
-                            return accessorRef.get() == accessor;
                         }
+
+                        if (partitionedActivities.size() == partitionRebuildBatchSize) {
+                            accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
+                            accessor.rebuildTimestamp.set(rebuildTimestamp.get());
+                            accessor.sipTimestamp.set(sipTimestamp.get());
+                            // indexInternal inherently clears the list by removing elements from the iterator, but just to be safe
+                            partitionedActivities.clear();
+                        }
+
+                        // stop if the accessor has changed
+                        return accessorRef.get() == accessor;
                     }
+                }
             );
 
             if (!partitionedActivities.isEmpty()) {
@@ -516,25 +521,25 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             long afterTimestamp = accessor.sipTimestamp.get();
             final List<MiruPartitionedActivity> partitionedActivities = Lists.newLinkedList();
             activityWALReader.streamSip(coord.tenantId, coord.partitionId, afterTimestamp,
-                    new MiruActivityWALReader.StreamMiruActivityWAL() {
-                        @Override
-                        public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                            long version = partitionedActivity.activity.isPresent() ? partitionedActivity.activity.get().version : 0;
-                            TimeAndVersion timeAndVersion = new TimeAndVersion(partitionedActivity.timestamp, version);
+                new MiruActivityWALReader.StreamMiruActivityWAL() {
+                    @Override
+                    public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
+                        long version = partitionedActivity.activity.isPresent() ? partitionedActivity.activity.get().version : 0;
+                        TimeAndVersion timeAndVersion = new TimeAndVersion(partitionedActivity.timestamp, version);
 
-                            if (partitionedActivity.type.isBoundaryType() || !sipTracker.wasSeenLastSip(timeAndVersion)) {
-                                partitionedActivities.add(partitionedActivity);
-                            }
-                            sipTracker.addSeenThisSip(timeAndVersion);
-
-                            if (!partitionedActivity.type.isBoundaryType()) {
-                                sipTracker.put(partitionedActivity.clockTimestamp);
-                            }
-
-                            // stop if the accessor has changed
-                            return accessorRef.get() == accessor;
+                        if (partitionedActivity.type.isBoundaryType() || !sipTracker.wasSeenLastSip(timeAndVersion)) {
+                            partitionedActivities.add(partitionedActivity);
                         }
+                        sipTracker.addSeenThisSip(timeAndVersion);
+
+                        if (!partitionedActivity.type.isBoundaryType()) {
+                            sipTracker.put(partitionedActivity.clockTimestamp);
+                        }
+
+                        // stop if the accessor has changed
+                        return accessorRef.get() == accessor;
                     }
+                }
             );
             accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip);
 
@@ -558,10 +563,10 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
     @Override
     public String toString() {
-        return "MiruLocalHostedPartition{" +
-                "coord=" + coord +
-                ", accessorRef=" + accessorRef.get() +
-                '}';
+        return "MiruLocalHostedPartition{"
+            + "coord=" + coord
+            + ", accessorRef=" + accessorRef.get()
+            + '}';
     }
 
 }
