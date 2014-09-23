@@ -262,7 +262,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             perPartitonHostsWithReplica);
 
         Map<MiruPartitionId, MiruReplicaSet> replicaSets = new HashMap<>();
-        for (MiruPartitionId miruPartitionId : perPartitonHostsWithReplica.keySet()) {
+        for (MiruPartitionId miruPartitionId : requiredPartitionId) {
 
             Set<MiruHost> partitionHosts = perPartitonHostsWithReplica.get(miruPartitionId);
             int countOfMissingReplicas = numberOfReplicas - partitionHosts.size();
@@ -452,9 +452,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         final MiruTenantId tenantId,
         final SetMultimap<MiruPartitionId, MiruHost> perPartitonHostsWithReplica) throws Exception {
 
-        final long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, defaultTopologyIsStaleAfterMillis);
-
-        final ListMultimap<MiruPartitionId, ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>> foo = ArrayListMultimap.create();
+        final ListMultimap<MiruPartitionId, ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>> partitionsTopology = ArrayListMultimap.
+            create();
         topologyRegistry.getEntrys(
             MiruVoidByte.INSTANCE, tenantId, null, null, 100, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>>() {
@@ -464,16 +463,17 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
                         if (cvat != null) {
                             MiruPartitionId partitionId = cvat.getColumn().partitionId;
-                            foo.put(partitionId, cvat);
-
+                            partitionsTopology.put(partitionId, cvat);
                         }
                         return cvat;
                     }
             });
 
+        long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, defaultTopologyIsStaleAfterMillis);
         Map<MiruPartitionId, ListMultimap<MiruPartitionState, MiruTopologyStatus>> result = new HashMap<>();
-        for (MiruPartitionId miruPartitionId : foo.keySet()) {
-            result.put(miruPartitionId, extractStatusByState(foo.get(miruPartitionId), perPartitonHostsWithReplica, tenantId, topologyIsStaleAfterMillis));
+        for (MiruPartitionId miruPartitionId : partitionsTopology.keySet()) {
+            result.put(miruPartitionId, extractStatusByState(partitionsTopology.get(miruPartitionId), perPartitonHostsWithReplica, tenantId,
+                topologyIsStaleAfterMillis));
         }
         return result;
     }
