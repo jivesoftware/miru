@@ -471,7 +471,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
         long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, defaultTopologyIsStaleAfterMillis);
         Map<MiruPartitionId, ListMultimap<MiruPartitionState, MiruTopologyStatus>> result = new HashMap<>();
-        for (MiruPartitionId miruPartitionId : partitionsTopology.keySet()) {
+        for (MiruPartitionId miruPartitionId : perPartitonHostsWithReplica.keySet()) {
             result.put(miruPartitionId, extractStatusByState(partitionsTopology.get(miruPartitionId), perPartitonHostsWithReplica, tenantId,
                 topologyIsStaleAfterMillis));
         }
