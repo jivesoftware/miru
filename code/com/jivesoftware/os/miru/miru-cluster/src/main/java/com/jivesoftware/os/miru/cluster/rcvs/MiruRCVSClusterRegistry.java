@@ -259,6 +259,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
         Map<MiruPartitionId, ListMultimap<MiruPartitionState, MiruTopologyStatus>> topologyStatusByState = getPartitionTopologyStatusByState(config,
             tenantId,
+            requiredPartitionId,
             perPartitonHostsWithReplica);
 
         Map<MiruPartitionId, MiruReplicaSet> replicaSets = new HashMap<>();
@@ -268,8 +269,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             int countOfMissingReplicas = numberOfReplicas - partitionHosts.size();
 
             ListMultimap<MiruPartitionState, MiruPartition> partitionsByState = Multimaps.transformValues(
-                topologyStatusByState.get(miruPartitionId),
-                topologyStatusToPartition);
+                    topologyStatusByState.get(miruPartitionId),
+                    topologyStatusToPartition);
 
             replicaSets.put(miruPartitionId, new MiruReplicaSet(partitionsByState, partitionHosts, countOfMissingReplicas));
         }
@@ -450,6 +451,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     private Map<MiruPartitionId, ListMultimap<MiruPartitionState, MiruTopologyStatus>> getPartitionTopologyStatusByState(
         final MiruTenantConfig config,
         final MiruTenantId tenantId,
+        final Collection<MiruPartitionId> requiredPartitionId,
         final SetMultimap<MiruPartitionId, MiruHost> perPartitonHostsWithReplica) throws Exception {
 
         final ListMultimap<MiruPartitionId, ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>> partitionsTopology = ArrayListMultimap.
@@ -471,7 +473,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
         long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, defaultTopologyIsStaleAfterMillis);
         Map<MiruPartitionId, ListMultimap<MiruPartitionState, MiruTopologyStatus>> result = new HashMap<>();
-        for (MiruPartitionId miruPartitionId : perPartitonHostsWithReplica.keySet()) {
+        for (MiruPartitionId miruPartitionId : requiredPartitionId) {
             result.put(miruPartitionId, extractStatusByState(partitionsTopology.get(miruPartitionId), perPartitonHostsWithReplica, tenantId,
                 topologyIsStaleAfterMillis));
         }
