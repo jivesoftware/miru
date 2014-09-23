@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.endpoint;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ListMultimap;
+import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -35,9 +36,11 @@ import static com.jivesoftware.os.miru.api.MiruConfigReader.PARTITIONS_ENDPOINT;
 public class MiruConfigEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
     private final MiruClusterRegistry clusterRegistry;
     private final MiruService miruService;
     private final RegistrySchemaProvider registrySchemaProvider;
+    private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
     public MiruConfigEndpoints(@Context MiruClusterRegistry clusterRegistry,
         @Context MiruService miruService,
@@ -65,7 +68,8 @@ public class MiruConfigEndpoints {
 
     @POST
     @Path("/schema/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response setStorage(
         @PathParam("tenantId") String tenantId,
         MiruSchema schema) {
@@ -75,7 +79,7 @@ public class MiruConfigEndpoints {
                 schema,
                 //TODO client specified version?
                 System.currentTimeMillis());
-            return Response.ok("ok").build();
+            return responseHelper.jsonResponse("Success");
         } catch (Throwable t) {
             log.error("Failed to set schema for tenant {}", new Object[] { tenantId }, t);
             return Response.serverError().entity(t.getMessage()).build();
