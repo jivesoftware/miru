@@ -88,7 +88,7 @@ public class MiruConfigEndpoints {
 
     @GET
     @Path("/schema/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response setStorage(@PathParam("tenantId") String tenantId) {
         try {
             MiruSchema schema = registrySchemaProvider.getSchema(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));

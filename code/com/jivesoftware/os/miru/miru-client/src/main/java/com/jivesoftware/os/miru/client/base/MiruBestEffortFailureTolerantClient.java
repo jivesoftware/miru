@@ -6,6 +6,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -27,6 +28,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 
@@ -76,6 +78,8 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
 
             List<MiruActivity> tenantActivities = activitiesPerTenant.get(tenantId);
             final List<MiruPartitionedActivity> partitionTenantActivites = miruPartitioner.writeActivities(tenantId, tenantActivities, recoverFromRemoval);
+            LOG.inc("sendActivity>wal", tenantActivities.size());
+            LOG.inc("sendActivity>wal>tenant>" + tenantId, tenantActivities.size());
 
             ListMultimap<MiruPartitionId, MiruPartitionedActivity> activitiesPerPartition = ArrayListMultimap.create();
             for (MiruPartitionedActivity partitionedActivity : partitionTenantActivites) {
@@ -93,13 +97,17 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                         if (!replicaSet.get(MiruPartitionState.online).isEmpty()) {
                             // cache only if at least one node is online
                             replicaCache.put(key, replicaSet);
+                            LOG.inc("sendActivity>cached");
                         } else {
-                            LOG.warn("Failed to cache because no paritios are online for tenant:{} partition:{}", tenantId, partitionId);
+                            LOG.warn("Failed to cache because no partitions are online for tenant:{} partition:{}", tenantId, partitionId);
+                            LOG.inc("sendActivity>notCached");
                         }
                     } catch (Exception x) {
-                        LOG.error("Failed to get list of hosts for tenantId:{} and partition:{}", new Object[]{ tenantId, partitionId });
+                        LOG.error("Failed to get list of hosts for tenantId:{} and partition:{}", tenantId, partitionId);
                         throw new MiruQueryServiceException("Failed to get list of hosts", x);
                     }
+                } else {
+                    LOG.inc("sendActivity>alreadyCached");
                 }
 
                 // This will contain all existing replicas as well as newly elected replicas
@@ -112,7 +120,10 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                             return new MiruPartitionCoord(tenantId, partitionId, host);
                         }
                     });
-                sendForTenant(allCoords, tenantId, activitiesPerPartition.get(partitionId));
+                List<MiruPartitionedActivity> tenantPartitionedActivities = activitiesPerPartition.get(partitionId);
+                sendForTenant(allCoords, tenantId, tenantPartitionedActivities);
+                LOG.inc("sendActivity>sent", tenantPartitionedActivities.size());
+                LOG.inc("sendActivity>sent>tenant>" + tenantId, tenantPartitionedActivities.size());
             }
         }
     }
@@ -163,17 +174,22 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
     private void sendForTenant(Collection<MiruPartitionCoord> coords, final MiruTenantId tenantId,
         final List<MiruPartitionedActivity> tenantPartitionedActivities) {
 
+        // execute in parallel but wait for all to complete
+        List<Future<?>> futures = Lists.newArrayListWithCapacity(coords.size());
         for (final MiruPartitionCoord coord : coords) {
             try {
-                sendActivitiesToHostsThreadPool.submit(new Runnable() {
-
+                Future<?> future = sendActivitiesToHostsThreadPool.submit(new Runnable() {
                     @Override
                     public void run() {
                         try {
                             activitySenderProvider.get(coord.host).send(tenantPartitionedActivities);
+                            LOG.inc("sendForTenant>sent", tenantPartitionedActivities.size());
+                            LOG.inc("sendForTenant>sent>host>" + coord.host, tenantPartitionedActivities.size());
                         } catch (Exception x) {
                             LOG.warn("Failed to send {} activities for tenantId:{} to host:{}",
-                                new Object[]{ tenantPartitionedActivities.size(), tenantId, coord.host });
+                                tenantPartitionedActivities.size(), tenantId, coord.host);
+                            LOG.inc("sendForTenant>notSent", tenantPartitionedActivities.size());
+                            LOG.inc("sendForTenant>notSent>host>" + coord.host, tenantPartitionedActivities.size());
 
                             // invalidate the replica cache since this host might be sick
                             //TODO also need a blacklist
@@ -181,10 +197,27 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                         }
                     }
                 });
+                futures.add(future);
+                LOG.inc("sendForTenant>submitted");
             } catch (Exception x) {
-                LOG.warn("Failed to submit runnable to send activities for tenantId:{} to host:{} ", new Object[]{ tenantId, coord.host });
+                LOG.warn("Failed to submit runnable to send activities for tenantId:{} to host:{} ", tenantId, coord.host);
+                LOG.inc("sendForTenant>notSubmitted");
             }
         }
+
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (InterruptedException e) {
+                LOG.warn("Interrupted while sending activity", e);
+                Thread.interrupted();
+            } catch (Exception e) {
+                LOG.warn("Exception while sending activity", e);
+            } finally {
+                LOG.inc("sendForTenant>completed");
+            }
+        }
+
     }
 
     private void checkForWriterAlignmentIfNecessary(MiruTenantId tenantId) {
@@ -193,8 +226,10 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
             try {
                 latestAlignmentCache.put(tenantId, true);
                 miruPartitioner.checkForAlignmentWithOtherWriters(tenantId);
+                LOG.inc("alignWriters>aligned");
             } catch (Throwable t) {
                 LOG.error("Unable to check for alignement with other writers", t);
+                LOG.inc("alignWriters>failed");
             }
         }
     }

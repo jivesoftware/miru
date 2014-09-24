@@ -10,7 +10,7 @@ public interface MiruClientConfig extends Config {
     @IntDefault (5_000_000)
     Integer getTotalCapacity();
 
-    @IntDefault (10)
+    @IntDefault (24)
     Integer getSendActivitiesThreadPoolSize();
 
     @IntDefault (10_000)
