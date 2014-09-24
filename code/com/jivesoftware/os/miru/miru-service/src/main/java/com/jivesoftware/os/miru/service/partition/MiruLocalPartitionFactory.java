@@ -37,7 +37,7 @@ public class MiruLocalPartitionFactory {
 
     public <BM> MiruHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         return new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, miruContextFactory,
-            activityWALReader, partitionEventHandler, scheduledExecutorService, config.getPartitionRebuildBatchSize(),
+            activityWALReader, partitionEventHandler, scheduledExecutorService, config.getPartitionWakeOnIndex(), config.getPartitionRebuildBatchSize(),
             config.getPartitionBootstrapIntervalInMillis(), config.getPartitionRunnableIntervalInMillis());
     }
 }

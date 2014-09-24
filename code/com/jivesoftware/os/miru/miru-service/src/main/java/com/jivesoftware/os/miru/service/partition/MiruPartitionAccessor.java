@@ -117,7 +117,6 @@ class MiruPartitionAccessor<BM> {
     }
 
     boolean indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities, IndexStrategy strategy) throws Exception {
-        boolean needsRefresh = false;
         semaphore.acquire();
         try {
             if (closed.get()) {
@@ -132,17 +131,14 @@ class MiruPartitionAccessor<BM> {
                             handleBoundaryType(partitionedActivity);
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.ACTIVITY) {
                             handleActivityType(partitionedActivity);
-                            needsRefresh = true;
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.REPAIR) {
                             if (strategy != IndexStrategy.rebuild) {
                                 handleRepairType(partitionedActivity);
                             } else {
                                 handleActivityType(partitionedActivity);
                             }
-                            needsRefresh = true;
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.REMOVE) {
                             handleRemoveType(partitionedActivity, strategy);
-                            needsRefresh = true;
                         } else {
                             log.warn("Activity WAL contained unsupported type {}", partitionedActivity.type);
                         }
@@ -154,9 +150,6 @@ class MiruPartitionAccessor<BM> {
             }
         } finally {
             semaphore.release();
-        }
-        if (needsRefresh) {
-            markForRefresh();
         }
         return true;
     }

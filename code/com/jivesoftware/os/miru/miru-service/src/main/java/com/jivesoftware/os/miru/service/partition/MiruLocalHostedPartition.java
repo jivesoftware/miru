@@ -53,6 +53,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final Collection<Runnable> runnables;
     private final Collection<ScheduledFuture<?>> futures;
     private final ScheduledExecutorService scheduledExecutorService;
+    private final boolean partitionWakeOnIndex;
     private final int partitionRebuildBatchSize;
     private final long partitionRunnableIntervalInMillis;
     private final long partitionMigrationWaitInMillis;
@@ -70,6 +71,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         MiruActivityWALReader activityWALReader,
         MiruPartitionEventHandler partitionEventHandler,
         ScheduledExecutorService scheduledExecutorService,
+        boolean partitionWakeOnIndex,
         int partitionRebuildBatchSize,
         long partitionBootstrapIntervalInMillis,
         long partitionRunnableIntervalInMillis)
@@ -82,6 +84,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.activityWALReader = activityWALReader;
         this.partitionEventHandler = partitionEventHandler;
         this.scheduledExecutorService = scheduledExecutorService;
+        this.partitionWakeOnIndex = partitionWakeOnIndex;
         this.partitionRebuildBatchSize = partitionRebuildBatchSize;
         this.partitionRunnableIntervalInMillis = partitionRunnableIntervalInMillis;
         this.partitionMigrationWaitInMillis = 3_000; //TODO config
@@ -213,16 +216,16 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             //TODO handle return case
             accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress);
         } else {
-            // keep refreshing in case the rebuild takes a while
-            if (accessorRef.get().info.state == MiruPartitionState.rebuilding) {
-                accessor.markForRefresh();
-            }
             while (partitionedActivities.hasNext()) {
                 MiruPartitionedActivity partitionedActivity = partitionedActivities.next();
                 if (partitionedActivity.partitionId.equals(coord.partitionId)) {
                     partitionedActivities.remove();
                 }
             }
+        }
+
+        if (partitionWakeOnIndex) {
+            accessor.markForRefresh();
         }
     }
 
