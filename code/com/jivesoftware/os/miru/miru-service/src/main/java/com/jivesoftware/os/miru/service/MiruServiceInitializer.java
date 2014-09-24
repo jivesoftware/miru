@@ -44,34 +44,36 @@ import java.util.concurrent.TimeUnit;
 public class MiruServiceInitializer {
 
     public MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
-            MiruRegistryStore registryStore,
-            MiruClusterRegistry clusterRegistry,
-            MiruHost miruHost,
-            MiruSchemaProvider schemaProvider,
-            MiruWAL wal,
-            HttpClientFactory httpClientFactory,
-            MiruResourceLocatorProvider resourceLocatorProvider,
-            MiruActivityInternExtern internExtern,
-            MiruBitmapsProvider bitmapsProvider) throws IOException {
+        MiruRegistryStore registryStore,
+        MiruClusterRegistry clusterRegistry,
+        MiruHost miruHost,
+        MiruSchemaProvider schemaProvider,
+        MiruWAL wal,
+        HttpClientFactory httpClientFactory,
+        MiruResourceLocatorProvider resourceLocatorProvider,
+        MiruActivityInternExtern internExtern,
+        MiruBitmapsProvider bitmapsProvider) throws IOException {
 
-        final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(6); //TODO expose to config
+        final ScheduledExecutorService serviceScheduledExecutor = Executors.newScheduledThreadPool(2); // heartbeat and ensurePartitions
+        final ScheduledExecutorService partitionScheduledExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledExecutorThreads());
+        final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads());
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
-                config.getLongTailSolverWindowSize(),
-                config.getLongTailSolverPercentile());
+            config.getLongTailSolverWindowSize(),
+            config.getLongTailSolverPercentile());
 
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount());
         MiruContextFactory streamFactory = new MiruContextFactory(
-                schemaProvider,
-                streamFactoryExecutor,
-                readTrackingWALReader,
-                resourceLocatorProvider.getDiskResourceLocator(),
-                resourceLocatorProvider.getTransientResourceLocator(),
-                config.getPartitionAuthzCacheSize(),
-                MiruBackingStorage.valueOf(config.getDefaultStorage()),
-                internExtern);
+            schemaProvider,
+            streamFactoryExecutor,
+            readTrackingWALReader,
+            resourceLocatorProvider.getDiskResourceLocator(),
+            resourceLocatorProvider.getTransientResourceLocator(),
+            config.getPartitionAuthzCacheSize(),
+            MiruBackingStorage.valueOf(config.getDefaultStorage()),
+            internExtern);
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
@@ -81,45 +83,44 @@ public class MiruServiceInitializer {
         MiruPartitionInfoProvider partitionInfoProvider = new CachedClusterPartitionInfoProvider();
 
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(new CurrentTimestamper(),
-                config,
-                streamFactory,
-                activityWALReader,
-                partitionEventHandler,
-                scheduledExecutor);
+            config,
+            streamFactory,
+            activityWALReader,
+            partitionEventHandler,
+            partitionScheduledExecutor);
 
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
-                httpClientFactory,
-                objectMapper);
+            httpClientFactory,
+            objectMapper);
 
         MiruTenantTopologyFactory tenantTopologyFactory = new MiruTenantTopologyFactory(config,
-                bitmapsProvider,
-                miruHost,
-                localPartitionFactory,
-                remotePartitionFactory,
-                partitionComparison);
+            bitmapsProvider,
+            miruHost,
+            localPartitionFactory,
+            remotePartitionFactory,
+            partitionComparison);
 
         MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(partitionInfoProvider,
-                tenantTopologyFactory,
-                clusterRegistry);
+            tenantTopologyFactory,
+            clusterRegistry);
 
         final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, clusterRegistry, expectedTenants);
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
 
-        final ExecutorService serviceExecutor = Executors.newFixedThreadPool(10); //TODO expose to config
-        MiruSolver solver = new MiruLowestLatencySolver(serviceExecutor,
-                config.getDefaultInitialSolvers(),
-                config.getDefaultMaxNumberOfSolvers(),
-                config.getDefaultAddAnotherSolverAfterNMillis(),
-                config.getDefaultFailAfterNMillis());
+        MiruSolver solver = new MiruLowestLatencySolver(solverExecutor,
+            config.getDefaultInitialSolvers(),
+            config.getDefaultMaxNumberOfSolvers(),
+            config.getDefaultAddAnotherSolverAfterNMillis(),
+            config.getDefaultFailAfterNMillis());
 
         final MiruService miruService = new MiruService(
-                miruHost,
-                partitionDirector,
-                partitionComparison,
-                activityWALWriter,
-                activityLookupTable,
-                solver);
+            miruHost,
+            partitionDirector,
+            partitionComparison,
+            activityWALWriter,
+            activityLookupTable,
+            solver);
 
         return new MiruLifecyle<MiruService>() {
 
@@ -131,7 +132,7 @@ public class MiruServiceInitializer {
             @Override
             public void start() throws Exception {
                 long heartbeatInterval = config.getHeartbeatIntervalInMillis();
-                scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
+                serviceScheduledExecutor.scheduleWithFixedDelay(new Runnable() {
 
                     @Override
                     public void run() {
@@ -139,7 +140,7 @@ public class MiruServiceInitializer {
                     }
                 }, 0, heartbeatInterval, TimeUnit.MILLISECONDS);
                 long ensurePartitionsInterval = config.getEnsurePartitionsIntervalInMillis();
-                scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
+                serviceScheduledExecutor.scheduleWithFixedDelay(new Runnable() {
 
                     @Override
                     public void run() {
@@ -150,8 +151,9 @@ public class MiruServiceInitializer {
 
             @Override
             public void stop() throws Exception {
-                serviceExecutor.shutdownNow();
-                scheduledExecutor.shutdownNow();
+                serviceScheduledExecutor.shutdownNow();
+                partitionScheduledExecutor.shutdownNow();
+                solverExecutor.shutdownNow();
                 streamFactoryExecutor.shutdownNow();
             }
         };

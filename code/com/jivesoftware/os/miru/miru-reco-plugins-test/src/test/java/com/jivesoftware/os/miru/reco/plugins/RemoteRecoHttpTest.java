@@ -46,7 +46,10 @@ public class RemoteRecoHttpTest {
 
     @Test (enabled = false, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
-        String tenant = "999";
+
+        //String tenant = "999"; //brewspace
+        String tenant = "Z49"; //big tenant
+
         MiruTenantId tenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
@@ -82,7 +85,7 @@ public class RemoteRecoHttpTest {
                 "parent",
                 100), true);
 
-        int numQueries = 1;
+        int numQueries = 100;
         for (int i = 0; i < numQueries; i++) {
             MiruResponse<TrendingAnswer> response = requestHelper.executeRequest(query,
                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
@@ -95,7 +98,8 @@ public class RemoteRecoHttpTest {
     @Test (enabled = false, description = "Needs REMOTE constants")
     public void testSystemRecommended() throws Exception {
 
-        String tenant = "999";
+        String tenant = "999"; //brewspace
+        //String tenant = "Z49"; //big tenant
         MiruTenantId tenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()

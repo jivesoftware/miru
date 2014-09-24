@@ -75,4 +75,10 @@ public interface MiruServiceConfig extends Config {
 
     @StringDefault("")
     String getReadStreamIdsPropName();
+
+    @IntDefault(24)
+    int getPartitionScheduledExecutorThreads();
+
+    @IntDefault(24)
+    int getSolverExecutorThreads();
 }
