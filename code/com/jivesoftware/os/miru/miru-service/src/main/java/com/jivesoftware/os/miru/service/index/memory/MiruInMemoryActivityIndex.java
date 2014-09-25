@@ -17,6 +17,7 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
 
     private final int initialCapacity = 32; //TODO configure?
     private MiruInternalActivity[] activities;
+    private final Object activityLock = new Object();
     private int last = -1;
     private long activitySizeInBytes = 0;
 
@@ -28,7 +29,7 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     public MiruInternalActivity get(MiruTenantId tenantId, int index) {
         MiruInternalActivity[] activities = this.activities; // stable reference
         int capacity = activities.length;
-        checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
+        checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         return index < activities.length ? activities[index] : null;
     }
 
@@ -45,8 +46,8 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
 
     @Override
     public void set(int index, MiruInternalActivity activity) {
-        synchronized (activities) {
-            checkArgument(index >= 0, "Index parameter is out of bounds. The value " + index + " must be >=0");
+        synchronized (activityLock) {
+            checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
             if (index >= activities.length) {
                 int newLength = activities.length * 2;
                 while (newLength <= index) {
@@ -82,7 +83,7 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     @Override
     public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInternalActivity[]> importItems) throws Exception {
         MiruInternalActivity[] importActivities = importItems.bulkExport(tenantId);
-        synchronized (activities) {
+        synchronized (activityLock) {
             this.activities = new MiruInternalActivity[importActivities.length];
             System.arraycopy(importActivities, 0, this.activities, 0, importActivities.length);
 

@@ -40,7 +40,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
     @Override
     public MiruInternalActivity get(MiruTenantId tenantId, int index) {
         int capacity = indexSize.get();
-        checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
+        checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
             SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), false);
             if (swappableFiler != null) {
@@ -59,7 +59,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
     @Override
     public MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId) {
         int capacity = indexSize.get();
-        checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity);
+        checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
             SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), false);
             if (swappableFiler != null) {
@@ -82,7 +82,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
 
     @Override
     public void set(int index, MiruInternalActivity activity) {
-        checkArgument(index >= 0, "Index parameter is out of bounds. The value " + index + " must be >=0");
+        checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
         try {
             //byte[] bytes = objectMapper.writeValueAsBytes(activity);
             byte[] bytes = internalActivityMarshaller.toBytes(activity);

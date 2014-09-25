@@ -39,7 +39,9 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MiruServiceInitializer {
 
@@ -54,9 +56,17 @@ public class MiruServiceInitializer {
         MiruActivityInternExtern internExtern,
         MiruBitmapsProvider bitmapsProvider) throws IOException {
 
-        final ScheduledExecutorService serviceScheduledExecutor = Executors.newScheduledThreadPool(2); // heartbeat and ensurePartitions
-        final ScheduledExecutorService partitionScheduledExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledExecutorThreads());
-        final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads());
+        final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
+
+        // heartbeat and ensurePartitions
+        final ScheduledExecutorService serviceScheduledExecutor = Executors.newScheduledThreadPool(2,
+            new NamedThreadFactory(threadGroup, "service"));
+        // rebuild, sip, checkActive
+        final ScheduledExecutorService partitionScheduledExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledExecutorThreads(),
+            new NamedThreadFactory(threadGroup, "partitions"));
+        // query solvers
+        final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads(),
+            new NamedThreadFactory(threadGroup, "solver"));
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
             config.getLongTailSolverWindowSize(),
@@ -159,4 +169,30 @@ public class MiruServiceInitializer {
         };
     }
 
+    private static class NamedThreadFactory implements ThreadFactory {
+
+        private final ThreadGroup g;
+        private final String namePrefix;
+        private final AtomicLong threadNumber;
+
+        public NamedThreadFactory(ThreadGroup g, String name) {
+            this.g = g;
+            namePrefix = name + "-";
+            threadNumber = new AtomicLong();
+        }
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(g, r,
+                namePrefix + threadNumber.getAndIncrement(),
+                0);
+            if (t.isDaemon()) {
+                t.setDaemon(false);
+            }
+            if (t.getPriority() != Thread.NORM_PRIORITY) {
+                t.setPriority(Thread.NORM_PRIORITY);
+            }
+            return t;
+        }
+    }
 }

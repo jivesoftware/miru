@@ -11,8 +11,8 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ConcurrentSkipListMap;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -39,37 +39,34 @@ public class MiruHostedPartitionComparisonTest {
     }
 
     @Test
-    public void testComparatorOrdering() throws Exception {
-        MiruHostedPartition p1 = mockPartition(49_601);
-        MiruHostedPartition p2 = mockPartition(49_602);
+    public void testOrdering() throws Exception {
+        MiruHostedPartition<Void> p1 = mockPartition(49_601);
+        MiruHostedPartition<Void> p2 = mockPartition(49_602);
 
-        assertEquals(partitionComparison.getComparator().compare(p1, p2), 0);
+        ConcurrentSkipListMap<PartitionAndHost, MiruHostedPartition<Void>> skipList = new ConcurrentSkipListMap<>();
+        skipList.put(new PartitionAndHost(p1.getPartitionId(), p1.getCoord().host), p1);
+        skipList.put(new PartitionAndHost(p2.getPartitionId(), p2.getCoord().host), p2);
 
-        timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p1.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
-
-        assertEquals(partitionComparison.getComparator().compare(p1, p2), -1);
-
-        timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p2.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
-        assertEquals(partitionComparison.getComparator().compare(p1, p2), 1);
-    }
-
-    @Test
-    public void testComparatorStability() throws Exception {
-        MiruHostedPartition p1 = mockPartition(49_601);
-        MiruHostedPartition p2 = mockPartition(49_602);
+        // with no data, ordering is unaffected
+        List<MiruHostedPartition<Void>> ordered = partitionComparison.orderPartitions(tenantId, partitionId, queryKey, skipList.values());
+        assertEquals(ordered.get(0).getCoord(), p1.getCoord());
+        assertEquals(ordered.get(1).getCoord(), p2.getCoord());
 
         timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p1.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p2.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
 
-        Comparator<MiruHostedPartition> comparator = partitionComparison.getComparator();
-        assertEquals(comparator.compare(p1, p2), -1);
+        // p2 answered, so now it's on top
+        ordered = partitionComparison.orderPartitions(tenantId, partitionId, queryKey, skipList.values());
+        assertEquals(ordered.get(0).getCoord(), p2.getCoord());
+        assertEquals(ordered.get(1).getCoord(), p1.getCoord());
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p2.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
-        // comparator was built prior to p2 promotion, so p1 should still be sorted earlier
-        assertEquals(comparator.compare(p1, p2), -1);
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p1.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
+
+        // p1 answered, so now it's on top
+        ordered = partitionComparison.orderPartitions(tenantId, partitionId, queryKey, skipList.values());
+        assertEquals(ordered.get(0).getCoord(), p1.getCoord());
+        assertEquals(ordered.get(1).getCoord(), p2.getCoord());
     }
 
     @Test
@@ -83,8 +80,8 @@ public class MiruHostedPartitionComparisonTest {
         assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, queryKey).get().longValue(), percentile);
     }
 
-    private MiruHostedPartition mockPartition(int port) {
-        MiruHostedPartition partition = mock(MiruHostedPartition.class);
+    private MiruHostedPartition<Void> mockPartition(int port) {
+        MiruHostedPartition<Void> partition = mock(MiruHostedPartition.class);
         when(partition.getCoord()).thenReturn(new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", port)));
         when(partition.getPartitionId()).thenReturn(partitionId);
         when(partition.isLocal()).thenReturn(true);

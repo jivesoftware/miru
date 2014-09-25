@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -28,8 +29,8 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     private final MiruExpectedTenants expectedTenants;
 
     public MiruClusterPartitionDirector(MiruHost host,
-            MiruClusterRegistry clusterRegistry,
-            MiruExpectedTenants expectedTenants) {
+        MiruClusterRegistry clusterRegistry,
+        MiruExpectedTenants expectedTenants) {
         this.host = host;
         this.clusterRegistry = clusterRegistry;
         this.expectedTenants = expectedTenants;
@@ -60,12 +61,21 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
 
     /** All reads read from here */
     @Override
-    public Iterable<OrderedPartitions> allQueryablePartitionsInOrder(MiruTenantId tenantId) throws Exception {
+    public Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception {
         MiruTenantTopology<?> topology = expectedTenants.getTopology(tenantId);
         if (topology == null) {
             return Collections.emptyList();
         }
-        return topology.allPartitionsInOrder();
+        return topology.allPartitionsInOrder(queryKey);
+    }
+
+    @Override
+    public Collection<? extends MiruHostedPartition<?>> allPartitions(MiruTenantId tenantId) throws Exception {
+        MiruTenantTopology<?> topology = expectedTenants.getTopology(tenantId);
+        if (topology == null) {
+            return Collections.emptyList();
+        }
+        return topology.allPartitions();
     }
 
     @Override
@@ -139,14 +149,12 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
             long sizeInMemory = 0;
             long sizeOnDisk = 0;
             for (MiruTenantTopology<?> topology : expectedTenants.topologies()) {
-                for (OrderedPartitions orderedPartitions : topology.allPartitionsInOrder()) {
-                    for (MiruHostedPartition partition : orderedPartitions.partitions) {
-                        try {
-                            sizeInMemory += partition.sizeInMemory();
-                            sizeOnDisk += partition.sizeOnDisk();
-                        } catch (Exception e) {
-                            LOG.warn("Failed to get size in bytes for partition " + partition, e);
-                        }
+                for (MiruHostedPartition<?> partition : topology.allPartitions()) {
+                    try {
+                        sizeInMemory += partition.sizeInMemory();
+                        sizeOnDisk += partition.sizeOnDisk();
+                    } catch (Exception e) {
+                        LOG.warn("Failed to get size in bytes for partition " + partition, e);
                     }
                 }
             }

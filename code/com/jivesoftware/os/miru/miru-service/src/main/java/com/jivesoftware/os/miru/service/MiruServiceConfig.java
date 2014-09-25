@@ -44,7 +44,7 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(100)
     long getDefaultAddAnotherSolverAfterNMillis();
 
-    @LongDefault(3_000)
+    @LongDefault(30_000)
     long getDefaultFailAfterNMillis();
     void setDefaultFailAfterNMillis(long millis);
 

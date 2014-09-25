@@ -61,11 +61,11 @@ public class MiruService implements Miru {
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public MiruService(MiruHost localhost,
-            MiruPartitionDirector partitionDirector,
-            MiruHostedPartitionComparison partitionComparison,
-            MiruActivityWALWriter activityWALWriter,
-            MiruActivityLookupTable activityLookupTable,
-            MiruSolver solver) {
+        MiruPartitionDirector partitionDirector,
+        MiruHostedPartitionComparison partitionComparison,
+        MiruActivityWALWriter activityWALWriter,
+        MiruActivityLookupTable activityLookupTable,
+        MiruSolver solver) {
 
         this.localhost = localhost;
         this.partitionDirector = partitionDirector;
@@ -97,33 +97,29 @@ public class MiruService implements Miru {
 
     public long sizeInMemory(MiruTenantId tenantId) throws Exception {
         long size = 0;
-        for (OrderedPartitions orderedPartitions : partitionDirector.allQueryablePartitionsInOrder(tenantId)) {
-            for (MiruHostedPartition<?> partition : orderedPartitions.partitions) {
-                size += partition.sizeInMemory();
-            }
+        for (MiruHostedPartition<?> partition : partitionDirector.allPartitions(tenantId)) {
+            size += partition.sizeInMemory();
         }
         return size;
     }
 
     public long sizeOnDisk(MiruTenantId tenantId) throws Exception {
         long size = 0;
-        for (OrderedPartitions orderedPartitions : partitionDirector.allQueryablePartitionsInOrder(tenantId)) {
-            for (MiruHostedPartition<?> partition : orderedPartitions.partitions) {
-                size += partition.sizeOnDisk();
-            }
+        for (MiruHostedPartition<?> partition : partitionDirector.allPartitions(tenantId)) {
+            size += partition.sizeOnDisk();
         }
         return size;
     }
 
     @Override
     public <A, P> MiruResponse<A> askAndMerge(
-            MiruTenantId tenantId,
-            final MiruSolvableFactory<A, P> solvableFactory,
-            MiruAnswerEvaluator<A> evaluator,
-            MiruAnswerMerger<A> merger,
-            A defaultValue,
-            boolean debug)
-            throws Exception {
+        MiruTenantId tenantId,
+        final MiruSolvableFactory<A, P> solvableFactory,
+        MiruAnswerEvaluator<A> evaluator,
+        MiruAnswerMerger<A> merger,
+        A defaultValue,
+        boolean debug)
+        throws Exception {
 
         log.startTimer("askAndMerge");
 
@@ -133,20 +129,21 @@ public class MiruService implements Miru {
         long totalElapsed;
 
         try {
-            Iterable<OrderedPartitions> partitionReplicas = partitionDirector.allQueryablePartitionsInOrder(tenantId);
+            Iterable<? extends OrderedPartitions<?>> partitionReplicas = partitionDirector.allQueryablePartitionsInOrder(
+                tenantId, solvableFactory.getQueryKey());
 
             Optional<A> lastAnswer = Optional.absent();
 
-            for (OrderedPartitions orderedPartitions : partitionReplicas) {
+            for (OrderedPartitions<?> orderedPartitions : partitionReplicas) {
 
                 final Optional<A> optionalAnswer = lastAnswer;
                 Collection<MiruSolvable<A>> solvables = Collections2.transform(orderedPartitions.partitions,
-                        new Function<MiruHostedPartition<?>, MiruSolvable<A>>() {
-                            @Override
-                            public MiruSolvable<A> apply(final MiruHostedPartition<?> replica) {
-                                return solvableFactory.create(replica, solvableFactory.getReport(optionalAnswer));
-                            }
-                        });
+                    new Function<MiruHostedPartition<?>, MiruSolvable<A>>() {
+                        @Override
+                        public MiruSolvable<A> apply(final MiruHostedPartition<?> replica) {
+                            return solvableFactory.create(replica, solvableFactory.getReport(optionalAnswer));
+                        }
+                    });
                 List<MiruPartition> ordered = Lists.transform(orderedPartitions.partitions, new Function<MiruHostedPartition<?>, MiruPartition>() {
                     @Override
                     public MiruPartition apply(MiruHostedPartition<?> input) {
@@ -155,7 +152,7 @@ public class MiruService implements Miru {
                 });
 
                 Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
-                        solvableFactory.getQueryKey());
+                    solvableFactory.getQueryKey());
                 MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered, solutionLog);
 
                 if (solved == null) {
@@ -193,13 +190,13 @@ public class MiruService implements Miru {
 
     @Override
     public <A, P> MiruPartitionResponse<A> askImmediate(
-            MiruTenantId tenantId,
-            MiruPartitionId partitionId,
-            MiruSolvableFactory<A, P> factory,
-            Optional<P> report,
-            A defaultValue,
-            boolean debug)
-            throws Exception {
+        MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        MiruSolvableFactory<A, P> factory,
+        Optional<P> report,
+        A defaultValue,
+        boolean debug)
+        throws Exception {
         Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
@@ -214,7 +211,7 @@ public class MiruService implements Miru {
             return answer;
         } else {
             return new MiruPartitionResponse<>(defaultValue,
-                    (debug) ? Arrays.asList("partition is NOT present. partitionId:" + partitionId) : null);
+                (debug) ? Arrays.asList("partition is NOT present. partitionId:" + partitionId) : null);
         }
     }
 

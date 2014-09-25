@@ -1,12 +1,12 @@
 package com.jivesoftware.os.miru.service.partition;
 
 /**
-*
-*/
-public class TimeAndVersion {
+ * Package private encapsulation of activity timestamp and version.
+ */
+class TimeAndVersion {
 
-    public final long timestamp;
-    public final long version;
+    private final long timestamp;
+    private final long version;
 
     TimeAndVersion(long timestamp, long version) {
         this.timestamp = timestamp;

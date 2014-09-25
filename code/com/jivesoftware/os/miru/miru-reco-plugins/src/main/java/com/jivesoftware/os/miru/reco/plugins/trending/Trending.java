@@ -110,7 +110,7 @@ public class Trending {
                     aggregateTerms.add(aggregateTermId);
 
                     Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField.getInvertedIndex(aggregateTermId);
-                    checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
+                    checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: %s", aggregateTermId);
 
                     BM termIndex = invertedIndex.get().getIndex();
 

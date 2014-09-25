@@ -50,7 +50,8 @@ public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<Mi
 
     @Override
     public MiruInternalActivity get(MiruTenantId tenantId, int index) {
-        checkArgument(index >= 0 && index < capacity(), "Index parameter is out of bounds. The value " + index + " must be >=0 and <" + capacity());
+        int capacity = capacity();
+        checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
             byte[] rawActivity;
             synchronized (filer.lock()) {

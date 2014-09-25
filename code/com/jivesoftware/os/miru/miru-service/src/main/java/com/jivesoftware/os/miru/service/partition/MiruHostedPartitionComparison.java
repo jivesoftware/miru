@@ -1,8 +1,10 @@
 package com.jivesoftware.os.miru.service.partition;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ComparisonChain;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -13,11 +15,14 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
-import com.jivesoftware.os.miru.plugin.solution.Question;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  *
@@ -26,12 +31,36 @@ public class MiruHostedPartitionComparison {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final ConcurrentMap<MiruPartitionCoord, Long> coordRecency = Maps.newConcurrentMap();
+    private final ConcurrentMap<TenantPartitionAndQuery, ConcurrentSkipListMap<PartitionAndHost, Long>> coordRecency = Maps.newConcurrentMap();
     private final ConcurrentMap<TenantPartitionAndQuery, RunningPercentile> queryPercentile = Maps.newConcurrentMap();
 
     private final int windowSize;
     private final int percentile;
     private final Timestamper timestamper;
+
+    private final Comparator<PartitionAndTime<?>> partitionAndTimeComparator = new Comparator<PartitionAndTime<?>>() {
+        @Override
+        public int compare(PartitionAndTime<?> pat1, PartitionAndTime<?> pat2) {
+            MiruHostedPartition p1 = pat1.partition;
+            MiruHostedPartition p2 = pat2.partition;
+            long t1 = pat1.time;
+            long t2 = pat2.time;
+            return ComparisonChain
+                .start()
+                .compare(p2.getPartitionId(), p1.getPartitionId()) // flipped p1 and p2 so that we get descending order.
+                .compareTrueFirst(p1.isLocal(), p2.isLocal())
+                .compare(p1.getStorage(), p2.getStorage(), Ordering.explicit(
+                    MiruBackingStorage.memory_fixed,
+                    MiruBackingStorage.memory,
+                    MiruBackingStorage.hybrid_fixed,
+                    MiruBackingStorage.hybrid,
+                    MiruBackingStorage.mem_mapped,
+                    MiruBackingStorage.disk,
+                    MiruBackingStorage.unknown))
+                .compare(t2, t1) // descending order
+                .result();
+        }
+    };
 
     public MiruHostedPartitionComparison(int windowSize, int percentile, Timestamper timestamper) {
         this.windowSize = windowSize;
@@ -49,55 +78,67 @@ public class MiruHostedPartitionComparison {
     }
 
     /**
-     * Turns current metrics into a stable comparator.
+     * Orders partitions for a replica set based on query metrics.
      *
+     * @param tenantId    the tenant
+     * @param partitionId the partition
+     * @param queryKey    the query key
+     * @param partitions  the partitions to order
      * @return a stable comparator
      */
-    public Comparator<MiruHostedPartition> getComparator() {
-        final Map<MiruPartitionCoord, Long> stableRecency = ImmutableMap.copyOf(coordRecency);
-        return new Comparator<MiruHostedPartition>() {
-            @Override
-            public int compare(MiruHostedPartition p1, MiruHostedPartition p2) {
-                long t1 = getRecencyTime(p1);
-                long t2 = getRecencyTime(p2);
-                return ComparisonChain
-                    .start()
-                    .compare(p2.getPartitionId(), p1.getPartitionId()) // flipped p1 and p2 so that we get descending order.
-                    .compareTrueFirst(p1.isLocal(), p2.isLocal())
-                    .compare(p1.getStorage(), p2.getStorage(), Ordering.explicit(
-                        MiruBackingStorage.memory_fixed,
-                        MiruBackingStorage.memory,
-                        MiruBackingStorage.hybrid_fixed,
-                        MiruBackingStorage.hybrid,
-                        MiruBackingStorage.mem_mapped,
-                        MiruBackingStorage.disk,
-                        MiruBackingStorage.unknown))
-                    .compare(t2, t1) // descending order
-                    .result();
-            }
+    public <BM> List<MiruHostedPartition<BM>> orderPartitions(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        String queryKey,
+        Collection<MiruHostedPartition<BM>> partitions) {
 
-            private long getRecencyTime(MiruHostedPartition p) {
-                Long t = stableRecency.get(p.getCoord());
-                if (t != null) {
-                    return t;
-                }
-                return Long.MIN_VALUE;
+        ConcurrentSkipListMap<PartitionAndHost, Long> skipList = coordRecency.get(new TenantPartitionAndQuery(tenantId, partitionId, queryKey));
+        Iterator<Map.Entry<PartitionAndHost, Long>> skipIter = skipList != null
+            ? skipList.entrySet().iterator() : Iterators.<Map.Entry<PartitionAndHost, Long>>emptyIterator();
+        Map.Entry<PartitionAndHost, Long> skipEntry = skipIter.hasNext() ? skipIter.next() : null;
+
+        List<PartitionAndTime<BM>> partitionAndTimes = Lists.newArrayListWithCapacity(partitions.size());
+
+        for (MiruHostedPartition<BM> partition : partitions) {
+            PartitionAndHost partitionAndHost = new PartitionAndHost(partition.getCoord().partitionId, partition.getCoord().host);
+            while (skipEntry != null && skipEntry.getKey().compareTo(partitionAndHost) < 0) {
+                skipEntry = skipIter.hasNext() ? skipIter.next() : null;
             }
-        };
+            long time = Long.MIN_VALUE;
+            if (skipEntry != null && skipEntry.getKey().compareTo(partitionAndHost) == 0) {
+                time = skipEntry.getValue();
+            }
+            partitionAndTimes.add(new PartitionAndTime<>(partition, time));
+        }
+
+        Collections.sort(partitionAndTimes, partitionAndTimeComparator);
+        return Lists.transform(partitionAndTimes, new Function<PartitionAndTime<BM>, MiruHostedPartition<BM>>() {
+            @Override
+            public MiruHostedPartition<BM> apply(PartitionAndTime<BM> input) {
+                return input.partition;
+            }
+        });
     }
 
     /**
      * Analyzes the latest winning solutions for a replica set.
      *
-     * @param solutions the latest winning solutions
+     * @param solutions  the latest winning solutions
      * @param queryClass the query class
      */
     public void analyzeSolutions(List<MiruSolution> solutions, String queryClass) {
         for (MiruSolution solution : solutions) {
             MiruPartitionCoord coord = solution.usedPartition;
-            coordRecency.put(coord, timestamper.get());
-
             TenantPartitionAndQuery key = new TenantPartitionAndQuery(coord.tenantId, coord.partitionId, queryClass);
+            ConcurrentSkipListMap<PartitionAndHost, Long> skipList = coordRecency.get(key);
+            if (skipList == null) {
+                skipList = new ConcurrentSkipListMap<>();
+                ConcurrentSkipListMap<PartitionAndHost, Long> existing = coordRecency.putIfAbsent(key, skipList);
+                if (existing != null) {
+                    skipList = existing;
+                }
+            }
+            skipList.put(new PartitionAndHost(coord.partitionId, coord.host), timestamper.get());
+
             RunningPercentile runningPercentile = queryPercentile.get(key);
             if (runningPercentile == null) {
                 queryPercentile.putIfAbsent(key, new RunningPercentile(windowSize, percentile));
@@ -107,7 +148,7 @@ public class MiruHostedPartitionComparison {
         }
     }
 
-    public <T extends Question<?, ?>> Optional<Long> suggestTimeout(MiruTenantId tenantId, MiruPartitionId partitionId, String queryClass) {
+    public Optional<Long> suggestTimeout(MiruTenantId tenantId, MiruPartitionId partitionId, String queryClass) {
         RunningPercentile runningPercentile = queryPercentile.get(new TenantPartitionAndQuery(tenantId, partitionId, queryClass));
         if (runningPercentile != null) {
             long suggestion = runningPercentile.get();
@@ -166,6 +207,17 @@ public class MiruHostedPartitionComparison {
 
     public static interface Timestamper {
         long get();
+    }
+
+    private static class PartitionAndTime<BM> {
+
+        public final MiruHostedPartition<BM> partition;
+        public final long time;
+
+        private PartitionAndTime(MiruHostedPartition<BM> partition, long time) {
+            this.partition = partition;
+            this.time = time;
+        }
     }
 
 }
