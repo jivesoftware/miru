@@ -61,8 +61,6 @@ public class TrendingEndpoints {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
             MiruPartitionResponse<TrendingAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
-
-            //log.info("scoreTrending: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(TrendingAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
@@ -71,4 +69,23 @@ public class TrendingEndpoints {
             return Response.serverError().build();
         }
     }
+
+//    @POST
+//    @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
+//    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+//    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+//    public Response scoreTrending(@PathParam("partitionId") int id, byte[] requestAndReport) {
+//        MiruPartitionId partitionId = MiruPartitionId.of(id);
+//        try {
+//            MiruPartitionResponse<TrendingAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
+//            resultBytes = null;
+//            return Response.ok(resultBytes, MediaType.APPLICATION_OCTET_STREAM);
+//            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(TrendingAnswer.EMPTY_RESULTS, null));
+//        } catch (MiruPartitionUnavailableException e) {
+//            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+//        } catch (Exception e) {
+//            log.error("Failed to score trending for partition: " + partitionId.getId(), e);
+//            return Response.serverError().build();
+//        }
+//    }
 }

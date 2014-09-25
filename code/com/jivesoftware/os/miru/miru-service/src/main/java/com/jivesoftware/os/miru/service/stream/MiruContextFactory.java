@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.stream;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -36,7 +35,6 @@ import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
-import com.jivesoftware.os.miru.service.index.disk.MiruMemMappedActivityIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskAuthzIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskField;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInboxIndex;
@@ -76,6 +74,8 @@ public class MiruContextFactory {
 
     private static MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private static final String DISK_FORMAT_VERSION = "version-1";
+
     private final MiruSchemaProvider schemaProvider;
     private final ExecutorService executorService;
     private final MiruReadTrackingWALReader readTrackingWALReader;
@@ -83,7 +83,6 @@ public class MiruContextFactory {
     private final MiruHybridResourceLocator hybridResourceLocator;
     private final MiruDiskResourceAnalyzer diskResourceAnalyzer = new MiruDiskResourceAnalyzer();
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final MiruActivityInternExtern activityInternExtern;
 
     private final int numberOfChunkStores = 16; // TODO expose to config;
@@ -266,6 +265,9 @@ public class MiruContextFactory {
 
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
 
+        File versionFile = diskResourceLocator.getFilerFile(identifier, DISK_FORMAT_VERSION);
+        versionFile.createNewFile();
+
         File memMap = diskResourceLocator.getFilerFile(identifier, "memMap");
         memMap.createNewFile();
 
@@ -284,12 +286,12 @@ public class MiruContextFactory {
             diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
         importHandles.put("timeIndex", timeIndex);
 
-        MiruMemMappedActivityIndex activityIndex = new MiruMemMappedActivityIndex(
-            new MemMappedFilerProvider(identifier, "activity"),
+        MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
             diskResourceLocator.getMapDirectory(identifier, "activity"),
             diskResourceLocator.getSwapDirectory(identifier, "activity"),
             multiChunkStore,
-            objectMapper);
+            new MiruInternalActivityMarshaller());
+
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
@@ -359,6 +361,9 @@ public class MiruContextFactory {
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
         Map<String, BulkImport<?>> importHandles = Maps.newHashMap();
 
+        File versionFile = diskResourceLocator.getFilerFile(identifier, DISK_FORMAT_VERSION);
+        versionFile.createNewFile();
+
         File onDisk = diskResourceLocator.getFilerFile(identifier, "onDisk");
         onDisk.createNewFile();
 
@@ -375,12 +380,11 @@ public class MiruContextFactory {
             diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
         importHandles.put("timeIndex", timeIndex);
 
-        MiruMemMappedActivityIndex activityIndex = new MiruMemMappedActivityIndex(
-            new MemMappedFilerProvider(identifier, "activity"),
+        MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
             diskResourceLocator.getMapDirectory(identifier, "activity"),
             diskResourceLocator.getSwapDirectory(identifier, "activity"),
             multiChunkStore,
-            objectMapper);
+            new MiruInternalActivityMarshaller());
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
@@ -480,7 +484,7 @@ public class MiruContextFactory {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings ({ "unchecked", "rawtypes" })
     private <BM> MiruContext<BM> copy(MiruTenantId tenantId, MiruContext<BM> from, MiruContext<BM> to) throws Exception {
         Map<String, BulkImport<?>> importHandles = to.getImportHandles();
         for (Map.Entry<String, BulkExport<?>> entry : from.getExportHandles().entrySet()) {
@@ -541,7 +545,7 @@ public class MiruContextFactory {
 
         return diskResourceAnalyzer.checkExists(
             diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
-            Lists.newArrayList("timeIndex", "activity", "removal"),
+            Lists.newArrayList(DISK_FORMAT_VERSION,"timeIndex", "removal"),
             mapDirectories,
             chunkNames);
     }
@@ -557,7 +561,7 @@ public class MiruContextFactory {
         }
         return diskResourceAnalyzer.checkExists(
             diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
-            Lists.newArrayList("timeIndex", "activity", "removal"),
+            Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "removal"),
             mapDirectories,
             chunkNames);
     }
