@@ -146,7 +146,10 @@ public class MiruTenantTopology<BM> {
             });
 
         List<OrderedPartitions<BM>> allOrderedPartitions = Lists.newArrayList();
-        for (MiruPartitionId partitionId : partitionsPerId.keySet()) {
+        List<MiruPartitionId> partitionIds = Lists.newArrayList(partitionsPerId.keySet());
+        Collections.sort(partitionIds);
+        Collections.reverse(partitionIds);
+        for (MiruPartitionId partitionId : partitionIds) {
             List<MiruHostedPartition<BM>> partitions = partitionsPerId.get(partitionId);
             List<MiruHostedPartition<BM>> orderedPartitions = partitionComparison.orderPartitions(tenantId, partitionId, queryKey, partitions);
             allOrderedPartitions.add(new OrderedPartitions<>(tenantId, partitionId, orderedPartitions));
