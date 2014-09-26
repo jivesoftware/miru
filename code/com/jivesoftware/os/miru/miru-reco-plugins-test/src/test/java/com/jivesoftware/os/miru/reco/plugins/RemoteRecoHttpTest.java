@@ -44,17 +44,22 @@ import static org.testng.Assert.assertNotNull;
  */
 public class RemoteRecoHttpTest {
 
-    private static final String REMOTE_HOST = "soa-prime-data6.phx1.jivehosted.com";
+    private static final String[] REMOTE_HOSTS = new String[] {
+        "soa-prime-data6.phx1.jivehosted.com",
+        "soa-prime-data7.phx1.jivehosted.com",
+        "soa-prime-data8.phx1.jivehosted.com",
+        "soa-prime-data9.phx1.jivehosted.com"
+    };
     private static final int REMOTE_PORT = 10_004;
 
     @Test(enabled = false, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
 
-        /*
         final String[] bigTenants = new String[] {
             "EVy", "Nv9", "KJt", "WVB", "ZlR", "iXM", "lPm", "Z49", "nyc", "oFd", "yso", "1MO", "40M", "2RV", "999", "EVy", "Nv9", "KJt", "WVB", "ZlR",
             "iXM", "lPm", "Z49", "nyc", "yso", "1MO", "9yG", "999", "EVy", "Nv9", "KJt"
         };
+        /*
         final String[] allTenants = new String[] { "000", "02o", "04j", "069", "08Y", "09q", "09u", "0AO", "0Hd", "0J1", "0Og", "0Pg", "0SN", "0Sp", "0Us",
             "0Yd", "0Zw", "0aP", "0c0", "0dk", "0hd", "0hg", "0hw", "0i1", "0pq", "0r5", "0r9", "0to", "0ww", "0xA", "0z4", "0zv", "10T", "125", "126",
             "175", "1Bm", "1Dp", "1Jv", "1MO", "1PL", "1To", "1Tq", "1Vx", "1Wd", "1Zf", "1bV", "1eK", "1f8", "1h7", "1hM", "1he", "1lU", "1lX",
@@ -165,7 +170,12 @@ public class RemoteRecoHttpTest {
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
-        final RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
+
+        final RequestHelper[] requestHelpers = new RequestHelper[REMOTE_HOSTS.length];
+        for (int i = 0; i < REMOTE_HOSTS.length; i++) {
+            String remoteHost = REMOTE_HOSTS[i];
+            requestHelpers[i] = new RequestHelper(httpClientFactory.createClient(remoteHost, REMOTE_PORT), objectMapper);
+        }
 
         final MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
             Optional.of(Arrays.asList(
@@ -186,15 +196,15 @@ public class RemoteRecoHttpTest {
         final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
         final long packThreeDays = snowflakeIdPacker.pack(TimeUnit.DAYS.toMillis(30), 0, 0);
 
-        final Random rand = new Random();
         ExecutorService executorService = Executors.newFixedThreadPool(8);
         int numQueries = 10_000;
+        final Random rand = new Random();
         for (int i = 0; i < numQueries; i++) {
             final int index = i;
             executorService.submit(new Runnable() {
                 @Override
                 public void run() {
-                    MiruTenantId tenantId = new MiruTenantId("Z49"/*bigTenants[index % bigTenants.length]*/.getBytes(Charsets.UTF_8));
+                    MiruTenantId tenantId = new MiruTenantId(bigTenants[index % bigTenants.length].getBytes(Charsets.UTF_8));
                     MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3_765)),
                         MiruAuthzExpression.NOT_PROVIDED,
                         new TrendingQuery(
@@ -204,7 +214,7 @@ public class RemoteRecoHttpTest {
                             "parent",
                             100), true);
 
-                    MiruResponse<TrendingAnswer> response = requestHelper.executeRequest(query,
+                    MiruResponse<TrendingAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(query,
                         TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
                         MiruResponse.class, new Class[] { TrendingAnswer.class }, null);
                     /*
@@ -237,7 +247,12 @@ public class RemoteRecoHttpTest {
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
-        RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
+
+        final RequestHelper[] requestHelpers = new RequestHelper[REMOTE_HOSTS.length];
+        for (int i = 0; i < REMOTE_HOSTS.length; i++) {
+            String remoteHost = REMOTE_HOSTS[i];
+            requestHelpers[i] = new RequestHelper(httpClientFactory.createClient(remoteHost, REMOTE_PORT), objectMapper);
+        }
 
         MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
             Optional.of(Arrays.asList(
@@ -271,7 +286,8 @@ public class RemoteRecoHttpTest {
                 resultConstraintFilter,
                 100), true);
 
-        MiruResponse<RecoAnswer> recoAnswer = requestHelper.executeRequest(request,
+        Random rand = new Random();
+        MiruResponse<RecoAnswer> recoAnswer = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(request,
             RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
             MiruResponse.class, new Class[] { RecoAnswer.class }, null);
         System.out.println(recoAnswer);

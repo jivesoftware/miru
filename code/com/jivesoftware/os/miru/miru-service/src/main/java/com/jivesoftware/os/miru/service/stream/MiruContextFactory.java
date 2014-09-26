@@ -208,7 +208,7 @@ public class MiruContextFactory {
             hybridResourceLocator.getSwapDirectory(identifier, "activity"),
             multiChunkStore,
             new MiruInternalActivityMarshaller(),
-            Optional.<MiruFilerProvider>absent());
+            Optional.<Filer>absent());
         exportHandles.put("activityIndex", activityIndex);
 
         MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps);
@@ -292,7 +292,7 @@ public class MiruContextFactory {
             diskResourceLocator.getSwapDirectory(identifier, "activity"),
             multiChunkStore,
             new MiruInternalActivityMarshaller(),
-            Optional.<MiruFilerProvider>of(new MemMappedFilerProvider(identifier, "activity")));
+            Optional.<Filer>of(diskResourceLocator.getByteBufferBackedFiler(identifier, "activity", 4)));
 
         importHandles.put("activityIndex", activityIndex);
 
@@ -387,7 +387,7 @@ public class MiruContextFactory {
             diskResourceLocator.getSwapDirectory(identifier, "activity"),
             multiChunkStore,
             new MiruInternalActivityMarshaller(),
-            Optional.<MiruFilerProvider>of(new MemMappedFilerProvider(identifier, "activity")));
+            Optional.<Filer>of(diskResourceLocator.getRandomAccessFiler(identifier, "activity", "rw")));
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,

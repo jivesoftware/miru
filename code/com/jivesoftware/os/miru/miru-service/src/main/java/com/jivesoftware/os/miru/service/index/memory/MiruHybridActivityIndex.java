@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import java.io.File;
 import java.io.IOException;
@@ -38,11 +37,10 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
     private final Optional<Filer> indexSizeFiler;
 
     public MiruHybridActivityIndex(File mapDirectory, File swapDirectory, MultiChunkStore chunkStore,
-        MiruInternalActivityMarshaller internalActivityMarshaller, Optional<MiruFilerProvider> filerProvider) throws Exception {
+        MiruInternalActivityMarshaller internalActivityMarshaller, Optional<Filer> indexSizeFiler) throws Exception {
         this.keyedStore = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 4, 100, chunkStore, 512);
         this.internalActivityMarshaller = internalActivityMarshaller;
-
-        this.indexSizeFiler = filerProvider.isPresent() ? Optional.of(filerProvider.get().getFiler(4)) : Optional.<Filer>absent();
+        this.indexSizeFiler = indexSizeFiler;
     }
 
     @Override

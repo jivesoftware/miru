@@ -10,6 +10,7 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -223,7 +224,7 @@ public class MiruIndexContextTest {
             Files.createTempDirectory("memmap").toFile(),
             new MultiChunkStore(new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true)),
             new MiruInternalActivityMarshaller(),
-            Optional.<MiruFilerProvider>absent());
+            Optional.<Filer>absent());
 
         miruHybridActivityIndex.bulkImport(tenantId, miruInMemoryActivityIndex);
 
