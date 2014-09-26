@@ -11,7 +11,7 @@
     <packaging>pom</packaging>
     <properties>
         <jive-utils-version>0.39</jive-utils-version>
-        <upena-version>0.6</upena-version>
+        <upena-version>0.7</upena-version>
     </properties>
     <dependencyManagement>
         <dependencies>

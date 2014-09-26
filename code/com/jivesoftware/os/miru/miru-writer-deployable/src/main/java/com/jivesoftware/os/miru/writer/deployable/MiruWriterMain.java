@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
-import com.jivesoftware.os.jive.utils.ordered.id.WriterIdProvider;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer;
@@ -47,6 +46,7 @@ public class MiruWriterMain {
     public void run(String[] args) throws Exception {
 
         Deployable deployable = new Deployable(args);
+        deployable.buildStatusReporter(null).start();
         deployable.buildManageServer().start();
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);

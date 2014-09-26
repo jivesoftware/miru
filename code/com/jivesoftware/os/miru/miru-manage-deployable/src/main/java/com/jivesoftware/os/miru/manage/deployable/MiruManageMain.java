@@ -42,6 +42,7 @@ public class MiruManageMain {
     public void run(String[] args) throws Exception {
 
         Deployable deployable = new Deployable(args);
+        deployable.buildStatusReporter(null).start();
         deployable.buildManageServer().start();
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
