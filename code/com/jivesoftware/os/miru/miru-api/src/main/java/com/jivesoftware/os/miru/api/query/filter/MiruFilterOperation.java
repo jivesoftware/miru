@@ -1,11 +1,13 @@
 package com.jivesoftware.os.miru.api.query.filter;
 
+import java.io.Serializable;
+
 /**
  * http://en.wikipedia.org/wiki/Truth_table
  *
  * @author jonathan
  */
-public enum MiruFilterOperation {
+public enum MiruFilterOperation implements Serializable {
 
     and, // currently supported
     nand, // TODO add support

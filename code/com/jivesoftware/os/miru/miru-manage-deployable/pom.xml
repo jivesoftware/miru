@@ -109,5 +109,10 @@
             <artifactId>testng</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>ordered-id</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

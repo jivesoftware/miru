@@ -30,10 +30,6 @@ public interface MiruPartitionDirector {
 
     void removeHost(MiruHost host) throws Exception;
 
-    void removeReplicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
-
-    void moveReplica(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<MiruHost> fromHost, MiruHost localhost) throws Exception;
-
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
 
     boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;

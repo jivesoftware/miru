@@ -2,11 +2,12 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 
 /**
  * @author jonathan.colt
  */
-public class MiruRequestAndReport<Q, R> {
+public class MiruRequestAndReport<Q, R> implements Serializable {
 
     public final MiruRequest<Q> request;
     public final R report;

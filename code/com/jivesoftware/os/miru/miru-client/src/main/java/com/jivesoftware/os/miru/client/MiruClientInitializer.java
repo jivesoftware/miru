@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.client.rcvs.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
@@ -20,6 +21,7 @@ public class MiruClientInitializer {
 
     public MiruClient initialize(MiruClientConfig config,
             MiruClusterRegistry clusterRegistry,
+            MiruReplicaSetDirector replicaSetDirector,
             MiruRegistryStore registryStore,
             MiruWAL miruWAL,
             int writerId) throws Exception {
@@ -39,6 +41,7 @@ public class MiruClientInitializer {
 
         return new MiruBestEffortFailureTolerantClient(sendActivitiesToHostsThreadPool,
             clusterRegistry,
+            replicaSetDirector,
             activitySenderProvider,
             miruPartitioner,
             config.getTopologyCacheSize(),

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.InMemorySetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -15,6 +17,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer.MiruManageConfig;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
@@ -26,6 +29,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.assertTrue;
 
 public class MiruManageServiceTest {
@@ -52,6 +57,8 @@ public class MiruManageServiceTest {
         MiruWAL miruWAL = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer, mapper);
         miruManageService = new MiruManageInitializer().initialize(config, clusterRegistry, registryStore, miruWAL);
 
+        MiruReplicaSetDirector  replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
+
         tenantId = new MiruTenantId("test1".getBytes());
         partitionId = MiruPartitionId.of(0);
         hosts = Lists.newArrayList();
@@ -62,8 +69,10 @@ public class MiruManageServiceTest {
             hosts.add(host);
         }
 
-        clusterRegistry.electToReplicaSetForTenantPartition(tenantId, partitionId,
-                new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), Sets.<MiruHost>newHashSet(), numberOfReplicas));
+        replicaSetDirector.electToReplicaSetForTenantPartition(tenantId,
+            partitionId,
+                new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), Sets.<MiruHost>newHashSet(), numberOfReplicas),
+                System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
     }
 
     @Test

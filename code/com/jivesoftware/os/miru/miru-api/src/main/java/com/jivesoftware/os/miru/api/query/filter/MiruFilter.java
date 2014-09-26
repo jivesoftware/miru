@@ -4,10 +4,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import java.io.Serializable;
 import java.util.List;
 
 /** @author jonathan */
-public class MiruFilter {
+public class MiruFilter implements Serializable {
 
     public static final MiruFilter NO_FILTER = new MiruFilter(
         MiruFilterOperation.or,

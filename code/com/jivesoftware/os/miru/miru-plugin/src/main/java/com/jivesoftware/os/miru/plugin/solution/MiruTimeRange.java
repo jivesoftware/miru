@@ -2,11 +2,12 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 
 /**
  * @author jonathan
  */
-public class MiruTimeRange {
+public class MiruTimeRange implements Serializable {
 
     public static final MiruTimeRange ALL_TIME = new MiruTimeRange(0, Long.MAX_VALUE);
 

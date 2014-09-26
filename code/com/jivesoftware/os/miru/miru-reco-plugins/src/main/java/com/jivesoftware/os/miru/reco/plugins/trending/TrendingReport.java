@@ -4,17 +4,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import java.io.Serializable;
 import java.util.Set;
 
 /**
  *
  */
-public class TrendingReport {
+public class TrendingReport implements Serializable {
 
-    public final ImmutableSet<MiruTermId> aggregateTerms;
+    public final Set<MiruTermId> aggregateTerms;
     public final int collectedDistincts;
 
-    public TrendingReport(ImmutableSet<MiruTermId> aggregateTerms, int collectedDistincts) {
+    public TrendingReport(Set<MiruTermId> aggregateTerms, int collectedDistincts) {
         this.aggregateTerms = aggregateTerms;
         this.collectedDistincts = collectedDistincts;
     }

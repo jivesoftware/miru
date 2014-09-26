@@ -5,12 +5,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import java.io.Serializable;
 
 /**
  * @param <Q> Query
  * @author jonathan.colt
  */
-public class MiruRequest<Q> {
+public class MiruRequest<Q> implements Serializable {
 
     public final MiruTenantId tenantId;
     public final MiruActorId actorId;

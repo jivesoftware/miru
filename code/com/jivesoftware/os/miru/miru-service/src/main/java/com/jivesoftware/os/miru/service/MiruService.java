@@ -259,13 +259,13 @@ public class MiruService implements Miru {
         partitionDirector.removeHost(host);
     }
 
-    public void removeReplicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        partitionDirector.removeReplicas(tenantId, partitionId);
-    }
-
-    public void moveReplica(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<MiruHost> fromHost) throws Exception {
-        partitionDirector.moveReplica(tenantId, partitionId, fromHost, localhost);
-    }
+//    public void removeReplicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+//        partitionDirector.removeReplicas(tenantId, partitionId);
+//    }
+//
+//    public void moveReplica(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<MiruHost> fromHost) throws Exception {
+//        partitionDirector.moveReplica(tenantId, partitionId, fromHost, localhost);
+//    }
 
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
         partitionDirector.removeTopology(tenantId, partitionId, host);

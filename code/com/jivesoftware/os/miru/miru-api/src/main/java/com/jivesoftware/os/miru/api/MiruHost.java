@@ -10,6 +10,7 @@ import java.util.Iterator;
 /** @author jonathan */
 public class MiruHost implements Comparable<MiruHost> {
 
+    // TODO add notion of rack so that host can be have the rink sort in a rack aware order.
     private final String logicalName;
     private final int port;
 

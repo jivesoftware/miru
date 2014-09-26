@@ -27,10 +27,14 @@ public class TrendingEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final TrendingInjectable injectable;
+    //private final FstMarshaller fstMarshaller;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public TrendingEndpoints(@Context TrendingInjectable injectable) {
+    public TrendingEndpoints(
+        @Context TrendingInjectable injectable) {
+        //@Context FstMarshaller fstMarshaller) {
         this.injectable = injectable;
+        //this.fstMarshaller = fstMarshaller;
     }
 
     @POST
@@ -74,13 +78,20 @@ public class TrendingEndpoints {
 //    @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
 //    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
 //    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-//    public Response scoreTrending(@PathParam("partitionId") int id, byte[] requestAndReport) {
+//    public Response scoreTrending(@PathParam("partitionId") int id, byte[] requestAndReportBytes) {
 //        MiruPartitionId partitionId = MiruPartitionId.of(id);
 //        try {
-//            MiruPartitionResponse<TrendingAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
-//            resultBytes = null;
-//            return Response.ok(resultBytes, MediaType.APPLICATION_OCTET_STREAM);
-//            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(TrendingAnswer.EMPTY_RESULTS, null));
+//            MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = (MiruRequestAndReport<TrendingQuery, TrendingReport>)fstMarshaller.deserialize(
+//                new ByteArrayInputStream(requestAndReportBytes), MiruRequestAndReport.class);
+//
+//            MiruPartitionResponse<TrendingAnswer> response = injectable.scoreTrending(partitionId, requestAndReport);
+//            byte[] responseBytes = null;
+//            if (response != null) {
+//                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//                fstMarshaller.serialize(response, outputStream);
+//                responseBytes = outputStream.toByteArray();
+//            }
+//            return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
 //        } catch (MiruPartitionUnavailableException e) {
 //            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
 //        } catch (Exception e) {

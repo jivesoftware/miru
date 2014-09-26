@@ -3,10 +3,11 @@ package com.jivesoftware.os.miru.api.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import java.io.Serializable;
 import java.util.List;
 
 /** @author jonathan */
-public class MiruFieldFilter {
+public class MiruFieldFilter implements Serializable {
 
     public final String fieldName;
     public final List<String> values;

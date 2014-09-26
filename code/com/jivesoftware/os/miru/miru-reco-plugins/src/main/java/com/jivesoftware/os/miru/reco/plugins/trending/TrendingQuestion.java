@@ -25,8 +25,6 @@ import java.util.List;
  */
 public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport> {
 
-    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-
     private final Trending trending;
     private final MiruRequest<TrendingQuery> request;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();

@@ -1,7 +1,6 @@
-package com.jivesoftware.os.miru.service.endpoint;
+package com.jivesoftware.os.miru.reader.deployable;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Optional;
 import com.google.common.collect.ListMultimap;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -33,7 +32,7 @@ import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPO
 import static com.jivesoftware.os.miru.api.MiruConfigReader.PARTITIONS_ENDPOINT;
 
 @Path(CONFIG_SERVICE_ENDPOINT_PREFIX)
-public class MiruConfigEndpoints {
+public class MiruReaderConfigEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -42,7 +41,7 @@ public class MiruConfigEndpoints {
     private final RegistrySchemaProvider registrySchemaProvider;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruConfigEndpoints(@Context MiruClusterRegistry clusterRegistry,
+    public MiruReaderConfigEndpoints(@Context MiruClusterRegistry clusterRegistry,
         @Context MiruService miruService,
         @Context RegistrySchemaProvider registrySchemaProvider) {
         this.clusterRegistry = clusterRegistry;
@@ -157,62 +156,6 @@ public class MiruConfigEndpoints {
         }
     }
 
-    @POST
-    @Path("/replicas/{tenantId}/{partitionId}/{logicalName}/{port}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response moveReplica(
-        @PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") Integer partitionId,
-        @PathParam("logicalName") String logicalName,
-        @PathParam("port") int port) {
-
-        MiruHost host = new MiruHost(logicalName, port);
-        try {
-            miruService.moveReplica(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId),
-                Optional.of(host));
-            return Response.ok(host.toStringForm()).build();
-        } catch (Throwable t) {
-            log.error("Failed to move replica for tenant {} partition {} from {}", new Object[] { tenantId, partitionId, host }, t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
-    @DELETE
-    @Path("/replicas/{tenantId}/{partitionId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response removeReplicas(
-        @PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") Integer partitionId) {
-        try {
-            miruService.removeReplicas(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId));
-            return Response.ok(partitionId.toString()).build();
-        } catch (Throwable t) {
-            log.error("Failed to remove replicas for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
-    @POST
-    @Path("/elect/{tenantId}/{partitionId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response electForTenantPartition(
-        @PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") Integer partitionId) {
-        try {
-            miruService.moveReplica(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId),
-                Optional.<MiruHost>absent());
-            return Response.ok(partitionId.toString()).build();
-        } catch (Throwable t) {
-            log.error("Failed to elect for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
 
     @POST
     @Path("/check/{tenantId}/{partitionId}/{state}/{storage}")

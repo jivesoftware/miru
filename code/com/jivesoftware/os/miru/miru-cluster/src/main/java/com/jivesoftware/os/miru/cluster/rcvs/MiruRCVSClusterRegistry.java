@@ -2,9 +2,7 @@ package com.jivesoftware.os.miru.cluster.rcvs;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -37,16 +35,13 @@ import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 
 public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
@@ -67,8 +62,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
     private final StripingLocksProvider<TenantPartitionHostKey> topologyLocks = new StripingLocksProvider<>(64);
 
-    public MiruRCVSClusterRegistry(
-        Timestamper timestamper,
+    public MiruRCVSClusterRegistry(Timestamper timestamper,
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry,
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry,
         RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry,
@@ -165,64 +159,6 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public Set<MiruHost> electToReplicaSetForTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, MiruReplicaSet replicaSet) throws Exception {
-        LinkedHashSet<HostHeartbeat> hostHeartbeats = getAllHosts();
-
-        Set<MiruHost> hostsWithReplica = Sets.newHashSet(replicaSet.getHostsWithReplica());
-        int countOfMissingReplicas = replicaSet.getCountOfMissingReplicas();
-
-        // hosts that provided heartbeat in the past hour
-        final long eligibleAfter = timestamper.get() - TimeUnit.HOURS.toMillis(1);
-        MiruHost[] hostsArray = FluentIterable.from(hostHeartbeats)
-            .filter(new Predicate<HostHeartbeat>() {
-                @Override
-                public boolean apply(@Nullable HostHeartbeat input) {
-                    return input != null && input.heartbeat > eligibleAfter;
-                }
-            })
-            .transform(new Function<HostHeartbeat, MiruHost>() {
-                @Nullable
-                @Override
-                public MiruHost apply(@Nullable HostHeartbeat input) {
-                    return input.host;
-                }
-            })
-            .toArray(MiruHost.class);
-
-        // We use a hash code derived from the tenant and partition to choose a starting index,
-        // and start electing eligible hosts from there.
-        // TODO come up with a better approach?
-        int hashCode = Objects.hash(tenantId, partitionId);
-        int electedCount = 0;
-        final long electionTime = timestamper.get();
-        for (int i = 0; i < hostsArray.length && electedCount < countOfMissingReplicas; i++, hashCode++) {
-            MiruHost hostToElect = hostsArray[Math.abs(hashCode) % hostsArray.length];
-            if (!hostsWithReplica.contains(hostToElect)) {
-                // this host is eligible
-                expectCoord(new MiruPartitionCoord(tenantId, partitionId, hostToElect));
-                // offset by election index (i) to ensure uniqueness of column keys
-                //TODO concurrent writes can still collide, we should pad currentTimeMillis and add ordered host index to ensure uniqueness
-                replicaRegistry.add(tenantId, partitionId, Long.MAX_VALUE - electionTime - i, hostToElect, null, timestamper);
-                hostsWithReplica.add(hostToElect);
-                electedCount++;
-
-                log.debug("Elected {} to {} on {}", new Object[]{ hostToElect, tenantId, partitionId });
-            }
-        }
-        return hostsWithReplica;
-    }
-
-    private void expectCoord(MiruPartitionCoord coord) throws Exception {
-        expectedTenantsRegistry.add(MiruVoidByte.INSTANCE, coord.host, coord.tenantId, MiruVoidByte.INSTANCE, null, timestamper);
-        expectedTenantPartitionsRegistry.add(coord.tenantId, coord.host, coord.partitionId, MiruVoidByte.INSTANCE, null, timestamper);
-        topologyRegistry.addIfNotExists(MiruVoidByte.INSTANCE, coord.tenantId,
-            new MiruTopologyColumnKey(coord.partitionId, coord.host),
-            new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, -1, -1),
-            null, timestamper);
-        log.debug("Expecting {}", coord);
-    }
-
-    @Override
     public ListMultimap<MiruPartitionState, MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception {
         final MiruTenantConfig config = getTenantConfig(tenantId);
         return Multimaps.transformValues(
@@ -269,8 +205,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             int countOfMissingReplicas = numberOfReplicas - partitionHosts.size();
 
             ListMultimap<MiruPartitionState, MiruPartition> partitionsByState = Multimaps.transformValues(
-                    topologyStatusByState.get(miruPartitionId),
-                    topologyStatusToPartition);
+                topologyStatusByState.get(miruPartitionId),
+                topologyStatusToPartition);
 
             replicaSets.put(miruPartitionId, new MiruReplicaSet(partitionsByState, partitionHosts, countOfMissingReplicas));
         }
@@ -367,32 +303,6 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public void removeReplicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        replicaRegistry.removeRow(tenantId, partitionId, timestamper);
-    }
-
-    @Override
-    public void moveReplica(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<MiruHost> fromHost, MiruHost toHost) throws Exception {
-        Map<MiruPartitionId, MiruReplicaSet> replicaSets = getReplicaSets(tenantId, Arrays.asList(partitionId));
-        MiruReplicaSet replicaSet = replicaSets.get(partitionId);
-
-        List<MiruHost> hosts = Lists.newArrayList(replicaSet.getHostsWithReplica());
-        if (fromHost.isPresent() && !hosts.isEmpty()) {
-            // list is small enough that direct removal is better than copying from intermediate set
-            hosts.remove(fromHost.or(hosts.get(0)));
-        }
-        hosts.add(toHost);
-
-        // rewrite new list of hosts to the head of the replica registry
-        long electionTime = timestamper.get();
-        for (int i = 0; i < hosts.size(); i++) {
-            MiruHost host = hosts.get(i);
-            expectCoord(new MiruPartitionCoord(tenantId, partitionId, host));
-            replicaRegistry.add(tenantId, partitionId, Long.MAX_VALUE - electionTime - i, host, null, timestamper);
-        }
-    }
-
-    @Override
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
         topologyRegistry.remove(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey(partitionId, host), timestamper);
     }
@@ -454,8 +364,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         final Collection<MiruPartitionId> requiredPartitionId,
         final SetMultimap<MiruPartitionId, MiruHost> perPartitonHostsWithReplica) throws Exception {
 
-        final ListMultimap<MiruPartitionId, ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>> partitionsTopology = ArrayListMultimap.
-            create();
+        final ListMultimap<MiruPartitionId,
+            ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>> partitionsTopology = ArrayListMultimap.create();
         topologyRegistry.getEntrys(
             MiruVoidByte.INSTANCE, tenantId, null, null, 100, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>>() {
@@ -536,6 +446,28 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             return input.partition;
         }
     };
+
+    @Override
+    public void addToReplicaRegistry(MiruTenantId tenantId, MiruPartitionId partitionId, long nextId, MiruHost host)
+        throws Exception {
+        replicaRegistry.add(tenantId, partitionId, nextId, host, null, timestamper);
+    }
+
+    @Override
+    public void removeTenantPartionReplicaSet(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        replicaRegistry.removeRow(tenantId, partitionId, timestamper);
+    }
+
+     @Override
+    public void ensurePartitionCoord(MiruPartitionCoord coord) throws Exception {
+        expectedTenantsRegistry.add(MiruVoidByte.INSTANCE, coord.host, coord.tenantId, MiruVoidByte.INSTANCE, null, timestamper);
+        expectedTenantPartitionsRegistry.add(coord.tenantId, coord.host, coord.partitionId, MiruVoidByte.INSTANCE, null, timestamper);
+        topologyRegistry.addIfNotExists(MiruVoidByte.INSTANCE, coord.tenantId,
+            new MiruTopologyColumnKey(coord.partitionId, coord.host),
+            new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, -1, -1),
+            null, timestamper);
+        log.debug("Expecting {}", coord);
+    }
 
     private static class TenantPartitionHostKey {
 

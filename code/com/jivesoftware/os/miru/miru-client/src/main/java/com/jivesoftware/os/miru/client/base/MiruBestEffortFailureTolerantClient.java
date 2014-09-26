@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruPartitioner;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -39,6 +40,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
 
     private final ExecutorService sendActivitiesToHostsThreadPool;
     private final MiruClusterRegistry clusterRegistry;
+    private final MiruReplicaSetDirector replicaSetDirector;
     private final MiruActivitySenderProvider activitySenderProvider;
     private final MiruPartitioner miruPartitioner;
 
@@ -48,12 +50,14 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
     public MiruBestEffortFailureTolerantClient(
         ExecutorService sendActivitiesToHostsThreadPool,
         MiruClusterRegistry clusterRegistry,
+        MiruReplicaSetDirector replicaSetDirector,
         MiruActivitySenderProvider activitySenderProvider,
         MiruPartitioner miruPartitioner,
         int cacheSize,
         long cacheExpiresAfterNMillis) {
         this.sendActivitiesToHostsThreadPool = sendActivitiesToHostsThreadPool;
         this.clusterRegistry = clusterRegistry;
+        this.replicaSetDirector = replicaSetDirector;
         this.activitySenderProvider = activitySenderProvider;
         this.miruPartitioner = miruPartitioner;
         this.replicaCache = CacheBuilder.newBuilder() //TODO config
@@ -145,7 +149,11 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
 
     private Set<MiruHost> electHostsForTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, MiruReplicaSet replicaSet) throws Exception {
         if (replicaSet.getCountOfMissingReplicas() > 0) {
-            return clusterRegistry.electToReplicaSetForTenantPartition(tenantId, partitionId, replicaSet);
+            return  replicaSetDirector.electToReplicaSetForTenantPartition(tenantId,
+                partitionId,
+                replicaSet,
+                System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1) // TODO expose to config!
+            );
         }
         return replicaSet.getHostsWithReplica();
     }

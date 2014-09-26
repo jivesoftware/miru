@@ -49,7 +49,6 @@ import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
-import com.jivesoftware.os.miru.service.endpoint.MiruConfigEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
@@ -178,7 +177,7 @@ public class MiruReaderMain {
             }
         }
 
-        deployable.addEndpoints(MiruConfigEndpoints.class);
+        deployable.addEndpoints(MiruReaderConfigEndpoints.class);
         deployable.addInjectables(MiruClusterRegistry.class, clusterRegistry);
         deployable.addInjectables(RegistrySchemaProvider.class, registrySchemaProvider);
 

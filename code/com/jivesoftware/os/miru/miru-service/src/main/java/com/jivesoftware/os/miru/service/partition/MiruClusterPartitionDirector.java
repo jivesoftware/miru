@@ -111,18 +111,6 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         clusterRegistry.removeHost(host);
     }
 
-    /** Remove replica set from the registry */
-    @Override
-    public void removeReplicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        clusterRegistry.removeReplicas(tenantId, partitionId);
-    }
-
-    /** Move replica from an optional host to another */
-    @Override
-    public void moveReplica(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<MiruHost> fromHost, MiruHost toHost) throws Exception {
-        clusterRegistry.moveReplica(tenantId, partitionId, fromHost, toHost);
-    }
-
     /** Remove topology from the registry */
     @Override
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {

@@ -2,12 +2,13 @@ package com.jivesoftware.os.miru.api.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 import java.util.List;
 
 /**
  *
  */
-public class MiruAuthzExpression {
+public class MiruAuthzExpression implements Serializable {
 
     public static final MiruAuthzExpression NOT_PROVIDED = new MiruAuthzExpression(null);
 

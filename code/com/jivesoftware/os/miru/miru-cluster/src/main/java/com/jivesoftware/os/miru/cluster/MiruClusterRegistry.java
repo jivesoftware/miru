@@ -15,7 +15,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public interface MiruClusterRegistry {
 
@@ -27,7 +26,11 @@ public interface MiruClusterRegistry {
 
     List<MiruTenantId> getTenantsForHost(MiruHost miruHost) throws Exception;
 
-    Set<MiruHost> electToReplicaSetForTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, MiruReplicaSet replicaSet) throws Exception;
+    void addToReplicaRegistry(MiruTenantId tenantId, MiruPartitionId partitionId, long nextId, MiruHost host) throws Exception;
+
+    void removeTenantPartionReplicaSet(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    void ensurePartitionCoord(MiruPartitionCoord coord) throws Exception;
 
     ListMultimap<MiruPartitionState, MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception;
 
@@ -49,10 +52,6 @@ public interface MiruClusterRegistry {
     MiruPartition getPartition(MiruPartitionCoord coord) throws Exception;
 
     void removeHost(MiruHost host) throws Exception;
-
-    void removeReplicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
-
-    void moveReplica(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<MiruHost> fromHost, MiruHost toHost) throws Exception;
 
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
 

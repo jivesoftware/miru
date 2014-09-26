@@ -17,6 +17,9 @@ package com.jivesoftware.os.miru.writer.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.WriterIdProvider;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.jive.utils.row.column.value.store.hbase.HBaseSetOfSortedMapsImplInitializer;
@@ -28,6 +31,7 @@ import com.jivesoftware.os.miru.client.endpoints.MiruClientEndpoints;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.upena.main.Deployable;
@@ -66,12 +70,22 @@ public class MiruWriterMain {
             3,
             TimeUnit.HOURS.toMillis(1));
 
+        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
+            new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
+            clusterRegistry);
+
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 
-        MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig, clusterRegistry, registryStore, wal, instanceConfig.getInstanceName());
+        MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig,
+            clusterRegistry,
+            replicaSetDirector,
+            registryStore,
+            wal,
+            instanceConfig.getInstanceName());
 
         deployable.addEndpoints(MiruClientEndpoints.class);
         deployable.addInjectables(MiruClient.class, miruClient);
+        deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 
         deployable.buildServer().start();
 

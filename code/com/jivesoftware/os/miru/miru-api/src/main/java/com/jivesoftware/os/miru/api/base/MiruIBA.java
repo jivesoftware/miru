@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.api.base;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -10,13 +11,13 @@ import java.util.Arrays;
  *
  * @author jonathan
  */
-public class MiruIBA implements Comparable {
+public class MiruIBA implements Comparable, Serializable {
 
     private int hashCode = 0;
     private final byte[] bytes;
 
     @JsonCreator
-    public MiruIBA(@JsonProperty("bytes") byte[] _bytes) {
+    public MiruIBA(@JsonProperty ("bytes") byte[] _bytes) {
         bytes = _bytes;
     }
 
