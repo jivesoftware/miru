@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
@@ -19,6 +20,7 @@ import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.Map;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -120,10 +122,10 @@ public class MiruIndexTest {
         final Map<Long, MiruInvertedIndex<EWAHCompressedBitmap>> importData = ImmutableMap.of(
                 key, invertedIndex
         );
-        miruInMemoryIndex.bulkImport(tenantId, new BulkExport<Map<Long, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
+        miruInMemoryIndex.bulkImport(tenantId, new BulkExport<Iterator<BulkEntry<Long, MiruInvertedIndex<EWAHCompressedBitmap>>>>() {
             @Override
-            public Map<Long, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
-                return importData;
+            public Iterator<BulkEntry<Long, MiruInvertedIndex<EWAHCompressedBitmap>>> bulkExport(MiruTenantId tenantId) throws Exception {
+                return Iterators.transform(importData.entrySet().iterator(), BulkEntry.<Long, MiruInvertedIndex<EWAHCompressedBitmap>>fromMapEntry());
             }
         });
 

@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
+import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
@@ -13,33 +15,39 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import java.io.File;
+import java.io.IOException;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * Short-lived (transient) impl. Like the mem-mapped impl, activity data is mem-mapped. However, set() is supported. The last index is only held in memory (not
- * stored on disk).
+ * Mem-mapped impl. Activity data lives in a keyed store, last index is an atomic integer optionally backed by a filer.
+ * Since the optional filer is backed by disk, it's recommended that set() only be used without a filer (transient index).
  */
-public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<MiruInternalActivity[]>, BulkExport<MiruInternalActivity[]> {
+public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Iterator<MiruInternalActivity>>, BulkExport<Iterator<MiruInternalActivity>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final FileBackedKeyedStore keyedStore;
-    private final AtomicInteger indexSize = new AtomicInteger();
+    private final AtomicInteger indexSize = new AtomicInteger(-1);
     private final MiruInternalActivityMarshaller internalActivityMarshaller;
+    private final Optional<Filer> indexSizeFiler;
 
     public MiruHybridActivityIndex(File mapDirectory, File swapDirectory, MultiChunkStore chunkStore,
-            MiruInternalActivityMarshaller internalActivityMarshaller) throws Exception {
+        MiruInternalActivityMarshaller internalActivityMarshaller, Optional<MiruFilerProvider> filerProvider) throws Exception {
         this.keyedStore = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 4, 100, chunkStore, 512);
         this.internalActivityMarshaller = internalActivityMarshaller;
+
+        this.indexSizeFiler = filerProvider.isPresent() ? Optional.of(filerProvider.get().getFiler(4)) : Optional.<Filer>absent();
     }
 
     @Override
     public MiruInternalActivity get(MiruTenantId tenantId, int index) {
-        int capacity = indexSize.get();
+        int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
             SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), false);
@@ -58,7 +66,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
 
     @Override
     public MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId) {
-        int capacity = indexSize.get();
+        int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
             SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), false);
@@ -77,11 +85,15 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
 
     @Override
     public int lastId() {
-        return indexSize.get() - 1;
+        return capacity() - 1;
     }
 
     @Override
     public void set(int index, MiruInternalActivity activity) {
+        set(index, activity, true);
+    }
+
+    private void set(int index, MiruInternalActivity activity, boolean checkCapacity) {
         checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
         try {
             //byte[] bytes = objectMapper.writeValueAsBytes(activity);
@@ -93,7 +105,9 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
                 FilerIO.write(swappingFiler, bytes);
                 swappingFiler.commit();
             }
-            checkCapacity(index);
+            if (checkCapacity) {
+                checkCapacity(index);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -106,14 +120,42 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return keyedStore.mapStoreSizeInBytes();
+        return (indexSizeFiler.isPresent() ? indexSizeFiler.get().length() : 0) + keyedStore.mapStoreSizeInBytes();
     }
 
-    private void checkCapacity(int index) {
+    private int capacity() {
+        try {
+            int size = indexSize.get();
+            if (size < 0) {
+                if (indexSizeFiler.isPresent()) {
+                    Filer filer = indexSizeFiler.get();
+                    synchronized (filer.lock()) {
+                        filer.seek(0);
+                        size = FilerIO.readInt(filer, "size");
+                    }
+                } else {
+                    size = 0;
+                }
+                indexSize.set(size);
+            }
+            return size;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void checkCapacity(int index) throws IOException {
         log.trace("Check if index {} should extend capacity {}", index, indexSize);
         int size = index + 1;
         synchronized (indexSize) {
             if (size > indexSize.get()) {
+                if (indexSizeFiler.isPresent()) {
+                    Filer filer = indexSizeFiler.get();
+                    synchronized (filer.lock()) {
+                        filer.seek(0);
+                        FilerIO.writeInt(filer, size, "size");
+                    }
+                }
                 log.debug("Capacity extended to {}", size);
                 indexSize.set(size);
             }
@@ -125,32 +167,55 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Mi
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInternalActivity[]> bulkExport) throws Exception {
-        MiruInternalActivity[] importActivities = bulkExport.bulkExport(tenantId);
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Iterator<MiruInternalActivity>> bulkExport) throws Exception {
+        Iterator<MiruInternalActivity> importActivities = bulkExport.bulkExport(tenantId);
 
-        int lastIndex;
-        for (lastIndex = importActivities.length - 1; lastIndex >= 0 && importActivities[lastIndex] == null; lastIndex--) {
-            // walk to first non-null
-        }
-
-        for (int index = 0; index <= lastIndex; index++) {
-            MiruInternalActivity activity = importActivities[index];
-            if (activity != null) {
-                set(index, activity);
+        int index = 0;
+        while (importActivities.hasNext()) {
+            MiruInternalActivity activity = importActivities.next();
+            if (activity == null) {
+                break;
             }
+            set(index, activity, false);
+            index++;
         }
+
+        checkCapacity(index - 1);
     }
 
     @Override
-    public MiruInternalActivity[] bulkExport(MiruTenantId tenantId) throws Exception {
-        int capacity = indexSize.get();
+    public Iterator<MiruInternalActivity> bulkExport(final MiruTenantId tenantId) throws Exception {
+        final int capacity = capacity();
 
-        //TODO all activities need to fit in memory... sigh.
-        //TODO need to "stream" this export/import.
-        MiruInternalActivity[] activities = new MiruInternalActivity[capacity];
-        for (int i = 0; i < activities.length; i++) {
-            activities[i] = get(tenantId, i);
-        }
-        return activities;
+        return new Iterator<MiruInternalActivity>() {
+            private int index = 0;
+            private MiruInternalActivity next;
+
+            private void loadNext() {
+                if (next == null && index < capacity) {
+                    next = get(tenantId, index);
+                }
+            }
+
+            @Override
+            public boolean hasNext() {
+                loadNext();
+                return (next != null);
+            }
+
+            @Override
+            public MiruInternalActivity next() {
+                loadNext();
+                MiruInternalActivity result = next;
+                index++;
+                next = null;
+                return result;
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+        };
     }
 }

@@ -1,14 +1,16 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Iterators;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruField;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -17,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Term dictionary is in memory. Supports index(). Next term id is held in memory.
  */
-public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> {
+public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>>> {
 
     private final MiruFieldDefinition fieldDefinition;
     private final ConcurrentMap<MiruTermId, MiruFieldIndexKey> termToIndex;
@@ -117,7 +119,7 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Map<Miru
     }
 
     @Override
-    public Map<MiruTermId, MiruFieldIndexKey> bulkExport(MiruTenantId tenantId) throws Exception {
-        return Maps.newHashMap(termToIndex);
+    public Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>> bulkExport(MiruTenantId tenantId) throws Exception {
+        return Iterators.transform(termToIndex.entrySet().iterator(), BulkEntry.<MiruTermId, MiruFieldIndexKey>fromMapEntry());
     }
 }

@@ -69,7 +69,7 @@ public class MiruInMemoryAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImpor
         cache.clear();
     }
 
-    private MiruInvertedIndex getOrAllocate(String authz, boolean allocateIfAbsent) {
+    private MiruInvertedIndex<BM> getOrAllocate(String authz, boolean allocateIfAbsent) {
         MiruInvertedIndex<BM> got = index.get(authz);
         if (got == null && allocateIfAbsent) {
             index.putIfAbsent(authz, new MiruInMemoryInvertedIndex<>(bitmaps));

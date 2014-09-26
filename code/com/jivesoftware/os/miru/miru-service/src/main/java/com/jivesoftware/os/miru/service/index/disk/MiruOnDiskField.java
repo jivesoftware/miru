@@ -8,18 +8,19 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruField;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.Map;
+import java.util.Iterator;
 
 /**
  * Persistent impl. Term dictionary is mem-mapped. Does not support index(), so no next term id.
  */
-public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Map<MiruTermId, MiruFieldIndexKey>> {
+public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>>> {
 
     private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024}; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
@@ -148,9 +149,11 @@ public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Map<MiruTe
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> importItems) throws Exception {
-        for (Map.Entry<MiruTermId, MiruFieldIndexKey> entry : importItems.bulkExport(tenantId).entrySet()) {
-            termToIndex.add(entry.getKey(), entry.getValue());
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>>> importItems) throws Exception {
+        Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>> iter = importItems.bulkExport(tenantId);
+        while (iter.hasNext()) {
+            BulkEntry<MiruTermId, MiruFieldIndexKey> entry = iter.next();
+            termToIndex.add(entry.key, entry.value);
         }
     }
 }

@@ -211,12 +211,9 @@ public class MiruTimeIndexTest {
             importValues[i] = i * 10;
         }
         MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
-        miruInMemoryTimeIndex.bulkImport(tenantId, new BulkExport<long[]>() {
-            @Override
-            public long[] bulkExport(MiruTenantId tenantId) throws Exception {
-                return importValues;
-            }
-        });
+        for (long timestamp : importValues) {
+            miruInMemoryTimeIndex.nextId(timestamp);
+        }
 
         // Set up and import on-disk implementation
         final File onDisk = Files.createTempFile("onDisk", "timeIndex").toFile();
@@ -267,12 +264,9 @@ public class MiruTimeIndexTest {
 
         final long[] importValues = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
 
-        miruInMemoryTimeIndex.bulkImport(tenantId, new BulkExport<long[]>() {
-            @Override
-            public long[] bulkExport(MiruTenantId tenantId) throws Exception {
-                return importValues;
-            }
-        });
+        for (long timestamp : importValues) {
+            miruInMemoryTimeIndex.nextId(timestamp);
+        }
 
         // Set up and import on-disk implementation
         final File onDisk = Files.createTempFile("onDisk", "timeIndex").toFile();

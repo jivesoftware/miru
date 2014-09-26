@@ -74,7 +74,7 @@ public class MiruContextFactory {
 
     private static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final String DISK_FORMAT_VERSION = "version-1";
+    private static final String DISK_FORMAT_VERSION = "version-2";
 
     private final MiruSchemaProvider schemaProvider;
     private final ExecutorService executorService;
@@ -207,7 +207,8 @@ public class MiruContextFactory {
             hybridResourceLocator.getMapDirectory(identifier, "activity"),
             hybridResourceLocator.getSwapDirectory(identifier, "activity"),
             multiChunkStore,
-            new MiruInternalActivityMarshaller());
+            new MiruInternalActivityMarshaller(),
+            Optional.<MiruFilerProvider>absent());
         exportHandles.put("activityIndex", activityIndex);
 
         MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps);
@@ -290,7 +291,8 @@ public class MiruContextFactory {
             diskResourceLocator.getMapDirectory(identifier, "activity"),
             diskResourceLocator.getSwapDirectory(identifier, "activity"),
             multiChunkStore,
-            new MiruInternalActivityMarshaller());
+            new MiruInternalActivityMarshaller(),
+            Optional.<MiruFilerProvider>of(new MemMappedFilerProvider(identifier, "activity")));
 
         importHandles.put("activityIndex", activityIndex);
 
@@ -384,7 +386,8 @@ public class MiruContextFactory {
             diskResourceLocator.getMapDirectory(identifier, "activity"),
             diskResourceLocator.getSwapDirectory(identifier, "activity"),
             multiChunkStore,
-            new MiruInternalActivityMarshaller());
+            new MiruInternalActivityMarshaller(),
+            Optional.<MiruFilerProvider>of(new MemMappedFilerProvider(identifier, "activity")));
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
@@ -545,7 +548,7 @@ public class MiruContextFactory {
 
         return diskResourceAnalyzer.checkExists(
             diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
-            Lists.newArrayList(DISK_FORMAT_VERSION,"timeIndex", "removal"),
+            Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "activity", "removal"),
             mapDirectories,
             chunkNames);
     }
@@ -561,7 +564,7 @@ public class MiruContextFactory {
         }
         return diskResourceAnalyzer.checkExists(
             diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
-            Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "removal"),
+            Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "activity", "removal"),
             mapDirectories,
             chunkNames);
     }

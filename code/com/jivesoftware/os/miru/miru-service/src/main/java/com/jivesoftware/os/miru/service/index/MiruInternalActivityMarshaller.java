@@ -33,14 +33,14 @@ public class MiruInternalActivityMarshaller {
     public MiruTermId[] fieldValueFromFiler(Filer filer, int fieldId) throws IOException {
         filer.seek((4 + 4) + (fieldId * 4));
         filer.seek(FilerIO.readInt(filer, "offset"));
-        return valuesFromFilter(filer);
+        return valuesFromFiler(filer);
     }
 
     public MiruIBA[] propValueFromFiler(Filer filer, int propId) throws IOException {
         int fieldsLength = FilerIO.readInt(filer, "fieldsLength");
         filer.seek((4 + 4) + (fieldsLength * 4) + (propId * 4));
         filer.seek(FilerIO.readInt(filer, "offset"));
-        return propsFromFilter(filer);
+        return propsFromFiler(filer);
     }
 
     public MiruInternalActivity fromFiler(MiruTenantId tenant, Filer filer) throws IOException {
@@ -52,10 +52,10 @@ public class MiruInternalActivityMarshaller {
             FilerIO.readInt(filer, "offest");
         }
         for (int i = 0; i < fieldsLength; i++) {
-            values[i] = valuesFromFilter(filer);
+            values[i] = valuesFromFiler(filer);
         }
         for (int i = 0; i < propsLength; i++) {
-            props[i] = propsFromFilter(filer);
+            props[i] = propsFromFiler(filer);
         }
 
         long time = FilerIO.readLong(filer, "time");
@@ -65,7 +65,7 @@ public class MiruInternalActivityMarshaller {
         return new MiruInternalActivity(tenant, time, authz, version, values, props);
     }
 
-    private MiruTermId[] valuesFromFilter(Filer filer) throws IOException {
+    private MiruTermId[] valuesFromFiler(Filer filer) throws IOException {
         int length = FilerIO.readInt(filer, "length");
         if (length == -1) {
             return null;
@@ -81,7 +81,7 @@ public class MiruInternalActivityMarshaller {
         return terms;
     }
 
-    private MiruIBA[] propsFromFilter(Filer filer) throws IOException {
+    private MiruIBA[] propsFromFiler(Filer filer) throws IOException {
         int length = FilerIO.readInt(filer, "length");
         if (length == -1) {
             return null;

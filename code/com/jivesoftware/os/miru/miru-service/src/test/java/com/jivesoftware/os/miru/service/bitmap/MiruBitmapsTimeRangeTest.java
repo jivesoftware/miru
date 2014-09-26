@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
-import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
@@ -143,12 +142,9 @@ public class MiruBitmapsTimeRangeTest {
 
     private MiruInMemoryTimeIndex buildInMemoryTimeIndex(MiruTenantId tenantId, final long[] timestamps) throws Exception {
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent());
-        miruInMemoryTimeIndex.bulkImport(tenantId, new BulkExport<long[]>() {
-            @Override
-            public long[] bulkExport(MiruTenantId tenantId) throws Exception {
-                return timestamps;
-            }
-        });
+        for (long timestamp : timestamps) {
+            miruInMemoryTimeIndex.nextId(timestamp);
+        }
         return miruInMemoryTimeIndex;
     }
 

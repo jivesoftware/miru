@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
+import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
@@ -221,7 +222,8 @@ public class MiruIndexContextTest {
             Files.createTempDirectory("memmap").toFile(),
             Files.createTempDirectory("memmap").toFile(),
             new MultiChunkStore(new ChunkStoreInitializer().initialize(File.createTempFile("memmap", "chunk").getAbsolutePath(), 512, true)),
-            new MiruInternalActivityMarshaller());
+            new MiruInternalActivityMarshaller(),
+            Optional.<MiruFilerProvider>absent());
 
         miruHybridActivityIndex.bulkImport(tenantId, miruInMemoryActivityIndex);
 

@@ -7,13 +7,14 @@ import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.util.Arrays;
+import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * In-memory impl. Activity data lives in an array, last index is a simple integer.
  */
-public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<MiruInternalActivity[]>, BulkExport<MiruInternalActivity[]> {
+public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<Iterator<MiruInternalActivity>>, BulkExport<Iterator<MiruInternalActivity>> {
 
     private final int initialCapacity = 32; //TODO configure?
     private MiruInternalActivity[] activities;
@@ -81,26 +82,28 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInternalActivity[]> importItems) throws Exception {
-        MiruInternalActivity[] importActivities = importItems.bulkExport(tenantId);
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Iterator<MiruInternalActivity>> importItems) throws Exception {
+        Iterator<MiruInternalActivity> importActivities = importItems.bulkExport(tenantId);
         synchronized (activityLock) {
-            this.activities = new MiruInternalActivity[importActivities.length];
-            System.arraycopy(importActivities, 0, this.activities, 0, importActivities.length);
-
-            //TODO could binary search for first null
-            last = -1;
-            for (int i = activities.length - 1; i >= 0; i--) {
-                if (activities[i] != null) {
-                    last = i;
+            int index = 0;
+            while (importActivities.hasNext()) {
+                MiruInternalActivity next = importActivities.next();
+                if (next == null) {
                     break;
                 }
+                set(index, next);
+                index++;
             }
+
+            MiruInternalActivity[] compact = new MiruInternalActivity[last + 1];
+            System.arraycopy(activities, 0, compact, 0, compact.length);
+            activities = compact;
         }
     }
 
     @Override
-    public MiruInternalActivity[] bulkExport(MiruTenantId tenantId) throws Exception {
+    public Iterator<MiruInternalActivity> bulkExport(final MiruTenantId tenantId) throws Exception {
         MiruInternalActivity[] activities = this.activities; // stable reference
-        return Arrays.copyOf(activities, activities.length);
+        return Arrays.asList(activities).iterator();
     }
 }

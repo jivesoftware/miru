@@ -1,30 +1,30 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Iterators;
 import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
-import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruField;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.Map;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Short-lived (transient) impl. Term dictionary is mem-mapped. Supports index().
  * Next term id is held in memory.
  */
-public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Map<MiruTermId, MiruFieldIndexKey>> {
+public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>>> {
 
-    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024}; //TODO make this configurable per field?
+    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024 }; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
 
     private final MiruFieldDefinition fieldDefinition;
@@ -169,12 +169,7 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Map<MiruTe
     }
 
     @Override
-    public Map<MiruTermId, MiruFieldIndexKey> bulkExport(MiruTenantId tenantId) throws Exception {
-        //TODO needs to fit in memory! boo!
-        Map<MiruTermId, MiruFieldIndexKey> export = Maps.newHashMap();
-        for (KeyValueStore.Entry<MiruTermId, MiruFieldIndexKey> entry : termToIndex) {
-            export.put(entry.getKey(), entry.getValue());
-        }
-        return export;
+    public Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>> bulkExport(MiruTenantId tenantId) throws Exception {
+        return Iterators.transform(termToIndex.iterator(), BulkEntry.<MiruTermId, MiruFieldIndexKey>fromKeyValueStoreEntry());
     }
 }

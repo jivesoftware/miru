@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author jonathan
  */
-public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<long[]>, BulkExport<MiruTimeIndex> {
+public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIndex>, BulkExport<MiruTimeIndex> {
 
     //TODO there's a good argument for making this a FileBackMapStore even for the in-memory impl
     //TODO (it's only used for index/repair, so disk paging won't slow reads)
@@ -225,10 +225,10 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<long[]>,
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<long[]> importItems) throws Exception {
-        long[] importArray = importItems.bulkExport(tenantId);
-        for (long timestamp : importArray) {
-            nextId(timestamp);
+    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruTimeIndex> importItems) throws Exception {
+        MiruTimeIndex importTimeIndex = importItems.bulkExport(tenantId);
+        for (Entry entry : importTimeIndex.getEntries()) {
+            nextId(entry.time);
         }
     }
 

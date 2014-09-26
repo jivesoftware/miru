@@ -101,19 +101,19 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                     streams.add(new KeyedColumnValueCallbackStream<>(
                         host, new CallbackStream<ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long>>() {
 
-                            @Override
-                            public ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> callback(
-                                ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> columnValueAndTimestamp) throws Exception {
+                        @Override
+                        public ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> callback(
+                            ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> columnValueAndTimestamp) throws Exception {
 
-                                    if (columnValueAndTimestamp != null
-                                    && columnValueAndTimestamp.getColumn().getIndex() == MiruHostsColumnKey.heartbeat.getIndex()) {
-                                        MiruHostsColumnValue value = columnValueAndTimestamp.getValue();
-                                        hostHeartbeats.
-                                        add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp(), value.sizeInMemory, value.sizeOnDisk));
-                                    }
-                                    return columnValueAndTimestamp;
-                                }
-                        }));
+                            if (columnValueAndTimestamp != null
+                                && columnValueAndTimestamp.getColumn().getIndex() == MiruHostsColumnKey.heartbeat.getIndex()) {
+                                MiruHostsColumnValue value = columnValueAndTimestamp.getValue();
+                                hostHeartbeats.
+                                    add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp(), value.sizeInMemory, value.sizeOnDisk));
+                            }
+                            return columnValueAndTimestamp;
+                        }
+                    }));
                 }
                 return value;
             }
@@ -132,11 +132,11 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 @Override
                 public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(
                     ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> value) throws Exception {
-                        if (value != null) {
-                            tenants.add(value.getColumn());
-                        }
-                        return value;
+                    if (value != null) {
+                        tenants.add(value.getColumn());
                     }
+                    return value;
+                }
             });
         return tenants;
     }
@@ -257,7 +257,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             Timestamper timestamper = new ConstantTimestamper(timestamp);
             topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
                 new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, coordMetrics.sizeInMemory, coordMetrics.sizeOnDisk), null, timestamper);
-            log.debug("Updated {} to {} at {}", new Object[]{ coord, coordInfo, refreshTimestamp });
+            log.debug("Updated {} to {} at {}", new Object[] { coord, coordInfo, refreshTimestamp });
         }
     }
 
@@ -276,7 +276,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             Timestamper timestamper = new ConstantTimestamper(refreshTimestamp);
             topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
                 refresh, null, timestamper);
-            log.debug("Refreshed {} at {}", new Object[]{ coord, refreshTimestamp });
+            log.debug("Refreshed {} at {}", new Object[] { coord, refreshTimestamp });
         }
     }
 
@@ -312,7 +312,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
         MiruTopologyColumnKey key = new MiruTopologyColumnKey(partitionId, host);
         ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>[] valueAndTimestamps = topologyRegistry
-            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[]{ key }, null, null);
+            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[] { key }, null, null);
         if (valueAndTimestamps != null && valueAndTimestamps.length > 0 && valueAndTimestamps[0] != null) {
             ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = valueAndTimestamps[0];
             return valueAndTimestamp;
@@ -339,19 +339,19 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 public ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> callback(
                     ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> cvat) throws Exception {
 
-                        if (cvat != null) {
-                            MiruPartitionId partitionId = cvat.getColumn().partitionId;
-                            if (!filterForPartitionId.isPresent() || filterForPartitionId.get().equals(partitionId)) {
-                                MiruHost host = cvat.getColumn().host;
-                                if (!filterForHost.isPresent() || filterForHost.get().equals(host)) {
-                                    cvats.add(cvat);
-                                    partitions.add(partitionId);
-                                }
-                                return cvat;
+                    if (cvat != null) {
+                        MiruPartitionId partitionId = cvat.getColumn().partitionId;
+                        if (!filterForPartitionId.isPresent() || filterForPartitionId.get().equals(partitionId)) {
+                            MiruHost host = cvat.getColumn().host;
+                            if (!filterForHost.isPresent() || filterForHost.get().equals(host)) {
+                                cvats.add(cvat);
+                                partitions.add(partitionId);
                             }
+                            return cvat;
                         }
-                        return null;
                     }
+                    return null;
+                }
             });
 
         SetMultimap<MiruPartitionId, MiruHost> hostsWithReplica = getHostsWithReplica(tenantId, partitions, numberOfReplicas);
@@ -373,12 +373,12 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 public ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> callback(
                     ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> cvat) throws Exception {
 
-                        if (cvat != null) {
-                            MiruPartitionId partitionId = cvat.getColumn().partitionId;
-                            partitionsTopology.put(partitionId, cvat);
-                        }
-                        return cvat;
+                    if (cvat != null) {
+                        MiruPartitionId partitionId = cvat.getColumn().partitionId;
+                        partitionsTopology.put(partitionId, cvat);
                     }
+                    return cvat;
+                }
             });
 
         long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, defaultTopologyIsStaleAfterMillis);
@@ -429,7 +429,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
         MiruTopologyColumnKey key = new MiruTopologyColumnKey(partitionId, host);
         ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>[] valueAndTimestamps = topologyRegistry
-            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[]{ key }, null, null);
+            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[] { key }, null, null);
 
         Long topologyTimestamp = null;
         if (valueAndTimestamps != null && valueAndTimestamps.length > 0 && valueAndTimestamps[0] != null) {
