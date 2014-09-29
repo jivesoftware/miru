@@ -496,11 +496,16 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                         }
 
                         if (partitionedActivities.size() == partitionRebuildBatchSize) {
-                            accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
-                            accessor.rebuildTimestamp.set(rebuildTimestamp.get());
-                            accessor.sipTimestamp.set(sipTimestamp.get());
-                            // indexInternal inherently clears the list by removing elements from the iterator, but just to be safe
-                            partitionedActivities.clear();
+                            log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                            try {
+                                accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
+                                accessor.rebuildTimestamp.set(rebuildTimestamp.get());
+                                accessor.sipTimestamp.set(sipTimestamp.get());
+                                // indexInternal inherently clears the list by removing elements from the iterator, but just to be safe
+                                partitionedActivities.clear();
+                            } finally {
+                                log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                            }
                         }
 
                         // stop if the accessor has changed
@@ -510,9 +515,14 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             );
 
             if (!partitionedActivities.isEmpty()) {
-                accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
-                accessor.rebuildTimestamp.set(rebuildTimestamp.get());
-                accessor.sipTimestamp.set(sipTimestamp.get());
+                log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                try {
+                    accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
+                    accessor.rebuildTimestamp.set(rebuildTimestamp.get());
+                    accessor.sipTimestamp.set(sipTimestamp.get());
+                } finally {
+                    log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                }
             }
 
             return accessorRef.get() == accessor;

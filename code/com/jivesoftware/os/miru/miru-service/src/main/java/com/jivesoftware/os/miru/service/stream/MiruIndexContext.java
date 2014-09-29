@@ -39,15 +39,15 @@ public class MiruIndexContext<BM> {
     private final MiruActivityInternExtern activityInterner;
     private final MiruIndexUtil indexUtil = new MiruIndexUtil();
 
-    private final StripingLocksProvider<Integer> stripingLocksProvider = new StripingLocksProvider<>(64);
+    private final StripingLocksProvider<Integer> stripingLocksProvider = new StripingLocksProvider<>(64);// TODO expose to config
 
     public MiruIndexContext(MiruBitmaps<BM> bitmaps,
-            MiruSchema schema,
-            MiruActivityIndex activityIndex,
-            MiruFields<BM> fieldIndex,
-            MiruAuthzIndex authzIndex,
-            MiruRemovalIndex removalIndex,
-            MiruActivityInternExtern activityInterner) {
+        MiruSchema schema,
+        MiruActivityIndex activityIndex,
+        MiruFields<BM> fieldIndex,
+        MiruAuthzIndex authzIndex,
+        MiruRemovalIndex removalIndex,
+        MiruActivityInternExtern activityInterner) {
         this.bitmaps = bitmaps;
         this.schema = schema;
         this.activityIndex = activityIndex;
@@ -59,12 +59,37 @@ public class MiruIndexContext<BM> {
 
     public void index(MiruActivity activity, int id) throws Exception {
         MiruInternalActivity internalActivity = activityInterner.intern(activity, schema);
-        indexFieldValues(internalActivity, id);
-        indexAuthz(internalActivity, id);
-        indexBloomins(internalActivity);
-        indexWriteTimeAggregates(internalActivity, id);
+        try {
+            log.startNanoTimer("indexing>indexFieldValues");
+            indexFieldValues(internalActivity, id);
+        } finally {
+            log.stopNanoTimer("indexing>indexFieldValues");
+        }
+        try {
+            log.startNanoTimer("indexing>indexAuthz");
+            indexAuthz(internalActivity, id);
+        } finally {
+            log.stopNanoTimer("indexing>indexAuthz");
+        }
+        try {
+            log.startNanoTimer("indexing>indexBloomins");
+            indexBloomins(internalActivity);
+        } finally {
+            log.stopNanoTimer("indexing>indexBloomins");
+        }
+        try {
+            log.startNanoTimer("indexing>indexWriteTimeAggregates");
+            indexWriteTimeAggregates(internalActivity, id);
+        } finally {
+            log.stopNanoTimer("indexing>indexWriteTimeAggregates");
+        }
         // add to the activity index last, and use it as the ultimate indicator of whether an activity is fully indexed
-        activityIndex.set(id, internalActivity);
+        try {
+            log.startNanoTimer("indexing>activityIndex");
+            activityIndex.set(id, internalActivity);
+        } finally {
+            log.stopNanoTimer("indexing>activityIndex");
+        }
     }
 
     public void set(MiruActivity activity, int id) {
