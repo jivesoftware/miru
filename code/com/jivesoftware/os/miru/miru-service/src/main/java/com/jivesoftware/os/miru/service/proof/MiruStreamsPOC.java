@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service.proof;
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
-import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** @author jonathan */
 public class MiruStreamsPOC {
+
+    private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
 
     public static void main(String[] args) {
         Random rand = new Random(123_345);
@@ -60,8 +62,8 @@ public class MiruStreamsPOC {
 
     public void add(int docId, int fieldId, int[] termIds) {
         for (int termId : termIds) {
-            long fieldTerm = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { fieldId, termId }));
-            getOrAllocate(fieldTerm).set(docId);
+            long key = indexKeyFunction.getKey(fieldId, termId);
+            getOrAllocate(key).set(docId);
         }
     }
 
@@ -78,8 +80,8 @@ public class MiruStreamsPOC {
         List<EWAHCompressedBitmap> bitmaps = new ArrayList<>();
         for (FieldQuery fieldQuery : fieldQuerys) {
             for (int termId : fieldQuery.termIds) {
-                long fieldTerm = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { fieldQuery.fieldId, termId }));
-                EWAHCompressedBitmap got = index.get(fieldTerm);
+                long key = indexKeyFunction.getKey(fieldQuery.fieldId, termId);
+                EWAHCompressedBitmap got = index.get(key);
                 if (got != null) {
                     bitmaps.add(got);
                 }

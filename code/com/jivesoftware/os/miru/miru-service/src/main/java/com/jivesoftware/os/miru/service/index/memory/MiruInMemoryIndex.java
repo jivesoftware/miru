@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruIndex;
@@ -9,6 +8,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
 import gnu.trove.impl.Constants;
 import gnu.trove.iterator.TLongObjectIterator;
 import gnu.trove.map.hash.TLongObjectHashMap;
@@ -22,6 +22,7 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
 
     private final MiruBitmaps<BM> bitmaps;
     private final TLongObjectHashMap<MiruInvertedIndex<BM>> index;
+    private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
 
     public MiruInMemoryIndex(MiruBitmaps<BM> bitmaps) {
         this.bitmaps = bitmaps;
@@ -64,21 +65,21 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
 
     @Override
     public Optional<MiruInvertedIndex<BM>> get(int fieldId, int termId) {
-        long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { fieldId, termId }));
+        long key = indexKeyFunction.getKey(fieldId, termId);
         synchronized (index) {
-            return Optional.fromNullable(index.get(fieldTermId));
+            return Optional.fromNullable(index.get(key));
         }
     }
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, int termId) {
         Optional<MiruInvertedIndex<BM>> got = get(fieldId, termId);
         if (!got.isPresent()) {
-            long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { fieldId, termId }));
+            long key = indexKeyFunction.getKey(fieldId, termId);
             MiruInMemoryInvertedIndex<BM> miruInvertedIndex = new MiruInMemoryInvertedIndex<>(bitmaps);
 
             got = Optional.<MiruInvertedIndex<BM>>of(miruInvertedIndex);
             synchronized (index) {
-                index.put(fieldTermId, miruInvertedIndex);
+                index.put(key, miruInvertedIndex);
             }
         }
         return got.get();

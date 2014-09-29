@@ -27,6 +27,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -42,6 +43,7 @@ import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -58,6 +60,7 @@ public class MiruService implements Miru {
     private final MiruHostedPartitionComparison partitionComparison;
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruActivityLookupTable activityLookupTable;
+    private final MiruSchemaProvider schemaProvider;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public MiruService(MiruHost localhost,
@@ -65,7 +68,8 @@ public class MiruService implements Miru {
         MiruHostedPartitionComparison partitionComparison,
         MiruActivityWALWriter activityWALWriter,
         MiruActivityLookupTable activityLookupTable,
-        MiruSolver solver) {
+        MiruSolver solver,
+        MiruSchemaProvider schemaProvider) {
 
         this.localhost = localhost;
         this.partitionDirector = partitionDirector;
@@ -73,6 +77,7 @@ public class MiruService implements Miru {
         this.activityWALWriter = activityWALWriter;
         this.activityLookupTable = activityLookupTable;
         this.solver = solver;
+        this.schemaProvider = schemaProvider;
     }
 
     public void writeToIndex(List<MiruPartitionedActivity> partitionedActivities) throws Exception {
@@ -120,6 +125,10 @@ public class MiruService implements Miru {
         A defaultValue,
         boolean debug)
         throws Exception {
+
+        if (schemaProvider.getSchema(tenantId) == null) {
+            return new MiruResponse<>(null, null, 0, true, Collections.singletonList("Schema has not been registered for this tenantId"));
+        }
 
         log.startTimer("askAndMerge");
 
@@ -185,7 +194,7 @@ public class MiruService implements Miru {
         log.inc("askAndMerge>query>" + solvableFactory.getQueryKey());
         log.inc("askAndMerge>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
 
-        return new MiruResponse<>(answer, solutions, totalElapsed, solutionLog.asList());
+        return new MiruResponse<>(answer, solutions, totalElapsed, false, solutionLog.asList());
     }
 
     @Override

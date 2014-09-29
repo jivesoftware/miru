@@ -7,7 +7,6 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -66,12 +65,13 @@ public class MiruIndexTest {
     @Test(dataProvider = "miruIndexDataProviderWithData")
     public <BM> void testExpectedData(MiruIndex<BM> miruIndex, Map<Long, MiruInvertedIndex> importData, MiruBackingStorage miruBackingStorage) throws
             Exception {
-        long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { 1, 2 }));
-        MiruInvertedIndex expected = importData.get(fieldTermId);
+        IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
+        long key = indexKeyFunction.getKey(1, 2);
+        MiruInvertedIndex expected = importData.get(key);
 
         long sizeInBytes = miruIndex.sizeInMemory() + miruIndex.sizeOnDisk();
         if (miruBackingStorage.equals(MiruBackingStorage.memory)) {
-            long expectedSizeInBytes = importData.get(fieldTermId).sizeInMemory() + importData.get(fieldTermId).sizeOnDisk();
+            long expectedSizeInBytes = importData.get(key).sizeInMemory() + importData.get(key).sizeOnDisk();
             assertEquals(sizeInBytes, expectedSizeInBytes);
         } else if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
             // See MapStore.cost() for more information. FileBackedMemMappedByteBufferFactory.allocate() adds the extra byte
@@ -108,6 +108,7 @@ public class MiruIndexTest {
 
     @DataProvider(name = "miruIndexDataProviderWithData")
     public Object[][] miruIndexDataProviderWithData() throws Exception {
+        IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4));
 
@@ -118,7 +119,7 @@ public class MiruIndexTest {
         MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex = new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(4));
         invertedIndex.or(bitmap);
 
-        long key = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { 1, 2 }));
+        long key = indexKeyFunction.getKey(1, 2);
         final Map<Long, MiruInvertedIndex<EWAHCompressedBitmap>> importData = ImmutableMap.of(
                 key, invertedIndex
         );

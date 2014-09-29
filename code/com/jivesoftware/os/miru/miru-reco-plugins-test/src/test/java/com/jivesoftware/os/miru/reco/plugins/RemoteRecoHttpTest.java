@@ -55,12 +55,13 @@ public class RemoteRecoHttpTest {
     @Test(enabled = false, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
 
-        final String[] bigTenants = new String[] {
+        /*
+        final String[] tenants = new String[] {
             "EVy", "Nv9", "KJt", "WVB", "ZlR", "iXM", "lPm", "Z49", "nyc", "oFd", "yso", "1MO", "40M", "2RV", "999", "EVy", "Nv9", "KJt", "WVB", "ZlR",
             "iXM", "lPm", "Z49", "nyc", "yso", "1MO", "9yG", "999", "EVy", "Nv9", "KJt"
         };
-        /*
-        final String[] allTenants = new String[] { "000", "02o", "04j", "069", "08Y", "09q", "09u", "0AO", "0Hd", "0J1", "0Og", "0Pg", "0SN", "0Sp", "0Us",
+        */
+        final String[] tenants = new String[] { "000", "02o", "04j", "069", "08Y", "09q", "09u", "0AO", "0Hd", "0J1", "0Og", "0Pg", "0SN", "0Sp", "0Us",
             "0Yd", "0Zw", "0aP", "0c0", "0dk", "0hd", "0hg", "0hw", "0i1", "0pq", "0r5", "0r9", "0to", "0ww", "0xA", "0z4", "0zv", "10T", "125", "126",
             "175", "1Bm", "1Dp", "1Jv", "1MO", "1PL", "1To", "1Tq", "1Vx", "1Wd", "1Zf", "1bV", "1eK", "1f8", "1h7", "1hM", "1he", "1lU", "1lX",
             "1nF", "1pJ", "1rJ", "1v2", "1zu", "21v", "22s", "24l", "264", "2B8", "2BR", "2D4", "2Jd", "2L5", "2Lo", "2Mf", "2Ps", "2RV", "2TG", "2Ti",
@@ -160,7 +161,6 @@ public class RemoteRecoHttpTest {
             "yMY", "yPE", "yPs", "yRQ", "ySJ", "yU1", "yZ9", "yZL", "yZV", "yZi", "yd2", "yfH", "yfa", "ygL", "yk2", "ykU", "yl6", "ylv", "yso",
             "yuC", "yxc", "yzb", "yzk", "z3C", "z4a", "z5F", "z6w", "zEp", "zJX", "zKr", "zLh", "zNk", "zNx", "zPo", "zRC", "zSw", "zTl", "zU8",
             "zUg", "zWe", "zWy", "zXf", "zfi", "zhD", "zhr", "zjx", "zlg", "znA", "znH", "zv7", "zzk" };
-            */
         //String tenant = "999"; //brewspace
         //String tenant = "Z49"; //big tenant
 
@@ -204,7 +204,7 @@ public class RemoteRecoHttpTest {
             executorService.submit(new Runnable() {
                 @Override
                 public void run() {
-                    MiruTenantId tenantId = new MiruTenantId(bigTenants[index % bigTenants.length].getBytes(Charsets.UTF_8));
+                    MiruTenantId tenantId = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
                     MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3_765)),
                         MiruAuthzExpression.NOT_PROVIDED,
                         new TrendingQuery(

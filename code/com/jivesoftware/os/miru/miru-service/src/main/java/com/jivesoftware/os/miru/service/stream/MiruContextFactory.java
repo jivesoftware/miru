@@ -74,7 +74,7 @@ public class MiruContextFactory {
 
     private static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final String DISK_FORMAT_VERSION = "version-2";
+    private static final String DISK_FORMAT_VERSION = "version-3";
 
     private final MiruSchemaProvider schemaProvider;
     private final ExecutorService executorService;

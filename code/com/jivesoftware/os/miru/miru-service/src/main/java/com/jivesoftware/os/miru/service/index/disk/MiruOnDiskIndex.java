@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
 import java.io.File;
 import java.util.Iterator;
 
@@ -20,6 +21,7 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
 
     private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
+    private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
 
     public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore) throws Exception {
         this.bitmaps = bitmaps;
@@ -56,8 +58,8 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
 
     @Override
     public Optional<MiruInvertedIndex<BM>> get(int fieldId, int termId) throws Exception {
-        long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { fieldId, termId }));
-        SwappableFiler filer = index.get(FilerIO.longBytes(fieldTermId), false);
+        long key = indexKeyFunction.getKey(fieldId, termId);
+        SwappableFiler filer = index.get(FilerIO.longBytes(key), false);
         if (filer == null) {
             return Optional.absent();
         }
@@ -65,8 +67,8 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
     }
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, int termId) throws Exception {
-        long fieldTermId = FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { fieldId, termId }));
-        SwappableFiler filer = index.get(FilerIO.longBytes(fieldTermId));
+        long key = indexKeyFunction.getKey(fieldId, termId);
+        SwappableFiler filer = index.get(FilerIO.longBytes(key));
         return new MiruOnDiskInvertedIndex<>(bitmaps, filer);
     }
 

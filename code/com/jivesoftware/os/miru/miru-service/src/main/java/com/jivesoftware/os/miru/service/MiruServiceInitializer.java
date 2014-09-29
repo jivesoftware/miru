@@ -130,7 +130,8 @@ public class MiruServiceInitializer {
             partitionComparison,
             activityWALWriter,
             activityLookupTable,
-            solver);
+            solver,
+            schemaProvider);
 
         return new MiruLifecyle<MiruService>() {
 
