@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
@@ -91,7 +92,7 @@ public class MiruContextFactoryTest {
                     .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
                     .build();
             int id = inMemoryStream.getTimeIndex().nextId((long) i);
-            inMemoryStream.getIndexContext().index(activity, id);
+            inMemoryStream.getIndexContext().index(Arrays.asList(new MiruActivityAndId<>(activity, id)));
             inMemoryStream.getIndexContext().remove(activity, id);
         }
 
@@ -159,7 +160,7 @@ public class MiruContextFactoryTest {
         MiruContext<EWAHCompressedBitmap> inMem = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
         int id = inMem.getTimeIndex().nextId(System.currentTimeMillis());
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(0));
-        inMem.getIndexContext().index(builder.build(), id);
+        inMem.getIndexContext().index(Arrays.asList(new MiruActivityAndId<>(builder.build(), id)));
         inMem.getQueryContext().inboxIndex.index(streamId, id);
         inMem.getQueryContext().unreadTrackingIndex.index(streamId, id);
         return inMem;

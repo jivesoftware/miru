@@ -2,12 +2,15 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -46,24 +49,28 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
-    public void set(int index, MiruInternalActivity activity) {
-        synchronized (activityLock) {
-            checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
-            if (index >= activities.length) {
-                int newLength = activities.length * 2;
-                while (newLength <= index) {
-                    newLength *= 2;
+    public void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+        for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
+            int index = activityAndId.id;
+            MiruInternalActivity activity = activityAndId.activity;
+            synchronized (activityLock) {
+                checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
+                if (index >= activities.length) {
+                    int newLength = activities.length * 2;
+                    while (newLength <= index) {
+                        newLength *= 2;
+                    }
+                    MiruInternalActivity[] newActivities = new MiruInternalActivity[newLength];
+                    System.arraycopy(activities, 0, newActivities, 0, activities.length);
+                    activities = newActivities;
                 }
-                MiruInternalActivity[] newActivities = new MiruInternalActivity[newLength];
-                System.arraycopy(activities, 0, newActivities, 0, activities.length);
-                activities = newActivities;
+                if (activities[index] != null) {
+                    activitySizeInBytes -= activities[index].sizeInBytes();
+                }
+                activities[index] = activity;
+                last = Math.max(index, last);
+                activitySizeInBytes += activity.sizeInBytes();
             }
-            if (activities[index] != null) {
-                activitySizeInBytes -= activities[index].sizeInBytes();
-            }
-            activities[index] = activity;
-            last = Math.max(index, last);
-            activitySizeInBytes += activity.sizeInBytes();
         }
     }
 
@@ -84,21 +91,32 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     @Override
     public void bulkImport(MiruTenantId tenantId, BulkExport<Iterator<MiruInternalActivity>> importItems) throws Exception {
         Iterator<MiruInternalActivity> importActivities = importItems.bulkExport(tenantId);
+        int batchSize = 1_000; //TODO expose to config
+
         synchronized (activityLock) {
+            List<MiruActivityAndId<MiruInternalActivity>> batch = new ArrayList<>(batchSize);
             int index = 0;
             while (importActivities.hasNext()) {
                 MiruInternalActivity next = importActivities.next();
                 if (next == null) {
                     break;
                 }
-                set(index, next);
-                index++;
-            }
 
+                batch.add(new MiruActivityAndId<>(next, index));
+                index++;
+                if (batch.size() >= batchSize) {
+                    set(batch);
+                    batch.clear();
+                }
+            }
+            if (!batch.isEmpty()) {
+                set(batch);
+            }
             MiruInternalActivity[] compact = new MiruInternalActivity[last + 1];
             System.arraycopy(activities, 0, compact, 0, compact.length);
             activities = compact;
         }
+
     }
 
     @Override

@@ -11,6 +11,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -18,7 +19,9 @@ import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -87,28 +90,33 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
     }
 
     @Override
-    public void set(int index, MiruInternalActivity activity) {
-        set(index, activity, true);
+    public void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+        set(activityAndIds, true);
     }
 
-    private void set(int index, MiruInternalActivity activity, boolean checkCapacity) {
-        checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
-        try {
-            //byte[] bytes = objectMapper.writeValueAsBytes(activity);
-            byte[] bytes = internalActivityMarshaller.toBytes(activity);
-            SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), true);
-            synchronized (swappableFiler.lock()) {
-                SwappingFiler swappingFiler = swappableFiler.swap(4 + bytes.length);
-                //FilerIO.writeByteArray(swappingFiler, bytes, "activity");
-                FilerIO.write(swappingFiler, bytes);
-                swappingFiler.commit();
+    private void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds, boolean checkCapacity) {
+        for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
+            int index = activityAndId.id;
+            MiruInternalActivity activity = activityAndId.activity;
+            checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
+            try {
+                //byte[] bytes = objectMapper.writeValueAsBytes(activity);
+                byte[] bytes = internalActivityMarshaller.toBytes(activity);
+                SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), true);
+                synchronized (swappableFiler.lock()) {
+                    SwappingFiler swappingFiler = swappableFiler.swap(4 + bytes.length);
+                    //FilerIO.writeByteArray(swappingFiler, bytes, "activity");
+                    FilerIO.write(swappingFiler, bytes);
+                    swappingFiler.commit();
+                }
+                if (checkCapacity) {
+                    checkCapacity(index);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-            if (checkCapacity) {
-                checkCapacity(index);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
+
     }
 
     @Override
@@ -167,15 +175,25 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
     @Override
     public void bulkImport(MiruTenantId tenantId, BulkExport<Iterator<MiruInternalActivity>> bulkExport) throws Exception {
         Iterator<MiruInternalActivity> importActivities = bulkExport.bulkExport(tenantId);
+        int batchSize = 1_000; //TODO expose to config
 
+        List<MiruActivityAndId<MiruInternalActivity>> batch = new ArrayList<>(batchSize);
         int index = 0;
         while (importActivities.hasNext()) {
             MiruInternalActivity activity = importActivities.next();
             if (activity == null) {
                 break;
             }
-            set(index, activity, false);
+            batch.add(new MiruActivityAndId<>(activity, index));
             index++;
+            if (batch.size() >= batchSize) {
+                set(batch, false);
+                batch.clear();
+            }
+        }
+
+        if (!batch.isEmpty()) {
+            set(batch, false);
         }
 
         checkCapacity(index - 1);

@@ -23,20 +23,27 @@ public class MiruActivityInternExtern {
     private final Interner<String> stringInterner;
 
     public MiruActivityInternExtern(Interner<MiruIBA> ibaInterner,
-            Interner<MiruTermId> termInterner,
-            Interner<MiruTenantId> tenantInterner,
-            Interner<String> stringInterner) {
+        Interner<MiruTermId> termInterner,
+        Interner<MiruTenantId> tenantInterner,
+        Interner<String> stringInterner) {
         this.ibaInterner = ibaInterner;
         this.termInterner = termInterner;
         this.tenantInterner = tenantInterner;
         this.stringInterner = stringInterner;
     }
 
-    public MiruInternalActivity intern(MiruActivity activity, MiruSchema schema) {
-        return new MiruInternalActivity.Builder(schema, tenantInterner.intern(activity.tenantId), activity.time, internAuthz(activity.authz), activity.version)
+    public List<MiruActivityAndId<MiruInternalActivity>> intern(List<MiruActivityAndId<MiruActivity>> activiyAndIds, final MiruSchema schema) {
+
+        List<MiruActivityAndId<MiruInternalActivity>> internedActivityAndIds = new ArrayList<>(activiyAndIds.size());
+        for (MiruActivityAndId<MiruActivity> activiyAndId : activiyAndIds) {
+            MiruActivity activity = activiyAndId.activity;
+            internedActivityAndIds.add(new MiruActivityAndId<>(new MiruInternalActivity.Builder(schema, tenantInterner
+                .intern(activity.tenantId), activity.time, internAuthz(activity.authz), activity.version)
                 .putFieldsValues(internFields(activity.fieldsValues, schema))
                 .putPropsValues(internProps(activity.propsValues, schema))
-                .build();
+                .build(), activiyAndId.id));
+        }
+        return internedActivityAndIds;
     }
 
     private String[] internAuthz(String[] activityAuthz) {
@@ -81,17 +88,17 @@ public class MiruActivityInternExtern {
         return termInterner.intern(termId);
     }
 
-     public String internString(String string) {
+    public String internString(String string) {
         return stringInterner.intern(string);
     }
 
     public MiruActivity extern(MiruInternalActivity activity, MiruSchema schema) {
         return new MiruActivity(activity.tenantId,
-                activity.time,
-                activity.authz,
-                activity.version,
-                externFields(activity.fieldsValues, schema),
-                externProps(activity.propsValues, schema));
+            activity.time,
+            activity.authz,
+            activity.version,
+            externFields(activity.fieldsValues, schema),
+            externProps(activity.propsValues, schema));
     }
 
     private Map<String, List<String>> externFields(MiruTermId[][] fields, MiruSchema schema) {

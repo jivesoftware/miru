@@ -8,6 +8,7 @@ package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import java.util.List;
 
 /** @author jonathan */
 public interface MiruActivityIndex {
@@ -42,7 +43,7 @@ public interface MiruActivityIndex {
      * @param index the index to store the activity at
      * @param activity the activity
      */
-    void set(int index, MiruInternalActivity activity);
+    void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds);
 
     /**
      * Total size in bytes of this index in memory.

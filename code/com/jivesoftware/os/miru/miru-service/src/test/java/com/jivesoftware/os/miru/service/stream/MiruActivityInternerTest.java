@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import java.util.Arrays;
@@ -49,16 +50,20 @@ public class MiruActivityInternerTest {
     @Test
     public void testIntern_complete() throws Exception {
 
-        MiruInternalActivity activity1 = interner.intern(
+        List<MiruActivityAndId<MiruInternalActivity>> internalActivity1 = interner.intern(Arrays.asList(new MiruActivityAndId<>(
             new MiruActivity.Builder(tenantId, 1, new String[] { "a", "b", "c" }, 0)
                 .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
                 .putAllPropValues("p", ImmutableList.of("v1", "v2"))
-                .build(), schema);
-        MiruInternalActivity activity2 = interner.intern(
+                .build(),0)), schema);
+        List<MiruActivityAndId<MiruInternalActivity>> internalActivity2 = interner.intern(Arrays.asList(new MiruActivityAndId<>(
             new MiruActivity.Builder(tenantId, 2, new String[] { "a", "b", "c" }, 0)
                 .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
                 .putAllPropValues("p", ImmutableList.of("v1", "v2"))
-                .build(), schema);
+                .build(), 1)), schema);
+
+
+        MiruInternalActivity activity1 = internalActivity1.get(0).activity;
+        MiruInternalActivity activity2 = internalActivity2.get(0).activity;
 
         assertTrue(activity1.tenantId == activity2.tenantId, "Different tenantIds"); // reference equality
 
@@ -77,9 +82,10 @@ public class MiruActivityInternerTest {
 
     @Test
     public void testIntern_nullAuthz() throws Exception {
-        MiruInternalActivity activity1 = interner.intern(new MiruActivity.Builder(tenantId, 1, null, 0).build(), schema);
+        List<MiruActivityAndId<MiruInternalActivity>> activity1 = interner.intern(Arrays.asList(new MiruActivityAndId<>(
+            new MiruActivity.Builder(tenantId, 1, null, 0).build(), 0)), schema);
 
-        assertNull(activity1.authz);
+        assertNull(activity1.get(0).activity.authz);
     }
 
     private <T> void assertReferenceEquals(Collection<T> first, Collection<T> second) {

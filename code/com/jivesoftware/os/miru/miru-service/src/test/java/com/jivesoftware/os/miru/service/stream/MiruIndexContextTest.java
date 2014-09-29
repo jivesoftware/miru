@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -107,21 +108,22 @@ public class MiruIndexContextTest {
 
         if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
             try {
-                miruIndexContext.index(buildMiruActivity(tenantId, 4, new String[0], ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4);
+                miruIndexContext.index(Arrays.asList(new MiruActivityAndId<>(
+                    buildMiruActivity(tenantId, 4, new String[0], ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4)));
                 fail("This index type is supposed to be readOnly");
             } catch (UnsupportedOperationException e) {
             }
         } else {
             long expectedSizeInBytes = (52 * 3) + (42 * 3); // See testSizeInBytes();
 
-            miruIndexContext.index(buildMiruActivity(tenantId, 4, new String[]{ "uvwxy" },
-                ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4);
+            miruIndexContext.index(Arrays.asList(new MiruActivityAndId<>(buildMiruActivity(tenantId, 4, new String[]{ "uvwxy" },
+                ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4)));
             expectedSizeInBytes += 52 + 52 + 42; // 2 new fields, 1 new authz value
             long sizeInBytes = miruFields.sizeInMemory() + miruFields.sizeOnDisk() + miruAuthzIndex.sizeInMemory() + miruAuthzIndex.sizeOnDisk();
             assertEquals(sizeInBytes, expectedSizeInBytes);
 
-            miruIndexContext.index(buildMiruActivity(tenantId, 5, new String[]{ "pqrst" },
-                ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")), 5);
+            miruIndexContext.index(Arrays.asList(new MiruActivityAndId<>(buildMiruActivity(tenantId, 5, new String[]{ "pqrst" },
+                ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")), 5)));
             expectedSizeInBytes += 52 + 0 + 42; // 1 new field, 1 existing field and 1 new authz value
             sizeInBytes = miruFields.sizeInMemory() + miruFields.sizeOnDisk() + miruAuthzIndex.sizeInMemory() + miruAuthzIndex.sizeOnDisk();
             assertEquals(sizeInBytes, expectedSizeInBytes);
@@ -143,20 +145,21 @@ public class MiruIndexContextTest {
 
         if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
             try {
-                miruIndexContext.index(buildMiruActivity(tenantId, 4, new String[0], ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4);
+                miruIndexContext.index(Arrays.asList(new MiruActivityAndId<>(
+                    buildMiruActivity(tenantId, 4, new String[0], ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 4)));
                 fail("This index type is supposed to be readOnly");
             } catch (UnsupportedOperationException e) {
             }
         } else {
             // Next add new data and check it
-            miruIndexContext.index(buildMiruActivity(tenantId, 4, new String[]{ "pqrst" },
-                ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 3);
+            miruIndexContext.index(Arrays.asList(new MiruActivityAndId<>(buildMiruActivity(tenantId, 4, new String[]{ "pqrst" },
+                ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 3)));
             verifyFieldValues(tenantId, miruActivityIndex, miruFields, "field1", 3, 0);
             verifyFieldValues(tenantId, miruActivityIndex, miruFields, "field2", 3, 1);
             verifyAuthzValues(miruAuthzIndex, miruActivityIndex.get(tenantId, 3).authz, 3);
 
-            miruIndexContext.index(buildMiruActivity(tenantId, 5, new String[]{ "uvwxy" },
-                ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")), 4);
+            miruIndexContext.index(Arrays.asList(new MiruActivityAndId<>(buildMiruActivity(tenantId, 5, new String[]{ "uvwxy" },
+                ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")), 4)));
             verifyFieldValues(tenantId, miruActivityIndex, miruFields, "field1", 4, 0);
             verifyFieldValues(tenantId, miruActivityIndex, miruFields, "field3", 4, 2);
             verifyAuthzValues(miruAuthzIndex, miruActivityIndex.get(tenantId, 4).authz, 4);
@@ -215,9 +218,9 @@ public class MiruIndexContextTest {
         MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[]{ "klmno" }, ImmutableMap.of("field3", "field3Value1"));
 
         // Index initial activities
-        miruInMemoryIndexContext.index(miruActivity1, 0);
-        miruInMemoryIndexContext.index(miruActivity2, 1);
-        miruInMemoryIndexContext.index(miruActivity3, 2);
+        miruInMemoryIndexContext.index(Arrays.asList(new MiruActivityAndId<>(miruActivity1, 0)));
+        miruInMemoryIndexContext.index(Arrays.asList(new MiruActivityAndId<>(miruActivity2, 1)));
+        miruInMemoryIndexContext.index(Arrays.asList(new MiruActivityAndId<>(miruActivity3, 2)));
 
         MiruHybridActivityIndex miruHybridActivityIndex = new MiruHybridActivityIndex(
             Files.createTempDirectory("memmap").toFile(),
