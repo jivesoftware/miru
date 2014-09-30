@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
@@ -166,6 +167,7 @@ public class MiruIndexContext<BM> {
     }
 
     private void indexFieldValues(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
+        Table<Integer, MiruTermId, List<Integer>> state = HashBasedTable.create();
         for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
             MiruInternalActivity activity = internalActivityAndId.activity;
             for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
@@ -173,13 +175,30 @@ public class MiruIndexContext<BM> {
                     MiruField miruField = fieldIndex.getField(fieldId);
                     for (MiruTermId term : activity.fieldsValues[fieldId]) {
                         miruField.index(term, internalActivityAndId.id);
+                        List<Integer> ids = state.get(fieldId, term);
+                        if (ids ==null) {
+                            ids = new ArrayList<>(internalActivityAndIds.size());
+                            state.put(fieldId, term, ids);
+                        }
+                        ids.add(internalActivityAndId.id);
                     }
+                }
+            }
+        }
+
+        for (Integer fieldId : state.rowKeySet()) {
+            MiruField<BM> miruField = fieldIndex.getField(fieldId);
+            for (Entry<MiruTermId, List<Integer>> entry : state.row(fieldId).entrySet()) {
+                MiruTermId fieldValue = entry.getKey();
+                for(Integer id:entry.getValue()) {
+                    miruField.index(fieldValue, id);
                 }
             }
         }
     }
 
     private void indexAuthz(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
+        // TODO rewrite to use same pattern as indexFieldValues
         for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
             MiruInternalActivity activity = internalActivityAndId.activity;
             if (activity.authz != null) {
