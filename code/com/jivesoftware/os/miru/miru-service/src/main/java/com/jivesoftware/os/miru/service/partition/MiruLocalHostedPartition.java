@@ -495,7 +495,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             new MiruActivityWALReader.StreamMiruActivityWAL() {
                                 @Override
                                 public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                                    queue.add(partitionedActivity);
+                                    queue.put(partitionedActivity);
 
                                     // stop if the accessor has changed
                                     return accessorRef.get() == accessor;
