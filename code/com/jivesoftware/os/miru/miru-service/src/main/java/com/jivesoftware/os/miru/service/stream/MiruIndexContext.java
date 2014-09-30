@@ -172,11 +172,9 @@ public class MiruIndexContext<BM> {
             MiruInternalActivity activity = internalActivityAndId.activity;
             for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
                 if (activity.fieldsValues[fieldId] != null) {
-                    MiruField miruField = fieldIndex.getField(fieldId);
                     for (MiruTermId term : activity.fieldsValues[fieldId]) {
-                        miruField.index(term, internalActivityAndId.id);
                         List<Integer> ids = state.get(fieldId, term);
-                        if (ids ==null) {
+                        if (ids == null) {
                             ids = new ArrayList<>(internalActivityAndIds.size());
                             state.put(fieldId, term, ids);
                         }
@@ -190,7 +188,7 @@ public class MiruIndexContext<BM> {
             MiruField<BM> miruField = fieldIndex.getField(fieldId);
             for (Entry<MiruTermId, List<Integer>> entry : state.row(fieldId).entrySet()) {
                 MiruTermId fieldValue = entry.getKey();
-                for(Integer id:entry.getValue()) {
+                for (Integer id : entry.getValue()) {
                     miruField.index(fieldValue, id);
                 }
             }
