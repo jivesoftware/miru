@@ -78,6 +78,7 @@ public class MiruContextFactory {
 
     private final MiruSchemaProvider schemaProvider;
     private final ExecutorService executorService;
+    private final ExecutorService indexingExecutorService;
     private final MiruReadTrackingWALReader readTrackingWALReader;
     private final MiruResourceLocator diskResourceLocator;
     private final MiruHybridResourceLocator hybridResourceLocator;
@@ -91,6 +92,7 @@ public class MiruContextFactory {
 
     public MiruContextFactory(MiruSchemaProvider schemaProvider,
         ExecutorService executorService,
+        ExecutorService indexingExecutorService,
         MiruReadTrackingWALReader readTrackingWALReader,
         MiruResourceLocator diskResourceLocator,
         MiruHybridResourceLocator transientResourceLocator,
@@ -99,6 +101,7 @@ public class MiruContextFactory {
         MiruActivityInternExtern activityInternExtern) {
         this.schemaProvider = schemaProvider;
         this.executorService = executorService;
+        this.indexingExecutorService = indexingExecutorService;
         this.readTrackingWALReader = readTrackingWALReader;
         this.diskResourceLocator = diskResourceLocator;
         this.hybridResourceLocator = transientResourceLocator;
@@ -172,7 +175,8 @@ public class MiruContextFactory {
         MiruInMemoryInboxIndex<BM> inboxIndex = new MiruInMemoryInboxIndex<>(bitmaps);
         exportHandles.put("inboxIndex", inboxIndex);
 
-        MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
+        MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern,
+            indexingExecutorService);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
@@ -244,7 +248,8 @@ public class MiruContextFactory {
         MiruInMemoryInboxIndex<BM> inboxIndex = new MiruInMemoryInboxIndex<>(bitmaps);
         exportHandles.put("inboxIndex", inboxIndex);
 
-        MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
+        MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern,
+            indexingExecutorService);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
@@ -342,7 +347,8 @@ public class MiruContextFactory {
             multiChunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
-        MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
+        MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern,
+            indexingExecutorService);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
@@ -434,7 +440,8 @@ public class MiruContextFactory {
             multiChunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
-        MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
+        MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern,
+            indexingExecutorService);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);

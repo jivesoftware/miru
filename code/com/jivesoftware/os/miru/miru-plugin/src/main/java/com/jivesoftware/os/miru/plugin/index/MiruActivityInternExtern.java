@@ -32,18 +32,32 @@ public class MiruActivityInternExtern {
         this.stringInterner = stringInterner;
     }
 
-    public List<MiruActivityAndId<MiruInternalActivity>> intern(List<MiruActivityAndId<MiruActivity>> activiyAndIds, final MiruSchema schema) {
+    /**
+     It is expected that activiyAndIds.size() == internedActivityAndIds.size();
+     @param activiyAndIds
+     @param fromOffset
+     @param length
+     @param internedActivityAndIds
+     @param schema
+     @return
+     */
+    public void intern(List<MiruActivityAndId<MiruActivity>> activiyAndIds,
+        int fromOffset,
+        int length,
+        List<MiruActivityAndId<MiruInternalActivity>> internedActivityAndIds,
+        final MiruSchema schema) {
 
-        List<MiruActivityAndId<MiruInternalActivity>> internedActivityAndIds = new ArrayList<>(activiyAndIds.size());
-        for (MiruActivityAndId<MiruActivity> activiyAndId : activiyAndIds) {
+        for (int i = fromOffset; i < fromOffset + length && i < activiyAndIds.size(); i++) {
+            MiruActivityAndId<MiruActivity> activiyAndId = activiyAndIds.get(i);
+
             MiruActivity activity = activiyAndId.activity;
-            internedActivityAndIds.add(new MiruActivityAndId<>(new MiruInternalActivity.Builder(schema, tenantInterner
+            internedActivityAndIds.set(i, new MiruActivityAndId<>(new MiruInternalActivity.Builder(schema, tenantInterner
                 .intern(activity.tenantId), activity.time, internAuthz(activity.authz), activity.version)
                 .putFieldsValues(internFields(activity.fieldsValues, schema))
                 .putPropsValues(internProps(activity.propsValues, schema))
                 .build(), activiyAndId.id));
+
         }
-        return internedActivityAndIds;
     }
 
     private String[] internAuthz(String[] activityAuthz) {

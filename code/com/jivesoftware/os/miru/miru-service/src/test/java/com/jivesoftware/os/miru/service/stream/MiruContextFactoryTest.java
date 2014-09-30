@@ -56,27 +56,28 @@ public class MiruContextFactoryTest {
         when(config.getDefaultStorage()).thenReturn(MiruBackingStorage.memory.name());
 
         RowColumnValueStoreImpl<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
-                new RowColumnValueStoreImpl<>();
+            new RowColumnValueStoreImpl<>();
         RowColumnValueStoreImpl<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> readTrackingSipWAL =
-                new RowColumnValueStoreImpl<>();
+            new RowColumnValueStoreImpl<>();
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
         bitmaps = new MiruBitmapsEWAH(4);
         MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
-                Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+            Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
 
         streamFactory = new MiruContextFactory(new SingleSchemaProvider(schema),
-                Executors.newSingleThreadExecutor(),
-                new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
-                new MiruTempDirectoryResourceLocator(),
-                new MiruTempDirectoryResourceLocator(),
-                20,
-                MiruBackingStorage.memory,
-                activityInterner);
+            Executors.newSingleThreadExecutor(),
+            Executors.newSingleThreadExecutor(),
+            new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
+            new MiruTempDirectoryResourceLocator(),
+            new MiruTempDirectoryResourceLocator(),
+            20,
+            MiruBackingStorage.memory,
+            activityInterner);
 
     }
 
-    @Test(enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
+    @Test (enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
     public void testCopyToDisk() throws Exception {
         int numberOfActivities = 5;
 
@@ -89,8 +90,8 @@ public class MiruContextFactoryTest {
         for (int i = 0; i < numberOfActivities; i++) {
             String[] authz = { "aaaabbbbcccc" };
             MiruActivity activity = new MiruActivity.Builder(tenantId, (long) i, authz, 0)
-                    .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
-                    .build();
+                .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
+                .build();
             int id = inMemoryStream.getTimeIndex().nextId((long) i);
             inMemoryStream.getIndexContext().index(Arrays.asList(new MiruActivityAndId<>(activity, id)));
             inMemoryStream.getIndexContext().remove(activity, id);
@@ -103,9 +104,9 @@ public class MiruContextFactoryTest {
 
         MiruAuthzExpression authzExpression = new MiruAuthzExpression(Arrays.asList("aaaabbbbcccc"));
         assertEquals(onDiskStream.getQueryContext().authzIndex.getCompositeAuthz(authzExpression),
-                inMemoryStream.getQueryContext().authzIndex.getCompositeAuthz(authzExpression));
+            inMemoryStream.getQueryContext().authzIndex.getCompositeAuthz(authzExpression));
         assertEquals(onDiskStream.getQueryContext().removalIndex.getIndex(),
-                inMemoryStream.getQueryContext().removalIndex.getIndex());
+            inMemoryStream.getQueryContext().removalIndex.getIndex());
 
         for (int i = 0; i < numberOfActivities; i++) {
             assertEquals(onDiskStream.getQueryContext().timeIndex.getTimestamp(i), inMemoryStream.getQueryContext().timeIndex.getTimestamp(i));
@@ -115,7 +116,7 @@ public class MiruContextFactoryTest {
             if (fieldId >= 0) {
                 MiruTermId termId = new MiruTermId(String.valueOf(i).getBytes());
                 assertEquals(onDiskStream.getQueryContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex(),
-                        inMemoryStream.getQueryContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex());
+                    inMemoryStream.getQueryContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex());
             }
         }
     }
@@ -152,7 +153,7 @@ public class MiruContextFactoryTest {
 
     private MiruContext<EWAHCompressedBitmap> minimalInMemory(MiruPartitionCoord coord) throws Exception {
         //TODO detecting backing storage fails if we haven't indexed at least 1 term for every field, 1 inbox, 1 unread
-        MiruActivity.Builder builder = new MiruActivity.Builder(coord.tenantId, 0, new String[] { "abcd" }, 0);
+        MiruActivity.Builder builder = new MiruActivity.Builder(coord.tenantId, 0, new String[]{ "abcd" }, 0);
         for (MiruFieldName fieldName : MiruFieldName.values()) {
             builder.putFieldValue(fieldName.getFieldName(), "defg");
         }

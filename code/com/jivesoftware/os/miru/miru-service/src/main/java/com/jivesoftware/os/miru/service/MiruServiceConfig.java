@@ -87,4 +87,7 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(24)
     int getRebuilderThreads();
+
+    @IntDefault(24)
+    int getIndexerThreads();
 }

@@ -28,6 +28,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 /**
  * Handles indexing of activity, including repair and removal, with synchronization and attention to versioning.
@@ -43,6 +46,7 @@ public class MiruIndexContext<BM> {
     private final MiruAuthzIndex authzIndex;
     private final MiruRemovalIndex removalIndex;
     private final MiruActivityInternExtern activityInterner;
+    private final ExecutorService indexExecutor;
     private final MiruIndexUtil indexUtil = new MiruIndexUtil();
     private final MiruTermId fieldAggregateTermId = indexUtil.makeFieldAggregate();
 
@@ -54,7 +58,8 @@ public class MiruIndexContext<BM> {
         MiruFields<BM> fieldIndex,
         MiruAuthzIndex authzIndex,
         MiruRemovalIndex removalIndex,
-        MiruActivityInternExtern activityInterner) {
+        MiruActivityInternExtern activityInterner,
+        ExecutorService indexExecutor) {
         this.bitmaps = bitmaps;
         this.schema = schema;
         this.activityIndex = activityIndex;
@@ -62,45 +67,69 @@ public class MiruIndexContext<BM> {
         this.authzIndex = authzIndex;
         this.removalIndex = removalIndex;
         this.activityInterner = activityInterner;
+        this.indexExecutor = indexExecutor;
     }
 
-    public void index(List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
-        List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = activityInterner.intern(activityAndIds, schema);
-        try {
-            log.startNanoTimer("indexing>indexFieldValues");
-            indexFieldValues(internalActivityAndIds);
-        } finally {
-            log.stopNanoTimer("indexing>indexFieldValues");
+    public void index(final List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
+        final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
+            new MiruActivityAndId[activityAndIds.size()]);
+
+        final int batchSize = 1000; // TODO expose to config
+        List<Future> futures = new ArrayList<>();
+        for (int i = 0; i < activityAndIds.size(); i += batchSize) {
+            final int startOfSubList = i;
+            futures.add(indexExecutor.submit(new Callable<Void>() {
+
+                @Override
+                public Void call() throws Exception {
+                    activityInterner.intern(activityAndIds, startOfSubList, batchSize, internalActivityAndIds, schema);
+                    return null;
+                }
+            }));
         }
-        try {
-            log.startNanoTimer("indexing>indexAuthz");
-            indexAuthz(internalActivityAndIds);
-        } finally {
-            log.stopNanoTimer("indexing>indexAuthz");
+        for (Future future : futures) {
+            future.get();
         }
-        try {
-            log.startNanoTimer("indexing>indexBloomins");
-            indexBloomins(internalActivityAndIds);
-        } finally {
-            log.stopNanoTimer("indexing>indexBloomins");
+
+        indexFieldValues(internalActivityAndIds);
+
+        futures = new ArrayList<>();
+        futures.add(indexExecutor.submit(new Callable<Void>() {
+
+            @Override
+            public Void call() throws Exception {
+                indexAuthz(internalActivityAndIds);
+                return null;
+            }
+        }));
+        futures.add(indexExecutor.submit(new Callable<Void>() {
+
+            @Override
+            public Void call() throws Exception {
+                indexBloomins(internalActivityAndIds);
+                return null;
+            }
+        }));
+        futures.add(indexExecutor.submit(new Callable<Void>() {
+
+            @Override
+            public Void call() throws Exception {
+                indexWriteTimeAggregates(internalActivityAndIds);
+                return null;
+            }
+        }));
+        for (Future future : futures) {
+            future.get();
         }
-        try {
-            log.startNanoTimer("indexing>indexWriteTimeAggregates");
-            indexWriteTimeAggregates(internalActivityAndIds);
-        } finally {
-            log.stopNanoTimer("indexing>indexWriteTimeAggregates");
-        }
-        // add to the activity index last, and use it as the ultimate indicator of whether an activity is fully indexed
-        try {
-            log.startNanoTimer("indexing>activityIndex");
-            activityIndex.set(internalActivityAndIds);
-        } finally {
-            log.stopNanoTimer("indexing>activityIndex");
-        }
+
+        activityIndex.set(internalActivityAndIds);
     }
 
     public void set(List<MiruActivityAndId<MiruActivity>> activityAndIds) {
-        List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = activityInterner.intern(activityAndIds, schema);
+        List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
+            new MiruActivityAndId[activityAndIds.size()]);
+
+        activityInterner.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, schema);
         activityIndex.set(internalActivityAndIds);
     }
 
@@ -113,8 +142,9 @@ public class MiruIndexContext<BM> {
                 log.debug("Declined to repair old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
             } else {
                 log.debug("Repairing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
-                List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = activityInterner
-                    .intern(Arrays.asList(new MiruActivityAndId<>(activity, id)), schema);
+                List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
+                    new MiruActivityAndId[1]);
+                activityInterner.intern(Arrays.asList(new MiruActivityAndId<>(activity, id)), 0, 1, internalActivityAndIds, schema);
 
                 for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                     MiruInternalActivity internalActivity = internalActivityAndId.activity;
@@ -153,8 +183,9 @@ public class MiruIndexContext<BM> {
                 log.debug("Declined to remove old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
             } else {
                 log.debug("Removing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
-                List<MiruActivityAndId<MiruInternalActivity>> internalActivity = activityInterner
-                    .intern(Arrays.asList(new MiruActivityAndId<>(activity, id)), schema);
+                List<MiruActivityAndId<MiruInternalActivity>> internalActivity = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
+                    new MiruActivityAndId[1]);
+                activityInterner.intern(Arrays.asList(new MiruActivityAndId<>(activity, id)), 0, 1, internalActivity, schema);
 
                 //TODO apply field changes?
                 // hide (add to removal)
@@ -186,12 +217,14 @@ public class MiruIndexContext<BM> {
 
         for (Integer fieldId : state.rowKeySet()) {
             MiruField<BM> miruField = fieldIndex.getField(fieldId);
+
             for (Entry<MiruTermId, List<Integer>> entry : state.row(fieldId).entrySet()) {
                 MiruTermId fieldValue = entry.getKey();
                 for (Integer id : entry.getValue()) {
                     miruField.index(fieldValue, id);
                 }
             }
+
         }
     }
 

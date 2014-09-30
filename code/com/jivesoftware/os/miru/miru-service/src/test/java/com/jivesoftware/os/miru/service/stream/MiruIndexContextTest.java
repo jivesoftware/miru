@@ -30,7 +30,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
-import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
@@ -50,6 +49,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -211,7 +211,7 @@ public class MiruIndexContextTest {
 
         // Build in-memory index stream object
         MiruIndexContext<EWAHCompressedBitmap> miruInMemoryIndexContext = new MiruIndexContext<>(new MiruBitmapsEWAH(4), miruSchema, miruInMemoryActivityIndex,
-            inMemoryMiruFields, miruInMemoryAuthzIndex, miruInMemoryRemovalIndex, activityInterner);
+            inMemoryMiruFields, miruInMemoryAuthzIndex, miruInMemoryRemovalIndex, activityInterner,Executors.newSingleThreadExecutor());
 
         MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[]{ "abcde" }, ImmutableMap.of("field1", "field1Value1"));
         MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[]{ "fghij" }, ImmutableMap.of("field2", "field2Value1"));
@@ -255,7 +255,8 @@ public class MiruIndexContextTest {
 
         // Build on-disk index stream object
         MiruIndexContext<EWAHCompressedBitmap> miruOnDiskIndexContext = new MiruIndexContext<>(new MiruBitmapsEWAH(4),
-            miruSchema, miruHybridActivityIndex, onDiskMiruFields, miruOnDiskAuthzIndex, miruOnDiskRemovalIndex, activityInterner);
+            miruSchema, miruHybridActivityIndex, onDiskMiruFields, miruOnDiskAuthzIndex, miruOnDiskRemovalIndex, activityInterner,
+            Executors.newSingleThreadExecutor());
 
         return new Object[][]{
             { tenantId, miruInMemoryIndexContext, miruInMemoryActivityIndex, inMemoryMiruFieldArray, miruInMemoryAuthzIndex, MiruBackingStorage.memory },

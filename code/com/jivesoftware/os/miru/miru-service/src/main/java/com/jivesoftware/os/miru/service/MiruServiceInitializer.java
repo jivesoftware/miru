@@ -69,7 +69,10 @@ public class MiruServiceInitializer {
             new NamedThreadFactory(threadGroup, "solver"));
 
         final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
-            new NamedThreadFactory(threadGroup, "rebuilder"));
+            new NamedThreadFactory(threadGroup, "hbase_rebuild_consumer"));
+
+        final ExecutorService indexExecutors = Executors.newFixedThreadPool(config.getIndexerThreads(),
+            new NamedThreadFactory(threadGroup, "index"));
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
             config.getLongTailSolverWindowSize(),
@@ -81,6 +84,7 @@ public class MiruServiceInitializer {
         MiruContextFactory streamFactory = new MiruContextFactory(
             schemaProvider,
             streamFactoryExecutor,
+            indexExecutors,
             readTrackingWALReader,
             resourceLocatorProvider.getDiskResourceLocator(),
             resourceLocatorProvider.getTransientResourceLocator(),

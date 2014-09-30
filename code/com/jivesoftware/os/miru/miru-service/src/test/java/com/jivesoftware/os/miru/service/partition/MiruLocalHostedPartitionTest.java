@@ -120,6 +120,7 @@ public class MiruLocalHostedPartitionTest {
 
         streamFactory = new MiruContextFactory(new SingleSchemaProvider(schema),
             Executors.newSingleThreadExecutor(),
+            Executors.newSingleThreadExecutor(),
             new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
             new MiruTempDirectoryResourceLocator(),
             new MiruTempDirectoryResourceLocator(),
