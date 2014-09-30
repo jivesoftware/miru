@@ -75,10 +75,10 @@ public class MiruIndexContext<BM> {
             new MiruActivityAndId[activityAndIds.size()]);
 
         final int batchSize = 1000; // TODO expose to config
-        List<Future> futures = new ArrayList<>();
+        List<Future> internFutures = new ArrayList<>(activityAndIds.size() / batchSize);
         for (int i = 0; i < activityAndIds.size(); i += batchSize) {
             final int startOfSubList = i;
-            futures.add(indexExecutor.submit(new Callable<Void>() {
+            internFutures.add(indexExecutor.submit(new Callable<Void>() {
 
                 @Override
                 public Void call() throws Exception {
@@ -87,13 +87,13 @@ public class MiruIndexContext<BM> {
                 }
             }));
         }
-        for (Future future : futures) {
+        for (Future future : internFutures) {
             future.get();
         }
 
         indexFieldValues(internalActivityAndIds);
 
-        futures = new ArrayList<>();
+        final List<Future> futures = new ArrayList<>();
         futures.add(indexExecutor.submit(new Callable<Void>() {
 
             @Override
@@ -110,14 +110,9 @@ public class MiruIndexContext<BM> {
                 return null;
             }
         }));
-        futures.add(indexExecutor.submit(new Callable<Void>() {
 
-            @Override
-            public Void call() throws Exception {
-                indexWriteTimeAggregates(internalActivityAndIds);
-                return null;
-            }
-        }));
+        futures.addAll(indexWriteTimeAggregates(internalActivityAndIds));
+
         for (Future future : futures) {
             future.get();
         }
@@ -198,7 +193,7 @@ public class MiruIndexContext<BM> {
     }
 
     private void indexFieldValues(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
-        Table<Integer, MiruTermId, List<Integer>> state = HashBasedTable.create();
+        final Table<Integer, MiruTermId, List<Integer>> state = HashBasedTable.create();
         for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
             MiruInternalActivity activity = internalActivityAndId.activity;
             for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
@@ -215,16 +210,27 @@ public class MiruIndexContext<BM> {
             }
         }
 
-        for (Integer fieldId : state.rowKeySet()) {
-            MiruField<BM> miruField = fieldIndex.getField(fieldId);
+        Set<Integer> fieldIds = state.rowKeySet();
+        List<Future> futures = new ArrayList<>(fieldIds.size());
+        for (final Integer fieldId : fieldIds) {
 
-            for (Entry<MiruTermId, List<Integer>> entry : state.row(fieldId).entrySet()) {
-                MiruTermId fieldValue = entry.getKey();
-                for (Integer id : entry.getValue()) {
-                    miruField.index(fieldValue, id);
+            futures.add(indexExecutor.submit(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    MiruField<BM> miruField = fieldIndex.getField(fieldId);
+                    for (Entry<MiruTermId, List<Integer>> entry : state.row(fieldId).entrySet()) {
+                        MiruTermId fieldValue = entry.getKey();
+                        for (Integer id : entry.getValue()) {
+                            miruField.index(fieldValue, id);
+                        }
+                    }
+                    return null;
                 }
-            }
+            }));
+        }
 
+        for (Future future : futures) {
+            future.get();
         }
     }
 
@@ -269,10 +275,10 @@ public class MiruIndexContext<BM> {
         }
     }
 
-    private void indexWriteTimeAggregates(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
+    private List<Future> indexWriteTimeAggregates(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
 
         Table<Integer, MiruTermId, Integer> state = HashBasedTable.create();
-        Table<Integer, MiruTermId, Table<Integer, MiruTermId, Integer>> aggregatState = HashBasedTable.create();
+        Table<Integer, MiruTermId, Table<Integer, MiruTermId, Integer>> aggregateState = HashBasedTable.create();
         for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
             MiruInternalActivity activity = internalActivityAndId.activity;
             for (int fieldId = 0; fieldId < activity.fieldsValues.length; fieldId++) {
@@ -298,10 +304,10 @@ public class MiruIndexContext<BM> {
                             if (aggregateFieldValues != null && aggregateFieldValues.length > 0) {
                                 for (MiruTermId aggregateFieldValue : aggregateFieldValues) {
                                     for (MiruTermId fieldValue : fieldValues) {
-                                        Table<Integer, MiruTermId, Integer> got = aggregatState.get(aggregateFieldId, aggregateFieldValue);
+                                        Table<Integer, MiruTermId, Integer> got = aggregateState.get(aggregateFieldId, aggregateFieldValue);
                                         if (got == null) {
                                             got = HashBasedTable.create();
-                                            aggregatState.put(aggregateFieldId, aggregateFieldValue, got);
+                                            aggregateState.put(aggregateFieldId, aggregateFieldValue, got);
                                         }
                                         got.put(fieldId, fieldValue, internalActivityAndId.id);
                                     }
@@ -331,27 +337,37 @@ public class MiruIndexContext<BM> {
 
         // Answers the question,
         // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
-        for (Integer aggregateFieldId : aggregatState.rowKeySet()) {
-            MiruField<BM> aggregateField = fieldIndex.getField(aggregateFieldId);
-            for (Entry<MiruTermId, Table<Integer, MiruTermId, Integer>> aggragateEntry : aggregatState.row(aggregateFieldId).entrySet()) {
-                MiruTermId aggregateFieldValue = aggragateEntry.getKey();
-                MiruInvertedIndex<BM> aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
+        List<Future> futures = new ArrayList<>();
+        for (Integer aggregateFieldId : aggregateState.rowKeySet()) {
+            final MiruField<BM> aggregateField = fieldIndex.getField(aggregateFieldId);
+            for (final Entry<MiruTermId, Table<Integer, MiruTermId, Integer>> aggregateEntry : aggregateState.row(aggregateFieldId).entrySet()) {
+                MiruTermId aggregateFieldValue = aggregateEntry.getKey();
+                final MiruInvertedIndex<BM> aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
 
-                Table<Integer, MiruTermId, Integer> fieldState = aggragateEntry.getValue();
-                for (Integer fieldId : fieldState.rowKeySet()) {
-                    MiruField<BM> miruField = fieldIndex.getField(fieldId);
-                    for (Entry<MiruTermId, Integer> fieldEntry : fieldState.row(fieldId).entrySet()) {
-                        MiruTermId fieldValue = fieldEntry.getKey();
+                futures.add(indexExecutor.submit(new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
 
-                        MiruTermId compositeAggregateId = indexUtil.makeFieldValueAggregate(fieldValue, aggregateField.getFieldDefinition().name);
-                        MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeAggregateId);
+                        Table<Integer, MiruTermId, Integer> fieldState = aggregateEntry.getValue();
+                        for (Integer fieldId : fieldState.rowKeySet()) {
+                            MiruField<BM> miruField = fieldIndex.getField(fieldId);
+                            for (Entry<MiruTermId, Integer> fieldEntry : fieldState.row(fieldId).entrySet()) {
+                                MiruTermId fieldValue = fieldEntry.getKey();
 
-                        invertedIndex.andNotToSourceSize(aggregateInvertedIndex.getIndex());
-                        miruField.index(compositeAggregateId, fieldEntry.getValue());
+                                MiruTermId compositeAggregateId = indexUtil.makeFieldValueAggregate(fieldValue, aggregateField.getFieldDefinition().name);
+                                MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeAggregateId);
+
+                                invertedIndex.andNotToSourceSize(aggregateInvertedIndex.getIndex());
+                                miruField.index(compositeAggregateId, fieldEntry.getValue());
+                            }
+                        }
+                        return null;
                     }
-                }
+                }));
+
             }
         }
+        return futures;
 
     }
 }
