@@ -68,6 +68,9 @@ public class MiruServiceInitializer {
         final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads(),
             new NamedThreadFactory(threadGroup, "solver"));
 
+        final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
+            new NamedThreadFactory(threadGroup, "rebuilder"));
+
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
             config.getLongTailSolverWindowSize(),
             config.getLongTailSolverPercentile());
@@ -97,7 +100,8 @@ public class MiruServiceInitializer {
             streamFactory,
             activityWALReader,
             partitionEventHandler,
-            partitionScheduledExecutor);
+            partitionScheduledExecutor,
+            rebuildExecutors);
 
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
             httpClientFactory,

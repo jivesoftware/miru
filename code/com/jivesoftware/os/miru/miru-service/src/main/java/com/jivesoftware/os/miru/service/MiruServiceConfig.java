@@ -84,4 +84,7 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(24)
     int getSolverExecutorThreads();
+
+    @IntDefault(24)
+    int getRebuilderThreads();
 }

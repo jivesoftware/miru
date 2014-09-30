@@ -21,9 +21,12 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +56,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final Collection<Runnable> runnables;
     private final Collection<ScheduledFuture<?>> futures;
     private final ScheduledExecutorService scheduledExecutorService;
+    private final ExecutorService rebuildExecutors;
     private final boolean partitionWakeOnIndex;
     private final int partitionRebuildBatchSize;
     private final int partitionSipBatchSize;
@@ -72,6 +76,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         MiruActivityWALReader activityWALReader,
         MiruPartitionEventHandler partitionEventHandler,
         ScheduledExecutorService scheduledExecutorService,
+        ExecutorService rebuildExecutors,
         boolean partitionWakeOnIndex,
         int partitionRebuildBatchSize,
         int partitionSipBatchSize,
@@ -86,6 +91,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.activityWALReader = activityWALReader;
         this.partitionEventHandler = partitionEventHandler;
         this.scheduledExecutorService = scheduledExecutorService;
+        this.rebuildExecutors = rebuildExecutors;
         this.partitionWakeOnIndex = partitionWakeOnIndex;
         this.partitionRebuildBatchSize = partitionRebuildBatchSize;
         this.partitionSipBatchSize = partitionSipBatchSize;
@@ -475,16 +481,41 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
 
         private boolean rebuild(final MiruPartitionAccessor<BM> accessor) throws Exception {
-            final List<MiruPartitionedActivity> partitionedActivities = Lists.newLinkedList();
+            final LinkedBlockingQueue<MiruPartitionedActivity> queue = new LinkedBlockingQueue<>(partitionRebuildBatchSize);
             final AtomicLong rebuildTimestamp = new AtomicLong(accessor.rebuildTimestamp.get());
             final AtomicLong sipTimestamp = new AtomicLong(accessor.sipTimestamp.get());
+            final AtomicBoolean streaming = new AtomicBoolean(true);
 
-            activityWALReader.stream(coord.tenantId, coord.partitionId, accessor.rebuildTimestamp.get(), partitionRebuildBatchSize,
-                new MiruActivityWALReader.StreamMiruActivityWAL() {
-                    @Override
-                    public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                        partitionedActivities.add(partitionedActivity);
+            rebuildExecutors.submit(new Runnable() {
 
+                @Override
+                public void run() {
+                    try {
+                        activityWALReader.stream(coord.tenantId, coord.partitionId, accessor.rebuildTimestamp.get(), partitionRebuildBatchSize,
+                            new MiruActivityWALReader.StreamMiruActivityWAL() {
+                                @Override
+                                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
+                                    queue.add(partitionedActivity);
+
+                                    // stop if the accessor has changed
+                                    return accessorRef.get() == accessor;
+                                }
+                            }
+                        );
+                    } catch (Exception x) {
+                        throw new RuntimeException(x);
+                    } finally {
+                        streaming.set(false);
+                    }
+                }
+            });
+
+            List<MiruPartitionedActivity> partitionedActivities = new ArrayList<>(partitionRebuildBatchSize);
+            while (streaming.get()) {
+                int drained = queue.drainTo(partitionedActivities, partitionRebuildBatchSize);
+                if (drained > 0) {
+                    for (int i = drained - 1; i > -1; i--) {
+                        MiruPartitionedActivity partitionedActivity = partitionedActivities.get(i);
                         // only adjust timestamps for activity types
                         if (partitionedActivity.type.isActivityType()) {
                             // rebuild offset is based on the activity timestamp
@@ -496,35 +527,20 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             if (partitionedActivity.clockTimestamp > sipTimestamp.get()) {
                                 sipTimestamp.set(partitionedActivity.clockTimestamp);
                             }
+                            break;
                         }
-
-                        if (partitionedActivities.size() == partitionRebuildBatchSize) {
-                            log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
-                            try {
-                                accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
-                                accessor.rebuildTimestamp.set(rebuildTimestamp.get());
-                                accessor.sipTimestamp.set(sipTimestamp.get());
-                                // indexInternal inherently clears the list by removing elements from the iterator, but just to be safe
-                                partitionedActivities.clear();
-                            } finally {
-                                log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
-                            }
-                        }
-
-                        // stop if the accessor has changed
-                        return accessorRef.get() == accessor;
                     }
-                }
-            );
 
-            if (!partitionedActivities.isEmpty()) {
-                log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
-                try {
-                    accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
-                    accessor.rebuildTimestamp.set(rebuildTimestamp.get());
-                    accessor.sipTimestamp.set(sipTimestamp.get());
-                } finally {
-                    log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                    log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                    try {
+                        accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
+                        accessor.rebuildTimestamp.set(rebuildTimestamp.get());
+                        accessor.sipTimestamp.set(sipTimestamp.get());
+                    } finally {
+                        log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                    }
+                    partitionedActivities.clear();
+
                 }
             }
 
