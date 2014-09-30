@@ -15,10 +15,8 @@ import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
 /** @author jonathan */
 public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
 
-    private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception>
-        activityWAL;
-    private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
-        activitySipWAL;
+    private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
+    private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL;
 
     public MiruActivityWALReaderImpl(
         RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
@@ -33,62 +31,64 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
     }
 
     @Override
-    public void stream(MiruTenantId tenantId, MiruPartitionId partitionId, long afterTimestamp, StreamMiruActivityWAL streamMiruActivityWAL)
+    public void stream(MiruTenantId tenantId, MiruPartitionId partitionId, long afterTimestamp, int batchSize, StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception {
         TenantId tenant = new TenantId(new String(tenantId.getBytes(), Charsets.UTF_8));
         MiruActivityWALRow rowKey = rowKey(partitionId);
 
-        streamFromActivityWAL(tenant, rowKey, afterTimestamp, streamMiruActivityWAL);
+        streamFromActivityWAL(tenant, rowKey, afterTimestamp, batchSize, streamMiruActivityWAL);
     }
 
     @Override
-    public void streamSip(MiruTenantId tenantId, MiruPartitionId partitionId, long afterTimestamp, StreamMiruActivityWAL streamMiruActivityWAL)
+    public void streamSip(MiruTenantId tenantId, MiruPartitionId partitionId, long afterTimestamp, int batchSize, StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception {
         TenantId tenant = new TenantId(new String(tenantId.getBytes(), Charsets.UTF_8));
         MiruActivityWALRow rowKey = rowKey(partitionId);
 
-        streamFromActivitySipWAL(tenant, rowKey, afterTimestamp, streamMiruActivityWAL);
+        streamFromActivitySipWAL(tenant, rowKey, afterTimestamp, batchSize, streamMiruActivityWAL);
     }
 
     private void streamFromActivityWAL(TenantId tenantId, MiruActivityWALRow rowKey, long afterTimestamp,
+        int batchSize,
         final StreamMiruActivityWAL streamMiruActivityWAL) throws Exception {
 
         MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp);
 
-        activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1_000, false, null, null,
+        activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> callback(
                     ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v) throws Exception {
 
-                    if (v != null) {
-                        if (!streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
-                            return null;
+                        if (v != null) {
+                            if (!streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
+                                return null;
+                            }
                         }
+                        return v;
                     }
-                    return v;
-                }
             });
     }
 
     private void streamFromActivitySipWAL(TenantId tenantId, MiruActivityWALRow rowKey, long afterTimestamp,
+        int batchSize,
         final StreamMiruActivityWAL streamMiruActivityWAL) throws Exception {
 
         MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp);
 
-        activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, 1_000, false, null, null,
+        activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback(
                     ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v) throws Exception {
 
-                    if (v != null) {
-                        if (!streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
-                            return null;
+                        if (v != null) {
+                            if (!streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
+                                return null;
+                            }
                         }
+                        return v;
                     }
-                    return v;
-                }
             });
     }
 

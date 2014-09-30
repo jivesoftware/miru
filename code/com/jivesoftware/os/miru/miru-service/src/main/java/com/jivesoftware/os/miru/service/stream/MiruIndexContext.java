@@ -221,7 +221,6 @@ public class MiruIndexContext<BM> {
 
     private void indexWriteTimeAggregates(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
 
-
         Table<Integer, MiruTermId, Integer> state = HashBasedTable.create();
         Table<Integer, MiruTermId, Table<Integer, MiruTermId, Integer>> aggregatState = HashBasedTable.create();
         for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
@@ -252,7 +251,7 @@ public class MiruIndexContext<BM> {
                                         Table<Integer, MiruTermId, Integer> got = aggregatState.get(aggregateFieldId, aggregateFieldValue);
                                         if (got == null) {
                                             got = HashBasedTable.create();
-                                            aggregatState.put(fieldId, fieldValue, got);
+                                            aggregatState.put(aggregateFieldId, aggregateFieldValue, got);
                                         }
                                         got.put(fieldId, fieldValue, internalActivityAndId.id);
                                     }
@@ -263,7 +262,6 @@ public class MiruIndexContext<BM> {
                 }
             }
         }
-
 
         // Answers the question,
         // "What is the latest activity against each distinct value of this field?"
@@ -280,8 +278,6 @@ public class MiruIndexContext<BM> {
                 miruField.index(fieldAggregateTermId, entry.getValue());
             }
         }
-
-
 
         // Answers the question,
         // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"

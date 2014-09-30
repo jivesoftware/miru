@@ -147,7 +147,10 @@
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>ordered-id</artifactId>
             <scope>test</scope>
-            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+            <artifactId>row-column-value-store-api</artifactId>
         </dependency>
     </dependencies>
 </project>

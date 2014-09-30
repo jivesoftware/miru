@@ -55,6 +55,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final ScheduledExecutorService scheduledExecutorService;
     private final boolean partitionWakeOnIndex;
     private final int partitionRebuildBatchSize;
+    private final int partitionSipBatchSize;
     private final long partitionRunnableIntervalInMillis;
     private final long partitionMigrationWaitInMillis;
     private final long maxSipClockSkew;
@@ -73,6 +74,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         ScheduledExecutorService scheduledExecutorService,
         boolean partitionWakeOnIndex,
         int partitionRebuildBatchSize,
+        int partitionSipBatchSize,
         long partitionBootstrapIntervalInMillis,
         long partitionRunnableIntervalInMillis)
         throws Exception {
@@ -86,6 +88,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.scheduledExecutorService = scheduledExecutorService;
         this.partitionWakeOnIndex = partitionWakeOnIndex;
         this.partitionRebuildBatchSize = partitionRebuildBatchSize;
+        this.partitionSipBatchSize = partitionSipBatchSize;
         this.partitionRunnableIntervalInMillis = partitionRunnableIntervalInMillis;
         this.partitionMigrationWaitInMillis = 3_000; //TODO config
         this.maxSipClockSkew = TimeUnit.SECONDS.toMillis(10); //TODO config
@@ -476,7 +479,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             final AtomicLong rebuildTimestamp = new AtomicLong(accessor.rebuildTimestamp.get());
             final AtomicLong sipTimestamp = new AtomicLong(accessor.sipTimestamp.get());
 
-            activityWALReader.stream(coord.tenantId, coord.partitionId, accessor.rebuildTimestamp.get(),
+            activityWALReader.stream(coord.tenantId, coord.partitionId, accessor.rebuildTimestamp.get(), partitionRebuildBatchSize,
                 new MiruActivityWALReader.StreamMiruActivityWAL() {
                     @Override
                     public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
@@ -537,7 +540,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
             long afterTimestamp = accessor.sipTimestamp.get();
             final List<MiruPartitionedActivity> partitionedActivities = Lists.newLinkedList();
-            activityWALReader.streamSip(coord.tenantId, coord.partitionId, afterTimestamp,
+            activityWALReader.streamSip(coord.tenantId, coord.partitionId, afterTimestamp, partitionSipBatchSize,
                 new MiruActivityWALReader.StreamMiruActivityWAL() {
                     @Override
                     public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {

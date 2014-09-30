@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -33,11 +34,13 @@ import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -70,17 +73,17 @@ public class MiruCollaborativeFilterNGTest {
 
     @Test (enabled = true)
     public void basicTest() throws Exception {
-
         AtomicInteger time = new AtomicInteger();
         Random rand = new Random(1_234);
         int numqueries = 2;
         int numberOfUsers = 2;
-        int numberOfDocument = 500_000;
-        int numberOfViewsPerUser = 2;
+        int numberOfDocument = 1000;
+        int numberOfViewsPerUser = 100;
         System.out.println("Building activities....");
         long start = System.currentTimeMillis();
         int count = 0;
         int numGroups = 10;
+        List<MiruPartitionedActivity> batch = new ArrayList<>();
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
             int randSeed = i % numGroups;
@@ -88,14 +91,21 @@ public class MiruCollaborativeFilterNGTest {
             for (int r = 0; r < 2 * (i / numGroups); r++) {
                 userRand.nextInt(numberOfDocument);
             }
+
             for (int d = 0; d < numberOfViewsPerUser; d++) {
                 int docId = userRand.nextInt(numberOfDocument);
                 long activityTime = time.incrementAndGet();
-                service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId))));
+                batch.add(util.viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId)));
                 if (++count % 10_000 == 0) {
+                    service.writeToIndex(batch);
+                    batch.clear();
                     System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
                 }
             }
+        }
+        if (!batch.isEmpty()) {
+            service.writeToIndex(batch);
+            batch.clear();
         }
 
         System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
@@ -125,7 +135,7 @@ public class MiruCollaborativeFilterNGTest {
         System.out.println("Running queries...");
 
         for (int i = 0; i < numqueries; i++) {
-            String user = "bob" + rand.nextInt(numberOfUsers);
+            String user = "bob" + i;
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(
                     indexUtil.makeFieldValueAggregate(new MiruTermId(user.getBytes(Charsets.UTF_8)), "doc").toString()));
             MiruFilter filter = new MiruFilter(
@@ -134,7 +144,7 @@ public class MiruCollaborativeFilterNGTest {
                 Optional.<List<MiruFilter>>absent());
 
             long s = System.currentTimeMillis();
-            MiruResponse<RecoAnswer> recoResult = injectable.collaborativeFilteringRecommendations(new MiruRequest<>(
+            MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(new MiruRequest<>(
                 tenant1,
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
@@ -147,8 +157,9 @@ public class MiruCollaborativeFilterNGTest {
                     10),
                 true));
 
-            System.out.println("recoResult:" + recoResult);
+            System.out.println("recoResult:" + response.answer.results);
             System.out.println("Took:" + (System.currentTimeMillis() - s));
+            Assert.assertTrue(response.answer.results.size() > 0, response.toString());
         }
 
     }
