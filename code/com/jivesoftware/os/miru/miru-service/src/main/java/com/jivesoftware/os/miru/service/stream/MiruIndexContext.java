@@ -342,6 +342,7 @@ public class MiruIndexContext<BM> {
             final MiruField<BM> aggregateField = fieldIndex.getField(aggregateFieldId);
             for (final Entry<MiruTermId, Table<Integer, MiruTermId, Integer>> aggregateEntry : aggregateState.row(aggregateFieldId).entrySet()) {
                 MiruTermId aggregateFieldValue = aggregateEntry.getKey();
+
                 final MiruInvertedIndex<BM> aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
 
                 futures.add(indexExecutor.submit(new Callable<Void>() {

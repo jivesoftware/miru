@@ -112,8 +112,13 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator
     private MiruFieldIndexKey getOrCreateTermId(MiruTermId term) {
         MiruFieldIndexKey id = termToIndex.get(term);
         if (id == null) {
-            termToIndex.putIfAbsent(term, new MiruFieldIndexKey(nextTermId.getAndIncrement()));
-            id = termToIndex.get(term);
+            synchronized (termToIndex) { // yes its double check locking and we know it! Its because we cannot nextTermId.getAndIncrement() prematurely
+                id = termToIndex.get(term);
+                if (id == null) {
+                    termToIndex.put(term, new MiruFieldIndexKey(nextTermId.getAndIncrement()));
+                    id = termToIndex.get(term);
+                }
+            }
         }
         return id;
     }
