@@ -39,10 +39,10 @@ public class MiruActivityIndexTest {
         new MiruFieldDefinition(4, "e"));
 
     @Test (dataProvider = "miruActivityIndexDataProvider")
-    public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) {
+    public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
-            miruActivityIndex.set(Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)));
+            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)));
             if (throwsUnsupportedExceptionOnSet) {
                 fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
             }
@@ -54,10 +54,10 @@ public class MiruActivityIndexTest {
     }
 
     @Test (dataProvider = "miruActivityIndexDataProvider")
-    public void testSetActivityOutOfBounds(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) {
+    public void testSetActivityOutOfBounds(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
-            miruActivityIndex.set(Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)));
+            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)));
             if (throwsUnsupportedExceptionOnSet) {
                 fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
             }

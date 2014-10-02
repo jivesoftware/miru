@@ -49,6 +49,14 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
     }
 
     @Override
+    public void setAndReady(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
+        if (!activityAndIds.isEmpty()) {
+            set(activityAndIds);
+            ready(activityAndIds.get(activityAndIds.size() - 1).id);
+        }
+    }
+
+    @Override
     public void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
         for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
             int index = activityAndId.id;
@@ -68,10 +76,14 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
                     activitySizeInBytes -= activities[index].sizeInBytes();
                 }
                 activities[index] = activity;
-                last = Math.max(index, last);
                 activitySizeInBytes += activity.sizeInBytes();
             }
         }
+    }
+
+    @Override
+    public void ready(int index) throws Exception {
+        last = Math.max(index, last);
     }
 
     @Override
@@ -105,12 +117,12 @@ public class MiruInMemoryActivityIndex implements MiruActivityIndex, BulkImport<
                 batch.add(new MiruActivityAndId<>(next, index));
                 index++;
                 if (batch.size() >= batchSize) {
-                    set(batch);
+                    setAndReady(batch);
                     batch.clear();
                 }
             }
             if (!batch.isEmpty()) {
-                set(batch);
+                setAndReady(batch);
             }
             MiruInternalActivity[] compact = new MiruInternalActivity[last + 1];
             System.arraycopy(activities, 0, compact, 0, compact.length);

@@ -38,12 +38,31 @@ public interface MiruActivityIndex {
     int lastId();
 
     /**
-     * Store the given activity at the provided index value.
+     * Store the given activity at the provided index value, and readies the index using the highest id seen.
+     * <p/>
+     * This method is NOT thread safe.
      *
-     * @param index the index to store the activity at
-     * @param activity the activity
+     * @param activityAndIds the activities to be stored and their indexes
+     */
+    void setAndReady(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception;
+
+    /**
+     * Store the given activity at the provided index value, but does not make ready the new ids.
+     * <p/>
+     * This method is thread safe.
+     *
+     * @param activityAndIds the activities to be stored and their indexes
      */
     void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds);
+
+    /**
+     * Readies the index up to the provided index value.
+     * <p/>
+     * This method is NOT thread safe.
+     *
+     * @param index the max ready index
+     */
+    void ready(int index) throws Exception;
 
     /**
      * Total size in bytes of this index in memory.

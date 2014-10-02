@@ -18,7 +18,6 @@ import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -90,11 +89,15 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
     }
 
     @Override
-    public void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
-        set(activityAndIds, true);
+    public void setAndReady(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
+        if (!activityAndIds.isEmpty()) {
+            set(activityAndIds);
+            ready(activityAndIds.get(activityAndIds.size() - 1).id);
+        }
     }
 
-    private void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds, boolean checkCapacity) {
+    @Override
+    public void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
         for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
             int index = activityAndId.id;
             MiruInternalActivity activity = activityAndId.activity;
@@ -104,19 +107,35 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
                 byte[] bytes = internalActivityMarshaller.toBytes(activity);
                 SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), true);
                 synchronized (swappableFiler.lock()) {
+                    swappableFiler.sync();
                     SwappingFiler swappingFiler = swappableFiler.swap(4 + bytes.length);
                     //FilerIO.writeByteArray(swappingFiler, bytes, "activity");
                     FilerIO.write(swappingFiler, bytes);
                     swappingFiler.commit();
                 }
-                if (checkCapacity) {
-                    checkCapacity(index);
-                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
+    }
 
+    @Override
+    public void ready(int index) throws Exception {
+        log.trace("Check if index {} should extend capacity {}", index, indexSize);
+        int size = index + 1;
+        synchronized (indexSize) {
+            if (size > indexSize.get()) {
+                if (indexSizeFiler.isPresent()) {
+                    Filer filer = indexSizeFiler.get();
+                    synchronized (filer.lock()) {
+                        filer.seek(0);
+                        FilerIO.writeInt(filer, size, "size");
+                    }
+                }
+                log.debug("Capacity extended to {}", size);
+                indexSize.set(size);
+            }
+        }
     }
 
     @Override
@@ -150,24 +169,6 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
         }
     }
 
-    private void checkCapacity(int index) throws IOException {
-        log.trace("Check if index {} should extend capacity {}", index, indexSize);
-        int size = index + 1;
-        synchronized (indexSize) {
-            if (size > indexSize.get()) {
-                if (indexSizeFiler.isPresent()) {
-                    Filer filer = indexSizeFiler.get();
-                    synchronized (filer.lock()) {
-                        filer.seek(0);
-                        FilerIO.writeInt(filer, size, "size");
-                    }
-                }
-                log.debug("Capacity extended to {}", size);
-                indexSize.set(size);
-            }
-        }
-    }
-
     @Override
     public void close() {
     }
@@ -187,16 +188,16 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
             batch.add(new MiruActivityAndId<>(activity, index));
             index++;
             if (batch.size() >= batchSize) {
-                set(batch, false);
+                setAndReady(batch);
                 batch.clear();
             }
         }
 
         if (!batch.isEmpty()) {
-            set(batch, false);
+            setAndReady(batch);
         }
 
-        checkCapacity(index - 1);
+        ready(index - 1);
     }
 
     @Override

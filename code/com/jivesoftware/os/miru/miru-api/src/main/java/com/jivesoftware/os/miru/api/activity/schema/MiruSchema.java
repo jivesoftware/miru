@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import java.util.Map;
 
@@ -19,6 +20,7 @@ public class MiruSchema {
     private final MiruFieldDefinition[] fieldDefinitions;
     private final MiruPropertyDefinition[] propertyDefinitions;
 
+    private ImmutableList<Integer> fieldIds; // lazy initialized
 
     public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
         this(fieldDefinitions, new MiruPropertyDefinition[0]);
@@ -86,5 +88,17 @@ public class MiruSchema {
     @JsonIgnore
     public int propertyCount() {
         return propertyDefinitions.length;
+    }
+
+    @JsonIgnore
+    public ImmutableList<Integer> getFieldIds() {
+        if (fieldIds == null) {
+            ImmutableList.Builder<Integer> builder = ImmutableList.builder();
+            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+                builder.add(fieldDefinition.fieldId);
+            }
+            fieldIds = builder.build();
+        }
+        return fieldIds;
     }
 }
