@@ -93,7 +93,7 @@ public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Iterator<B
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return termToIndex.sizeInBytes();
+        return termToIndex.estimateSizeInBytes();
     }
 
     @Override

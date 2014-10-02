@@ -1,6 +1,12 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterators;
+import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.jive.utils.io.HeapByteBufferFactory;
+import com.jivesoftware.os.jive.utils.map.store.BytesObjectMapStore;
+import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruIndex;
@@ -9,9 +15,6 @@ import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
-import gnu.trove.impl.Constants;
-import gnu.trove.iterator.TLongObjectIterator;
-import gnu.trove.map.hash.TLongObjectHashMap;
 import java.util.Iterator;
 
 /**
@@ -21,20 +24,30 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
     BulkExport<Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final TLongObjectHashMap<MiruInvertedIndex<BM>> index;
+    private final BytesObjectMapStore<Long, MiruInvertedIndex<BM>> index;
     private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
 
     public MiruInMemoryIndex(MiruBitmaps<BM> bitmaps) {
         this.bitmaps = bitmaps;
-        this.index = new TLongObjectHashMap<>(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR, -1);
+        this.index = new BytesObjectMapStore<Long, MiruInvertedIndex<BM>>(8, 10, null, new HeapByteBufferFactory()) {
+            @Override
+            public byte[] keyBytes(Long key) {
+                return FilerIO.longBytes(key);
+            }
+
+            @Override
+            public Long bytesKey(byte[] bytes, int offset) {
+                return FilerIO.bytesLong(bytes, offset);
+            }
+        };
     }
 
     @Override
     public long sizeInMemory() throws Exception {
         long sizeInBytes = 0;
         synchronized (index) {
-            for (MiruInvertedIndex<BM> i : index.valueCollection()) {
-                sizeInBytes += bitmaps.sizeInBytes(i.getIndex());
+            for (KeyValueStore.Entry<Long, MiruInvertedIndex<BM>> entry : index) {
+                sizeInBytes += bitmaps.sizeInBytes(entry.getValue().getIndex());
             }
         }
         return sizeInBytes;
@@ -64,50 +77,34 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
     }
 
     @Override
-    public Optional<MiruInvertedIndex<BM>> get(int fieldId, int termId) {
+    public Optional<MiruInvertedIndex<BM>> get(int fieldId, int termId) throws Exception {
         long key = indexKeyFunction.getKey(fieldId, termId);
-        synchronized (index) {
-            return Optional.fromNullable(index.get(key));
-        }
+        return Optional.fromNullable(index.getUnsafe(key));
     }
 
-    private MiruInvertedIndex<BM> getOrAllocate(int fieldId, int termId) {
-        Optional<MiruInvertedIndex<BM>> got = get(fieldId, termId);
-        if (!got.isPresent()) {
-            long key = indexKeyFunction.getKey(fieldId, termId);
-            MiruInMemoryInvertedIndex<BM> miruInvertedIndex = new MiruInMemoryInvertedIndex<>(bitmaps);
-
-            got = Optional.<MiruInvertedIndex<BM>>of(miruInvertedIndex);
+    private MiruInvertedIndex<BM> getOrAllocate(int fieldId, int termId) throws Exception {
+        long key = indexKeyFunction.getKey(fieldId, termId);
+        MiruInvertedIndex<BM> got = index.getUnsafe(key);
+        if (got == null) {
             synchronized (index) {
-                index.put(key, miruInvertedIndex);
+                got = index.get(key);
+                if (got == null) {
+                    got = new MiruInMemoryInvertedIndex<>(bitmaps);
+                    index.add(key, got);
+                }
             }
         }
-        return got.get();
+        return got;
     }
 
     @Override
     public Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>> bulkExport(MiruTenantId tenantId) throws Exception {
-        synchronized (index) {
-            final TLongObjectIterator<MiruInvertedIndex<BM>> iter = index.iterator();
-            return new Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>>() {
-
-                @Override
-                public boolean hasNext() {
-                    return iter.hasNext();
-                }
-
-                @Override
-                public BulkEntry<Long, MiruInvertedIndex<BM>> next() {
-                    iter.advance();
-                    return new BulkEntry<>(iter.key(), iter.value());
-                }
-
-                @Override
-                public void remove() {
-                    throw new UnsupportedOperationException();
-                }
-            };
-        }
+        return Iterators.transform(index.iterator(), new Function<KeyValueStore.Entry<Long, MiruInvertedIndex<BM>>, BulkEntry<Long, MiruInvertedIndex<BM>>>() {
+            @Override
+            public BulkEntry<Long, MiruInvertedIndex<BM>> apply(KeyValueStore.Entry<Long, MiruInvertedIndex<BM>> input) {
+                return new BulkEntry<>(input.getKey(), input.getValue());
+            }
+        });
     }
 
     @Override
@@ -116,7 +113,7 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
             Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>> iter = importItems.bulkExport(tenantId);
             while (iter.hasNext()) {
                 BulkEntry<Long, MiruInvertedIndex<BM>> entry = iter.next();
-                index.put(entry.key, entry.value);
+                index.add(entry.key, entry.value);
             }
         }
     }

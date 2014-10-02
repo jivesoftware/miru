@@ -2,6 +2,9 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
+import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeBytesObjectMapStore;
+import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStore;
+import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -11,9 +14,6 @@ import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -22,13 +22,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>>> {
 
     private final MiruFieldDefinition fieldDefinition;
-    private final ConcurrentMap<MiruTermId, MiruFieldIndexKey> termToIndex;
+    private final VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
     private final MiruInMemoryIndex<BM> index;
     private final AtomicInteger nextTermId;
 
-    public MiruInMemoryField(MiruFieldDefinition fieldDefinition, Map<MiruTermId, MiruFieldIndexKey> termToIndex, MiruInMemoryIndex<BM> index) {
+    public MiruInMemoryField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex<BM> index) {
         this.fieldDefinition = fieldDefinition;
-        this.termToIndex = new ConcurrentHashMap<>(termToIndex);
+        this.termToIndex = new VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey>(
+            new int[] { 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 }, 10, null) {
+
+            @Override
+            protected int keyLength(MiruTermId key) {
+                return key.getBytes().length;
+            }
+
+            @Override
+            public byte[] keyBytes(MiruTermId key) {
+                return key.getBytes();
+            }
+
+            @Override
+            public MiruTermId bytesKey(byte[] bytes, int offset) {
+                return new MiruTermId(bytes);
+            }
+        };
         this.index = index;
         this.nextTermId = new AtomicInteger();
     }
@@ -40,8 +57,8 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator
 
     @Override
     public long sizeInMemory() throws Exception {
-        long sizeInBytes = termToIndex.size() * 16; // 2 refs
-        for (Map.Entry<MiruTermId, MiruFieldIndexKey> entry : termToIndex.entrySet()) {
+        long sizeInBytes = termToIndex.estimateSizeInBytes() * 16; // 2 refs
+        for (KeyValueStore.Entry<MiruTermId, MiruFieldIndexKey> entry : termToIndex) {
             sizeInBytes += entry.getKey().getBytes().length + entry.getValue().sizeInBytes();
         }
         return sizeInBytes;
@@ -104,18 +121,18 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator
         return Optional.absent();
     }
 
-    private Optional<MiruFieldIndexKey> getTermId(MiruTermId term) {
-        MiruFieldIndexKey id = termToIndex.get(term);
+    private Optional<MiruFieldIndexKey> getTermId(MiruTermId term) throws KeyValueStoreException {
+        MiruFieldIndexKey id = termToIndex.getUnsafe(term);
         return Optional.fromNullable(id);
     }
 
-    private MiruFieldIndexKey getOrCreateTermId(MiruTermId term) {
-        MiruFieldIndexKey id = termToIndex.get(term);
+    private MiruFieldIndexKey getOrCreateTermId(MiruTermId term) throws KeyValueStoreException {
+        MiruFieldIndexKey id = termToIndex.getUnsafe(term);
         if (id == null) {
             synchronized (termToIndex) { // yes its double check locking and we know it! Its because we cannot nextTermId.getAndIncrement() prematurely
                 id = termToIndex.get(term);
                 if (id == null) {
-                    termToIndex.put(term, new MiruFieldIndexKey(nextTermId.getAndIncrement()));
+                    termToIndex.add(term, new MiruFieldIndexKey(nextTermId.getAndIncrement()));
                     id = termToIndex.get(term);
                 }
             }
@@ -125,6 +142,6 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator
 
     @Override
     public Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>> bulkExport(MiruTenantId tenantId) throws Exception {
-        return Iterators.transform(termToIndex.entrySet().iterator(), BulkEntry.<MiruTermId, MiruFieldIndexKey>fromMapEntry());
+        return Iterators.transform(termToIndex.iterator(), BulkEntry.<MiruTermId, MiruFieldIndexKey>fromKeyValueStoreEntry());
     }
 }

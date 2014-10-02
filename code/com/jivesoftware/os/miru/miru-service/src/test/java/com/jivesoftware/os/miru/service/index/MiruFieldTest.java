@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
@@ -52,7 +51,7 @@ public class MiruFieldTest {
 
         for (int id : ids) {
             Optional<MiruInvertedIndex<BM>> optional = field.getInvertedIndex(new MiruTermId(new byte[] { (byte) id }), median);
-            assertEquals(optional.isPresent(), id > median);
+            assertEquals(optional.isPresent(), id > median, "Should be " + optional.isPresent() + ": " + id + " > " + median);
         }
     }
 
@@ -62,7 +61,6 @@ public class MiruFieldTest {
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1");
         MiruInMemoryField<EWAHCompressedBitmap> miruInMemoryField = new MiruInMemoryField<>(fieldDefinition,
-                Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(),
                 new MiruInMemoryIndex<>(new MiruBitmapsEWAH(2)));
 
         for (int id = 0; id < 10; id++) {

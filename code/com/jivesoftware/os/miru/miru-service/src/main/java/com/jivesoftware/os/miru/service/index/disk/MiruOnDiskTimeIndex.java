@@ -7,7 +7,6 @@ import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.map.store.FileBackMapStore;
-import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -253,17 +252,13 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     }
 
     @Override
-    public int getExactId(long timestamp) {
-        try {
-            Integer id = timestampToIndex.get(timestamp);
-            return id != null ? id : -1;
-        } catch (KeyValueStoreException e) {
-            throw new RuntimeException(e);
-        }
+    public int getExactId(long timestamp) throws Exception {
+        Integer id = timestampToIndex.get(timestamp);
+        return id != null ? id : -1;
     }
 
     @Override
-    public boolean contains(long timestamp) {
+    public boolean contains(long timestamp) throws Exception {
         int id = getExactId(timestamp);
         return id >= 0 && id < timestampsLength;
     }
@@ -312,7 +307,7 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return filer.length() + timestampToIndex.sizeInBytes();
+        return filer.length() + timestampToIndex.estimateSizeInBytes();
     }
 
     @Override

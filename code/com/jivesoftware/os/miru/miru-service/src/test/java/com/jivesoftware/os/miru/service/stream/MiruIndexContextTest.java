@@ -285,9 +285,9 @@ public class MiruIndexContextTest {
 
     private MiruInMemoryField<EWAHCompressedBitmap>[] buildInMemoryMiruFieldArray(MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex) {
         return new MiruInMemoryField[]{
-            new MiruInMemoryField<>(fieldDefinitions[0], Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex),
-            new MiruInMemoryField<>(fieldDefinitions[1], Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex),
-            new MiruInMemoryField<>(fieldDefinitions[2], Maps.<MiruTermId, MiruFieldIndexKey>newHashMap(), miruInMemoryIndex)
+            new MiruInMemoryField<>(fieldDefinitions[0], miruInMemoryIndex),
+            new MiruInMemoryField<>(fieldDefinitions[1], miruInMemoryIndex),
+            new MiruInMemoryField<>(fieldDefinitions[2], miruInMemoryIndex)
         };
     }
 

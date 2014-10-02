@@ -1,13 +1,15 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterators;
+import com.jivesoftware.os.jive.utils.io.HeapByteBufferFactory;
+import com.jivesoftware.os.jive.utils.map.store.PrimitivesMapStoresBuilder;
+import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import gnu.trove.impl.Constants;
-import gnu.trove.iterator.TLongIntIterator;
-import gnu.trove.map.hash.TLongIntHashMap;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,11 +22,10 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     //TODO there's a good argument for making this a FileBackMapStore even for the in-memory impl
     //TODO (it's only used for index/repair, so disk paging won't slow reads)
 
-    private final TLongIntHashMap timestampToIndex = new TLongIntHashMap(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR, -1, -1);
-
     private long smallestTimestamp = Long.MAX_VALUE;
     private long largestTimestamp = Long.MIN_VALUE;
     private final AtomicInteger id;
+    private final KeyValueStore<Long, Integer> timestampToIndex;
     private final Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream;
 
     private final Object timestampsLock = new Object();
@@ -34,6 +35,10 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     public MiruInMemoryTimeIndex(Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream) {
         this.timestamps = new long[initialCapacity];
         this.id = new AtomicInteger(0);
+        this.timestampToIndex = new PrimitivesMapStoresBuilder()
+            .setByteBufferFactory(new HeapByteBufferFactory())
+            .setInitialPageCapacity(initialCapacity)
+            .buildLongInt();
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
     }
 
@@ -63,7 +68,7 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     }
 
     @Override
-    public int nextId(long timestamp) {
+    public int nextId(long timestamp) throws Exception {
         if (smallestTimestamp == Long.MAX_VALUE) {
             smallestTimestamp = timestamp;
         }
@@ -73,7 +78,7 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
 
         int nextId = nextId();
         synchronized (timestampToIndex) {
-            timestampToIndex.put(timestamp, nextId);
+            timestampToIndex.add(timestamp, nextId);
         }
         if (timestamp < smallestTimestamp) {
             if (timeOrderAnomalyStream.isPresent()) {
@@ -120,15 +125,15 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     }
 
     @Override
-    public int getExactId(long timestamp) {
+    public int getExactId(long timestamp) throws Exception {
         Integer index = timestampToIndex.get(timestamp);
         return index != null ? index : -1;
     }
 
     @Override
-    public boolean contains(long timestamp) {
+    public boolean contains(long timestamp) throws Exception {
         synchronized (timestampToIndex) {
-            return timestampToIndex.containsKey(timestamp);
+            return timestampToIndex.getUnsafe(timestamp) != null;
         }
     }
 
@@ -172,42 +177,19 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
         return new Iterable<Entry>() {
             @Override
             public Iterator<Entry> iterator() {
-                return new TLongIntIteratorAdapter(timestampToIndex.iterator());
+                return Iterators.transform(timestampToIndex.iterator(), new Function<KeyValueStore.Entry<Long, Integer>, Entry>() {
+                    @Override
+                    public Entry apply(KeyValueStore.Entry<Long, Integer> input) {
+                        return new Entry(input.getKey(), input.getValue());
+                    }
+                });
             }
         };
     }
 
-    private static class TLongIntIteratorAdapter implements Iterator<Entry> {
-
-        private final TLongIntIterator iter;
-
-        private TLongIntIteratorAdapter(TLongIntIterator iter) {
-            this.iter = iter;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return iter.hasNext();
-        }
-
-        @Override
-        public Entry next() {
-            iter.advance();
-            long key = iter.key();
-            int value = iter.value();
-            return new Entry(key, value);
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
-
     @Override
-    public long sizeInMemory() {
-        return timestamps.length * 8 // pointer
-                + timestampToIndex.size() * 12; // long + int
+    public long sizeInMemory() throws Exception {
+        return timestamps.length * 8 + 0; // /*timestampToIndex.sizeInBytes();*/
     }
 
     @Override

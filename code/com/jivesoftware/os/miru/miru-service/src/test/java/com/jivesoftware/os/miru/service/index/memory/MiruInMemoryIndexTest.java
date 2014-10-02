@@ -1,15 +1,148 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.jive.utils.io.HeapByteBufferFactory;
+import com.jivesoftware.os.jive.utils.map.store.BytesObjectMapStore;
+import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
 import gnu.trove.impl.Constants;
 import gnu.trove.impl.hash.TPrimitiveHash;
+import gnu.trove.map.hash.TLongIntHashMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import org.testng.annotations.Test;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
 public class MiruInMemoryIndexTest {
+
+    @Test(enabled = false)
+    public void testTrove() throws Exception {
+        final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
+        final int numIterations = 20;
+        final int numFields = 10;
+        final int numTerms = 100_000;
+        int[] values = new int[numFields * numTerms];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = i;
+        }
+
+        for (int i = 0; i < numIterations; i++) {
+            System.out.println("---------------------- " + i + " ----------------------");
+
+            // trove setup
+            TLongIntHashMap trove = new TLongIntHashMap(10, Constants.DEFAULT_LOAD_FACTOR, -1, -1);
+
+            // trove insert
+            long start = System.currentTimeMillis();
+            for (int fieldId = 0; fieldId < numFields; fieldId++) {
+                for (int termId = 0; termId < numTerms; termId++) {
+                    long key = indexKeyFunction.getKey(fieldId, termId);
+                    trove.put(key, values[fieldId * numFields + termId]);
+                }
+            }
+            System.out.println("Trove: Inserted " + trove.size() + " in " + (System.currentTimeMillis() - start) + "ms");
+
+            // trove retrieve
+            start = System.currentTimeMillis();
+            for (int fieldId = 0; fieldId < numFields; fieldId++) {
+                for (int termId = 0; termId < numTerms; termId++) {
+                    long key = indexKeyFunction.getKey(fieldId, termId);
+                    int retrieved = trove.get(key);
+                    assertEquals(retrieved, values[fieldId * numFields + termId], "Failed at " + fieldId + ", " + termId);
+                }
+            }
+
+            if (i == numIterations - 1) {
+                Thread.sleep(600000);
+            }
+
+            System.out.println("Trove: Retrieved " + trove.size() + " in " + (System.currentTimeMillis() - start) + "ms");
+        }
+    }
+
+    @Test(enabled = false)
+    public void testMapComparisons() throws Exception {
+        final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
+        final int numIterations = 100;
+        final int numFields = 10;
+        final int numTerms = 100_000;
+        //float loadFactor = Constants.DEFAULT_LOAD_FACTOR;
+        final int initialCapacity = 10; //(int) ((float) (numFields * numTerms) / loadFactor);
+        Object[] obj = new Object[numFields * numTerms];
+        for (int i = 0; i < obj.length; i++) {
+            obj[i] = i;
+        }
+
+        for (int i = 0; i < numIterations; i++) {
+            System.out.println("---------------------- " + i + " ----------------------");
+
+            // trove setup
+            TLongObjectHashMap<Object> trove = new TLongObjectHashMap<>(
+                numFields * numTerms * 2, Constants.DEFAULT_LOAD_FACTOR, -1);
+
+            // trove insert
+            long start = System.currentTimeMillis();
+            for (int fieldId = 0; fieldId < numFields; fieldId++) {
+                for (int termId = 0; termId < numTerms; termId++) {
+                    long key = indexKeyFunction.getKey(fieldId, termId);
+                    trove.put(key, obj[fieldId * numFields + termId]);
+                }
+            }
+            System.out.println("Trove: Inserted " + trove.size() + " in " + (System.currentTimeMillis() - start) + "ms");
+
+            // trove retrieve
+            start = System.currentTimeMillis();
+            for (int fieldId = 0; fieldId < numFields; fieldId++) {
+                for (int termId = 0; termId < numTerms; termId++) {
+                    long key = indexKeyFunction.getKey(fieldId, termId);
+                    Object retrieved = trove.get(key);
+                    assertTrue(retrieved == obj[fieldId * numFields + termId], "Failed at " + fieldId + ", " + termId);
+                }
+            }
+            System.out.println("Trove: Retrieved " + trove.size() + " in " + (System.currentTimeMillis() - start) + "ms");
+
+            // bytebuffer mapstore setup
+            BytesObjectMapStore<Long, Object> byteBufferMapStore =
+                new BytesObjectMapStore<Long, Object>(8, numFields * numTerms * 2, null, new HeapByteBufferFactory()) {
+                    @Override
+                    public byte[] keyBytes(Long key) {
+                        return FilerIO.longBytes(key);
+                    }
+
+                    @Override
+                    public Long bytesKey(byte[] bytes, int offset) {
+                        return FilerIO.bytesLong(bytes, offset);
+                    }
+                };
+
+            // bytebuffer mapstore insert
+            start = System.currentTimeMillis();
+            for (int fieldId = 0; fieldId < numFields; fieldId++) {
+                for (int termId = 0; termId < numTerms; termId++) {
+                    long key = indexKeyFunction.getKey(fieldId, termId);
+                    byteBufferMapStore.add(key, obj[fieldId * numFields + termId]);
+                }
+            }
+            System.out.println("ByteBufferMapStore: Inserted " + byteBufferMapStore.estimatedMaxNumberOfKeys() + " in " +
+                (System.currentTimeMillis() - start) + "ms");
+
+            // bytebuffer mapstore retrieve
+            start = System.currentTimeMillis();
+            for (int fieldId = 0; fieldId < numFields; fieldId++) {
+                for (int termId = 0; termId < numTerms; termId++) {
+                    long key = indexKeyFunction.getKey(fieldId, termId);
+                    Object retrieved = byteBufferMapStore.getUnsafe(key);
+                    assertTrue(retrieved == obj[fieldId * numFields + termId], "Failed at " + fieldId + ", " + termId);
+                }
+            }
+            System.out.println("ByteBufferMapStore: Retrieved " + byteBufferMapStore.estimatedMaxNumberOfKeys() + " in " +
+                (System.currentTimeMillis() - start) + "ms");
+        }
+    }
 
     @Test(enabled = false)
     public void testKeyHash() {

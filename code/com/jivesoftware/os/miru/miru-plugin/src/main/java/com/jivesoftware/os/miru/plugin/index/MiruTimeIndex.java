@@ -11,7 +11,7 @@ package com.jivesoftware.os.miru.plugin.index;
  */
 public interface MiruTimeIndex {
 
-    boolean contains(long timestamp);
+    boolean contains(long timestamp) throws Exception;
 
     /**
      * Returns the actual index of the given timestamp if it appears in the index, or else where it would have been.
@@ -21,7 +21,7 @@ public interface MiruTimeIndex {
      */
     int getClosestId(long timestamp);
 
-    int getExactId(long timestamp);
+    int getExactId(long timestamp) throws Exception;
 
     long getLargestTimestamp();
 
@@ -49,11 +49,11 @@ public interface MiruTimeIndex {
 
     int lastId();
 
-    int nextId(long timestamp);
+    int nextId(long timestamp) throws Exception;
 
     Iterable<Entry> getEntries();
 
-    long sizeInMemory();
+    long sizeInMemory() throws Exception;
 
     long sizeOnDisk() throws Exception;
 

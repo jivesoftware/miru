@@ -97,7 +97,7 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return termToIndex.sizeInBytes();
+        return termToIndex.estimateSizeInBytes();
     }
 
     @Override
