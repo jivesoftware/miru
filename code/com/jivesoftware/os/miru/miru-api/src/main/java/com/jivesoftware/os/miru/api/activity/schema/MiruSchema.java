@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,6 +23,7 @@ public class MiruSchema {
     private final MiruPropertyDefinition[] propertyDefinitions;
 
     private ImmutableList<Integer> fieldIds; // lazy initialized
+    private List<MiruFieldDefinition>[] fieldAggregateFieldDefinitions;
 
     public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
         this(fieldDefinitions, new MiruPropertyDefinition[0]);
@@ -42,6 +45,8 @@ public class MiruSchema {
         for (MiruPropertyDefinition propertyDefinition : propertyDefinitions) {
             propNameToId.put(propertyDefinition.name, propertyDefinition.propId);
         }
+
+        this.fieldAggregateFieldDefinitions = new List[fieldDefinitions.length];
     }
 
     public MiruFieldDefinition[] getFieldDefinitions() {
@@ -100,5 +105,23 @@ public class MiruSchema {
             fieldIds = builder.build();
         }
         return fieldIds;
+    }
+
+    @JsonIgnore
+    public List<MiruFieldDefinition> getAggregateFieldDefinitions(int fieldId) {
+        List<MiruFieldDefinition> aggregateFieldDefinitions = fieldAggregateFieldDefinitions[fieldId];
+        if (aggregateFieldDefinitions == null) {
+            aggregateFieldDefinitions = Lists.newArrayList();
+            List<String> aggregateFieldNames = fieldDefinitions[fieldId].aggregateFieldNames;
+            Lists.newArrayListWithCapacity(aggregateFieldNames.size());
+            for (String aggregateFieldName : aggregateFieldNames) {
+                int aggregateFieldId = getFieldId(aggregateFieldName);
+                if (aggregateFieldId >= 0) {
+                    aggregateFieldDefinitions.add(fieldDefinitions[aggregateFieldId]);
+                }
+            }
+            fieldAggregateFieldDefinitions[fieldId] = aggregateFieldDefinitions;
+        }
+        return aggregateFieldDefinitions;
     }
 }
