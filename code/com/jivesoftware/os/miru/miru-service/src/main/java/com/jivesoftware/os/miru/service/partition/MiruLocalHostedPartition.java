@@ -288,7 +288,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage),
                                 Optional.of(MiruPartitionState.bootstrap), 0);
                             if (updatePartition(accessor, migrated)) {
-                                streamFactory.close(fromStream);
+                                if (fromStream != null) {
+                                    streamFactory.close(fromStream);
+                                }
                                 streamFactory.markStorage(coord, destinationStorage);
                                 updated = true;
                             } else {

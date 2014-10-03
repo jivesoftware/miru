@@ -73,15 +73,22 @@ public class MiruIndexContext<BM> {
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
 
-        final int batchSize = 1000; // TODO expose to config
-        List<Future<?>> internFutures = new ArrayList<>(activityAndIds.size() / batchSize);
-        for (int i = 0; i < activityAndIds.size(); i += batchSize) {
+        log.trace("Start: Index batch of {}", activityAndIds.size());
+
+        final int numPartitions = 24;
+        final int numActivities = internalActivityAndIds.size();
+        final int partitionSize = (numActivities + numPartitions - 1) / numPartitions;
+
+        List<Future<?>> internFutures = new ArrayList<>(numPartitions);
+        for (int i = 0; i < activityAndIds.size(); i += partitionSize) {
             final int startOfSubList = i;
             internFutures.add(indexExecutor.submit(new Callable<Void>() {
 
                 @Override
                 public Void call() throws Exception {
-                    activityInterner.intern(activityAndIds, startOfSubList, batchSize, internalActivityAndIds, schema);
+                    log.trace("Start: Intern {}", startOfSubList);
+                    activityInterner.intern(activityAndIds, startOfSubList, partitionSize, internalActivityAndIds, schema);
+                    log.trace("End: Intern {}", startOfSubList);
                     return null;
                 }
             }));
@@ -89,15 +96,22 @@ public class MiruIndexContext<BM> {
         for (Future future : internFutures) {
             future.get();
         }
+        log.trace("Finished waiting for interns");
 
-        indexFieldValues(internalActivityAndIds);
+        List<Future<?>> fieldFutures = indexFieldValues(internalActivityAndIds);
+        for (Future future : fieldFutures) {
+            future.get();
+        }
+        log.trace("Finished waiting for fields");
 
         final List<Future<?>> indexFutures = new ArrayList<>();
         indexFutures.add(indexExecutor.submit(new Callable<Void>() {
 
             @Override
             public Void call() throws Exception {
+                log.trace("Start: Authz");
                 indexAuthz(internalActivityAndIds);
+                log.trace("End: Authz");
                 return null;
             }
         }));
@@ -105,7 +119,9 @@ public class MiruIndexContext<BM> {
 
             @Override
             public Void call() throws Exception {
+                log.trace("Start: Bloomins");
                 indexBloomins(internalActivityAndIds);
+                log.trace("End: Bloomins");
                 return null;
             }
         }));
@@ -115,11 +131,9 @@ public class MiruIndexContext<BM> {
         for (Future future : indexFutures) {
             future.get();
         }
+        log.trace("Finished waiting for authz/blooms/aggregates");
 
-        int numActivities = internalActivityAndIds.size();
-        int numPartitions = 10;
-        int partitionSize = (numActivities + numPartitions - 1) / numPartitions;
-        List<Future<?>> activityFutures = new ArrayList<>(partitionSize);
+        List<Future<?>> activityFutures = new ArrayList<>(numPartitions);
         for (final List<MiruActivityAndId<MiruInternalActivity>> partition : Lists.partition(internalActivityAndIds, partitionSize)) {
             activityFutures.add(indexExecutor.submit(new Callable<Void>() {
                 @Override
@@ -132,6 +146,8 @@ public class MiruIndexContext<BM> {
         for (Future future : activityFutures) {
             future.get();
         }
+        log.trace("Finished waiting for activity index");
+
         if (!activityAndIds.isEmpty()) {
             activityIndex.ready(activityAndIds.get(activityAndIds.size() - 1).id);
         }
@@ -209,13 +225,14 @@ public class MiruIndexContext<BM> {
         }
     }
 
-    private void indexFieldValues(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
+    private List<Future<?>> indexFieldValues(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
         List<Integer> fieldIds = schema.getFieldIds();
-        List<Future> futures = new ArrayList<>(fieldIds.size());
+        List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (final int fieldId : fieldIds) {
             futures.add(indexExecutor.submit(new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
+                    log.trace("Start: Index field {}", fieldId);
                     MiruField<BM> miruField = null;
                     for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                         MiruInternalActivity activity = internalActivityAndId.activity;
@@ -228,14 +245,13 @@ public class MiruIndexContext<BM> {
                             }
                         }
                     }
+                    log.trace("End: Index field {}", fieldId);
                     return null;
                 }
             }));
         }
 
-        for (Future future : futures) {
-            future.get();
-        }
+        return futures;
     }
 
     private void indexAuthz(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
@@ -288,6 +304,7 @@ public class MiruIndexContext<BM> {
                 futures.add(indexExecutor.submit(new Callable<Void>() {
                     @Override
                     public Void call() throws Exception {
+                        log.trace("Start: WriteTimeAggregate field {}", fieldId);
                         MiruField<BM> miruField = null;
                         for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                             MiruInternalActivity activity = internalActivityAndId.activity;
@@ -313,62 +330,70 @@ public class MiruIndexContext<BM> {
                                 miruField.index(miruTermId, internalActivityAndId.id);
                             }
                         }
+                        log.trace("End: WriteTimeAggregate field {}", fieldId);
                         return null;
                     }
                 }));
             }
 
             List<MiruFieldDefinition> aggregateFieldDefinitions = schema.getAggregateFieldDefinitions(fieldId);
+            int aggregateFieldCallableCount = 0;
             for (final MiruFieldDefinition aggregateFieldDefinition : aggregateFieldDefinitions) {
-                futures.add(indexExecutor.submit(new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        MiruField<BM> miruField = null;
+                MiruField<BM> miruField = null;
 
-                        Set<WriteAggregateKey> visited = Sets.newHashSet();
-                        // walk backwards so we see the largest id first, and mark visitors for each coordinate
-                        for (int i = internalActivityAndIds.size() - 1; i >= 0; i--) {
-                            MiruActivityAndId<MiruInternalActivity> internalActivityAndId = internalActivityAndIds.get(i);
-                            MiruInternalActivity activity = internalActivityAndId.activity;
-                            MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
-                            if (fieldValues != null && fieldValues.length > 0) {
-                                // Answers the question,
-                                // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
-                                MiruTermId[] aggregateFieldValues = activity.fieldsValues[aggregateFieldDefinition.fieldId];
-                                if (aggregateFieldValues != null && aggregateFieldValues.length > 0) {
-                                    MiruField<BM> aggregateField = null;
-                                    for (MiruTermId aggregateFieldValue : aggregateFieldValues) {
-                                        MiruInvertedIndex<BM> aggregateInvertedIndex = null;
-                                        for (MiruTermId fieldValue : fieldValues) {
-                                            if (aggregateField == null) {
-                                                aggregateField = fieldIndex.getField(aggregateFieldDefinition.fieldId);
-                                            }
-                                            WriteAggregateKey key = new WriteAggregateKey(
-                                                aggregateField.getFieldDefinition().fieldId, aggregateFieldValue, fieldValue);
-                                            if (visited.add(key)) {
-                                                MiruTermId compositeAggregateId = indexUtil.makeFieldValueAggregate(fieldValue, aggregateFieldDefinition.name);
-
-                                                if (miruField == null) {
-                                                    miruField = fieldIndex.getField(fieldId);
-                                                }
-                                                MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeAggregateId);
-
-                                                if (aggregateInvertedIndex == null) {
-                                                    aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
-                                                }
-                                                invertedIndex.andNotToSourceSize(aggregateInvertedIndex.getIndex());
-
-                                                miruField.index(compositeAggregateId, internalActivityAndId.id);
-                                            }
+                Set<WriteAggregateKey> visited = Sets.newHashSet();
+                // walk backwards so we see the largest id first, and mark visitors for each coordinate
+                for (int i = internalActivityAndIds.size() - 1; i >= 0; i--) {
+                    final MiruActivityAndId<MiruInternalActivity> internalActivityAndId = internalActivityAndIds.get(i);
+                    MiruInternalActivity activity = internalActivityAndId.activity;
+                    MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+                    if (fieldValues != null && fieldValues.length > 0) {
+                        // Answers the question,
+                        // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
+                        MiruTermId[] aggregateFieldValues = activity.fieldsValues[aggregateFieldDefinition.fieldId];
+                        if (aggregateFieldValues != null && aggregateFieldValues.length > 0) {
+                            MiruField<BM> aggregateField = null;
+                            for (MiruTermId aggregateFieldValue : aggregateFieldValues) {
+                                MiruInvertedIndex<BM> aggregateInvertedIndex = null;
+                                for (final MiruTermId fieldValue : fieldValues) {
+                                    WriteAggregateKey key = new WriteAggregateKey(aggregateFieldDefinition.fieldId, aggregateFieldValue, fieldValue);
+                                    if (visited.add(key)) {
+                                        if (miruField == null) {
+                                            miruField = fieldIndex.getField(fieldId);
                                         }
+                                        if (aggregateField == null) {
+                                            aggregateField = fieldIndex.getField(aggregateFieldDefinition.fieldId);
+                                        }
+                                        if (aggregateInvertedIndex == null) {
+                                            aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
+                                        }
+
+                                        final MiruField<BM> callableMiruField = miruField;
+                                        final MiruInvertedIndex<BM> callableAggregateInvertedIndex = aggregateInvertedIndex;
+                                        futures.add(indexExecutor.submit(new Callable<Void>() {
+                                            @Override
+                                            public Void call() throws Exception {
+                                                //log.trace("Start: Aggregate field {} {}", fieldId, aggregateFieldDefinition.fieldId);
+
+                                                MiruTermId compositeAggregateId = indexUtil.makeFieldValueAggregate(fieldValue, aggregateFieldDefinition.name);
+                                                MiruInvertedIndex<BM> invertedIndex = callableMiruField.getOrCreateInvertedIndex(compositeAggregateId);
+                                                invertedIndex.andNotToSourceSize(callableAggregateInvertedIndex.getIndex());
+                                                callableMiruField.index(compositeAggregateId, internalActivityAndId.id);
+
+                                                //log.trace("End: Aggregate field {} {}", fieldId, aggregateFieldDefinition.fieldId);
+                                                return null;
+                                            }
+                                        }));
+
+                                        aggregateFieldCallableCount++;
                                     }
                                 }
                             }
                         }
-                        return null;
                     }
-                }));
+                }
             }
+            log.trace("Dispatched {} aggregate field callables", aggregateFieldCallableCount);
         }
         return futures;
     }
