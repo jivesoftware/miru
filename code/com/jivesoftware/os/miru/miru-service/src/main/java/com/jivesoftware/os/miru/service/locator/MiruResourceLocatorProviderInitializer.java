@@ -33,17 +33,22 @@ public class MiruResourceLocatorProviderInitializer {
 
         final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(6); //TODO expose to config
 
-        File diskPath = new File(config.getDiskResourceLocatorPath());
-        FileUtils.forceMkdir(diskPath);
+        File[] diskPaths = pathToFile(config.getDiskResourceLocatorPaths().split(","));
+        for (File diskPath : diskPaths) {
+            FileUtils.forceMkdir(diskPath);
+        }
         final MiruResourceLocator diskResourceLocator = new DiskIdentifierPartResourceLocator(
-                diskPath,
+                diskPaths,
                 config.getDiskResourceInitialChunkSize());
 
-        File transientPath = new File(config.getTransientResourceLocatorPath());
-        FileUtils.forceMkdir(transientPath);
-        final MiruHybridResourceCleaner cleaner = new MiruHybridResourceCleaner(transientPath);
+        File[] transientPaths = pathToFile(config.getTransientResourceLocatorPaths().split(","));
+        for (File transientPath : transientPaths) {
+            FileUtils.forceMkdir(transientPath);
+        }
+
+        final MiruHybridResourceCleaner cleaner = new MiruHybridResourceCleaner(transientPaths);
         final MiruHybridResourceLocator transientResourceLocator = new HybridIdentifierPartResourceLocator(
-                transientPath,
+                transientPaths,
                 config.getTransientResourceInitialChunkSize(),
                 cleaner);
 
@@ -83,5 +88,13 @@ public class MiruResourceLocatorProviderInitializer {
                 scheduledExecutor.shutdownNow();
             }
         };
+    }
+
+    private File[] pathToFile(String[] paths) {
+        File[] files = new File[paths.length];
+        for (int i = 0; i < files.length; i++) {
+            files[i] = new File(paths[i].trim());
+        }
+        return files;
     }
 }

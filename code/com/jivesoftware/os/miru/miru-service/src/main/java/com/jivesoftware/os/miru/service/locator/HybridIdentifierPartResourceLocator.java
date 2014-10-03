@@ -12,23 +12,32 @@ public class HybridIdentifierPartResourceLocator extends AbstractIdentifierPartR
     private final MiruHybridResourceCleaner cleaner;
     private final Random random = new Random();
 
-    public HybridIdentifierPartResourceLocator(File path,
+    public HybridIdentifierPartResourceLocator(File[] paths,
         long initialChunkSize,
         MiruHybridResourceCleaner cleaner) {
-        super(path, initialChunkSize);
+        super(paths, initialChunkSize);
         this.cleaner = cleaner;
     }
 
     @Override
     public MiruResourcePartitionIdentifier acquire() {
         MiruHybridTokenIdentifier identifier = null;
-        while (identifier == null || getPartitionPath(identifier).exists()) {
+        while (identifier == null || anyExist(getPartitionPaths(identifier))) {
             byte[] bytes = new byte[12];
             random.nextBytes(bytes);
             identifier = new MiruHybridTokenIdentifier(BaseEncoding.base64Url().omitPadding().encode(bytes));
         }
         cleaner.acquired(identifier.getToken());
         return identifier;
+    }
+
+    private boolean anyExist(File[] partitionPaths) {
+        for (File partitionPath : partitionPaths) {
+            if (partitionPath.exists()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

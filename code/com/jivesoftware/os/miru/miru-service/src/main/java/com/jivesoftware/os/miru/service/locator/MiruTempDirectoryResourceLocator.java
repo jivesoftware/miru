@@ -35,7 +35,9 @@ public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocat
 
     @Override
     public File getFilerFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return new File(getPartitionPath(identifier), name + ".filer");
+        File[] partitionPaths = getPartitionPaths(identifier);
+        //TODO leaky
+        return new File(partitionPaths[Math.abs(name.hashCode()) % partitionPaths.length], name + ".filer");
     }
 
     @Override
@@ -56,18 +58,18 @@ public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocat
     }
 
     @Override
-    public File getMapDirectory(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return new File(getMapPath(identifier), name);
+    public File[] getMapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
+        return makeSubDirectories(getMapPaths(identifier), name);
     }
 
     @Override
-    public File getSwapDirectory(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return new File(getSwapPath(identifier), name);
+    public File[] getSwapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
+        return makeSubDirectories(getSwapPaths(identifier), name);
     }
 
     @Override
-    public File getChunkFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return new File(getPartitionPath(identifier), name + ".chunk");
+    public File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
+        return makeSubDirectories(getPartitionPaths(identifier), name);
     }
 
     @Override
@@ -77,27 +79,37 @@ public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocat
 
     @Override
     public void clean(MiruResourcePartitionIdentifier identifier) throws IOException {
-        FileUtil.remove(getPartitionPath(identifier));
+        for (File file : getPartitionPaths(identifier)) {
+            FileUtil.remove(file);
+        }
     }
 
     @Override
-    public File getPartitionPath(MiruResourcePartitionIdentifier identifier) throws IOException {
+    public File[] getPartitionPaths(MiruResourcePartitionIdentifier identifier) throws IOException {
         synchronized (partitionPaths) {
             File partitionPath = partitionPaths.get(identifier);
             if (partitionPath == null || !partitionPath.exists()) {
                 partitionPath = Files.createTempDirectory(Joiner.on('.').join(identifier.getParts())).toFile();
                 partitionPaths.put(identifier, partitionPath);
             }
-            return partitionPath;
+            return new File[] { partitionPath };
         }
     }
 
-    private File getMapPath(MiruResourcePartitionIdentifier identifier) throws IOException {
-        return new File(getPartitionPath(identifier), "maps");
+    private File[] getMapPaths(MiruResourcePartitionIdentifier identifier) throws IOException {
+        return makeSubDirectories(getPartitionPaths(identifier), "maps");
     }
 
-    private File getSwapPath(MiruResourcePartitionIdentifier identifier) throws IOException {
-        return new File(getPartitionPath(identifier), "swaps");
+    private File[] getSwapPaths(MiruResourcePartitionIdentifier identifier) throws IOException {
+        return makeSubDirectories(getPartitionPaths(identifier), "swaps");
+    }
+
+    private File[] makeSubDirectories(File[] baseDirectories, String subName) {
+        File[] subDirectories = new File[baseDirectories.length];
+        for (int i = 0; i < subDirectories.length; i++) {
+            subDirectories[i] = new File(baseDirectories[i], subName);
+        }
+        return subDirectories;
     }
 
 }

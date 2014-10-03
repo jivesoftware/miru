@@ -39,9 +39,9 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     private final MiruFilerProvider filerProvider;
     private final FileBackMapStore<Long, Integer> timestampToIndex;
 
-    public MiruOnDiskTimeIndex(MiruFilerProvider filerProvider, File mapDirectory) throws IOException {
+    public MiruOnDiskTimeIndex(MiruFilerProvider filerProvider, String[] mapDirectories) throws IOException {
         this.filerProvider = filerProvider;
-        this.timestampToIndex = new FileBackMapStore<Long, Integer>(mapDirectory.getAbsolutePath(), 8, 4, 32, 64, null) {
+        this.timestampToIndex = new FileBackMapStore<Long, Integer>(mapDirectories, 8, 4, 32, 64, null) {
 
             private final int numPartitions = 4;
 

@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.id.Id;
@@ -16,9 +15,7 @@ import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryUnreadTrackingIndex;
-import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -156,14 +153,21 @@ public class MiruUnreadTrackingIndexTest {
             miruInvertedIndex = tempMiruInvertedIndex;
         }
 
-        File mapDir = Files.createTempDirectory("map").toFile();
-        File swapDir = Files.createTempDirectory("swap").toFile();
-        Path chunksDir = Files.createTempDirectory("chunks");
-        File chunks = new File(chunksDir.toFile(), "chunks.data");
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4_096, false);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        String[] mapDirs = new String[] {
+            Files.createTempDirectory("mapFields").toFile().getAbsolutePath(),
+            Files.createTempDirectory("mapFields").toFile().getAbsolutePath()
+        };
+        String[] swapDirs = new String[] {
+            Files.createTempDirectory("swapFields").toFile().getAbsolutePath(),
+            Files.createTempDirectory("swapFields").toFile().getAbsolutePath()
+        };
+        String[] chunksDirs = new String[] {
+            Files.createTempDirectory("chunksFields").toFile().getAbsolutePath(),
+            Files.createTempDirectory("chunksFields").toFile().getAbsolutePath()
+        };
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(chunksDirs, "data", 4, 4_096, false);
         MiruOnDiskUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(
-                bitmaps, mapDir, swapDir, multiChunkStore);
+                bitmaps, mapDirs, swapDirs, multiChunkStore);
         miruOnDiskUnreadTrackingIndex.bulkImport(tenantId, miruInMemoryUnreadTrackingIndex);
 
         return new Object[][] {

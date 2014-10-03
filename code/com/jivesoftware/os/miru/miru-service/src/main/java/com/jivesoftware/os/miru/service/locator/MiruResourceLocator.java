@@ -16,15 +16,15 @@ public interface MiruResourceLocator {
 
     ByteBufferBackedFiler getByteBufferBackedFiler(MiruResourcePartitionIdentifier identifier, String name, long length) throws IOException;
 
-    File getMapDirectory(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
+    File[] getMapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
 
-    File getSwapDirectory(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
+    File[] getSwapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
 
-    File getChunkFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
+    File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
 
     long getInitialChunkSize();
 
     void clean(MiruResourcePartitionIdentifier identifier) throws IOException;
 
-    File getPartitionPath(MiruResourcePartitionIdentifier identifier) throws IOException;
+    File[] getPartitionPaths(MiruResourcePartitionIdentifier identifier) throws IOException;
 }

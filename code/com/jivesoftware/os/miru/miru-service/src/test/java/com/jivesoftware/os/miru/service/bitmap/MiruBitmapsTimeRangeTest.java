@@ -151,7 +151,7 @@ public class MiruBitmapsTimeRangeTest {
     private MiruOnDiskTimeIndex buildOnDiskTimeIndex(MiruTenantId tenantId, MiruInMemoryTimeIndex miruInMemoryTimeIndex) throws Exception {
         final File onDisk = Files.createTempFile("onDisk", "timeIndex").toFile();
 
-        MiruOnDiskTimeIndex miruOnDiskTimeIndex = new MiruOnDiskTimeIndex(new MiruFilerProvider() {
+        MiruFilerProvider filerProvider = new MiruFilerProvider() {
             @Override
             public File getBackingFile() {
                 return onDisk;
@@ -161,7 +161,12 @@ public class MiruBitmapsTimeRangeTest {
             public Filer getFiler(long length) throws IOException {
                 return new RandomAccessFiler(onDisk, "rw");
             }
-        }, Files.createTempDirectory("timestampToIndex").toFile());
+        };
+        String[] mapDirectories = {
+            Files.createTempDirectory("timestampToIndex").toFile().getAbsolutePath(),
+            Files.createTempDirectory("timestampToIndex").toFile().getAbsolutePath()
+        };
+        MiruOnDiskTimeIndex miruOnDiskTimeIndex = new MiruOnDiskTimeIndex(filerProvider, mapDirectories);
         miruOnDiskTimeIndex.bulkImport(tenantId, miruInMemoryTimeIndex);
 
         return miruOnDiskTimeIndex;

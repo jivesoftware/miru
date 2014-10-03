@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import java.io.File;
 import java.util.Map;
 
 /** @author jonathan */
@@ -21,10 +20,11 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
 
-    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore) throws Exception {
+    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore)
+        throws Exception {
         this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
-        this.index = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 8, 100, chunkStore, 512);
+        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 512, 4);
     }
 
     @Override

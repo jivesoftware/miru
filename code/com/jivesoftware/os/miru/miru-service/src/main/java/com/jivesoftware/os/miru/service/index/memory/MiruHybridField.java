@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
-import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
@@ -32,14 +31,13 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
     private final AtomicInteger nextTermId;
     private final VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
 
-    public MiruHybridField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex<BM> index, File mapDirectory) {
+    public MiruHybridField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex<BM> index, String[] mapDirectories) {
         this.fieldDefinition = fieldDefinition;
         this.index = index;
         this.nextTermId = new AtomicInteger();
 
-        String pathToPartitions = mapDirectory.getAbsolutePath();
         this.termToIndex = new VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey>(
-            pathToPartitions, KEY_SIZE_THRESHOLDS, PAYLOAD_SIZE, 100, 8, null) {
+            mapDirectories, KEY_SIZE_THRESHOLDS, PAYLOAD_SIZE, 100, 8, null) {
 
                 @Override
                 protected int keyLength(MiruTermId key) {

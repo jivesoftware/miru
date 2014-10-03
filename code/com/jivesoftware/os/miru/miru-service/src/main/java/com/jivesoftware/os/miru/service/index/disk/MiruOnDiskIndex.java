@@ -13,7 +13,6 @@ import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
-import java.io.File;
 import java.util.Iterator;
 
 /** @author jonathan */
@@ -23,9 +22,9 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
     private final FileBackedKeyedStore index;
     private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
 
-    public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, File mapDirectory, File swapDirectory, MultiChunkStore chunkStore) throws Exception {
+    public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore) throws Exception {
         this.bitmaps = bitmaps;
-        this.index = new FileBackedKeyedStore(mapDirectory.getAbsolutePath(), swapDirectory.getAbsolutePath(), 8, 100, chunkStore, 512);
+        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 512, 4); //TODO expose to config
     }
 
     @Override

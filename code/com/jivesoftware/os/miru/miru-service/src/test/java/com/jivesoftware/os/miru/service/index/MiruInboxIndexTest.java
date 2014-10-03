@@ -18,9 +18,7 @@ import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInboxIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex.InboxAndLastActivityIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
-import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,7 +35,7 @@ public class MiruInboxIndexTest {
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
     public void testGetEmptyInboxWithoutCreating(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId miruStreamId)
-            throws Exception {
+        throws Exception {
 
         Optional<EWAHCompressedBitmap> inbox = miruInboxIndex.getInbox(miruStreamId);
         assertNotNull(inbox);
@@ -46,7 +44,7 @@ public class MiruInboxIndexTest {
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
     public void testGetEmptyInboxAndCreate(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId miruStreamId)
-            throws Exception {
+        throws Exception {
 
         MiruInvertedIndexAppender inbox = miruInboxIndex.getAppender(miruStreamId);
         assertNotNull(inbox);
@@ -78,7 +76,7 @@ public class MiruInboxIndexTest {
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
     public void testLastActivityIndexNotSetAutomatically(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds)
-            throws Exception {
+        throws Exception {
 
         int lastActivityIndex = miruInboxIndex.getLastActivityIndex(streamId);
         assertEquals(lastActivityIndex, -1);
@@ -90,7 +88,8 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
+    public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId,
+        List<Integer> indexedIds) throws Exception {
 
         MiruStreamId newStreamId = new MiruStreamId(new Id(1_337).toBytes());
         int lastActivityIndex = miruInboxIndex.getLastActivityIndex(newStreamId);
@@ -114,22 +113,27 @@ public class MiruInboxIndexTest {
     @DataProvider(name = "miruInboxIndexDataProvider")
     public Object[][] miruInboxIndexDataProvider() throws Exception {
         MiruStreamId miruStreamId = new MiruStreamId(new Id(12_345).toBytes());
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
         MiruInMemoryInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = new MiruInMemoryInboxIndex<>(bitmaps);
 
-        File mapDir = Files.createTempDirectory("map").toFile();
-        File swapDir = Files.createTempDirectory("swap").toFile();
-        Path chunksDir = Files.createTempDirectory("chunks");
-        File chunks = new File(chunksDir.toFile(), "chunks.data");
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4_096, false);
+        String[] mapDirs = new String[] {
+            Files.createTempDirectory("map").toFile().getAbsolutePath(),
+            Files.createTempDirectory("map").toFile().getAbsolutePath()
+        };
+        String[] swapDirs = new String[] {
+            Files.createTempDirectory("swap").toFile().getAbsolutePath(),
+            Files.createTempDirectory("swap").toFile().getAbsolutePath()
+        };
+        String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "chunk", 4_096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
-        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDir, swapDir, multiChunkStore);
+        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore);
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 
-        return new Object[][]{
-            {miruInMemoryInboxIndex, miruStreamId},
-            {miruOnDiskInboxIndex, miruStreamId}
+        return new Object[][] {
+            { miruInMemoryInboxIndex, miruStreamId },
+            { miruOnDiskInboxIndex, miruStreamId }
         };
     }
 
@@ -139,7 +143,7 @@ public class MiruInboxIndexTest {
 
         // Create in-memory inbox index
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruInMemoryInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = new MiruInMemoryInboxIndex<>(bitmaps);
 
         ConcurrentMap<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>> index = new ConcurrentHashMap<>();
@@ -163,18 +167,23 @@ public class MiruInboxIndexTest {
         });
 
         // Copy to on disk index
-        File mapDir = Files.createTempDirectory("map").toFile();
-        File swapDir = Files.createTempDirectory("swap").toFile();
-        Path chunksDir = Files.createTempDirectory("chunks");
-        File chunks = new File(chunksDir.toFile(), "chunks.data");
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunks.getAbsolutePath(), 4_096, false);
+        String[] mapDirs = new String[] {
+            Files.createTempDirectory("map").toFile().getAbsolutePath(),
+            Files.createTempDirectory("map").toFile().getAbsolutePath()
+        };
+        String[] swapDirs = new String[] {
+            Files.createTempDirectory("swap").toFile().getAbsolutePath(),
+            Files.createTempDirectory("swap").toFile().getAbsolutePath()
+        };
+        String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "chunk", 4_096, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
-        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDir, swapDir, multiChunkStore);
+        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore);
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 
-        return new Object[][]{
-            {miruInMemoryInboxIndex, streamId, ImmutableList.of(1, 2, 3)},
-            {miruOnDiskInboxIndex, streamId, ImmutableList.of(1, 2, 3)}
+        return new Object[][] {
+            { miruInMemoryInboxIndex, streamId, ImmutableList.of(1, 2, 3) },
+            { miruOnDiskInboxIndex, streamId, ImmutableList.of(1, 2, 3) }
         };
     }
 }

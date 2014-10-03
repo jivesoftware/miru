@@ -8,29 +8,26 @@ import java.util.List;
  */
 public class MiruDiskResourceAnalyzer {
 
-    public boolean checkExists(File partitionPath, List<String> filerNames, List<String> mapNames, List<String> chunkNames) {
-        File mapPath = new File(partitionPath, "maps");
-        if (!mapPath.exists()) {
-            return false;
+    public boolean checkExists(File[] partitionPaths, List<String> filerNames, List<String> mapNames) {
+        for (File partitionPath : partitionPaths) {
+            File mapPath = new File(partitionPath, "maps");
+            if (!mapPath.exists() || !mapPath.isDirectory()) {
+                return false;
+            }
+
+            for (String mapName : mapNames) {
+                File mapDirectory = new File(mapPath, mapName);
+                if (!mapDirectory.exists() || !mapDirectory.isDirectory()) {
+                    return false;
+                }
+            }
         }
 
         for (String filerName : filerNames) {
+            //TODO leaky
+            File partitionPath = partitionPaths[Math.abs(filerName.hashCode()) % partitionPaths.length];
             File filer = new File(partitionPath, filerName + ".filer");
             if (!filer.exists()) {
-                return false;
-            }
-        }
-
-        for (String mapName : mapNames) {
-            File mapDirectory = new File(mapPath, mapName);
-            if (!mapDirectory.exists()) {
-                return false;
-            }
-        }
-
-        for (String chunkName : chunkNames) {
-            File chunk = new File(partitionPath, chunkName + ".chunk");
-            if (!chunk.exists()) {
                 return false;
             }
         }

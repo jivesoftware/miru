@@ -6,7 +6,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.jive.utils.io.Filer;
@@ -58,7 +57,6 @@ import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -71,7 +69,7 @@ public class MiruContextFactory {
 
     private static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final String DISK_FORMAT_VERSION = "version-3";
+    private static final String DISK_FORMAT_VERSION = "version-4";
 
     private final MiruSchemaProvider schemaProvider;
     private final ExecutorService executorService;
@@ -83,7 +81,7 @@ public class MiruContextFactory {
 
     private final MiruActivityInternExtern activityInternExtern;
 
-    private final int numberOfChunkStores = 16; // TODO expose to config;
+    private final int numberOfChunkStores = 24; // TODO expose to config;
     private final int partitionAuthzCacheSize;
     private final MiruBackingStorage defaultStorage;
 
@@ -196,17 +194,16 @@ public class MiruContextFactory {
         MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent());
         exportHandles.put("timeIndex", timeIndex);
 
-        ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
-        for (int i = 0; i < chunkStores.length; i++) {
-            File chunkFile = hybridResourceLocator.getChunkFile(identifier, "activity-" + i);
-            chunkStores[i] = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), hybridResourceLocator.getInitialChunkSize(), true);
-        }
-
-        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStores);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(
+            filesToPaths(hybridResourceLocator.getChunkDirectories(identifier, "chunk")),
+            "activity",
+            numberOfChunkStores,
+            hybridResourceLocator.getInitialChunkSize(),
+            true);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
-            hybridResourceLocator.getMapDirectory(identifier, "activity"),
-            hybridResourceLocator.getSwapDirectory(identifier, "activity"),
+            filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "activity")),
+            filesToPaths(hybridResourceLocator.getSwapDirectories(identifier, "activity")),
             multiChunkStore,
             new MiruInternalActivityMarshaller(),
             Optional.<Filer>absent());
@@ -220,7 +217,7 @@ public class MiruContextFactory {
             fields[fieldId] = new MiruHybridField<>(
                 schema.getFieldDefinition(fieldId),
                 index,
-                hybridResourceLocator.getMapDirectory(identifier, "field" + fieldId));
+                filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "field" + fieldId)));
             exportHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -274,24 +271,23 @@ public class MiruContextFactory {
         File memMap = diskResourceLocator.getFilerFile(identifier, "memMap");
         memMap.createNewFile();
 
-        ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
-        for (int i = 0; i < chunkStores.length; i++) {
-            File chunkFile = diskResourceLocator.getChunkFile(identifier, "stream-" + i);
-            chunkStores[i] = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), diskResourceLocator.getInitialChunkSize(), true);
-        }
-
-        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStores);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(
+            filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk")),
+            "stream",
+            numberOfChunkStores,
+            diskResourceLocator.getInitialChunkSize(),
+            true);
 
         Map<String, BulkImport<?>> importHandles = Maps.newHashMap();
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
             new MemMappedFilerProvider(identifier, "timeIndex"),
-            diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "timestampToIndex")));
         importHandles.put("timeIndex", timeIndex);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
-            diskResourceLocator.getMapDirectory(identifier, "activity"),
-            diskResourceLocator.getSwapDirectory(identifier, "activity"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "activity")),
+                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "activity")),
             multiChunkStore,
             new MiruInternalActivityMarshaller(),
             Optional.<Filer>of(diskResourceLocator.getByteBufferBackedFiler(identifier, "activity", 4)));
@@ -299,8 +295,8 @@ public class MiruContextFactory {
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
-            diskResourceLocator.getMapDirectory(identifier, "index"),
-            diskResourceLocator.getSwapDirectory(identifier, "index"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
+                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
             multiChunkStore);
         importHandles.put("index", index);
 
@@ -309,7 +305,7 @@ public class MiruContextFactory {
             fields[fieldId] = new MiruOnDiskField<>(
                 schema.getFieldDefinition(fieldId),
                 index,
-                diskResourceLocator.getMapDirectory(identifier, "field-" + fieldId));
+                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "field-" + fieldId)));
             importHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -322,8 +318,8 @@ public class MiruContextFactory {
             .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
             .build();
         MiruOnDiskAuthzIndex<BM> authzIndex = new MiruOnDiskAuthzIndex<>(bitmaps,
-            diskResourceLocator.getMapDirectory(identifier, "authz"),
-            diskResourceLocator.getSwapDirectory(identifier, "authz"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "authz")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "authz")),
             multiChunkStore,
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         importHandles.put("authzIndex", authzIndex);
@@ -333,14 +329,14 @@ public class MiruContextFactory {
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
-            diskResourceLocator.getMapDirectory(identifier, "unread"),
-            diskResourceLocator.getSwapDirectory(identifier, "unread"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "unread")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "unread")),
             multiChunkStore);
         importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
-            diskResourceLocator.getMapDirectory(identifier, "inbox"),
-            diskResourceLocator.getSwapDirectory(identifier, "inbox"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "inbox")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "inbox")),
             multiChunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
@@ -372,30 +368,29 @@ public class MiruContextFactory {
         File onDisk = diskResourceLocator.getFilerFile(identifier, "onDisk");
         onDisk.createNewFile();
 
-        ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
-        for (int i = 0; i < chunkStores.length; i++) {
-            File chunkFile = diskResourceLocator.getChunkFile(identifier, "stream-" + i);
-            chunkStores[i] = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), diskResourceLocator.getInitialChunkSize(), true);
-        }
-
-        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStores);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(
+            filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk")),
+            "stream",
+            numberOfChunkStores,
+            diskResourceLocator.getInitialChunkSize(),
+            true);
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
             new OnDiskFilerProvider(identifier, "timeIndex"),
-            diskResourceLocator.getMapDirectory(identifier, "timestampToIndex"));
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "timestampToIndex")));
         importHandles.put("timeIndex", timeIndex);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
-            diskResourceLocator.getMapDirectory(identifier, "activity"),
-            diskResourceLocator.getSwapDirectory(identifier, "activity"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "activity")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "activity")),
             multiChunkStore,
             new MiruInternalActivityMarshaller(),
             Optional.<Filer>of(diskResourceLocator.getRandomAccessFiler(identifier, "activity", "rw")));
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
-            diskResourceLocator.getMapDirectory(identifier, "index"),
-            diskResourceLocator.getSwapDirectory(identifier, "index"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
             multiChunkStore);
         importHandles.put("index", index);
 
@@ -403,7 +398,7 @@ public class MiruContextFactory {
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(schema.getFieldDefinition(fieldId),
                 index,
-                diskResourceLocator.getMapDirectory(identifier, "field-" + fieldId));
+                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "field-" + fieldId)));
             importHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -415,8 +410,8 @@ public class MiruContextFactory {
             .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
             .build();
         MiruOnDiskAuthzIndex<BM> authzIndex = new MiruOnDiskAuthzIndex<>(bitmaps,
-            diskResourceLocator.getMapDirectory(identifier, "authz"),
-            diskResourceLocator.getSwapDirectory(identifier, "authz"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "authz")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "authz")),
             multiChunkStore,
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         importHandles.put("authzIndex", authzIndex);
@@ -426,14 +421,14 @@ public class MiruContextFactory {
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
-            diskResourceLocator.getMapDirectory(identifier, "unread"),
-            diskResourceLocator.getSwapDirectory(identifier, "unread"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "unread")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "unread")),
             multiChunkStore);
         importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
-            diskResourceLocator.getMapDirectory(identifier, "inbox"),
-            diskResourceLocator.getSwapDirectory(identifier, "inbox"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "inbox")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "inbox")),
             multiChunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
@@ -545,16 +540,17 @@ public class MiruContextFactory {
         for (int i = 0; i < schema.fieldCount(); i++) {
             mapDirectories.add("field-" + i);
         }
-        List<String> chunkNames = new ArrayList<>();
-        for (int i = 0; i < numberOfChunks; i++) {
-            chunkNames.add("stream-" + i);
+
+        MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        String[] chunkPaths = filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk"));
+        if (!new ChunkStoreInitializer().checkExists(chunkPaths, "stream", numberOfChunks)) {
+            return false;
         }
 
         return diskResourceAnalyzer.checkExists(
-            diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
+            diskResourceLocator.getPartitionPaths(identifier),
             Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "activity", "removal"),
-            mapDirectories,
-            chunkNames);
+            mapDirectories);
     }
 
     private boolean checkOnDisk(MiruSchema schema, MiruPartitionCoord coord, int numberOfChunks) throws IOException {
@@ -562,15 +558,25 @@ public class MiruContextFactory {
         for (int i = 0; i < schema.fieldCount(); i++) {
             mapDirectories.add("field-" + i);
         }
-        List<String> chunkNames = new ArrayList<>();
-        for (int i = 0; i < numberOfChunks; i++) {
-            chunkNames.add("stream-" + i);
+
+        MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        String[] chunkPaths = filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk"));
+        if (!new ChunkStoreInitializer().checkExists(chunkPaths, "stream", numberOfChunks)) {
+            return false;
         }
+
         return diskResourceAnalyzer.checkExists(
-            diskResourceLocator.getPartitionPath(new MiruPartitionCoordIdentifier(coord)),
+            diskResourceLocator.getPartitionPaths(identifier),
             Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "activity", "removal"),
-            mapDirectories,
-            chunkNames);
+            mapDirectories);
+    }
+
+    private String[] filesToPaths(File[] files) {
+        String[] paths = new String[files.length];
+        for (int i = 0; i < paths.length; i++) {
+            paths[i] = files[i].getAbsolutePath();
+        }
+        return paths;
     }
 
     private class MemMappedFilerProvider implements MiruFilerProvider {

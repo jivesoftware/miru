@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.jive.utils.chunk.store.ChunkStore;
 import com.jivesoftware.os.jive.utils.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -17,7 +16,6 @@ import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskField;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryField;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryIndex;
-import java.io.File;
 import java.nio.file.Files;
 import java.util.List;
 import org.testng.annotations.DataProvider;
@@ -68,18 +66,29 @@ public class MiruFieldTest {
             miruInMemoryField.index(new MiruTermId(new byte[] { (byte) id }), id);
         }
 
-        File indexMapDirectory = Files.createTempDirectory(getClass().getSimpleName()).toFile();
-        File indexSwapDirectory = Files.createTempDirectory(getClass().getSimpleName()).toFile();
-        File chunkDirectory = Files.createTempDirectory(getClass().getSimpleName()).toFile();
-        File chunkFile = new File(chunkDirectory, "chunk");
-        File fieldMapDirectory = Files.createTempDirectory(getClass().getSimpleName()).toFile();
+        String[] indexMapDirectories = new String[] {
+            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath(),
+            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath()
+        };
+        String[] indexSwapDirectories = new String[] {
+            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath(),
+            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath()
+        };
+        String[] chunkDirectories = new String[] {
+            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath(),
+            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath()
+        };
+        String[] fieldMapDirectories = new String[] {
+            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath(),
+            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath()
+        };
 
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunkFile.getAbsolutePath(), 5_120, false); // 512 min size, times 10 field indexes
-        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        // 512 min size, times 10 field indexes
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(chunkDirectories, "data", 4, 5_120, false);
         MiruOnDiskField<EWAHCompressedBitmap> miruOnDiskField = new MiruOnDiskField<>(
                 fieldDefinition,
-                new MiruOnDiskIndex<>(new MiruBitmapsEWAH(2), indexMapDirectory, indexSwapDirectory, multiChunkStore),
-                fieldMapDirectory);
+                new MiruOnDiskIndex<>(new MiruBitmapsEWAH(2), indexMapDirectories, indexSwapDirectories, multiChunkStore),
+                fieldMapDirectories);
         // need to export/import both the field and its index (a little strange)
         miruOnDiskField.bulkImport(tenantId, miruInMemoryField);
         miruOnDiskField.getIndex().bulkImport(tenantId, miruInMemoryField.getIndex());

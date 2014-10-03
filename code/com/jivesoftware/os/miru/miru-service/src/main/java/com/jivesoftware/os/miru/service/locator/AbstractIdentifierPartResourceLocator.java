@@ -8,6 +8,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import org.apache.commons.io.FileUtils;
 
 /**
@@ -17,17 +18,22 @@ public abstract class AbstractIdentifierPartResourceLocator implements MiruResou
 
     protected static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    protected final File basePath;
+    protected final File[] basePaths;
     protected final long initialChunkSize;
 
-    public AbstractIdentifierPartResourceLocator(File basePath, long initialChunkSize) {
-        this.basePath = basePath;
+    public AbstractIdentifierPartResourceLocator(File[] basePaths, long initialChunkSize) {
+        this.basePaths = basePaths;
         this.initialChunkSize = initialChunkSize;
+    }
+
+    private File getPartitionPathByName(MiruResourcePartitionIdentifier identifier, String name) {
+        File[] partitionPaths = ensurePartitionPaths(identifier);
+        return partitionPaths[Math.abs(name.hashCode()) % partitionPaths.length];
     }
 
     @Override
     public File getFilerFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return new File(ensurePartitionPath(identifier), name + ".filer");
+        return new File(getPartitionPathByName(identifier, name), name + ".filer");
     }
 
     @Override
@@ -48,18 +54,18 @@ public abstract class AbstractIdentifierPartResourceLocator implements MiruResou
     }
 
     @Override
-    public File getMapDirectory(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return ensureDirectory(new File(getMapPath(identifier), name));
+    public File[] getMapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
+        return ensureDirectories(makeSubDirectories(getMapPaths(identifier), name));
     }
 
     @Override
-    public File getSwapDirectory(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return ensureDirectory(new File(getSwapPath(identifier), name));
+    public File[] getSwapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
+        return ensureDirectories(makeSubDirectories(getSwapPaths(identifier), name));
     }
 
     @Override
-    public File getChunkFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return new File(ensurePartitionPath(identifier), name + ".chunk");
+    public File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name) {
+        return makeSubDirectories(ensurePartitionPaths(identifier), name);
     }
 
     @Override
@@ -69,44 +75,56 @@ public abstract class AbstractIdentifierPartResourceLocator implements MiruResou
 
     @Override
     public void clean(MiruResourcePartitionIdentifier identifier) throws IOException {
-        FileUtil.remove(ensurePartitionPath(identifier));
+        for (File partitionPath : ensurePartitionPaths(identifier)) {
+            FileUtil.remove(partitionPath);
+        }
     }
 
     @Override
-    public File getPartitionPath(MiruResourcePartitionIdentifier identifier) {
-        File path = basePath;
+    public File[] getPartitionPaths(MiruResourcePartitionIdentifier identifier) {
+        File[] paths = Arrays.copyOf(basePaths, basePaths.length);
         for (String part : identifier.getParts()) {
-            path = new File(path, part);
+            paths = makeSubDirectories(paths, part);
         }
-        return path;
+        return paths;
     }
 
-    private File ensurePartitionPath(MiruResourcePartitionIdentifier identifier) {
-        File path = basePath;
+    private File[] ensurePartitionPaths(MiruResourcePartitionIdentifier identifier) {
+        File[] paths = Arrays.copyOf(basePaths, basePaths.length);
         for (String part : identifier.getParts()) {
-            path = ensureDirectory(new File(path, part));
+            paths = ensureDirectories(makeSubDirectories(paths, part));
         }
-        return path;
+        return paths;
     }
 
-    private File getMapPath(MiruResourcePartitionIdentifier identifier) {
-        File partitionPath = ensurePartitionPath(identifier);
-        return ensureDirectory(new File(partitionPath, "maps"));
+    private File[] getMapPaths(MiruResourcePartitionIdentifier identifier) {
+        File[] partitionPaths = ensurePartitionPaths(identifier);
+        return ensureDirectories(makeSubDirectories(partitionPaths, "maps"));
     }
 
-    private File getSwapPath(MiruResourcePartitionIdentifier identifier) {
-        File partitionPath = ensurePartitionPath(identifier);
-        return ensureDirectory(new File(partitionPath, "swaps"));
+    private File[] getSwapPaths(MiruResourcePartitionIdentifier identifier) {
+        File[] partitionPaths = ensurePartitionPaths(identifier);
+        return ensureDirectories(makeSubDirectories(partitionPaths, "swaps"));
     }
 
-    private File ensureDirectory(File file) {
-        try {
-            FileUtils.forceMkdir(file);
-        } catch (IOException x) {
-            log.error("Path should be a directory: {} exists:{} isDirectory:{} canRead:{} canWrite:{} canExecute:{}", new Object[] {
-                file.getAbsolutePath(), file.exists(), file.isDirectory(), file.canRead(), file.canWrite(), file.canExecute() });
-            throw new IllegalStateException("Failed to ensure directory", x);
+    private File[] makeSubDirectories(File[] baseDirectories, String subName) {
+        File[] subDirectories = new File[baseDirectories.length];
+        for (int i = 0; i < subDirectories.length; i++) {
+            subDirectories[i] = new File(baseDirectories[i], subName);
         }
-        return file;
+        return subDirectories;
+    }
+
+    private File[] ensureDirectories(File[] files) {
+        for (File file : files) {
+            try {
+                FileUtils.forceMkdir(file);
+            } catch (IOException x) {
+                log.error("Path should be a directory: {} exists:{} isDirectory:{} canRead:{} canWrite:{} canExecute:{}",
+                    file.getAbsolutePath(), file.exists(), file.isDirectory(), file.canRead(), file.canWrite(), file.canExecute());
+                throw new IllegalStateException("Failed to ensure directory", x);
+            }
+        }
+        return files;
     }
 }

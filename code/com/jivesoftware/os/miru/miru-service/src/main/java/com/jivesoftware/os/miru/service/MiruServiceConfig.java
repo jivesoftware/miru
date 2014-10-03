@@ -18,10 +18,10 @@ public interface MiruServiceConfig extends Config {
     String getPluginPackages();
 
     @StringDefault("var/lib/miru/data")
-    String getDiskResourceLocatorPath();
+    String getDiskResourceLocatorPaths();
 
     @StringDefault("var/lib/miru/transient")
-    String getTransientResourceLocatorPath();
+    String getTransientResourceLocatorPaths();
 
     @LongDefault(33_554_432) // 32 MB
     long getDiskResourceInitialChunkSize();

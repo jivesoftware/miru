@@ -13,29 +13,31 @@ public class MiruHybridResourceCleaner {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final File basePath;
+    private final File[] basePaths;
     private final Set<String> acquired = Sets.newHashSet();
 
-    public MiruHybridResourceCleaner(final File basePath) {
-        this.basePath = basePath;
+    public MiruHybridResourceCleaner(final File[] basePaths) {
+        this.basePaths = basePaths;
     }
 
     public void clean() {
-        try {
-            Set<File> removalSet = Sets.newHashSet();
-            synchronized (acquired) {
-                for (File file : basePath.listFiles()) {
-                    if (!acquired.contains(file.getName())) {
-                        removalSet.add(file);
+        for (File basePath : basePaths) {
+            try {
+                Set<File> removalSet = Sets.newHashSet();
+                synchronized (acquired) {
+                    for (File file : basePath.listFiles()) {
+                        if (!acquired.contains(file.getName())) {
+                            removalSet.add(file);
+                        }
                     }
                 }
+                for (File remove : removalSet) {
+                    log.info("Cleaning directory " + remove.getAbsolutePath());
+                    FileUtil.remove(remove);
+                }
+            } catch (Throwable t) {
+                log.error("Cleanup thread encountered a problem", t);
             }
-            for (File remove : removalSet) {
-                log.info("Cleaning directory " + remove.getAbsolutePath());
-                FileUtil.remove(remove);
-            }
-        } catch (Throwable t) {
-            log.error("Cleanup thread encountered a problem", t);
         }
     }
 
