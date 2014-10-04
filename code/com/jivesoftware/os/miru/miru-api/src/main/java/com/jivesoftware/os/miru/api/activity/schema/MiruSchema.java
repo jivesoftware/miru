@@ -21,9 +21,10 @@ public class MiruSchema {
     private final Map<String, Integer> propNameToId;
     private final MiruFieldDefinition[] fieldDefinitions;
     private final MiruPropertyDefinition[] propertyDefinitions;
+    private final List<MiruFieldDefinition>[] fieldAggregateFieldDefinitions;
+    private final List<MiruFieldDefinition>[] fieldBloominFieldDefinitions;
 
     private ImmutableList<Integer> fieldIds; // lazy initialized
-    private List<MiruFieldDefinition>[] fieldAggregateFieldDefinitions;
 
     public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
         this(fieldDefinitions, new MiruPropertyDefinition[0]);
@@ -47,6 +48,7 @@ public class MiruSchema {
         }
 
         this.fieldAggregateFieldDefinitions = new List[fieldDefinitions.length];
+        this.fieldBloominFieldDefinitions = new List[fieldDefinitions.length];
     }
 
     public MiruFieldDefinition[] getFieldDefinitions() {
@@ -123,5 +125,23 @@ public class MiruSchema {
             fieldAggregateFieldDefinitions[fieldId] = aggregateFieldDefinitions;
         }
         return aggregateFieldDefinitions;
+    }
+
+    @JsonIgnore
+    public List<MiruFieldDefinition> getBloominFieldDefinitions(int fieldId) {
+        List<MiruFieldDefinition> bloomFieldDefinitions = fieldBloominFieldDefinitions[fieldId];
+        if (bloomFieldDefinitions == null) {
+            bloomFieldDefinitions = Lists.newArrayList();
+            List<String> bloomFieldNames = fieldDefinitions[fieldId].bloomFieldNames;
+            Lists.newArrayListWithCapacity(bloomFieldNames.size());
+            for (String bloomFieldName : bloomFieldNames) {
+                int bloomFieldId = getFieldId(bloomFieldName);
+                if (bloomFieldId >= 0) {
+                    bloomFieldDefinitions.add(fieldDefinitions[bloomFieldId]);
+                }
+            }
+            fieldBloominFieldDefinitions[fieldId] = bloomFieldDefinitions;
+        }
+        return bloomFieldDefinitions;
     }
 }
