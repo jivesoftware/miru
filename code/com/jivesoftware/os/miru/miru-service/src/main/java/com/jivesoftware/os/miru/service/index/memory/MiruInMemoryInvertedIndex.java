@@ -38,6 +38,15 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
         return read.get();
     }
 
+    @Override
+    public BM getIndexUnsafe() throws Exception {
+        BM index = write.get();
+        if (index == null) {
+            index = read.get();
+        }
+        return index;
+    }
+
     private void markForMerge() {
         needsMerge = true;
     }

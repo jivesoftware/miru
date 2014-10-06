@@ -513,7 +513,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             });
 
             List<MiruPartitionedActivity> partitionedActivities = new ArrayList<>(partitionRebuildBatchSize);
-            while (streaming.get()) {
+            while (streaming.get() || !queue.isEmpty()) {
                 int drained = queue.drainTo(partitionedActivities, partitionRebuildBatchSize);
                 if (drained > 0) {
                     for (int i = drained - 1; i > -1; i--) {

@@ -45,6 +45,11 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
     }
 
     @Override
+    public BM getIndexUnsafe() throws Exception {
+        return getIndex();
+    }
+
+    @Override
     public void append(int id) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();

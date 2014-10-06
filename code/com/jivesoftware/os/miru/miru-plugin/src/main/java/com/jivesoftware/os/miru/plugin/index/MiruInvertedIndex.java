@@ -6,7 +6,23 @@ package com.jivesoftware.os.miru.plugin.index;
  */
 public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
 
+    /**
+     * Gets the raw index in a safe manner. The returned index is guaranteed to be free of concurrent writes,
+     * so this method is safe to use even if the calling thread does not hold the context's write lock.
+     *
+     * @return the raw unsafe index
+     * @throws Exception
+     */
     BM getIndex() throws Exception;
+
+    /**
+     * Gets the raw index in an unsafe manner. The returned index is not guaranteed to be free of concurrent writes,
+     * so this method should only be used if the calling thread holds the context's write lock.
+     *
+     * @return the raw unsafe index
+     * @throws Exception
+     */
+    BM getIndexUnsafe() throws Exception;
 
     void remove(int id) throws Exception;
 

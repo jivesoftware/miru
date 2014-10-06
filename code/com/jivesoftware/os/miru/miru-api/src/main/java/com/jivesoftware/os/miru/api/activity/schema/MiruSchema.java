@@ -25,6 +25,9 @@ public class MiruSchema {
     private final List<MiruFieldDefinition>[] fieldBloominFieldDefinitions;
 
     private ImmutableList<Integer> fieldIds; // lazy initialized
+    private ImmutableList<MiruFieldDefinition> writeTimeAggregateFields; // lazy initialized
+    private ImmutableList<MiruFieldDefinition> fieldsWithAggregates; // lazy initialized
+    private ImmutableList<MiruFieldDefinition> fieldsWithBlooms; // lazy initialized
 
     public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
         this(fieldDefinitions, new MiruPropertyDefinition[0]);
@@ -107,6 +110,48 @@ public class MiruSchema {
             fieldIds = builder.build();
         }
         return fieldIds;
+    }
+
+    @JsonIgnore
+    public ImmutableList<MiruFieldDefinition> getWriteTimeAggregateFields() {
+        if (writeTimeAggregateFields == null) {
+            ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
+            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+                if (fieldDefinition.writeTimeAggregate) {
+                    builder.add(fieldDefinition);
+                }
+            }
+            writeTimeAggregateFields = builder.build();
+        }
+        return writeTimeAggregateFields;
+    }
+
+    @JsonIgnore
+    public ImmutableList<MiruFieldDefinition> getFieldsWithAggregates() {
+        if (fieldsWithAggregates == null) {
+            ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
+            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+                if (!fieldDefinition.aggregateFieldNames.isEmpty()) {
+                    builder.add(fieldDefinition);
+                }
+            }
+            fieldsWithAggregates = builder.build();
+        }
+        return fieldsWithAggregates;
+    }
+
+    @JsonIgnore
+    public ImmutableList<MiruFieldDefinition> getFieldsWithBlooms() {
+        if (fieldsWithBlooms == null) {
+            ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
+            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+                if (!fieldDefinition.bloomFieldNames.isEmpty()) {
+                    builder.add(fieldDefinition);
+                }
+            }
+            fieldsWithBlooms = builder.build();
+        }
+        return fieldsWithBlooms;
     }
 
     @JsonIgnore
