@@ -2,8 +2,6 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -66,7 +64,7 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
             ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
         }
 
-        // 3) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
+        // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
         // AND it all together and return the results

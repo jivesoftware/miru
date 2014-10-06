@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -32,8 +33,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Handles indexing of activity, including repair and removal, with synchronization and attention to versioning.
@@ -115,9 +114,9 @@ public class MiruIndexContext<BM> {
             }
         }));
 
+        otherFutures.addAll(indexAggregateFields(internalActivityAndIds));
         otherFutures.addAll(indexBloomins(internalActivityAndIds));
         otherFutures.addAll(indexWriteTimeAggregates(internalActivityAndIds));
-        otherFutures.addAll(indexAggregateFields(internalActivityAndIds));
         awaitFutures(otherFutures, "IndexOthers");
 
         List<Future<?>> activityFutures = new ArrayList<>(numPartitions);
@@ -271,35 +270,12 @@ public class MiruIndexContext<BM> {
     }
 
     private List<Future<?>> indexBloomins(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
-        int bloomWorkCount = 0;
+        int callableCount = 0;
         List<MiruFieldDefinition> fieldsWithBlooms = schema.getFieldsWithBlooms();
-        //TODO expose to config
-        int numberOfCallables = 24;
-        List<Future<?>> futures = Lists.newArrayListWithCapacity(numberOfCallables);
+        List<Future<?>> futures = Lists.newArrayListWithCapacity(internalActivityAndIds.size() * fieldsWithBlooms.size());
         Random random = new Random();
-        final AtomicBoolean fullyQueued = new AtomicBoolean(false);
-        final PriorityBlockingQueue<RandomOrderWork<BloomWork>> queue = new PriorityBlockingQueue<>(internalActivityAndIds.size() * 2);
-        for (int i = 0; i < numberOfCallables; i++) {
-            futures.add(indexExecutor.submit(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    int workBatchSize = 100; //TODO expose to config
-                    List<RandomOrderWork<BloomWork>> workList = Lists.newArrayListWithCapacity(workBatchSize);
-                    while (!fullyQueued.get() || !queue.isEmpty()) {
-                        int drained = queue.drainTo(workList, workBatchSize);
-                        if (drained > 0) {
-                            for (RandomOrderWork<BloomWork> work : workList) {
-                                MiruField<BM> miruField = fieldIndex.getField(work.payload.fieldId);
-                                MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(work.payload.compositeBloomId);
-                                bloomIndex.put(invertedIndex, work.payload.bloomFieldValues);
-                            }
-                            workList.clear();
-                        }
-                    }
-                    return null;
-                }
-            }));
-        }
+        int batchSize = 100; // small initial batch size to quickly deliver work, to be doubled on each delivery
+        List<Callable<?>> batch = Lists.newArrayListWithCapacity(internalActivityAndIds.size()); // oversized for simplification
         for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
             MiruInternalActivity activity = internalActivityAndId.activity;
             for (final MiruFieldDefinition fieldDefinition : fieldsWithBlooms) {
@@ -310,17 +286,39 @@ public class MiruIndexContext<BM> {
                         final MiruTermId[] bloomFieldValues = activity.fieldsValues[bloominFieldDefinition.fieldId];
                         if (bloomFieldValues != null && bloomFieldValues.length > 0) {
                             for (final MiruTermId fieldValue : fieldValues) {
-                                MiruTermId compositeBloomId = indexUtil.makeBloomComposite(fieldValue, bloominFieldDefinition.name);
-                                queue.put(new RandomOrderWork<>(random, new BloomWork(fieldDefinition.fieldId, compositeBloomId, bloomFieldValues)));
-                                bloomWorkCount++;
+                                batch.add(new Callable<Void>() {
+                                    @Override
+                                    public Void call() throws Exception {
+                                        MiruTermId compositeBloomId = indexUtil.makeBloomComposite(fieldValue, bloominFieldDefinition.name);
+                                        MiruField<BM> miruField = fieldIndex.getField(fieldDefinition.fieldId);
+                                        MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeBloomId);
+                                        bloomIndex.put(invertedIndex, bloomFieldValues);
+                                        return null;
+                                    }
+                                });
+                                callableCount++;
+
+                                if (batch.size() == batchSize) {
+                                    Collections.shuffle(batch, random);
+                                    for (Callable<?> callable : batch) {
+                                        futures.add(indexExecutor.submit(callable));
+                                    }
+                                    batch.clear();
+                                    batchSize *= 2;
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        fullyQueued.set(true);
-        log.trace("Scheduled {} bloom work items", bloomWorkCount);
+        if (!batch.isEmpty()) {
+            Collections.shuffle(batch, random);
+            for (Callable<?> callable : batch) {
+                futures.add(indexExecutor.submit(callable));
+            }
+        }
+        log.trace("Submitted {} bloom callables", callableCount);
 
         return futures;
     }
@@ -361,37 +359,13 @@ public class MiruIndexContext<BM> {
     }
 
     private List<Future<?>> indexAggregateFields(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
-        int aggregateFieldWorkCount = 0;
+        int callableCount = 0;
         List<MiruFieldDefinition> fieldsWithAggregates = schema.getFieldsWithAggregates();
-        //TODO expose to config
-        int numberOfCallables = 24;
-        List<Future<?>> futures = Lists.newArrayListWithCapacity(numberOfCallables);
-        Random random = new Random();
-        final AtomicBoolean fullyQueued = new AtomicBoolean(false);
-        final PriorityBlockingQueue<RandomOrderWork<AggregateFieldWork<BM>>> queue = new PriorityBlockingQueue<>(internalActivityAndIds.size() * 2);
-        for (int i = 0; i < numberOfCallables; i++) {
-            futures.add(indexExecutor.submit(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    int workBatchSize = 100; //TODO expose to config
-                    List<RandomOrderWork<AggregateFieldWork<BM>>> workList = Lists.newArrayListWithCapacity(workBatchSize);
-                    while (!fullyQueued.get() || !queue.isEmpty()) {
-                        int drained = queue.drainTo(workList, workBatchSize);
-                        if (drained > 0) {
-                            for (RandomOrderWork<AggregateFieldWork<BM>> work : workList) {
-                                MiruField<BM> miruField = fieldIndex.getField(work.payload.fieldId);
-                                MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(work.payload.compositeAggregateId);
-                                invertedIndex.andNotToSourceSize(work.payload.aggregateBitmap);
-                                miruField.index(work.payload.compositeAggregateId, work.payload.id);
-                            }
-                            workList.clear();
-                        }
-                    }
-                    return null;
-                }
-            }));
-        }
+        List<Future<?>> futures = Lists.newArrayListWithCapacity(internalActivityAndIds.size() * fieldsWithAggregates.size());
         Set<WriteAggregateKey> visited = Sets.newHashSet();
+        Random random = new Random();
+        int batchSize = 100; // small initial batch size to quickly deliver work, to be doubled on each delivery
+        List<Callable<?>> batch = Lists.newArrayListWithCapacity(internalActivityAndIds.size()); // oversized for simplification
         // walk backwards so we see the largest id first, and mark visitors for each coordinate
         for (int i = internalActivityAndIds.size() - 1; i >= 0; i--) {
             final MiruActivityAndId<MiruInternalActivity> internalActivityAndId = internalActivityAndIds.get(i);
@@ -416,11 +390,28 @@ public class MiruIndexContext<BM> {
                                             aggregateInvertedIndex = aggregateField.getOrCreateInvertedIndex(aggregateFieldValue);
                                         }
 
-                                        BM aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe();
-                                        MiruTermId compositeAggregateId = indexUtil.makeFieldValueAggregate(fieldValue, aggregateFieldDefinition.name);
-                                        queue.put(new RandomOrderWork<>(random, new AggregateFieldWork<>(
-                                            internalActivityAndId.id, fieldDefinition.fieldId, compositeAggregateId, aggregateBitmap)));
-                                        aggregateFieldWorkCount++;
+                                        final BM aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe();
+                                        batch.add(new Callable<Void>() {
+                                            @Override
+                                            public Void call() throws Exception {
+                                                MiruField<BM> miruField = fieldIndex.getField(fieldDefinition.fieldId);
+                                                MiruTermId compositeAggregateId = indexUtil.makeFieldValueAggregate(fieldValue, aggregateFieldDefinition.name);
+                                                MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeAggregateId);
+                                                invertedIndex.andNotToSourceSize(aggregateBitmap);
+                                                miruField.index(compositeAggregateId, internalActivityAndId.id);
+                                                return null;
+                                            }
+                                        });
+                                        callableCount++;
+
+                                        if (batch.size() == batchSize) {
+                                            Collections.shuffle(batch, random);
+                                            for (Callable<?> callable : batch) {
+                                                futures.add(indexExecutor.submit(callable));
+                                            }
+                                            batch.clear();
+                                            batchSize *= 2;
+                                        }
                                     }
                                 }
                             }
@@ -429,18 +420,23 @@ public class MiruIndexContext<BM> {
                 }
             }
         }
-        fullyQueued.set(true);
-        log.trace("Scheduled {} aggregate field work items", aggregateFieldWorkCount);
+        if (!batch.isEmpty()) {
+            Collections.shuffle(batch, random);
+            for (Callable<?> callable : batch) {
+                futures.add(indexExecutor.submit(callable));
+            }
+        }
+        log.trace("Submitted {} aggregate field callables", callableCount);
         return futures;
     }
 
-    static class WriteAggregateKey {
-        final int fieldId;
-        final MiruTermId fieldValue;
-        final int aggregateFieldId;
-        final MiruTermId aggregateFieldValue;
+    private static class WriteAggregateKey {
+        private final int fieldId;
+        private final MiruTermId fieldValue;
+        private final int aggregateFieldId;
+        private final MiruTermId aggregateFieldValue;
 
-        WriteAggregateKey(int fieldId, MiruTermId fieldValue, int aggregateFieldId, MiruTermId aggregateFieldValue) {
+        private WriteAggregateKey(int fieldId, MiruTermId fieldValue, int aggregateFieldId, MiruTermId aggregateFieldValue) {
             this.fieldId = fieldId;
             this.fieldValue = fieldValue;
             this.aggregateFieldId = aggregateFieldId;
@@ -481,47 +477,6 @@ public class MiruIndexContext<BM> {
             result = 31 * result + aggregateFieldId;
             result = 31 * result + (aggregateFieldValue != null ? aggregateFieldValue.hashCode() : 0);
             return result;
-        }
-    }
-
-    static class RandomOrderWork<T> implements Comparable<RandomOrderWork<T>> {
-        final int order;
-        final T payload;
-
-        RandomOrderWork(Random random, T payload) {
-            this.order = random.nextInt();
-            this.payload = payload;
-        }
-
-        @Override
-        public int compareTo(RandomOrderWork<T> o) {
-            return Integer.compare(order, o.order);
-        }
-    }
-
-    static class BloomWork {
-        final int fieldId;
-        final MiruTermId compositeBloomId;
-        final MiruTermId[] bloomFieldValues;
-
-        BloomWork(int fieldId, MiruTermId compositeBloomId, MiruTermId[] bloomFieldValues) {
-            this.fieldId = fieldId;
-            this.compositeBloomId = compositeBloomId;
-            this.bloomFieldValues = bloomFieldValues;
-        }
-    }
-
-    static class AggregateFieldWork<BM> {
-        final int id;
-        final int fieldId;
-        final MiruTermId compositeAggregateId;
-        final BM aggregateBitmap;
-
-        AggregateFieldWork(int id, int fieldId, MiruTermId compositeAggregateId, BM aggregateBitmap) {
-            this.id = id;
-            this.fieldId = fieldId;
-            this.compositeAggregateId = compositeAggregateId;
-            this.aggregateBitmap = aggregateBitmap;
         }
     }
 }

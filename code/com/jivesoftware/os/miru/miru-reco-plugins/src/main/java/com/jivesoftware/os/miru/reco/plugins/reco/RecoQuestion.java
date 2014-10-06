@@ -63,7 +63,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
             ands.add(compositeAuthz);
         }
 
-        // 3) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
+        // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         BM buildIndexMask = bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex()));
         if (solutionLog.isEnabled()) {
             solutionLog.log("indexMask contains {} items.", bitmaps.cardinality(buildIndexMask));

@@ -75,7 +75,7 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
             ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
-        // 4) Mask out anything that hasn't made it into the activityIndex yet, orToSourceSize that has been removed from the index
+        // 4) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
 
         // AND it all together and return the results
