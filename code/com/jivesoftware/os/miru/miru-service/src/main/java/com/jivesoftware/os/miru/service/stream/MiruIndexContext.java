@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
@@ -30,9 +31,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Handles indexing of activity, including repair and removal, with synchronization and attention to versioning.
@@ -104,7 +107,6 @@ public class MiruIndexContext<BM> {
 
         final List<Future<?>> otherFutures = new ArrayList<>();
         otherFutures.add(indexExecutor.submit(new Callable<Void>() {
-
             @Override
             public Void call() throws Exception {
                 log.trace("Start: Authz");
@@ -113,15 +115,11 @@ public class MiruIndexContext<BM> {
                 return null;
             }
         }));
-
         otherFutures.addAll(indexAggregateFields(internalActivityAndIds));
         otherFutures.addAll(indexBloomins(internalActivityAndIds));
         otherFutures.addAll(indexWriteTimeAggregates(internalActivityAndIds));
-        awaitFutures(otherFutures, "IndexOthers");
-
-        List<Future<?>> activityFutures = new ArrayList<>(numPartitions);
         for (final List<MiruActivityAndId<MiruInternalActivity>> partition : Lists.partition(internalActivityAndIds, partitionSize)) {
-            activityFutures.add(indexExecutor.submit(new Callable<Void>() {
+            otherFutures.add(indexExecutor.submit(new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
                     activityIndex.set(partition);
@@ -129,7 +127,7 @@ public class MiruIndexContext<BM> {
                 }
             }));
         }
-        awaitFutures(activityFutures, "IndexActivity");
+        awaitFutures(otherFutures, "IndexOthers");
 
         if (!activityAndIds.isEmpty()) {
             activityIndex.ready(activityAndIds.get(activityAndIds.size() - 1).id);
@@ -272,10 +270,33 @@ public class MiruIndexContext<BM> {
     private List<Future<?>> indexBloomins(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
         int callableCount = 0;
         List<MiruFieldDefinition> fieldsWithBlooms = schema.getFieldsWithBlooms();
-        List<Future<?>> futures = Lists.newArrayListWithCapacity(internalActivityAndIds.size() * fieldsWithBlooms.size());
+
         Random random = new Random();
         int batchSize = 100; // small initial batch size to quickly deliver work, to be doubled on each delivery
         List<Callable<?>> batch = Lists.newArrayListWithCapacity(internalActivityAndIds.size()); // oversized for simplification
+
+        final AtomicBoolean fullyQueued = new AtomicBoolean(false);
+        final ConcurrentLinkedQueue<Callable<?>> queue = Queues.newConcurrentLinkedQueue();
+        int numberOfCallables = 24;
+        List<Future<?>> futures = Lists.newArrayListWithCapacity(numberOfCallables);
+        for (int i = 0; i < numberOfCallables; i++) {
+            futures.add(indexExecutor.submit(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    while (true) {
+                        Callable<?> callable = queue.poll();
+                        if (callable != null) {
+                            callable.call();
+                        } else {
+                            if (fullyQueued.get() && queue.isEmpty()) {
+                                break;
+                            }
+                        }
+                    }
+                    return null;
+                }
+            }));
+        }
         for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
             MiruInternalActivity activity = internalActivityAndId.activity;
             for (final MiruFieldDefinition fieldDefinition : fieldsWithBlooms) {
@@ -300,9 +321,7 @@ public class MiruIndexContext<BM> {
 
                                 if (batch.size() == batchSize) {
                                     Collections.shuffle(batch, random);
-                                    for (Callable<?> callable : batch) {
-                                        futures.add(indexExecutor.submit(callable));
-                                    }
+                                    queue.addAll(batch);
                                     batch.clear();
                                     batchSize *= 2;
                                 }
@@ -314,10 +333,9 @@ public class MiruIndexContext<BM> {
         }
         if (!batch.isEmpty()) {
             Collections.shuffle(batch, random);
-            for (Callable<?> callable : batch) {
-                futures.add(indexExecutor.submit(callable));
-            }
+            queue.addAll(batch);
         }
+        fullyQueued.set(true);
         log.trace("Submitted {} bloom callables", callableCount);
 
         return futures;
@@ -361,11 +379,35 @@ public class MiruIndexContext<BM> {
     private List<Future<?>> indexAggregateFields(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
         int callableCount = 0;
         List<MiruFieldDefinition> fieldsWithAggregates = schema.getFieldsWithAggregates();
-        List<Future<?>> futures = Lists.newArrayListWithCapacity(internalActivityAndIds.size() * fieldsWithAggregates.size());
-        Set<WriteAggregateKey> visited = Sets.newHashSet();
+
         Random random = new Random();
         int batchSize = 100; // small initial batch size to quickly deliver work, to be doubled on each delivery
         List<Callable<?>> batch = Lists.newArrayListWithCapacity(internalActivityAndIds.size()); // oversized for simplification
+
+        final AtomicBoolean fullyQueued = new AtomicBoolean(false);
+        final ConcurrentLinkedQueue<Callable<?>> queue = Queues.newConcurrentLinkedQueue();
+        int numberOfCallables = 24;
+        List<Future<?>> futures = Lists.newArrayListWithCapacity(numberOfCallables);
+        for (int i = 0; i < numberOfCallables; i++) {
+            futures.add(indexExecutor.submit(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    while (true) {
+                        Callable<?> callable = queue.poll();
+                        if (callable != null) {
+                            callable.call();
+                        } else {
+                            if (fullyQueued.get() && queue.isEmpty()) {
+                                break;
+                            }
+                        }
+                    }
+                    return null;
+                }
+            }));
+        }
+
+        Set<WriteAggregateKey> visited = Sets.newHashSet();
         // walk backwards so we see the largest id first, and mark visitors for each coordinate
         for (int i = internalActivityAndIds.size() - 1; i >= 0; i--) {
             final MiruActivityAndId<MiruInternalActivity> internalActivityAndId = internalActivityAndIds.get(i);
@@ -406,9 +448,7 @@ public class MiruIndexContext<BM> {
 
                                         if (batch.size() == batchSize) {
                                             Collections.shuffle(batch, random);
-                                            for (Callable<?> callable : batch) {
-                                                futures.add(indexExecutor.submit(callable));
-                                            }
+                                            queue.addAll(batch);
                                             batch.clear();
                                             batchSize *= 2;
                                         }
@@ -422,11 +462,11 @@ public class MiruIndexContext<BM> {
         }
         if (!batch.isEmpty()) {
             Collections.shuffle(batch, random);
-            for (Callable<?> callable : batch) {
-                futures.add(indexExecutor.submit(callable));
-            }
+            queue.addAll(batch);
         }
+        fullyQueued.set(true);
         log.trace("Submitted {} aggregate field callables", callableCount);
+
         return futures;
     }
 
