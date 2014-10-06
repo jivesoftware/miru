@@ -294,8 +294,6 @@ public class MiruIndexContext<BM> {
                                 bloomIndex.put(invertedIndex, work.payload.bloomFieldValues);
                             }
                             workList.clear();
-                        } else {
-                            Thread.yield();
                         }
                     }
                     return null;
@@ -387,8 +385,6 @@ public class MiruIndexContext<BM> {
                                 miruField.index(work.payload.compositeAggregateId, work.payload.id);
                             }
                             workList.clear();
-                        } else {
-                            Thread.yield();
                         }
                     }
                     return null;
