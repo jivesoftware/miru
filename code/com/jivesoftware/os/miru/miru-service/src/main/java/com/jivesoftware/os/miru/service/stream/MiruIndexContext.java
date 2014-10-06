@@ -293,6 +293,7 @@ public class MiruIndexContext<BM> {
                                 MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(work.payload.compositeBloomId);
                                 bloomIndex.put(invertedIndex, work.payload.bloomFieldValues);
                             }
+                            workList.clear();
                         } else {
                             Thread.yield();
                         }
@@ -385,6 +386,7 @@ public class MiruIndexContext<BM> {
                                 invertedIndex.andNotToSourceSize(work.payload.aggregateBitmap);
                                 miruField.index(work.payload.compositeAggregateId, work.payload.id);
                             }
+                            workList.clear();
                         } else {
                             Thread.yield();
                         }
