@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.84</version>
+        <version>0.85-SNAPSHOT</version>
         <relativePath>../global-build-management/pom.xml</relativePath>
     </parent>
     <artifactId>shared-lib-version-management</artifactId>
