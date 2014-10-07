@@ -50,15 +50,17 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
     }
 
     @Override
-    public void append(int id) throws Exception {
+    public void append(int... ids) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
             BM index = getIndex();
-            if (!bitmaps.set(index, id)) {
-                throw new RuntimeException("id must be in increasing order"
-                    + ", id = " + id
-                    + ", cardinality = " + bitmaps.cardinality(index)
-                    + ", size in bits = " + bitmaps.sizeInBits(index));
+            for (int id : ids) {
+                if (!bitmaps.set(index, id)) {
+                    throw new RuntimeException("id must be in increasing order"
+                        + ", id = " + id
+                        + ", cardinality = " + bitmaps.cardinality(index)
+                        + ", size in bits = " + bitmaps.sizeInBits(index));
+                }
             }
             setIndex(index);
         }

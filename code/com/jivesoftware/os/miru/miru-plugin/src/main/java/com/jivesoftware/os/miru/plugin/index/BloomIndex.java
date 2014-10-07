@@ -51,12 +51,12 @@ public class BloomIndex<BM> {
         this.bitmaps = bitmaps;
         this.hashFunction = hashFunction;
 
-        long disiredBits = optimalNumOfBits(expectedInsertions, falsePositiveProbability);
-        if (disiredBits > Integer.MAX_VALUE) {
+        long desiredBits = optimalNumOfBits(expectedInsertions, falsePositiveProbability);
+        if (desiredBits > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("expectedInsertions=" + expectedInsertions + " falsePositiveProbability=" + falsePositiveProbability
                     + " exceeds the capacity of an ewah.");
         }
-        this.numBits = (int) disiredBits;
+        this.numBits = (int) desiredBits;
         this.numHashFunctions = optimalNumOfHashFunctions(expectedInsertions, this.numBits);
     }
 
@@ -71,11 +71,11 @@ public class BloomIndex<BM> {
         return Math.max(1, (int) Math.round(m / n * Math.log(2)));
     }
 
-    public void put(MiruInvertedIndex<BM> bloomIndex, MiruTermId[] keys) throws Exception {
+    public void put(MiruInvertedIndex<BM> bloomIndex, List<MiruTermId> keys) throws Exception {
 
-        int[] bitIndexes = new int[keys.length * numHashFunctions];
-        for (int i = 0; i < keys.length; i++) {
-            MiruTermId key = keys[i];
+        int[] bitIndexes = new int[keys.size() * numHashFunctions];
+        for (int i = 0; i < keys.size(); i++) {
+            MiruTermId key = keys.get(i);
             createBitIndexesForValue(key.getBytes(), numHashFunctions, bitIndexes, i * numHashFunctions);
         }
         bloomIndex.setIntermediate(bitIndexes);

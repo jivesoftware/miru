@@ -43,8 +43,8 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
     }
 
     @Override
-    public void index(int fieldId, int termId, int id) throws Exception {
-        getOrAllocate(fieldId, termId).append(id);
+    public void index(int fieldId, int termId, int... ids) throws Exception {
+        getOrAllocate(fieldId, termId).append(ids);
     }
 
     @Override

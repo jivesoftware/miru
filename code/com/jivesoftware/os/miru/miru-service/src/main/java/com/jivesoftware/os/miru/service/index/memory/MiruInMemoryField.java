@@ -70,10 +70,10 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator
     }
 
     @Override
-    public void index(MiruTermId term, int id) throws Exception {
+    public void index(MiruTermId term, int... ids) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
-        index.index(fieldDefinition.fieldId, indexKey.getId(), id);
-        indexKey.retain(id);
+        index.index(fieldDefinition.fieldId, indexKey.getId(), ids);
+        indexKey.retain(ids[ids.length - 1]);
     }
 
     @Override

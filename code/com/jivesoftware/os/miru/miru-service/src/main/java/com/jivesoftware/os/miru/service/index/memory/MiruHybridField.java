@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -99,10 +100,10 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
     }
 
     @Override
-    public void index(MiruTermId term, int id) throws Exception {
+    public void index(MiruTermId term, int... ids) throws Exception {
         MiruFieldIndexKey indexKey = getOrCreateTermId(term);
-        index.index(fieldDefinition.fieldId, indexKey.getId(), id);
-        if (indexKey.retain(id)) {
+        index.index(fieldDefinition.fieldId, indexKey.getId(), ids);
+        if (indexKey.retain(ids[ids.length - 1])) {
             termToIndex.add(term, indexKey);
         }
     }

@@ -13,7 +13,7 @@ public interface MiruField<BM> {
 
     long sizeOnDisk() throws Exception;
 
-    void index(MiruTermId term, int id) throws Exception;
+    void index(MiruTermId term, int... ids) throws Exception;
 
     void remove(MiruTermId term, int id) throws Exception;
 

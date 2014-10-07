@@ -74,14 +74,16 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     }
 
     @Override
-    public void append(int id) {
+    public void append(int... ids) {
         synchronized (write) {
             BM bitmap = writer();
-            if (!bitmaps.set(bitmap, id)) {
-                throw new RuntimeException("id must be in increasing order"
-                    + ", id = " + id
-                    + ", cardinality = " + bitmaps.cardinality(bitmap)
-                    + ", size in bits = " + bitmaps.sizeInBits(bitmap));
+            for (int id : ids) {
+                if (!bitmaps.set(bitmap, id)) {
+                    throw new RuntimeException("id must be in increasing order"
+                        + ", id = " + id
+                        + ", cardinality = " + bitmaps.cardinality(bitmap)
+                        + ", size in bits = " + bitmaps.sizeInBits(bitmap));
+                }
             }
             markForMerge();
         }

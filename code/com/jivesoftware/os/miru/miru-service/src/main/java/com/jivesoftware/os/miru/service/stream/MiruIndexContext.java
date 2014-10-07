@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
@@ -24,10 +25,13 @@ import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -79,13 +83,14 @@ public class MiruIndexContext<BM> {
         this.bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
     }
 
+    @SuppressWarnings("unchecked")
     public void index(final List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
 
         log.trace("Start: Index batch of {}", activityAndIds.size());
 
-        final int numPartitions = 24;
+        final int numPartitions = 48;
         final int numActivities = internalActivityAndIds.size();
         final int partitionSize = (numActivities + numPartitions - 1) / numPartitions;
 
@@ -102,21 +107,32 @@ public class MiruIndexContext<BM> {
         }
         awaitFutures(internFutures, "Intern");
 
-        List<Future<?>> fieldFutures = indexFieldValues(internalActivityAndIds);
+        List<Future<Map<MiruTermId, TIntList>>> fieldWorkFutures = composeFieldValuesWork(internalActivityAndIds);
+        List<Future<BloomWork>> bloominsWorkFutures = composeBloominsWork(internalActivityAndIds);
+
+        Map<MiruTermId, TIntList>[] fieldsWork = new Map[fieldWorkFutures.size()];
+        for (int i = 0; i < fieldWorkFutures.size(); i++) {
+            fieldsWork[i] = fieldWorkFutures.get(i).get();
+        }
+        List<Future<?>> fieldFutures = indexFieldValues(fieldsWork);
+
+        List<BloomWork> bloominsWork = Lists.newArrayListWithCapacity(bloominsWorkFutures.size());
+        for (Future<BloomWork> bloominsWorkFuture : bloominsWorkFutures) {
+            bloominsWork.add(bloominsWorkFuture.get());
+        }
+
         awaitFutures(fieldFutures, "IndexFields");
 
         final List<Future<?>> otherFutures = new ArrayList<>();
         otherFutures.add(indexExecutor.submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                log.trace("Start: Authz");
                 indexAuthz(internalActivityAndIds);
-                log.trace("End: Authz");
                 return null;
             }
         }));
         otherFutures.addAll(indexAggregateFields(internalActivityAndIds));
-        otherFutures.addAll(indexBloomins(internalActivityAndIds));
+        otherFutures.addAll(indexBloomins(bloominsWork));
         otherFutures.addAll(indexWriteTimeAggregates(internalActivityAndIds));
         for (final List<MiruActivityAndId<MiruInternalActivity>> partition : Lists.partition(internalActivityAndIds, partitionSize)) {
             otherFutures.add(indexExecutor.submit(new Callable<Void>() {
@@ -137,16 +153,12 @@ public class MiruIndexContext<BM> {
     }
 
     private void awaitFutures(List<Future<?>> futures, String futureName) throws InterruptedException, ExecutionException {
-        long[] times = new long[futures.size()];
-
         long start = System.currentTimeMillis();
-        for (int i = 0; i < futures.size(); i++) {
-            futures.get(i).get();
-            times[i] = System.currentTimeMillis() - start;
+        for (Future<?> future : futures) {
+            future.get();
         }
-
         if (log.isTraceEnabled()) {
-            log.trace(futureName + ": Finished waiting for futures: " + Arrays.asList(times));
+            log.trace(futureName + ": Finished waiting for futures in " + (System.currentTimeMillis() - start) + " ms");
         }
     }
 
@@ -222,32 +234,53 @@ public class MiruIndexContext<BM> {
         }
     }
 
-    private List<Future<?>> indexFieldValues(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
+    @SuppressWarnings("unchecked")
+    private List<Future<Map<MiruTermId, TIntList>>> composeFieldValuesWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds)
+        throws Exception {
+
         List<Integer> fieldIds = schema.getFieldIds();
-        List<Future<?>> futures = new ArrayList<>(fieldIds.size());
+        List<Future<Map<MiruTermId, TIntList>>> workFutures = new ArrayList<>(fieldIds.size());
         for (final int fieldId : fieldIds) {
-            futures.add(indexExecutor.submit(new Callable<Void>() {
+            workFutures.add(indexExecutor.submit(new Callable<Map<MiruTermId, TIntList>>() {
                 @Override
-                public Void call() throws Exception {
-                    log.trace("Start: Index field {}", fieldId);
-                    MiruField<BM> miruField = null;
+                public Map<MiruTermId, TIntList> call() throws Exception {
+                    Map<MiruTermId, TIntList> fieldWork = Maps.newHashMap();
                     for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                         MiruInternalActivity activity = internalActivityAndId.activity;
                         if (activity.fieldsValues[fieldId] != null) {
-                            if (miruField == null) {
-                                miruField = fieldIndex.getField(fieldId);
-                            }
                             for (MiruTermId term : activity.fieldsValues[fieldId]) {
-                                miruField.index(term, internalActivityAndId.id);
+                                TIntList ids = fieldWork.get(term);
+                                if (ids == null) {
+                                    ids = new TIntArrayList();
+                                    fieldWork.put(term, ids);
+                                }
+                                ids.add(internalActivityAndId.id);
                             }
                         }
                     }
-                    log.trace("End: Index field {}", fieldId);
-                    return null;
+                    return fieldWork;
                 }
             }));
         }
+        return workFutures;
+    }
 
+    private List<Future<?>> indexFieldValues(final Map<MiruTermId, TIntList>[] work) throws Exception {
+        List<Integer> fieldIds = schema.getFieldIds();
+        List<Future<?>> futures = new ArrayList<>(fieldIds.size());
+        for (int fieldId = 0; fieldId < work.length; fieldId++) {
+            final MiruField<BM> miruField = fieldIndex.getField(fieldId);
+            Map<MiruTermId, TIntList> fieldWork = work[fieldId];
+            for (final Map.Entry<MiruTermId, TIntList> entry : fieldWork.entrySet()) {
+                futures.add(indexExecutor.submit(new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        miruField.index(entry.getKey(), entry.getValue().toArray());
+                        return null;
+                    }
+                }));
+            }
+        }
         return futures;
     }
 
@@ -267,75 +300,76 @@ public class MiruIndexContext<BM> {
         authzIndex.repair(authz, id, value);
     }
 
-    private List<Future<?>> indexBloomins(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
-        int callableCount = 0;
+    private static class BloomWork {
+        final int fieldId;
+        final int bloomFieldId;
+        final Map<MiruTermId, List<MiruTermId>> work;
+
+        private BloomWork(int fieldId, int bloomFieldId, Map<MiruTermId, List<MiruTermId>> work) {
+            this.fieldId = fieldId;
+            this.bloomFieldId = bloomFieldId;
+            this.work = work;
+        }
+    }
+
+    private List<Future<BloomWork>> composeBloominsWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
         List<MiruFieldDefinition> fieldsWithBlooms = schema.getFieldsWithBlooms();
 
-        Random random = new Random();
-        int batchSize = 100; // small initial batch size to quickly deliver work, to be doubled on each delivery
-        List<Callable<?>> batch = Lists.newArrayListWithCapacity(internalActivityAndIds.size()); // oversized for simplification
-
-        final AtomicBoolean fullyQueued = new AtomicBoolean(false);
-        final ConcurrentLinkedQueue<Callable<?>> queue = Queues.newConcurrentLinkedQueue();
-        int numberOfCallables = 24;
-        List<Future<?>> futures = Lists.newArrayListWithCapacity(numberOfCallables);
-        for (int i = 0; i < numberOfCallables; i++) {
-            futures.add(indexExecutor.submit(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    while (true) {
-                        Callable<?> callable = queue.poll();
-                        if (callable != null) {
-                            callable.call();
-                        } else {
-                            if (fullyQueued.get() && queue.isEmpty()) {
-                                break;
-                            }
-                        }
-                    }
-                    return null;
-                }
-            }));
-        }
-        for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
-            MiruInternalActivity activity = internalActivityAndId.activity;
-            for (final MiruFieldDefinition fieldDefinition : fieldsWithBlooms) {
-                List<MiruFieldDefinition> bloominFieldDefinitions = schema.getBloominFieldDefinitions(fieldDefinition.fieldId);
-                for (final MiruFieldDefinition bloominFieldDefinition : bloominFieldDefinitions) {
-                    MiruTermId[] fieldValues = activity.fieldsValues[fieldDefinition.fieldId];
-                    if (fieldValues != null && fieldValues.length > 0) {
-                        final MiruTermId[] bloomFieldValues = activity.fieldsValues[bloominFieldDefinition.fieldId];
-                        if (bloomFieldValues != null && bloomFieldValues.length > 0) {
-                            for (final MiruTermId fieldValue : fieldValues) {
-                                batch.add(new Callable<Void>() {
-                                    @Override
-                                    public Void call() throws Exception {
-                                        MiruTermId compositeBloomId = indexUtil.makeBloomComposite(fieldValue, bloominFieldDefinition.name);
-                                        MiruField<BM> miruField = fieldIndex.getField(fieldDefinition.fieldId);
-                                        MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeBloomId);
-                                        bloomIndex.put(invertedIndex, bloomFieldValues);
-                                        return null;
+        List<Future<BloomWork>> workFutures = Lists.newArrayList();
+        for (final MiruFieldDefinition fieldDefinition : fieldsWithBlooms) {
+            List<MiruFieldDefinition> bloominFieldDefinitions = schema.getBloominFieldDefinitions(fieldDefinition.fieldId);
+            for (final MiruFieldDefinition bloominFieldDefinition : bloominFieldDefinitions) {
+                workFutures.add(indexExecutor.submit(new Callable<BloomWork>() {
+                    @Override
+                    public BloomWork call() throws Exception {
+                        Map<MiruTermId, List<MiruTermId>> fieldValueWork = Maps.newHashMap();
+                        BloomWork bloomWork = new BloomWork(fieldDefinition.fieldId, bloominFieldDefinition.fieldId, fieldValueWork);
+                        for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
+                            MiruInternalActivity activity = internalActivityAndId.activity;
+                            MiruTermId[] fieldValues = activity.fieldsValues[fieldDefinition.fieldId];
+                            if (fieldValues != null && fieldValues.length > 0) {
+                                final MiruTermId[] bloomFieldValues = activity.fieldsValues[bloominFieldDefinition.fieldId];
+                                if (bloomFieldValues != null && bloomFieldValues.length > 0) {
+                                    for (final MiruTermId fieldValue : fieldValues) {
+                                        List<MiruTermId> combinedBloomFieldValues = fieldValueWork.get(fieldValue);
+                                        if (combinedBloomFieldValues == null) {
+                                            combinedBloomFieldValues = Lists.newArrayList();
+                                            fieldValueWork.put(fieldValue, combinedBloomFieldValues);
+                                        }
+                                        Collections.addAll(combinedBloomFieldValues, bloomFieldValues);
                                     }
-                                });
-                                callableCount++;
-
-                                if (batch.size() == batchSize) {
-                                    Collections.shuffle(batch, random);
-                                    queue.addAll(batch);
-                                    batch.clear();
-                                    batchSize *= 2;
                                 }
                             }
                         }
+                        return bloomWork;
                     }
-                }
+                }));
             }
         }
-        if (!batch.isEmpty()) {
-            Collections.shuffle(batch, random);
-            queue.addAll(batch);
+        return workFutures;
+    }
+
+    private List<Future<?>> indexBloomins(List<BloomWork> bloomWorks) {
+        int callableCount = 0;
+        List<Future<?>> futures = Lists.newArrayList();
+        for (BloomWork bloomWork : bloomWorks) {
+            final MiruField<BM> miruField = fieldIndex.getField(bloomWork.fieldId);
+            final MiruFieldDefinition bloomFieldDefinition = schema.getFieldDefinition(bloomWork.bloomFieldId);
+            for (final Map.Entry<MiruTermId, List<MiruTermId>> fieldValueEntry : bloomWork.work.entrySet()) {
+                futures.add(indexExecutor.submit(new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        MiruTermId fieldValue = fieldValueEntry.getKey();
+                        List<MiruTermId> bloomFieldValues = fieldValueEntry.getValue();
+                        MiruTermId compositeBloomId = indexUtil.makeBloomComposite(fieldValue, bloomFieldDefinition.name);
+                        MiruInvertedIndex<BM> invertedIndex = miruField.getOrCreateInvertedIndex(compositeBloomId);
+                        bloomIndex.put(invertedIndex, bloomFieldValues);
+                        return null;
+                    }
+                }));
+                callableCount++;
+            }
         }
-        fullyQueued.set(true);
         log.trace("Submitted {} bloom callables", callableCount);
 
         return futures;

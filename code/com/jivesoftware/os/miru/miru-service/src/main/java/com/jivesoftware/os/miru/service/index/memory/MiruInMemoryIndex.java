@@ -64,8 +64,8 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
     }
 
     @Override
-    public void index(int fieldId, int termId, int id) throws Exception {
-        getOrAllocate(fieldId, termId).append(id);
+    public void index(int fieldId, int termId, int... ids) throws Exception {
+        getOrAllocate(fieldId, termId).append(ids);
     }
 
     @Override

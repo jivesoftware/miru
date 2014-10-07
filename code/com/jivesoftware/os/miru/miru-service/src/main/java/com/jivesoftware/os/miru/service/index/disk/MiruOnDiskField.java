@@ -95,7 +95,7 @@ public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Iterator<B
     }
 
     @Override
-    public void index(MiruTermId term, int id) throws Exception {
+    public void index(MiruTermId term, int... ids) throws Exception {
         throw new UnsupportedOperationException("On disk index is read only");
     }
 
