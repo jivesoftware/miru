@@ -74,29 +74,31 @@ public class TrendingEndpoints {
         }
     }
 
-//    @POST
-//    @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
-//    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-//    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-//    public Response scoreTrending(@PathParam("partitionId") int id, byte[] requestAndReportBytes) {
-//        MiruPartitionId partitionId = MiruPartitionId.of(id);
-//        try {
-//            MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = (MiruRequestAndReport<TrendingQuery, TrendingReport>)fstMarshaller.deserialize(
-//                new ByteArrayInputStream(requestAndReportBytes), MiruRequestAndReport.class);
-//
-//            MiruPartitionResponse<TrendingAnswer> response = injectable.scoreTrending(partitionId, requestAndReport);
-//            byte[] responseBytes = null;
-//            if (response != null) {
-//                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-//                fstMarshaller.serialize(response, outputStream);
-//                responseBytes = outputStream.toByteArray();
-//            }
-//            return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
-//        } catch (MiruPartitionUnavailableException e) {
-//            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
-//        } catch (Exception e) {
-//            log.error("Failed to score trending for partition: " + partitionId.getId(), e);
-//            return Response.serverError().build();
-//        }
-//    }
+    /*
+    @POST
+    @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response scoreTrending(@PathParam("partitionId") int id, byte[] requestAndReportBytes) {
+        MiruPartitionId partitionId = MiruPartitionId.of(id);
+        try {
+            MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = (MiruRequestAndReport<TrendingQuery, TrendingReport>)fstMarshaller
+                .deserialize(new ByteArrayInputStream(requestAndReportBytes), MiruRequestAndReport.class);
+
+            MiruPartitionResponse<TrendingAnswer> response = injectable.scoreTrending(partitionId, requestAndReport);
+            byte[] responseBytes = null;
+            if (response != null) {
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                fstMarshaller.serialize(response, outputStream);
+                responseBytes = outputStream.toByteArray();
+            }
+            return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
+        } catch (MiruPartitionUnavailableException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (Exception e) {
+            log.error("Failed to score trending for partition: " + partitionId.getId(), e);
+            return Response.serverError().build();
+        }
+    }
+    */
 }

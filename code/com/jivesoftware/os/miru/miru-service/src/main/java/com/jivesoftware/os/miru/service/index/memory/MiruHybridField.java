@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -23,13 +24,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>>> {
 
-    private static final int[] KEY_SIZE_THRESHOLDS = new int[]{ 4, 16, 64, 256, 1_024 }; //TODO make this configurable per field?
+    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024 }; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
 
     private final MiruFieldDefinition fieldDefinition;
     private final MiruInMemoryIndex<BM> index;
     private final AtomicInteger nextTermId;
     private final VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
+    private final StripingLocksProvider<MiruTermId> stripingLocks = new StripingLocksProvider<>(96);
 
     public MiruHybridField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex<BM> index, String[] mapDirectories) {
         this.fieldDefinition = fieldDefinition;
@@ -39,48 +41,48 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
         this.termToIndex = new VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey>(
             mapDirectories, KEY_SIZE_THRESHOLDS, PAYLOAD_SIZE, 100, 8, null) {
 
-                @Override
-                protected int keyLength(MiruTermId key) {
-                    return key.getBytes().length;
-                }
+            @Override
+            protected int keyLength(MiruTermId key) {
+                return key.getBytes().length;
+            }
 
-                @Override
-                public String keyPartition(MiruTermId key) {
-                    return "0";
-                }
+            @Override
+            public String keyPartition(MiruTermId key) {
+                return "0";
+            }
 
-                @Override
-                public Iterable<String> keyPartitions() {
-                    return Collections.singletonList("0");
-                }
+            @Override
+            public Iterable<String> keyPartitions() {
+                return Collections.singletonList("0");
+            }
 
-                @Override
-                public byte[] keyBytes(MiruTermId key) {
-                    return key.getBytes();
-                }
+            @Override
+            public byte[] keyBytes(MiruTermId key) {
+                return key.getBytes();
+            }
 
-                @Override
-                public byte[] valueBytes(MiruFieldIndexKey value) {
-                    ByteBuffer buf = ByteBuffer.allocate(8); // 2 ints
-                    buf.putInt(value.getId());
-                    buf.putInt(value.getMaxId());
-                    return buf.array();
-                }
+            @Override
+            public byte[] valueBytes(MiruFieldIndexKey value) {
+                ByteBuffer buf = ByteBuffer.allocate(8); // 2 ints
+                buf.putInt(value.getId());
+                buf.putInt(value.getMaxId());
+                return buf.array();
+            }
 
-                @Override
-                public MiruTermId bytesKey(byte[] bytes, int offset) {
-                    if (offset != 0) {
-                        throw new UnsupportedOperationException("offset not supported");
-                    }
-                    return new MiruTermId(bytes);
+            @Override
+            public MiruTermId bytesKey(byte[] bytes, int offset) {
+                if (offset != 0) {
+                    throw new UnsupportedOperationException("offset not supported");
                 }
+                return new MiruTermId(bytes);
+            }
 
-                @Override
-                public MiruFieldIndexKey bytesValue(MiruTermId key, byte[] bytes, int offset) {
-                    ByteBuffer buf = ByteBuffer.wrap(bytes, offset, 8); // 2 ints
-                    return new MiruFieldIndexKey(buf.getInt(), buf.getInt());
-                }
-            };
+            @Override
+            public MiruFieldIndexKey bytesValue(MiruTermId key, byte[] bytes, int offset) {
+                ByteBuffer buf = ByteBuffer.wrap(bytes, offset, 8); // 2 ints
+                return new MiruFieldIndexKey(buf.getInt(), buf.getInt());
+            }
+        };
     }
 
     @Override
@@ -153,14 +155,14 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
     }
 
     private Optional<MiruFieldIndexKey> getTermId(MiruTermId term) throws KeyValueStoreException {
-        MiruFieldIndexKey id = termToIndex.get(term);
+        MiruFieldIndexKey id = termToIndex.getUnsafe(term);
         return Optional.fromNullable(id);
     }
 
     private MiruFieldIndexKey getOrCreateTermId(MiruTermId term) throws KeyValueStoreException {
         MiruFieldIndexKey id = termToIndex.getUnsafe(term);
         if (id == null) {
-            synchronized (termToIndex) { // poor mans put if absent
+            synchronized (stripingLocks.lock(term)) { // poor mans put if absent
                 id = termToIndex.get(term);
                 if (id == null) {
                     termToIndex.add(term, new MiruFieldIndexKey(nextTermId.getAndIncrement()));

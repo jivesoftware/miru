@@ -85,7 +85,7 @@ public class MiruPluginTestBootstrap {
         clusterRegistry.sendHeartbeatForHost(miruHost, 0, 0);
         replicaSetDirector.electToReplicaSetForTenantPartition(tenantId, partitionId,
                 new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3),
-                System.currentTimeMillis()-TimeUnit.HOURS.toMillis(1));
+                System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
 
