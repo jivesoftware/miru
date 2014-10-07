@@ -101,12 +101,14 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
 
         if (bitmaps.isEmpty()) {
             copy(container, original);
-        } else if (bitmaps.size() == 1) {
-            RoaringAggregation.andNot(container, original, bitmaps.get(0));
         } else {
-            RoaringBitmap ored = new RoaringBitmap();
-            RoaringAggregation.or(ored, bitmaps.toArray(new RoaringBitmap[bitmaps.size()]));
-            RoaringAggregation.andNot(container, original, ored);
+            RoaringAggregation.andNot(container, original, bitmaps.get(0));
+            for (int i = 1; i < bitmaps.size(); i++) {
+                container.andNot(bitmaps.get(i));
+                if (container.isEmpty()) {
+                    break;
+                }
+            }
         }
     }
 
@@ -142,6 +144,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     @Override
     public void serialize(RoaringBitmap bitmap, DataOutput dataOutput) throws Exception {
         bitmap.serialize(dataOutput);
+    }
+
+    @Override
+    public boolean isEmpty(RoaringBitmap bitmap) {
+        return bitmap.isEmpty();
     }
 
     @Override

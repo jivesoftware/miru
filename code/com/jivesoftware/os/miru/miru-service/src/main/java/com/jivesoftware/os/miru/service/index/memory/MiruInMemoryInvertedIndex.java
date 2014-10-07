@@ -136,7 +136,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
 
     @Override
     public void andNot(BM mask) {
-        if (bitmaps.sizeInBits(mask) == 0) {
+        if (bitmaps.isEmpty(mask)) {
             return;
         }
         synchronized (write) {
@@ -150,7 +150,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
 
     @Override
     public void or(BM mask) {
-        if (bitmaps.sizeInBits(mask) == 0) {
+        if (bitmaps.isEmpty(mask)) {
             return;
         }
         synchronized (write) {
@@ -168,7 +168,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
             return;
         }
         for (BM mask : masks) {
-            if (bitmaps.sizeInBits(mask) == 0) {
+            if (bitmaps.isEmpty(mask)) {
                 return;
             }
         }
@@ -183,7 +183,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
 
     @Override
     public void orToSourceSize(BM mask) {
-        if (bitmaps.sizeInBits(mask) == 0) {
+        if (bitmaps.isEmpty(mask)) {
             return;
         }
         BM or = bitmaps.create();
@@ -229,7 +229,7 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
 
     private BM copy(BM original) {
         //TODO fix BM.clone()
-        if (bitmaps.sizeInBits(original) == 0) {
+        if (bitmaps.isEmpty(original)) {
             return reusable.next();
         } else {
             BM next = reusable.next();

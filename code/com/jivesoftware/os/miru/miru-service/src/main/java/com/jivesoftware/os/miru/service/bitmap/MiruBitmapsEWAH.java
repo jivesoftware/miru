@@ -118,10 +118,10 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
         } else if (bitmaps.size() == 1) {
             original.andNotToContainer(bitmaps.get(0), container);
         } else {
+            //TODO we've determined that this is less efficient than iteratively performing the andNots, but leaving for a rainy day
             EWAHCompressedBitmap ored = new EWAHCompressedBitmap();
             or((BitmapStorage) ored, bitmaps);
             original.andNotToContainer(ored, container);
-
         }
     }
 
@@ -179,6 +179,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
             MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(container, source.sizeInBits());
             source.andNotToContainer(masks.get(0), matchNoMoreThanNBitmapStorage);
         } else {
+            //TODO we've determined that this is less efficient than iteratively performing the andNots, but leaving for a rainy day
             EWAHCompressedBitmap ored = new EWAHCompressedBitmap();
             or((BitmapStorage) ored, masks);
             MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(container, source.sizeInBits());
@@ -196,6 +197,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     @Override
     public void serialize(EWAHCompressedBitmap bitmap, DataOutput dataOutput) throws Exception {
         bitmap.serialize(dataOutput);
+    }
+
+    @Override
+    public boolean isEmpty(EWAHCompressedBitmap bitmap) {
+        return bitmap.isEmpty();
     }
 
     @Override

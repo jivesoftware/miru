@@ -43,6 +43,8 @@ public interface MiruBitmaps<BM> {
 
     long cardinality(BM bitmap);
 
+    boolean isEmpty(BM bitmap);
+
     long sizeInBytes(BM bitmap);
 
     long sizeInBits(BM bitmap);
