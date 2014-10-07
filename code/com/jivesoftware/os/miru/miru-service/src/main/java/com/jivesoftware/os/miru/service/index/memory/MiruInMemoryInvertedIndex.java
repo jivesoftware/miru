@@ -100,12 +100,12 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
 
     @Override
     public void remove(int id) { // Kinda crazy expensive way to remove an intermediary bit.
+        BM r = bitmaps.create();
         synchronized (write) {
             BM remove = reusable.next();
             bitmaps.set(remove, id);
             BM bitmap = writer();
-            BM r = bitmaps.create();
-            bitmaps.andNotToSourceSize(r, bitmap, remove);
+            bitmaps.andNotToSourceSize(r, bitmap, Collections.singletonList(remove));
             write.set(r);
             markForMerge();
         }
@@ -163,14 +163,19 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     }
 
     @Override
-    public void andNotToSourceSize(BM mask) {
-        if (bitmaps.sizeInBits(mask) == 0) {
+    public void andNotToSourceSize(List<BM> masks) {
+        if (masks.isEmpty()) {
             return;
         }
+        for (BM mask : masks) {
+            if (bitmaps.sizeInBits(mask) == 0) {
+                return;
+            }
+        }
+        BM andNot = bitmaps.create();
         synchronized (write) {
             BM bitmap = writer();
-            BM andNot = bitmaps.create();
-            bitmaps.andNotToSourceSize(andNot, bitmap, mask);
+            bitmaps.andNotToSourceSize(andNot, bitmap, masks);
             write.set(andNot);
             markForMerge();
         }
@@ -181,9 +186,9 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
         if (bitmaps.sizeInBits(mask) == 0) {
             return;
         }
+        BM or = bitmaps.create();
         synchronized (write) {
             BM bitmap = writer();
-            BM or = bitmaps.create();
             bitmaps.orToSourceSize(or, bitmap, mask);
             write.set(or);
             markForMerge();

@@ -67,7 +67,7 @@ public interface MiruBitmaps<BM> {
 
     void orToSourceSize(BM container, BM source, BM mask);
 
-    void andNotToSourceSize(BM container, BM source, BM mask);
+    void andNotToSourceSize(BM container, BM source, List<BM> masks);
 
     BM buildIndexMask(int largestIndex, Optional<BM> andNotMask);
 

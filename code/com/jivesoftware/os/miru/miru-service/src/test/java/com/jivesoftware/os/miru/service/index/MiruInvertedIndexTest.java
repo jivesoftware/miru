@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInvertedIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -133,7 +134,7 @@ public class MiruInvertedIndexTest {
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
         bitmap.set(1);
         bitmap.set(3);
-        miruInvertedIndex.andNotToSourceSize(bitmap);
+        miruInvertedIndex.andNotToSourceSize(Collections.singletonList(bitmap));
 
         assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(), 1));
         assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(), 2));

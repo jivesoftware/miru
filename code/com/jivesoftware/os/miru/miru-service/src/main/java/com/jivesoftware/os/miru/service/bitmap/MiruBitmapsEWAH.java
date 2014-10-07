@@ -171,9 +171,19 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public void andNotToSourceSize(EWAHCompressedBitmap container, EWAHCompressedBitmap source, EWAHCompressedBitmap mask) {
-        MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(container, source.sizeInBits());
-        source.andNotToContainer(mask, matchNoMoreThanNBitmapStorage);
+    public void andNotToSourceSize(EWAHCompressedBitmap container, EWAHCompressedBitmap source, List<EWAHCompressedBitmap> masks) {
+
+        if (masks.isEmpty()) {
+            copy(container, source);
+        } else if (masks.size() == 1) {
+            MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(container, source.sizeInBits());
+            source.andNotToContainer(masks.get(0), matchNoMoreThanNBitmapStorage);
+        } else {
+            EWAHCompressedBitmap ored = new EWAHCompressedBitmap();
+            or((BitmapStorage) ored, masks);
+            MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(container, source.sizeInBits());
+            source.andNotToContainer(ored, matchNoMoreThanNBitmapStorage);
+        }
     }
 
     @Override

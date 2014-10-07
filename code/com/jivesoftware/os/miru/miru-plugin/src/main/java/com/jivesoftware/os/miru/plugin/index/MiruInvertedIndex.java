@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.plugin.index;
 
+import java.util.List;
+
 /**
  *
  * @author jonathan
@@ -30,7 +32,7 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
 
     void setIntermediate(int... ids) throws Exception;
 
-    void andNotToSourceSize(BM mask) throws Exception;
+    void andNotToSourceSize(List<BM> masks) throws Exception;
 
     void orToSourceSize(BM mask) throws Exception;
 

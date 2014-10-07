@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -57,7 +58,7 @@ public class MiruInMemoryUnreadTrackingIndex<BM> implements MiruUnreadTrackingIn
     @Override
     public void applyRead(MiruStreamId streamId, BM readMask) throws Exception {
         MiruInvertedIndex<BM> unread = getOrCreateUnread(streamId);
-        unread.andNotToSourceSize(readMask);
+        unread.andNotToSourceSize(Collections.singletonList(readMask));
     }
 
     @Override

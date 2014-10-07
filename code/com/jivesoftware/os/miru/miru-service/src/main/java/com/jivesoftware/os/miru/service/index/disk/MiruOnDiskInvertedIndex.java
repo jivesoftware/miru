@@ -130,11 +130,11 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
     }
 
     @Override
-    public void andNotToSourceSize(BM mask) throws Exception {
+    public void andNotToSourceSize(List<BM> masks) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
             BM andNot = bitmaps.create();
-            bitmaps.andNotToSourceSize(andNot, getIndex(), mask);
+            bitmaps.andNotToSourceSize(andNot, getIndex(), masks);
             setIndex(andNot);
         }
     }
