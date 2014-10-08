@@ -45,20 +45,16 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
             for (int rangeEnd = 1; rangeEnd < indexes.length; rangeEnd++) {
                 if (indexes[rangeEnd - 1] + 1 != indexes[rangeEnd]) {
                     if (rangeStart == rangeEnd - 1) {
-                        System.out.println("add " + indexes[rangeStart]);
                         bitmap.add(indexes[rangeStart]);
                     } else {
-                        System.out.println("flip " + indexes[rangeStart] + " -> " + indexes[rangeEnd - 1]);
                         bitmap.flip(indexes[rangeStart], indexes[rangeEnd - 1] + 1);
                     }
                     rangeStart = rangeEnd;
                 }
             }
             if (rangeStart == indexes.length - 1) {
-                System.out.println("add " + indexes[rangeStart]);
                 bitmap.add(indexes[rangeStart]);
             } else {
-                System.out.println("flip " + indexes[rangeStart] + " -> " + indexes[indexes.length - 1]);
                 bitmap.flip(indexes[rangeStart], indexes[indexes.length - 1] + 1);
             }
         }
