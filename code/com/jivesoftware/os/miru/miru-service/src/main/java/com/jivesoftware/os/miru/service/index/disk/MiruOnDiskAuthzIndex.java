@@ -29,6 +29,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     private final MiruBitmaps<BM> bitmaps;
     private final VariableKeySizeFileBackedKeyedStore keyedStore;
     private final MiruAuthzCache<BM> cache;
+    private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskAuthzIndex(MiruBitmaps<BM> bitmaps,
         String[] mapDirectories,
@@ -42,7 +43,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
         int[] keySizeThresholds = { 4, 16, 64, 256, 1_024 };
         //TODO actual capacity? should this be shared with a key prefix?
         //TODO expose to config
-        this.keyedStore = new VariableKeySizeFileBackedKeyedStore(mapDirectories, swapDirectories, chunkStore, keySizeThresholds, 100, 512, 4);
+        this.keyedStore = new VariableKeySizeFileBackedKeyedStore(mapDirectories, swapDirectories, chunkStore, keySizeThresholds, 100, 4);
 
         this.cache = cache;
     }
@@ -82,7 +83,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     }
 
     private MiruInvertedIndex<BM> get(String authz) throws Exception {
-        SwappableFiler filer = keyedStore.get(key(authz), false);
+        SwappableFiler filer = keyedStore.get(key(authz), -1);
         if (filer == null) {
             return null;
         }
@@ -129,7 +130,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
         for (Map.Entry<String, MiruInvertedIndex<BM>> entry : authzMap.entrySet()) {
             MiruInvertedIndex<BM> miruInvertedIndex = entry.getValue();
 
-            Filer filer = keyedStore.get(key(entry.getKey()));
+            Filer filer = keyedStore.get(key(entry.getKey()), newFilerInitialCapacity);
 
             bitmaps.serialize(miruInvertedIndex.getIndex(), FilerIO.asDataOutput(filer));
         }

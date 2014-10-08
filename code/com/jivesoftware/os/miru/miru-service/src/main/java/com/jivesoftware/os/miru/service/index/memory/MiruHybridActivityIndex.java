@@ -6,7 +6,6 @@ import com.jivesoftware.os.jive.utils.io.Filer;
 import com.jivesoftware.os.jive.utils.io.FilerIO;
 import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
 import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
-import com.jivesoftware.os.jive.utils.keyed.store.SwappingFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -39,7 +38,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
 
     public MiruHybridActivityIndex(String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore,
         MiruInternalActivityMarshaller internalActivityMarshaller, Optional<Filer> indexSizeFiler) throws Exception {
-        this.keyedStore = new FileBackedKeyedStore(mapDirectories, swapDirectories, 4, 100, chunkStore, 512, 24); //TODO expose to config
+        this.keyedStore = new FileBackedKeyedStore(mapDirectories, swapDirectories, 4, 100, chunkStore, 24); //TODO expose to config
         this.internalActivityMarshaller = internalActivityMarshaller;
         this.indexSizeFiler = indexSizeFiler;
     }
@@ -49,7 +48,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), false);
+            SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), -1);
             if (swappableFiler != null) {
                 synchronized (swappableFiler.lock()) {
                     swappableFiler.sync();
@@ -68,7 +67,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), false);
+            SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), -1);
             if (swappableFiler != null) {
                 synchronized (swappableFiler.lock()) {
                     swappableFiler.sync();
@@ -104,13 +103,10 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
             try {
                 //byte[] bytes = objectMapper.writeValueAsBytes(activity);
                 byte[] bytes = internalActivityMarshaller.toBytes(activity);
-                SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), true);
+                SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), 4 + bytes.length);
                 synchronized (swappableFiler.lock()) {
                     swappableFiler.sync();
-                    SwappingFiler swappingFiler = swappableFiler.swap(4 + bytes.length);
-                    //FilerIO.writeByteArray(swappingFiler, bytes, "activity");
-                    FilerIO.write(swappingFiler, bytes);
-                    swappingFiler.commit();
+                    FilerIO.write(swappableFiler, bytes);
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);

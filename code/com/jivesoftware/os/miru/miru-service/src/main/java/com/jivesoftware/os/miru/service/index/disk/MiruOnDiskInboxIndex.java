@@ -22,11 +22,12 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
 
     private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
+    private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskInboxIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore) throws Exception {
         this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
-        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 512, 4);
+        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 4);
     }
 
     @Override
@@ -36,18 +37,18 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
 
     @Override
     public Optional<BM> getInbox(MiruStreamId streamId) throws Exception {
-        SwappableFiler filer = index.get(streamId.getBytes(), false);
+        SwappableFiler filer = index.get(streamId.getBytes(), -1);
         if (filer == null) {
             return Optional.absent();
         }
-        return Optional.<BM>of(new MiruOnDiskInvertedIndex<>(bitmaps, filer, 4).getIndex());
+        return Optional.of(new MiruOnDiskInvertedIndex<>(bitmaps, filer, 4).getIndex());
     }
 
     @Override
     public MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception {
-        SwappableFiler filer = index.get(streamId.getBytes(), false);
+        SwappableFiler filer = index.get(streamId.getBytes(), -1);
         if (filer == null) {
-            filer = index.get(streamId.getBytes(), true);
+            filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
             setLastActivityIndex(streamId, -1); // Initialize lastActivityIndex to -1 when we create the on-disk index
         }
         return new MiruOnDiskInvertedIndex<>(bitmaps, filer, 4);
@@ -55,7 +56,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
 
     @Override
     public int getLastActivityIndex(MiruStreamId streamId) throws Exception {
-        Filer filer = index.get(streamId.getBytes(), false);
+        Filer filer = index.get(streamId.getBytes(), -1);
         if (filer == null) {
             return -1;
         }
@@ -68,7 +69,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
 
     @Override
     public void setLastActivityIndex(MiruStreamId streamId, int activityIndex) throws Exception {
-        Filer filer = index.get(streamId.getBytes(), true);
+        Filer filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
 
         synchronized (filer.lock()) {
             filer.seek(0);
@@ -96,7 +97,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
         InboxAndLastActivityIndex<BM> bulkImport = importItems.bulkExport(tenantId);
 
         for (final Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : bulkImport.index.entrySet()) {
-            SwappableFiler filer = index.get(entry.getKey().getBytes(), true);
+            SwappableFiler filer = index.get(entry.getKey().getBytes(), newFilerInitialCapacity);
 
             synchronized (filer.lock()) {
                 filer.sync();
@@ -122,7 +123,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
             if (bulkImport.index.containsKey(entry.getKey())) {
                 continue; // Already handled above
             }
-            Filer filer = index.get(entry.getKey().getBytes(), true);
+            Filer filer = index.get(entry.getKey().getBytes(), newFilerInitialCapacity);
 
             synchronized (filer.lock()) {
                 filer.seek(0);

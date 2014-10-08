@@ -20,12 +20,13 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
 
     private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
+    private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore)
         throws Exception {
         this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
-        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 512, 4);
+        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 4);
     }
 
     @Override
@@ -35,11 +36,11 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
 
     @Override
     public Optional<BM> getUnread(MiruStreamId streamId) throws Exception {
-        SwappableFiler filer = index.get(streamId.getBytes(), false);
+        SwappableFiler filer = index.get(streamId.getBytes(), -1);
         if (filer == null) {
             return Optional.absent();
         }
-        return Optional.<BM>of(new MiruOnDiskInvertedIndex<>(bitmaps, filer).getIndex());
+        return Optional.of(new MiruOnDiskInvertedIndex<>(bitmaps, filer).getIndex());
     }
 
     @Override
@@ -48,7 +49,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     }
 
     private MiruInvertedIndex<BM> getOrCreateUnread(MiruStreamId streamId) throws Exception {
-        SwappableFiler filer = index.get(streamId.getBytes(), true);
+        SwappableFiler filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
         return new MiruOnDiskInvertedIndex<>(bitmaps, filer);
     }
 
@@ -83,7 +84,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     public void bulkImport(MiruTenantId tenantId, BulkExport<Map<MiruStreamId, MiruInvertedIndex<BM>>> importItems) throws Exception {
         Map<MiruStreamId, MiruInvertedIndex<BM>> importIndex = importItems.bulkExport(tenantId);
         for (final Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : importIndex.entrySet()) {
-            SwappableFiler filer = index.get(entry.getKey().getBytes(), true);
+            SwappableFiler filer = index.get(entry.getKey().getBytes(), newFilerInitialCapacity);
 
             MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
             miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BM>() {

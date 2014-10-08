@@ -21,10 +21,11 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
     private final MiruBitmaps<BM> bitmaps;
     private final FileBackedKeyedStore index;
     private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
+    private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore) throws Exception {
         this.bitmaps = bitmaps;
-        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 512, 4); //TODO expose to config
+        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 4); //TODO expose to config
     }
 
     @Override
@@ -58,7 +59,7 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
     @Override
     public Optional<MiruInvertedIndex<BM>> get(int fieldId, int termId) throws Exception {
         long key = indexKeyFunction.getKey(fieldId, termId);
-        SwappableFiler filer = index.get(FilerIO.longBytes(key), false);
+        SwappableFiler filer = index.get(FilerIO.longBytes(key), -1);
         if (filer == null) {
             return Optional.absent();
         }
@@ -67,7 +68,7 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, int termId) throws Exception {
         long key = indexKeyFunction.getKey(fieldId, termId);
-        SwappableFiler filer = index.get(FilerIO.longBytes(key));
+        SwappableFiler filer = index.get(FilerIO.longBytes(key), newFilerInitialCapacity);
         return new MiruOnDiskInvertedIndex<>(bitmaps, filer);
     }
 
@@ -76,7 +77,7 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
         Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>> iter = importItems.bulkExport(tenantId);
         while (iter.hasNext()) {
             BulkEntry<Long, MiruInvertedIndex<BM>> entry = iter.next();
-            SwappableFiler filer = index.get(FilerIO.longBytes(entry.key));
+            SwappableFiler filer = index.get(FilerIO.longBytes(entry.key), newFilerInitialCapacity);
 
             final BM fieldTermIndex = entry.value.getIndex();
             MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);

@@ -269,10 +269,10 @@ public class MiruIndexContextTest {
             Files.createTempDirectory("swapRemoval").toFile().getAbsolutePath(),
             Files.createTempDirectory("swapRemoval").toFile().getAbsolutePath()
         };
-        FileBackedKeyedStore removalStore = new FileBackedKeyedStore(removalMapDirs, removalSwapDirs, 1, 32, hybridMultiChunkStore, 32, 4);
+        FileBackedKeyedStore removalStore = new FileBackedKeyedStore(removalMapDirs, removalSwapDirs, 1, 32, hybridMultiChunkStore, 4);
         MiruOnDiskRemovalIndex<EWAHCompressedBitmap> miruOnDiskRemovalIndex = new MiruOnDiskRemovalIndex<>(
             new MiruBitmapsEWAH(4),
-            removalStore.get(new byte[]{ 0 }));
+            removalStore.get(new byte[]{ 0 }, 32));
 
         // Build on-disk index stream object
         MiruIndexContext<EWAHCompressedBitmap> miruOnDiskIndexContext = new MiruIndexContext<>(new MiruBitmapsEWAH(4),
