@@ -46,7 +46,7 @@ public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Iterator<B
             }
 
             @Override
-            public Iterable<String> keyPartitions() {
+            protected Iterable<String> keyPartitions(int i) {
                 return Collections.singletonList("0");
             }
 

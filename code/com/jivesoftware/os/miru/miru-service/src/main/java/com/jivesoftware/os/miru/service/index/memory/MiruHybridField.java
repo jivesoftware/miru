@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeFileBackMapStore;
 import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStoreException;
@@ -14,8 +15,8 @@ import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -24,7 +25,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>>> {
 
-    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024 }; //TODO make this configurable per field?
+    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 2, 4, 6, 8, 10, 12, 16, 64, 256, 1_024 }; //TODO make this configurable per field?
+    private static final int[] KEY_SIZE_PARTITIONS = new int[] { 1, 2, 2, 6, 8,  6,  2,  1,  1,   1     }; //TODO make this configurable per field?
+    private static final int[] KEY_SIZE_TO_PARTITION_COUNT = new int[KEY_SIZE_THRESHOLDS[KEY_SIZE_THRESHOLDS.length - 1] + 1];
+    static {
+        int maximumKeySize = KEY_SIZE_THRESHOLDS[KEY_SIZE_THRESHOLDS.length - 1];
+        for (int i = 0; i <= maximumKeySize; i++) {
+            KEY_SIZE_TO_PARTITION_COUNT[i] = getPartitionSize(i);
+        }
+    }
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
 
     private final MiruFieldDefinition fieldDefinition;
@@ -39,7 +48,7 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
         this.nextTermId = new AtomicInteger();
 
         this.termToIndex = new VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey>(
-            mapDirectories, KEY_SIZE_THRESHOLDS, PAYLOAD_SIZE, 100, 8, null) {
+            mapDirectories, KEY_SIZE_THRESHOLDS, PAYLOAD_SIZE, 100, 64, null) {
 
             @Override
             protected int keyLength(MiruTermId key) {
@@ -48,12 +57,17 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
 
             @Override
             public String keyPartition(MiruTermId key) {
-                return "0";
+                return String.valueOf(Math.abs(key.hashCode()) % KEY_SIZE_TO_PARTITION_COUNT[keyLength(key)]);
             }
 
             @Override
-            public Iterable<String> keyPartitions() {
-                return Collections.singletonList("0");
+            protected Iterable<String> keyPartitions(int keyLength) {
+                int partitionCount = KEY_SIZE_TO_PARTITION_COUNT[keyLength];
+                List<String> partitions = Lists.newArrayListWithCapacity(partitionCount);
+                for (int i = 0; i < partitionCount; i++) {
+                    partitions.add(String.valueOf(i));
+                }
+                return partitions;
             }
 
             @Override
@@ -83,6 +97,15 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
                 return new MiruFieldIndexKey(buf.getInt(), buf.getInt());
             }
         };
+    }
+
+    private static int getPartitionSize(int keyLength) {
+        for (int i = 0; i < KEY_SIZE_THRESHOLDS.length; i++) {
+            if (KEY_SIZE_THRESHOLDS[i] >= keyLength) {
+                return KEY_SIZE_PARTITIONS[i];
+            }
+        }
+        throw new IndexOutOfBoundsException("Key is too long");
     }
 
     @Override
