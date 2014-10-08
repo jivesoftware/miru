@@ -31,7 +31,7 @@ public interface MiruBitmaps<BM> {
 
     BM[] createArrayOf(int size);
 
-    boolean set(BM bitmap, int i);
+    boolean set(BM bitmap, int... indexes);
 
     BM setIntermediate(BM bitmap, int... indexes);
 

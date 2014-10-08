@@ -28,8 +28,20 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
 
     void remove(int id) throws Exception;
 
-    void set(int id) throws Exception;
+    /**
+     * Sets multiple bits at the end of the bitmap, in ascending order.
+     *
+     * @param ids the indexes of the bits to set, in ascending order
+     * @throws Exception
+     */
+    void set(int... ids) throws Exception;
 
+    /**
+     * Sets multiple bits anywhere in the bitmap.
+     *
+     * @param ids the indexes of the bits to set
+     * @throws Exception
+     */
     void setIntermediate(int... ids) throws Exception;
 
     void andNotToSourceSize(List<BM> masks) throws Exception;

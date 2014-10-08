@@ -37,8 +37,31 @@ import org.roaringbitmap.RoaringInspection;
 public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
 
     @Override
-    public boolean set(RoaringBitmap bitmap, int i) {
-        bitmap.add(i);
+    public boolean set(RoaringBitmap bitmap, int... indexes) {
+        if (indexes.length == 1) {
+            bitmap.add(indexes[0]);
+        } else if (indexes.length > 1) {
+            int rangeStart = 0;
+            for (int rangeEnd = 1; rangeEnd < indexes.length; rangeEnd++) {
+                if (indexes[rangeEnd - 1] + 1 != indexes[rangeEnd]) {
+                    if (rangeStart == rangeEnd - 1) {
+                        System.out.println("add " + indexes[rangeStart]);
+                        bitmap.add(indexes[rangeStart]);
+                    } else {
+                        System.out.println("flip " + indexes[rangeStart] + " -> " + indexes[rangeEnd - 1]);
+                        bitmap.flip(indexes[rangeStart], indexes[rangeEnd - 1] + 1);
+                    }
+                    rangeStart = rangeEnd;
+                }
+            }
+            if (rangeStart == indexes.length - 1) {
+                System.out.println("add " + indexes[rangeStart]);
+                bitmap.add(indexes[rangeStart]);
+            } else {
+                System.out.println("flip " + indexes[rangeStart] + " -> " + indexes[indexes.length - 1]);
+                bitmap.flip(indexes[rangeStart], indexes[indexes.length - 1] + 1);
+            }
+        }
         return true;
     }
 

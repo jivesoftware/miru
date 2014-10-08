@@ -43,8 +43,14 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public boolean set(EWAHCompressedBitmap bitmap, int i) {
-        return bitmap.set(i);
+    public boolean set(EWAHCompressedBitmap bitmap, int... indexes) {
+        //TODO we could optimize by adding ranges via streams of words
+        for (int index : indexes) {
+            if (!bitmap.set(index)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
