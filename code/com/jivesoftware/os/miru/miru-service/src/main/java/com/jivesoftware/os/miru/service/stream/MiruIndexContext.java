@@ -84,7 +84,7 @@ public class MiruIndexContext<BM> {
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
 
-        log.trace("Start: Index batch of {}", activityAndIds.size());
+        log.debug("Start: Index batch of {}", activityAndIds.size());
 
         final int numPartitions = 48;
         final int numActivities = internalActivityAndIds.size();
@@ -166,7 +166,7 @@ public class MiruIndexContext<BM> {
             activityIndex.ready(activityAndIds.get(activityAndIds.size() - 1).id);
         }
 
-        log.trace("End: Index batch of {}", activityAndIds.size());
+        log.debug("End: Index batch of {}", activityAndIds.size());
     }
 
     public void set(List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {

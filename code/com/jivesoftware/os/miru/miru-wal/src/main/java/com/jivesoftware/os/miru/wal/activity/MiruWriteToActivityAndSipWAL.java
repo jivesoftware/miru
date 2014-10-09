@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.wal.activity;
 
 import com.jivesoftware.os.jive.utils.id.TenantId;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriterImpl.CollisionId;
@@ -9,6 +8,7 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriterImpl.ColumnKey
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.List;
 
 /** @author jonathan */

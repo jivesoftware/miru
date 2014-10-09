@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
-import com.jivesoftware.os.jive.utils.map.store.VariableKeySizeBytesObjectMapStore;
+import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
 import java.util.concurrent.ConcurrentHashMap;

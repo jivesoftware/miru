@@ -65,19 +65,19 @@
             <version>0.3.7</version>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>io</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>map-store</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>chunk-store</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>keyed-store</artifactId>
         </dependency>
         <dependency>
@@ -109,7 +109,7 @@
             <artifactId>http-client</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+            <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-inmemory</artifactId>
             <scope>test</scope>
         </dependency>
@@ -149,7 +149,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+            <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-api</artifactId>
         </dependency>
     </dependencies>

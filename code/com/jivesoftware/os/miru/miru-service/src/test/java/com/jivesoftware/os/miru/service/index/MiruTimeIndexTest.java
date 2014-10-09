@@ -1,10 +1,10 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.io.ByteBufferBackedFiler;
-import com.jivesoftware.os.jive.utils.io.FileBackedMemMappedByteBufferFactory;
-import com.jivesoftware.os.jive.utils.io.Filer;
-import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
+import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.RandomAccessFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;

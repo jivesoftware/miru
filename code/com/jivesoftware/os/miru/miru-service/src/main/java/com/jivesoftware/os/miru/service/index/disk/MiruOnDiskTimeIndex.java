@@ -1,12 +1,12 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.io.Filer;
-import com.jivesoftware.os.jive.utils.io.FilerIO;
-import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.map.store.FileBackMapStore;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.jive.utils.map.store.FileBackMapStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -123,7 +123,7 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
      *      1536: { 1536, 1664, 1792, 1920 }
      * </pre>
      */
-    private static void segmentForSearch(MiruTimeIndex index, com.jivesoftware.os.jive.utils.io.Filer filer, int remainingLevels, int segments, long fp,
+    private static void segmentForSearch(MiruTimeIndex index, com.jivesoftware.os.filer.io.Filer filer, int remainingLevels, int segments, long fp,
         int smallestId, int largestId) throws IOException {
 
         seekTo(filer, fp);
@@ -168,7 +168,7 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     }
 
     //TODO delta should always be 0 if the algorithm is correct, so eventually we will remove all calls to this
-    private static void seekTo(com.jivesoftware.os.jive.utils.io.Filer filer, long fp) throws IOException {
+    private static void seekTo(com.jivesoftware.os.filer.io.Filer filer, long fp) throws IOException {
         if (fp - filer.getFilePointer() != 0) {
             System.out.println("Delta: " + (fp - filer.getFilePointer()));
         }

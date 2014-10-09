@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.jivesoftware.os.jive.utils.io.Filer;
+import com.jivesoftware.os.filer.io.Filer;
 import java.io.File;
 import java.io.IOException;
 

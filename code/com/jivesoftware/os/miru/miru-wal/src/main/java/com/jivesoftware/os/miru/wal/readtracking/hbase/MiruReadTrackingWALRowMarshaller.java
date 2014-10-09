@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.wal.readtracking.hbase;
 
-import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.TypeMarshaller;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 
 public class MiruReadTrackingWALRowMarshaller implements TypeMarshaller<MiruReadTrackingWALRow> {
 

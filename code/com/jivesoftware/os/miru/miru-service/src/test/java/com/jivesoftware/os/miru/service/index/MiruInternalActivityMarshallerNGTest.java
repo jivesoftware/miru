@@ -15,7 +15,7 @@
  */
 package com.jivesoftware.os.miru.service.index;
 
-import com.jivesoftware.os.jive.utils.io.ByteArrayFiler;
+import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;

@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
-import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
+import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.keyed.store.FileBackedKeyedStore;
+import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;

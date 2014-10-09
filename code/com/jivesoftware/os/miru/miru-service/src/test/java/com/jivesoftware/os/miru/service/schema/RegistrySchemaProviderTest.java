@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.service.schema;
 
-import com.jivesoftware.os.jive.utils.row.column.value.store.inmemory.RowColumnValueStoreImpl;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
+import com.jivesoftware.os.rcvs.inmemory.RowColumnValueStoreImpl;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;

@@ -48,7 +48,7 @@
             <version>0.94-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+            <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-api</artifactId>
         </dependency>
         <dependency>
@@ -75,7 +75,7 @@
             <type>jar</type>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+            <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-hbase</artifactId>
             <type>jar</type>
         </dependency>

@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.cluster.marshaller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.TypeMarshaller;
+import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 
 public class JacksonJsonObjectTypeMarshaller<T> implements TypeMarshaller<T> {
 

@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.service.locator;
 
-import com.jivesoftware.os.jive.utils.io.ByteBufferBackedFiler;
-import com.jivesoftware.os.jive.utils.io.FileBackedMemMappedByteBufferFactory;
-import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
+import com.jivesoftware.os.filer.io.RandomAccessFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.io.File;

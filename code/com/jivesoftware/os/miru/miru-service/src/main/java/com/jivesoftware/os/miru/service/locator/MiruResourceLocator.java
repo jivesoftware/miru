@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.locator;
 
-import com.jivesoftware.os.jive.utils.io.ByteBufferBackedFiler;
-import com.jivesoftware.os.jive.utils.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.RandomAccessFiler;
 import java.io.File;
 import java.io.IOException;
 

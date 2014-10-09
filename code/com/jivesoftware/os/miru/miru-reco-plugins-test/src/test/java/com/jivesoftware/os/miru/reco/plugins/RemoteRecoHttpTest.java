@@ -52,7 +52,7 @@ public class RemoteRecoHttpTest {
     };
     private static final int REMOTE_PORT = 10_004;
 
-    @Test(enabled = true, description = "Needs REMOTE constants")
+    @Test(enabled = false, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
 
         final String[] tenants = new String[] {

@@ -1,13 +1,6 @@
 package com.jivesoftware.os.miru.cluster;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jivesoftware.os.jive.utils.id.SaltingDelegatingMarshaller;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.DefaultRowColumnValueStoreMarshaller;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.RowColumnValueStore;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.SetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.jive.utils.row.column.value.store.api.timestamper.CurrentTimestamper;
-import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.primatives.IntegerTypeMarshaller;
-import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.primatives.LongTypeMarshaller;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -31,6 +24,13 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnValue;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
+import com.jivesoftware.os.rcvs.api.DefaultRowColumnValueStoreMarshaller;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
+import com.jivesoftware.os.rcvs.api.SetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
+import com.jivesoftware.os.rcvs.marshall.id.SaltingDelegatingMarshaller;
+import com.jivesoftware.os.rcvs.marshall.primatives.IntegerTypeMarshaller;
+import com.jivesoftware.os.rcvs.marshall.primatives.LongTypeMarshaller;
 
 /**
  * ------

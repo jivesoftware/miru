@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.io.FilerIO;
-import com.jivesoftware.os.jive.utils.io.HeapByteBufferFactory;
-import com.jivesoftware.os.jive.utils.map.store.BytesObjectMapStore;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.map.store.BytesObjectMapStore;
 import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
 import gnu.trove.impl.Constants;
 import gnu.trove.impl.hash.TPrimitiveHash;

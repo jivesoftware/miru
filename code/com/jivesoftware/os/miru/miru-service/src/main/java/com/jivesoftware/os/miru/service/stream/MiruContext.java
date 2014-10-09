@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.miru.plugin.context.MiruReadTrackContext;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;

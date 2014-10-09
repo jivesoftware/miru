@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.jive.utils.io.Filer;
-import com.jivesoftware.os.jive.utils.io.FilerIO;
-import com.jivesoftware.os.jive.utils.keyed.store.FileBackedKeyedStore;
-import com.jivesoftware.os.jive.utils.keyed.store.SwappableFiler;
+import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.keyed.store.FileBackedKeyedStore;
+import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;

@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Function;
-import com.jivesoftware.os.jive.utils.map.store.api.KeyValueStore;
+import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import java.util.Map;
 import javax.annotation.Nullable;
 

@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.jivesoftware.os.jive.utils.io.FilerIO;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.io.Serializable;

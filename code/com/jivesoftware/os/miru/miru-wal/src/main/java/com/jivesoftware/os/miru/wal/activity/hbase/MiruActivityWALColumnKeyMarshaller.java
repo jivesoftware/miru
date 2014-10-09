@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.wal.activity.hbase;
 
-import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.TypeMarshaller;
-import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.UtilLexMarshaller;
+import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
+import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import java.nio.ByteBuffer;
 
 public class MiruActivityWALColumnKeyMarshaller implements TypeMarshaller<MiruActivityWALColumnKey> {

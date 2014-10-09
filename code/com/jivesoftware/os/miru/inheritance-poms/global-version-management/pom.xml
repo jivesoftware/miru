@@ -11,6 +11,8 @@
     <packaging>pom</packaging>
     <properties>
         <jive-utils-version>0.50</jive-utils-version>
+        <rcvs-version>0.3</rcvs-version>
+        <filer-version>0.2</filer-version>
         <upena-version>0.7</upena-version>
     </properties>
     <dependencyManagement>
@@ -71,29 +73,29 @@
                 <version>${jive-utils-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+                <groupId>com.jivesoftware.os.rcvs</groupId>
                 <artifactId>row-column-value-store-hbase</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${rcvs-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+                <groupId>com.jivesoftware.os.rcvs</groupId>
                 <artifactId>row-column-value-store-tests</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${rcvs-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils</groupId>
+                <groupId>com.jivesoftware.os.filer</groupId>
                 <artifactId>keyed-store</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${filer-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils</groupId>
+                <groupId>com.jivesoftware.os.filer</groupId>
                 <artifactId>map-store</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${filer-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils</groupId>
+                <groupId>com.jivesoftware.os.filer</groupId>
                 <artifactId>chunk-store</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${filer-version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.jive.utils</groupId>
@@ -101,9 +103,9 @@
                 <version>${jive-utils-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils</groupId>
+                <groupId>com.jivesoftware.os.filer</groupId>
                 <artifactId>io</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${filer-version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.jive.utils</groupId>
@@ -111,14 +113,19 @@
                 <version>${jive-utils-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+                <groupId>com.jivesoftware.os.rcvs</groupId>
                 <artifactId>row-column-value-store-marshall-primatives</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${rcvs-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+                <groupId>com.jivesoftware.os.rcvs</groupId>
+                <artifactId>row-column-value-store-marshall-id</artifactId>
+                <version>${rcvs-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.rcvs</groupId>
                 <artifactId>row-column-value-store-inmemory</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${rcvs-version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.jive.utils</groupId>
@@ -136,9 +143,9 @@
                 <version>${jive-utils-version}</version>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+                <groupId>com.jivesoftware.os.rcvs</groupId>
                 <artifactId>row-column-value-store-api</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${rcvs-version}</version>
             </dependency>
             <dependency>
                 <groupId>com.googlecode.combinatoricslib</groupId>
@@ -147,9 +154,9 @@
                 <type>jar</type>
             </dependency>
             <dependency>
-                <groupId>com.jivesoftware.os.jive.utils.row.column.value.store</groupId>
+                <groupId>com.jivesoftware.os.rcvs</groupId>
                 <artifactId>row-column-value-store-marshall-api</artifactId>
-                <version>${jive-utils-version}</version>
+                <version>${rcvs-version}</version>
                 <type>jar</type>
             </dependency>
             <dependency>

@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.cluster.marshaller;
 
-import com.jivesoftware.os.jive.utils.row.column.value.store.marshall.api.TypeMarshaller;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnValue;
+import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 import java.nio.ByteBuffer;
 
 /**
