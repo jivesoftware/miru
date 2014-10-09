@@ -33,9 +33,9 @@ import static org.testng.Assert.assertEquals;
 
 public class MiruAuthzIndexTest {
 
-    @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
+    @Test (dataProvider = "miruAuthzIndexDataProviderWithData")
     public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<Integer, EWAHCompressedBitmap> bitsIn)
-            throws Exception {
+        throws Exception {
 
         for (Map.Entry<Integer, EWAHCompressedBitmap> entry : bitsIn.entrySet()) {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) entry.getKey()));
@@ -47,10 +47,10 @@ public class MiruAuthzIndexTest {
         }
     }
 
-    @DataProvider(name = "miruAuthzIndexDataProviderWithData")
+    @DataProvider (name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8_192);
-        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{ 1 });
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         final Map<Integer, EWAHCompressedBitmap> smallBitsIn = Maps.newHashMap();
@@ -76,39 +76,39 @@ public class MiruAuthzIndexTest {
             }
         });
 
-        String[] mapDirs = new String[] {
+        String[] mapDirs = new String[]{
             Files.createTempDirectory("map").toFile().getAbsolutePath(),
             Files.createTempDirectory("map").toFile().getAbsolutePath()
         };
-        String[] swapDirs = new String[] {
+        String[] swapDirs = new String[]{
             Files.createTempDirectory("swap").toFile().getAbsolutePath(),
             Files.createTempDirectory("swap").toFile().getAbsolutePath()
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", 16_384, false);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
-        MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex
-                = new MiruOnDiskAuthzIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore, cache(bitmaps, miruAuthzUtils, 10));
+        MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex =
+             new MiruOnDiskAuthzIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore, cache(bitmaps, miruAuthzUtils, 10));
         smallMiruOnDiskAuthzIndex.bulkImport(tenantId, smallMiruInMemoryAuthzIndex);
 
-        return new Object[][] {
-                { smallMiruInMemoryAuthzIndex, miruAuthzUtils, smallBitsIn },
-                { largeMiruInMemoryAuthzIndex, miruAuthzUtils, largeBitsIn },
-                { smallMiruOnDiskAuthzIndex, miruAuthzUtils, smallBitsIn }
+        return new Object[][]{
+            { smallMiruInMemoryAuthzIndex, miruAuthzUtils, smallBitsIn },
+            { largeMiruInMemoryAuthzIndex, miruAuthzUtils, largeBitsIn },
+            { smallMiruOnDiskAuthzIndex, miruAuthzUtils, smallBitsIn }
         };
     }
 
     private <BM> MiruAuthzCache<BM> cache(MiruBitmaps<BM> bitmaps, MiruAuthzUtils<BM> miruAuthzUtils, int maximumSize) {
         Cache<VersionedAuthzExpression, BM> cache = CacheBuilder.newBuilder()
-                .maximumSize(maximumSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES)
-                .build();
+            .maximumSize(maximumSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES)
+            .build();
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(null, null, null, Interners.<String>newWeakInterner());
         return new MiruAuthzCache<>(bitmaps, cache, activityInternExtern, miruAuthzUtils);
     }
 
     private <BM> InvertedIndexData<BM> buildInMemoryInvertedIndexes(MiruBitmaps<BM> bitmaps, Map<Integer, BM> bitsIn, MiruAuthzUtils<BM> miruAuthzUtils,
-            int size) throws Exception {
+        int size) throws Exception {
         Map<String, MiruInvertedIndex<BM>> importItems = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {

@@ -28,7 +28,7 @@ public class RoaringInspectionTest {
         bitmaps.set(bitmap, 0);
         CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(bitmap);
 
-        System.out.println("cardinalityAndLastSetBit="+cardinalityAndLastSetBit.lastSetBit);
+        System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
 
         RoaringBitmap remove = bitmaps.create();
         bitmaps.set(remove, 0);
@@ -37,7 +37,7 @@ public class RoaringInspectionTest {
         bitmaps.andNot(answer, bitmap, Arrays.asList(remove));
 
         cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(answer);
-        System.out.println("cardinalityAndLastSetBit="+cardinalityAndLastSetBit.lastSetBit);
+        System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
 
     }
 

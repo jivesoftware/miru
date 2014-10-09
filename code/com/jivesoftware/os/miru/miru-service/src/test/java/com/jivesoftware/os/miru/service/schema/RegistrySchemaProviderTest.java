@@ -18,10 +18,10 @@ public class RegistrySchemaProviderTest {
         MiruSchema schema1 = new MiruSchema(new MiruFieldDefinition(0, "a"), new MiruFieldDefinition(1, "b"));
         MiruTenantId tenantId2 = new MiruTenantId("tenant2".getBytes());
         MiruSchema schema2 = new MiruSchema(new MiruFieldDefinition(0, "c"), new MiruFieldDefinition(1, "d"));
-        
+
         RowColumnValueStoreImpl<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema> schemaRegistry = new RowColumnValueStoreImpl<>();
         RegistrySchemaProvider schemaProvider = new RegistrySchemaProvider(schemaRegistry, 10);
-        
+
         schemaProvider.register(tenantId1, schema1, 1L);
         schemaProvider.register(tenantId2, schema2, 2L);
 

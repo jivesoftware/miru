@@ -55,12 +55,12 @@ public class MiruServiceBenchmarkTest {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private List<Integer> distinctQueries = ImmutableList.of(
-            10,
-            100,
-            500
+        10,
+        100,
+        500
     );
 
-    private List< MiruRequest<AggregateCountsQuery>> inboxAggregateCountsQueries;
+    private List<MiruRequest<AggregateCountsQuery>> inboxAggregateCountsQueries;
 
     private MiruService miruService;
     private AggregateCountsInjectable injectable;
@@ -70,32 +70,32 @@ public class MiruServiceBenchmarkTest {
     public void setup() {
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         mapper.setVisibilityChecker(mapper.getSerializationConfig().getDefaultVisibilityChecker()
-                .withFieldVisibility(JsonAutoDetect.Visibility.ANY));
+            .withFieldVisibility(JsonAutoDetect.Visibility.ANY));
     }
 
-    @Test(groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
+    @Test (groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
     public void benchmarkTestSmallCustomer() throws Exception {
         UUID runUUID = UUID.randomUUID();
         setupAndRunBenchmark(runUUID, "benchmarkTestSmallCustomer", MiruCustomerSize.SMALL_CUSTOMER);
     }
 
-    @Test(groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
+    @Test (groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
     public void benchmarkTestMediumCustomer() throws Exception {
         UUID runUUID = UUID.randomUUID();
         setupAndRunBenchmark(runUUID, "benchmarkTestMediumCustomer", MiruCustomerSize.MEDIUM_CUSTOMER);
     }
 
-    @Test(groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
+    @Test (groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
     public void benchmarkTestLargeCustomer() throws Exception {
         UUID runUUID = UUID.randomUUID();
         setupAndRunBenchmark(runUUID, "benchmarkTestLargeCustomer", MiruCustomerSize.LARGE_CUSTOMER);
     }
 
-    @Test(groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
+    @Test (groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
     public void benchmarkTestAllCustomerSizes() throws Exception {
         UUID runUUID = UUID.randomUUID();
         setupAndRunBenchmark(runUUID, "benchmarkTestAllCustomerSizes",
-                MiruCustomerSize.SMALL_CUSTOMER, MiruCustomerSize.MEDIUM_CUSTOMER, MiruCustomerSize.LARGE_CUSTOMER);
+            MiruCustomerSize.SMALL_CUSTOMER, MiruCustomerSize.MEDIUM_CUSTOMER, MiruCustomerSize.LARGE_CUSTOMER);
     }
 
     private void setupAndRunBenchmark(UUID runUUID, String methodName, MiruCustomerSize... customerSizes) throws Exception {
@@ -139,7 +139,7 @@ public class MiruServiceBenchmarkTest {
         MiruSchema schema = new MiruSchema(FIELDS);
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenantId, partitionId, miruHost, schema, MiruBackingStorage.hybrid,
-                new MiruBitmapsRoaring());
+            new MiruBitmapsRoaring());
         this.miruService = miruProvider.getMiru(tenantId);
         this.injectable = new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider));
 
@@ -155,7 +155,7 @@ public class MiruServiceBenchmarkTest {
         // Generate all of the inbox queries that will run for this iteration
         log.debug(currentProfile + " = Generating inbox queries");
         this.inboxAggregateCountsQueries = customerSize.generateInboxAggregateCountsQueries(random, tenantId, numDistinctQueries, fieldCardinality,
-                followables, maxOrderId);
+            followables, maxOrderId);
         log.debug(currentProfile + " = Generated inbox queries");
     }
 
@@ -178,43 +178,43 @@ public class MiruServiceBenchmarkTest {
         UUID trialId = UUID.randomUUID();
 
         Run run = new Run.Builder(runUUID)
-                .label("")
-                .startTime(new Date())
-                .build();
+            .label("")
+            .startTime(new Date())
+            .build();
 
         InstrumentSpec instrumentSpec = new InstrumentSpec.Builder()
-                .className("NoClassname")
-                .build();
+            .className("NoClassname")
+            .build();
 
         BenchmarkSpec benchmarkSpec = new BenchmarkSpec.Builder()
-                .methodName(methodName)
-                .className(MiruServiceBenchmarkTest.class.getCanonicalName())
-                .addParameter("customerSize", benchmarkProfile.getCustomerSize().name())
-                .addParameter("fieldCardinality", benchmarkProfile.getFieldCardinality().name())
-                .addParameter("followables", benchmarkProfile.getFollowables().name())
-                .addParameter("numDistinctQueries", String.valueOf(benchmarkProfile.getNumDistinctQueries()))
-                .build();
+            .methodName(methodName)
+            .className(MiruServiceBenchmarkTest.class.getCanonicalName())
+            .addParameter("customerSize", benchmarkProfile.getCustomerSize().name())
+            .addParameter("fieldCardinality", benchmarkProfile.getFieldCardinality().name())
+            .addParameter("followables", benchmarkProfile.getFollowables().name())
+            .addParameter("numDistinctQueries", String.valueOf(benchmarkProfile.getNumDistinctQueries()))
+            .build();
 
         Iterable<Measurement> measurements = ImmutableList.of(
-                new Measurement.Builder()
-                        .description("runtime")
-                        .weight(1.0).value(Value.create(benchmarkResult.getTotalTime(), benchmarkResult.getUnit()))
-                        .build()
+            new Measurement.Builder()
+            .description("runtime")
+            .weight(1.0).value(Value.create(benchmarkResult.getTotalTime(), benchmarkResult.getUnit()))
+            .build()
         );
 
         Trial trial = new Trial.Builder(trialId)
-                .run(run)
-                .instrumentSpec(instrumentSpec)
-                .scenario(new Scenario.Builder()
-                        .benchmarkSpec(benchmarkSpec))
-                .addAllMeasurements(measurements)
-                .build();
+            .run(run)
+            .instrumentSpec(instrumentSpec)
+            .scenario(new Scenario.Builder()
+                .benchmarkSpec(benchmarkSpec))
+            .addAllMeasurements(measurements)
+            .build();
 
         Collection<HttpClientConfiguration> configurations = Lists.newArrayList();
         HttpClientConfig baseConfig = HttpClientConfig.newBuilder()
-                .setSocketTimeoutInMillis(10_000)
-                .setMaxConnections(10)
-                .build();
+            .setSocketTimeoutInMillis(10_000)
+            .setMaxConnections(10)
+            .build();
         configurations.add(baseConfig);
         HttpClientFactory createHttpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configurations);
         HttpClient httpClient = createHttpClientFactory.createClient("https://microbenchmarks.appspot.com/data/trials", 443);
@@ -224,13 +224,14 @@ public class MiruServiceBenchmarkTest {
     }
 
     private class BenchmarkProfile {
+
         private final MiruCustomerSize customerSize;
         private final MiruFieldCardinality fieldCardinality;
         private final MiruFollowables followables;
         private final int numDistinctQueries;
 
         private BenchmarkProfile(MiruCustomerSize customerSize, MiruFieldCardinality fieldCardinality,
-                MiruFollowables followables, int numDistinctQueries) {
+            MiruFollowables followables, int numDistinctQueries) {
             this.customerSize = customerSize;
             this.fieldCardinality = fieldCardinality;
             this.followables = followables;
@@ -255,12 +256,12 @@ public class MiruServiceBenchmarkTest {
 
         @Override
         public String toString() {
-            return "BenchmarkProfile{" +
-                    "customerSize=" + customerSize +
-                    ", fieldCardinality=" + fieldCardinality +
-                    ", followables=" + followables +
-                    ", numDistinctQueries=" + numDistinctQueries +
-                    '}';
+            return "BenchmarkProfile{"
+                + "customerSize=" + customerSize
+                + ", fieldCardinality=" + fieldCardinality
+                + ", followables=" + followables
+                + ", numDistinctQueries=" + numDistinctQueries
+                + '}';
         }
 
         @Override
@@ -301,6 +302,7 @@ public class MiruServiceBenchmarkTest {
     }
 
     private class BenchmarkResult {
+
         private final double totalTime;
         private final String unit;
         private final long numQueriesRun;
@@ -337,7 +339,7 @@ public class MiruServiceBenchmarkTest {
     /**
      * Taken from Google Caliper to help force a GC between runs
      */
-    @SuppressWarnings("ResultOfObjectAllocationIgnored")
+    @SuppressWarnings ("ResultOfObjectAllocationIgnored")
     private void forceGc() {
         System.gc();
         System.runFinalization();
@@ -345,8 +347,8 @@ public class MiruServiceBenchmarkTest {
         new Object() {
             @Override
             protected void finalize() {
-                    latch.countDown();
-                }
+                latch.countDown();
+            }
         };
         System.gc();
         System.runFinalization();

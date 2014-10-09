@@ -40,22 +40,24 @@ public class MiruLowestLatencySolverTest {
         long failAfterNMillis = 3_000;
 
         MiruLowestLatencySolver solver = new MiruLowestLatencySolver(executor, initialSolvers, maxNumberOfSolvers,
-                addAnotherSolverAfterNMillis, failAfterNMillis);
+            addAnotherSolverAfterNMillis, failAfterNMillis);
 
         List<MiruSolvable<Integer>> solvables = Lists.newArrayList();
         List<MiruPartition> orderedPartitions = Lists.newArrayList();
         for (int i = 0; i < 10; i++) {
             final int id = i;
-            MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(1), new MiruHost("localhost", 49_600 + i));
+            MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()),
+                MiruPartitionId.of(1),
+                new MiruHost("localhost", 49_600 + i));
             solvables.add(new MiruSolvable<>(
-                    coord,
-                    new Callable<MiruPartitionResponse<Integer>>() {
-                        @Override
-                        public MiruPartitionResponse<Integer> call() throws Exception {
-                            Thread.sleep(id * 1_000); // Fake latency for each callable, 0 should always win
-                            return new MiruPartitionResponse<>(id, null);
-                        }
-                    }));
+                coord,
+                new Callable<MiruPartitionResponse<Integer>>() {
+                    @Override
+                    public MiruPartitionResponse<Integer> call() throws Exception {
+                        Thread.sleep(id * 1_000); // Fake latency for each callable, 0 should always win
+                        return new MiruPartitionResponse<>(id, null);
+                    }
+                }));
             orderedPartitions.add(new MiruPartition(coord, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory)));
         }
 

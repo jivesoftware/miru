@@ -9,8 +9,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -129,9 +129,9 @@ public class MiruStreamServiceNGTest {
                     int indexSize = p * (capacity / passes) + i;
                     System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
                         + " millis ratePerSecond:" + formatter.format(1_000 * (activities.size() / e)));
-                    System.out.println("\t\tIndexSize:" + formatter.format(indexSize) +
-                            " sizeInMemory:" + formatter.format(service.sizeInMemory(tenant1)) +
-                            " sizeOnDisk:" + formatter.format(service.sizeOnDisk(tenant1)));
+                    System.out.println("\t\tIndexSize:" + formatter.format(indexSize)
+                        + " sizeInMemory:" + formatter.format(service.sizeInMemory(tenant1))
+                        + " sizeOnDisk:" + formatter.format(service.sizeOnDisk(tenant1)));
 
                     activities.clear();
                 }
@@ -144,9 +144,9 @@ public class MiruStreamServiceNGTest {
                 int indexSize = (p + 1) * (capacity / passes);
                 System.out.println("\tIndexed " + formatter.format(activities.size()) + " activities in " + formatter.format(System.currentTimeMillis() - t)
                     + " millis ratePerSecond:" + formatter.format(1_000 * (activities.size() / e)));
-                System.out.println("\t\tIndexSize:" + formatter.format(indexSize) +
-                        " sizeInMemory:" + formatter.format(service.sizeInMemory(tenant1)) +
-                        " sizeOnDisk:" + formatter.format(service.sizeOnDisk(tenant1)));
+                System.out.println("\t\tIndexSize:" + formatter.format(indexSize)
+                    + " sizeInMemory:" + formatter.format(service.sizeInMemory(tenant1))
+                    + " sizeOnDisk:" + formatter.format(service.sizeOnDisk(tenant1)));
             }
 
             //System.out.println("Adding " + activities.size() + " activities.");
@@ -208,7 +208,7 @@ public class MiruStreamServiceNGTest {
      * schema.put("tag", 3); <br>
      * schema.put("author", 4); <br>
      */
-    private final int[] fieldCardinality = new int[]{ 10, 10_000, 1_000_000, 10_000, 1_000};
+    private final int[] fieldCardinality = new int[]{ 10, 10_000, 1_000_000, 10_000, 1_000 };
     private final int[] fieldFrequency = new int[]{ 1, 1, 1, 10, 1 };
 
     private MiruPartitionedActivity generateActivity(int time, Random rand) {
@@ -274,7 +274,7 @@ public class MiruStreamServiceNGTest {
 
         //aggregateQuery:
         {
-            MiruRequest< AggregateCountsQuery> query = new MiruRequest<>(
+            MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
                 tenant1,
                 new MiruActorId(Id.NULL),
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(

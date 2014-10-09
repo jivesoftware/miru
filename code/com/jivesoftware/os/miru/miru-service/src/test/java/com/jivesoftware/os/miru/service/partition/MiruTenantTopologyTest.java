@@ -69,7 +69,8 @@ public class MiruTenantTopologyTest {
                 coordToPartition.put(coord, hostedPartition);
                 return hostedPartition;
             }
-        };Answer<MiruHostedPartition> remoteAnswer = new Answer<MiruHostedPartition>() {
+        };
+        Answer<MiruHostedPartition> remoteAnswer = new Answer<MiruHostedPartition>() {
             @Override
             public MiruHostedPartition answer(InvocationOnMock invocation) throws Throwable {
                 MiruPartitionCoord coord = (MiruPartitionCoord) invocation.getArguments()[0];
@@ -132,7 +133,7 @@ public class MiruTenantTopologyTest {
                 MiruHostedPartition hostedPartition = mock(MiruHostedPartition.class);
                 doAnswer(new Answer<Void>() {
                     @Override
-                    @SuppressWarnings("unchecked")
+                    @SuppressWarnings ("unchecked")
                     public Void answer(InvocationOnMock invocation) throws Throwable {
                         Iterator<MiruPartitionedActivity> iter = (Iterator<MiruPartitionedActivity>) invocation.getArguments()[0];
                         while (iter.hasNext()) {
@@ -150,9 +151,9 @@ public class MiruTenantTopologyTest {
         when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class))).thenAnswer(answer);
 
         tenantTopology.index(Lists.newArrayList(
-            factory.activity(0, p0, 0, new MiruActivity.Builder(tenantId, 0, new String[] { "authz" }, 1_111).build()),
-            factory.activity(0, p1, 0, new MiruActivity.Builder(tenantId, 1, new String[] { "authz" }, 2_222).build()),
-            factory.activity(0, p2, 0, new MiruActivity.Builder(tenantId, 2, new String[] { "authz" }, 3_333).build())));
+            factory.activity(0, p0, 0, new MiruActivity.Builder(tenantId, 0, new String[]{ "authz" }, 1_111).build()),
+            factory.activity(0, p1, 0, new MiruActivity.Builder(tenantId, 1, new String[]{ "authz" }, 2_222).build()),
+            factory.activity(0, p2, 0, new MiruActivity.Builder(tenantId, 2, new String[]{ "authz" }, 3_333).build())));
 
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)));
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)));

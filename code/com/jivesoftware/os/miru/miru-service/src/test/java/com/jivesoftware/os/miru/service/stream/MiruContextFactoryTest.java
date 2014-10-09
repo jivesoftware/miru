@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.collect.Interners;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;

@@ -206,7 +206,7 @@ public class MiruIndexContextTest {
 
         // Build in-memory index stream object
         MiruIndexContext<EWAHCompressedBitmap> miruInMemoryIndexContext = new MiruIndexContext<>(new MiruBitmapsEWAH(4), miruSchema, miruInMemoryActivityIndex,
-            inMemoryMiruFields, miruInMemoryAuthzIndex, miruInMemoryRemovalIndex, activityInterner,Executors.newSingleThreadExecutor());
+            inMemoryMiruFields, miruInMemoryAuthzIndex, miruInMemoryRemovalIndex, activityInterner, Executors.newSingleThreadExecutor());
 
         MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[]{ "abcde" }, ImmutableMap.of("field1", "field1Value1"));
         MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[]{ "fghij" }, ImmutableMap.of("field2", "field2Value1"));
@@ -246,7 +246,7 @@ public class MiruIndexContextTest {
             Files.createTempDirectory("authz").toFile().getAbsolutePath(),
             Files.createTempDirectory("authz").toFile().getAbsolutePath()
         };
-        String[] hybridChunksDirs = new String[] {
+        String[] hybridChunksDirs = new String[]{
             Files.createTempDirectory("chunk").toFile().getAbsolutePath(),
             Files.createTempDirectory("chunk").toFile().getAbsolutePath()
         };
@@ -261,11 +261,11 @@ public class MiruIndexContextTest {
         miruOnDiskAuthzIndex.bulkImport(tenantId, miruInMemoryAuthzIndex);
 
         // Miru on-disk removal index
-        String[] removalMapDirs = new String[] {
+        String[] removalMapDirs = new String[]{
             Files.createTempDirectory("mapRemoval").toFile().getAbsolutePath(),
             Files.createTempDirectory("mapRemoval").toFile().getAbsolutePath()
         };
-        String[] removalSwapDirs = new String[] {
+        String[] removalSwapDirs = new String[]{
             Files.createTempDirectory("swapRemoval").toFile().getAbsolutePath(),
             Files.createTempDirectory("swapRemoval").toFile().getAbsolutePath()
         };
@@ -314,15 +314,15 @@ public class MiruIndexContextTest {
 
     private MiruFields<EWAHCompressedBitmap> buildOnDiskMiruFields(MiruTenantId tenantId, MiruInMemoryField<EWAHCompressedBitmap>[] inMemoryMiruFields,
         MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex) throws Exception {
-        String[] mapDirs = new String[] {
+        String[] mapDirs = new String[]{
             Files.createTempDirectory("mapFields").toFile().getAbsolutePath(),
             Files.createTempDirectory("mapFields").toFile().getAbsolutePath()
         };
-        String[] swapDirs = new String[] {
+        String[] swapDirs = new String[]{
             Files.createTempDirectory("swapFields").toFile().getAbsolutePath(),
             Files.createTempDirectory("swapFields").toFile().getAbsolutePath()
         };
-        String[] chunksDirs = new String[] {
+        String[] chunksDirs = new String[]{
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath(),
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath()
         };
@@ -332,7 +332,7 @@ public class MiruIndexContextTest {
 
         MiruField<EWAHCompressedBitmap>[] miruFieldArray = new MiruField[3];
         for (int i = 0; i < 3; i++) {
-            String[] fieldMapDirs = new String[] {
+            String[] fieldMapDirs = new String[]{
                 Files.createTempDirectory("field-" + i).toFile().getAbsolutePath(),
                 Files.createTempDirectory("field-" + i).toFile().getAbsolutePath()
             };

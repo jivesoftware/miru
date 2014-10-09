@@ -25,7 +25,7 @@ import static org.testng.Assert.fail;
  */
 public class MiruBitmapsTimeRangeTest {
 
-    @Test(dataProvider = "evenTimeIndexDataProvider")
+    @Test (dataProvider = "evenTimeIndexDataProvider")
     public <BM> void testBuildEvenTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
         final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
         for (int lower = 0; lower <= size / 2; lower++) {
@@ -44,7 +44,7 @@ public class MiruBitmapsTimeRangeTest {
         }
     }
 
-    @Test(dataProvider = "oddTimeIndexDataProvider")
+    @Test (dataProvider = "oddTimeIndexDataProvider")
     public <BM> void testBuildOddTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
         final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         for (int lower = 0; lower < size / 2; lower++) {
@@ -62,14 +62,15 @@ public class MiruBitmapsTimeRangeTest {
         }
     }
 
-    @Test(dataProvider = "singleEntryTimeIndexDataProvider")
+    @Test (dataProvider = "singleEntryTimeIndexDataProvider")
     public <BM> void testSingleBitTimeRange(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) {
         BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE);
 
         assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, 0, 1);
     }
 
-    private <BM> void assertExpectedNumberOfConsecutiveBitsStartingFromN(MiruBitmaps<BM> bitmaps, BM bitmap, int expectedStartingFrom, int expectedCardinality) {
+    private <BM> void assertExpectedNumberOfConsecutiveBitsStartingFromN(MiruBitmaps<BM> bitmaps, BM bitmap, int expectedStartingFrom,
+        int expectedCardinality) {
         int last = -1;
         int cardinality = 0;
         int startingFrom = -1;
@@ -88,7 +89,7 @@ public class MiruBitmapsTimeRangeTest {
         assertEquals(cardinality, expectedCardinality);
     }
 
-    @DataProvider(name = "evenTimeIndexDataProvider")
+    @DataProvider (name = "evenTimeIndexDataProvider")
     public Object[][] evenTimeIndexDataProvider() throws Exception {
 
         final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
@@ -97,17 +98,16 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{ 1 });
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
-        return new Object[][] {
+        return new Object[][]{
             { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex },
-        };
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }, };
     }
 
-    @DataProvider(name = "oddTimeIndexDataProvider")
+    @DataProvider (name = "oddTimeIndexDataProvider")
     public <BM> Object[][] oddTimeIndexDataProvider(MiruBitmaps<BM> bitmaps) throws Exception {
 
         final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
@@ -116,28 +116,26 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{ 1 });
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
-        return new Object[][] {
+        return new Object[][]{
             { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex },
-        };
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }, };
     }
 
-    @DataProvider(name = "singleEntryTimeIndexDataProvider")
+    @DataProvider (name = "singleEntryTimeIndexDataProvider")
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
 
-        final long[] timestamps = new long[] { System.currentTimeMillis() };
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        final long[] timestamps = new long[]{ System.currentTimeMillis() };
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{ 1 });
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
-        return new Object[][] {
+        return new Object[][]{
             { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex },
-        };
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }, };
     }
 
     private MiruInMemoryTimeIndex buildInMemoryTimeIndex(MiruTenantId tenantId, final long[] timestamps) throws Exception {
