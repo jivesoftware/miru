@@ -79,8 +79,8 @@ public class MiruIndexContext<BM> {
         this.bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
     }
 
-    @SuppressWarnings("unchecked")
     public void index(final List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
+        @SuppressWarnings("unchecked")
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
 
@@ -101,17 +101,13 @@ public class MiruIndexContext<BM> {
                 }
             }));
         }
-        awaitFutures(internFutures, "Intern");
+        awaitInternFutures(internFutures);
 
         List<Future<List<FieldValuesWork>>> fieldWorkFutures = composeFieldValuesWork(internalActivityAndIds);
         final List<Future<List<BloomWork>>> bloominsWorkFutures = composeBloominsWork(internalActivityAndIds);
         final List<Future<List<AggregateFieldsWork>>> aggregateFieldsWorkFutures = composeAggregateFieldsWork(internalActivityAndIds);
 
-        List<FieldValuesWork>[] fieldsWork = new List[fieldWorkFutures.size()];
-        for (int i = 0; i < fieldWorkFutures.size(); i++) {
-            fieldsWork[i] = fieldWorkFutures.get(i).get();
-            Collections.sort(fieldsWork[i]);
-        }
+        List<FieldValuesWork>[] fieldsWork = awaitFieldWorkFutures(fieldWorkFutures);
 
         List<Future<?>> fieldFutures = indexFieldValues(fieldsWork);
 
@@ -139,10 +135,10 @@ public class MiruIndexContext<BM> {
             }
         });
 
-        awaitFutures(fieldFutures, "IndexFields");
+        awaitFieldFutures(fieldFutures);
 
-        List<BloomWork> bloominsWork = bloominsSortFuture.get();
-        List<AggregateFieldsWork> aggregateFieldsWork = aggregateFieldsSortFuture.get();
+        List<BloomWork> bloominsWork = awaitBloominsSortFuture(bloominsSortFuture);
+        List<AggregateFieldsWork> aggregateFieldsWork = awaitAggregateFieldsSortFuture(aggregateFieldsSortFuture);
 
         final List<Future<?>> otherFutures = new ArrayList<>();
         otherFutures.add(indexExecutor.submit(new Callable<Void>() {
@@ -164,7 +160,7 @@ public class MiruIndexContext<BM> {
                 }
             }));
         }
-        awaitFutures(otherFutures, "IndexOthers");
+        awaitOtherFutures(otherFutures);
 
         if (!activityAndIds.isEmpty()) {
             activityIndex.ready(activityAndIds.get(activityAndIds.size() - 1).id);
@@ -173,17 +169,8 @@ public class MiruIndexContext<BM> {
         log.trace("End: Index batch of {}", activityAndIds.size());
     }
 
-    private void awaitFutures(List<Future<?>> futures, String futureName) throws InterruptedException, ExecutionException {
-        long start = System.currentTimeMillis();
-        for (Future<?> future : futures) {
-            future.get();
-        }
-        if (log.isTraceEnabled()) {
-            log.trace(futureName + ": Finished waiting for futures in " + (System.currentTimeMillis() - start) + " ms");
-        }
-    }
-
     public void set(List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
+        @SuppressWarnings("unchecked")
         List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
 
@@ -200,6 +187,7 @@ public class MiruIndexContext<BM> {
                 log.debug("Declined to repair old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
             } else {
                 log.debug("Repairing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
+                @SuppressWarnings("unchecked")
                 List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
                     new MiruActivityAndId[1]);
                 activityInterner.intern(Arrays.asList(new MiruActivityAndId<>(activity, id)), 0, 1, internalActivityAndIds, schema);
@@ -241,6 +229,7 @@ public class MiruIndexContext<BM> {
                 log.debug("Declined to remove old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
             } else {
                 log.debug("Removing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
+                @SuppressWarnings("unchecked")
                 List<MiruActivityAndId<MiruInternalActivity>> internalActivity = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
                     new MiruActivityAndId[1]);
                 activityInterner.intern(Arrays.asList(new MiruActivityAndId<>(activity, id)), 0, 1, internalActivity, schema);
@@ -255,23 +244,49 @@ public class MiruIndexContext<BM> {
         }
     }
 
-    private static class FieldValuesWork implements Comparable<FieldValuesWork> {
-        final MiruTermId fieldValue;
-        final TIntList ids;
+    private void awaitInternFutures(List<Future<?>> internFutures) throws InterruptedException, ExecutionException {
+        awaitFutures(internFutures, "Intern");
+    }
 
-        private FieldValuesWork(MiruTermId fieldValue, TIntList ids) {
-            this.fieldValue = fieldValue;
-            this.ids = ids;
+    private List<FieldValuesWork>[] awaitFieldWorkFutures(List<Future<List<FieldValuesWork>>> fieldWorkFutures)
+        throws InterruptedException, ExecutionException {
+
+        @SuppressWarnings("unchecked")
+        List<FieldValuesWork>[] fieldsWork = new List[fieldWorkFutures.size()];
+        for (int i = 0; i < fieldWorkFutures.size(); i++) {
+            fieldsWork[i] = fieldWorkFutures.get(i).get();
+            Collections.sort(fieldsWork[i]);
         }
+        return fieldsWork;
+    }
 
-        @Override
-        public int compareTo(FieldValuesWork o) {
-            // flipped so that natural ordering is "largest first"
-            return Integer.compare(o.ids.size(), ids.size());
+    private void awaitFieldFutures(List<Future<?>> fieldFutures) throws InterruptedException, ExecutionException {
+        awaitFutures(fieldFutures, "IndexFields");
+    }
+
+    private List<BloomWork> awaitBloominsSortFuture(Future<List<BloomWork>> bloominsSortFuture) throws InterruptedException, ExecutionException {
+        return bloominsSortFuture.get();
+    }
+
+    private List<AggregateFieldsWork> awaitAggregateFieldsSortFuture(Future<List<AggregateFieldsWork>> aggregateFieldsSortFuture) throws
+        InterruptedException, ExecutionException {
+        return aggregateFieldsSortFuture.get();
+    }
+
+    private void awaitOtherFutures(List<Future<?>> otherFutures) throws InterruptedException, ExecutionException {
+        awaitFutures(otherFutures, "IndexOthers");
+    }
+
+    private void awaitFutures(List<Future<?>> futures, String futureName) throws InterruptedException, ExecutionException {
+        long start = System.currentTimeMillis();
+        for (Future<?> future : futures) {
+            future.get();
+        }
+        if (log.isTraceEnabled()) {
+            log.trace(futureName + ": Finished waiting for futures in " + (System.currentTimeMillis() - start) + " ms");
         }
     }
 
-    @SuppressWarnings("unchecked")
     private List<Future<List<FieldValuesWork>>> composeFieldValuesWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds)
         throws Exception {
 
@@ -339,26 +354,6 @@ public class MiruIndexContext<BM> {
 
     private void repairAuthz(String authz, int id, boolean value) throws Exception {
         authzIndex.repair(authz, id, value);
-    }
-
-    private static class BloomWork implements Comparable<BloomWork> {
-        final int fieldId;
-        final int bloomFieldId;
-        final MiruTermId fieldValue;
-        final List<MiruTermId> bloomFieldValues;
-
-        private BloomWork(int fieldId, int bloomFieldId, MiruTermId fieldValue, List<MiruTermId> bloomFieldValues) {
-            this.fieldId = fieldId;
-            this.bloomFieldId = bloomFieldId;
-            this.fieldValue = fieldValue;
-            this.bloomFieldValues = bloomFieldValues;
-        }
-
-        @Override
-        public int compareTo(BloomWork o) {
-            // flipped so that natural ordering is "largest first"
-            return Integer.compare(o.bloomFieldValues.size(), bloomFieldValues.size());
-        }
     }
 
     private List<Future<List<BloomWork>>> composeBloominsWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
@@ -458,41 +453,6 @@ public class MiruIndexContext<BM> {
         return futures;
     }
 
-    private static class AggregateFieldsWork implements Comparable<AggregateFieldsWork> {
-        final int fieldId;
-        final int aggregateFieldId;
-        final MiruTermId fieldValue;
-        final List<IdAndTerm> work;
-
-        private AggregateFieldsWork(int fieldId, int aggregateFieldId, MiruTermId fieldValue, List<IdAndTerm> work) {
-            this.fieldId = fieldId;
-            this.aggregateFieldId = aggregateFieldId;
-            this.fieldValue = fieldValue;
-            this.work = work;
-        }
-
-        @Override
-        public int compareTo(AggregateFieldsWork o) {
-            // flipped so that natural ordering is "largest first"
-            return Integer.compare(o.work.size(), work.size());
-        }
-    }
-
-    private static class IdAndTerm {
-        final int id;
-        final MiruTermId term;
-
-        private IdAndTerm(int id, MiruTermId term) {
-            this.id = id;
-            this.term = term;
-        }
-
-        @Override
-        public String toString() {
-            return "{" + id + ',' + term + '}';
-        }
-    }
-
     // Answers the question,
     // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
     private List<Future<List<AggregateFieldsWork>>> composeAggregateFieldsWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds)
@@ -588,41 +548,4 @@ public class MiruIndexContext<BM> {
         return futures;
     }
 
-    private static class WriteAggregateKey {
-        private final MiruTermId fieldValue;
-        private final MiruTermId aggregateFieldValue;
-
-        private WriteAggregateKey(MiruTermId fieldValue, MiruTermId aggregateFieldValue) {
-            this.fieldValue = fieldValue;
-            this.aggregateFieldValue = aggregateFieldValue;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            WriteAggregateKey that = (WriteAggregateKey) o;
-
-            if (aggregateFieldValue != null ? !aggregateFieldValue.equals(that.aggregateFieldValue) : that.aggregateFieldValue != null) {
-                return false;
-            }
-            if (fieldValue != null ? !fieldValue.equals(that.fieldValue) : that.fieldValue != null) {
-                return false;
-            }
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = fieldValue != null ? fieldValue.hashCode() : 0;
-            result = 31 * result + (aggregateFieldValue != null ? aggregateFieldValue.hashCode() : 0);
-            return result;
-        }
-    }
 }

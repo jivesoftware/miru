@@ -45,22 +45,21 @@ import static org.testng.Assert.assertNotNull;
 public class RemoteRecoHttpTest {
 
     private static final String[] REMOTE_HOSTS = new String[] {
-        "soa-prime-data6.phx1.jivehosted.com",
-        "soa-prime-data7.phx1.jivehosted.com",
-        "soa-prime-data8.phx1.jivehosted.com",
-        "soa-prime-data9.phx1.jivehosted.com"
+        //"soa-prime-data6.phx1.jivehosted.com",
+        //"soa-prime-data7.phx1.jivehosted.com",
+        "soa-prime-data8.phx1.jivehosted.com"//,
+        //"soa-prime-data9.phx1.jivehosted.com"
     };
     private static final int REMOTE_PORT = 10_004;
 
-    @Test(enabled = false, description = "Needs REMOTE constants")
+    @Test(enabled = true, description = "Needs REMOTE constants")
     public void testSystemTrending() throws Exception {
 
-        /*
         final String[] tenants = new String[] {
             "EVy", "Nv9", "KJt", "WVB", "ZlR", "iXM", "lPm", "Z49", "nyc", "oFd", "yso", "1MO", "40M", "2RV", "999", "EVy", "Nv9", "KJt", "WVB", "ZlR",
             "iXM", "lPm", "Z49", "nyc", "yso", "1MO", "9yG", "999", "EVy", "Nv9", "KJt"
         };
-        */
+        /*
         final String[] tenants = new String[] { "000", "02o", "04j", "069", "08Y", "09q", "09u", "0AO", "0Hd", "0J1", "0Og", "0Pg", "0SN", "0Sp", "0Us",
             "0Yd", "0Zw", "0aP", "0c0", "0dk", "0hd", "0hg", "0hw", "0i1", "0pq", "0r5", "0r9", "0to", "0ww", "0xA", "0z4", "0zv", "10T", "125", "126",
             "175", "1Bm", "1Dp", "1Jv", "1MO", "1PL", "1To", "1Tq", "1Vx", "1Wd", "1Zf", "1bV", "1eK", "1f8", "1h7", "1hM", "1he", "1lU", "1lX",
@@ -161,6 +160,7 @@ public class RemoteRecoHttpTest {
             "yMY", "yPE", "yPs", "yRQ", "ySJ", "yU1", "yZ9", "yZL", "yZV", "yZi", "yd2", "yfH", "yfa", "ygL", "yk2", "ykU", "yl6", "ylv", "yso",
             "yuC", "yxc", "yzb", "yzk", "z3C", "z4a", "z5F", "z6w", "zEp", "zJX", "zKr", "zLh", "zNk", "zNx", "zPo", "zRC", "zSw", "zTl", "zU8",
             "zUg", "zWe", "zWy", "zXf", "zfi", "zhD", "zhr", "zjx", "zlg", "znA", "znH", "zv7", "zzk" };
+        */
         //String tenant = "999"; //brewspace
         //String tenant = "Z49"; //big tenant
 
@@ -197,7 +197,7 @@ public class RemoteRecoHttpTest {
         final long packThreeDays = snowflakeIdPacker.pack(TimeUnit.DAYS.toMillis(30), 0, 0);
 
         ExecutorService executorService = Executors.newFixedThreadPool(8);
-        int numQueries = 10_000;
+        int numQueries = tenants.length; //10_000;
         final Random rand = new Random();
         for (int i = 0; i < numQueries; i++) {
             final int index = i;
@@ -214,6 +214,7 @@ public class RemoteRecoHttpTest {
                             "parent",
                             100), true);
 
+                    @SuppressWarnings("unchecked")
                     MiruResponse<TrendingAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(query,
                         TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
                         MiruResponse.class, new Class[] { TrendingAnswer.class }, null);
@@ -287,6 +288,7 @@ public class RemoteRecoHttpTest {
                 100), true);
 
         Random rand = new Random();
+        @SuppressWarnings("unchecked")
         MiruResponse<RecoAnswer> recoAnswer = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(request,
             RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
             MiruResponse.class, new Class[] { RecoAnswer.class }, null);

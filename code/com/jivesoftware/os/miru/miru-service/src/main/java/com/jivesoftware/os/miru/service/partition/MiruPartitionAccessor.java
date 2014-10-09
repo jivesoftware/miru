@@ -190,7 +190,9 @@ class MiruPartitionAccessor<BM> {
                 }
             }
 
-            context.getIndexContext().index(indexables);
+            if (!indexables.isEmpty()) {
+                context.getIndexContext().index(indexables);
+            }
         }
     }
 

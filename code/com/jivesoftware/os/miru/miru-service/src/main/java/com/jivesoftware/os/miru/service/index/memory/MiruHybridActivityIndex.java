@@ -51,7 +51,6 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
             SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), -1);
             if (swappableFiler != null) {
                 synchronized (swappableFiler.lock()) {
-                    swappableFiler.sync();
                     swappableFiler.seek(0);
                     return internalActivityMarshaller.fromFiler(tenantId, swappableFiler);
                 }
@@ -70,7 +69,6 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
             SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), -1);
             if (swappableFiler != null) {
                 synchronized (swappableFiler.lock()) {
-                    swappableFiler.sync();
                     swappableFiler.seek(0);
                     return internalActivityMarshaller.fieldValueFromFiler(swappableFiler, fieldId);
                 }
@@ -105,7 +103,7 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
                 byte[] bytes = internalActivityMarshaller.toBytes(activity);
                 SwappableFiler swappableFiler = keyedStore.get(FilerIO.intBytes(index), 4 + bytes.length);
                 synchronized (swappableFiler.lock()) {
-                    swappableFiler.sync();
+                    swappableFiler.seek(0);
                     FilerIO.write(swappableFiler, bytes);
                 }
             } catch (Exception e) {
