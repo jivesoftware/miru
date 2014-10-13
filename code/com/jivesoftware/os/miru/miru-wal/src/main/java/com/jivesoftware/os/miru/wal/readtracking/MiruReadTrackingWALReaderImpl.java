@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.wal.readtracking;
 
-import com.google.common.base.Charsets;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -17,17 +15,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader {
 
-    private final RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception>
+    private final RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         readTrackingWAL;
-    private final RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception>
+    private final RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception>
         readTrackingSipWAL;
 
     // TODO - this should probably live in the hbase registry
     private final Map<MiruTenantPartitionAndStreamId, Long> userSipTimestamp = new ConcurrentHashMap<>();
 
     public MiruReadTrackingWALReaderImpl(
-        RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
-        RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {
+        RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
+        RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {
 
         this.readTrackingWAL = readTrackingWAL;
         this.readTrackingSipWAL = readTrackingSipWAL;
@@ -39,16 +37,14 @@ public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader 
 
     @Override
     public void stream(MiruTenantId tenantId, MiruStreamId streamId, long afterEventId, StreamReadTrackingWAL streamReadTrackingWAL) throws Exception {
-        TenantId tenant = new TenantId(new String(tenantId.getBytes(), Charsets.UTF_8));
-        streamFromReadTrackingWAL(tenant, rowKey(streamId), afterEventId, streamReadTrackingWAL);
+        streamFromReadTrackingWAL(tenantId, rowKey(streamId), afterEventId, streamReadTrackingWAL);
     }
 
     @Override
     public void streamSip(MiruTenantId tenantId, MiruStreamId streamId, long sipTimestamp, StreamReadTrackingSipWAL streamReadTrackingSipWAL)
         throws Exception {
 
-        TenantId tenant = new TenantId(new String(tenantId.getBytes(), Charsets.UTF_8));
-        streamFromReadTrackingSipWAL(tenant, rowKey(streamId), sipTimestamp, streamReadTrackingSipWAL);
+        streamFromReadTrackingSipWAL(tenantId, rowKey(streamId), sipTimestamp, streamReadTrackingSipWAL);
     }
 
     @Override
@@ -62,7 +58,7 @@ public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader 
         return sipTimestamp != null ? sipTimestamp : 0;
     }
 
-    private void streamFromReadTrackingWAL(TenantId tenantId, MiruReadTrackingWALRow rowKey, long afterEventId,
+    private void streamFromReadTrackingWAL(MiruTenantId tenantId, MiruReadTrackingWALRow rowKey, long afterEventId,
         final StreamReadTrackingWAL streamReadTrackingWAL) throws Exception {
 
         MiruReadTrackingWALColumnKey start = new MiruReadTrackingWALColumnKey(afterEventId);
@@ -84,7 +80,7 @@ public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader 
         );
     }
 
-    private void streamFromReadTrackingSipWAL(TenantId tenantId, MiruReadTrackingWALRow rowKey, long afterTimestamp,
+    private void streamFromReadTrackingSipWAL(MiruTenantId tenantId, MiruReadTrackingWALRow rowKey, long afterTimestamp,
         final StreamReadTrackingSipWAL streamReadTrackingSipWAL) throws Exception {
 
         MiruReadTrackingSipWALColumnKey start = new MiruReadTrackingSipWALColumnKey(afterTimestamp);

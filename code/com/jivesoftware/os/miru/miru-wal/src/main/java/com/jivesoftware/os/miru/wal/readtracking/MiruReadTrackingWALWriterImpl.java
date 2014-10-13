@@ -1,7 +1,5 @@
 package com.jivesoftware.os.miru.wal.readtracking;
 
-import com.google.common.base.Charsets;
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -29,12 +27,12 @@ public class MiruReadTrackingWALWriterImpl<C, V> implements MiruReadTrackingWALW
         V provideColumnValue(MiruPartitionedActivity activity);
     }
 
-    private final RowColumnValueStore<TenantId, MiruReadTrackingWALRow, C, V, ? extends Exception> wal;
+    private final RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, C, V, ? extends Exception> wal;
     private final ColumnKey<C> columnKey;
     private final ColumnValue<V> columnValue;
     private final CollisionId collisionId;
 
-    public MiruReadTrackingWALWriterImpl(RowColumnValueStore<TenantId, MiruReadTrackingWALRow, C, V, ? extends Exception> wal,
+    public MiruReadTrackingWALWriterImpl(RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, C, V, ? extends Exception> wal,
         ColumnKey<C> columnKey, ColumnValue<V> columnValue, CollisionId collisionId) {
         this.wal = wal;
         this.columnKey = columnKey;
@@ -58,6 +56,6 @@ public class MiruReadTrackingWALWriterImpl<C, V> implements MiruReadTrackingWALW
         }
 
         List<RowColumValueTimestampAdd<MiruReadTrackingWALRow, C, V>> took = rawAdds.take();
-        wal.multiRowsMultiAdd(new TenantId(new String(tenantId.getBytes(), Charsets.UTF_8)), took);
+        wal.multiRowsMultiAdd(tenantId, took);
     }
 }

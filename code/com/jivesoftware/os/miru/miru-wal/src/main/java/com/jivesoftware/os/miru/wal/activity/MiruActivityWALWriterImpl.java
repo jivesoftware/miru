@@ -1,7 +1,5 @@
 package com.jivesoftware.os.miru.wal.activity;
 
-import com.google.common.base.Charsets;
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
@@ -26,12 +24,12 @@ public class MiruActivityWALWriterImpl<C> implements MiruActivityWALWriter {
         C provideColumnKey(MiruPartitionedActivity activity, CollisionId collisionId);
     }
 
-    private final RowColumnValueStore<TenantId, MiruActivityWALRow, C, MiruPartitionedActivity, ? extends Exception> wal;
+    private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, C, MiruPartitionedActivity, ? extends Exception> wal;
     private final ColumnKey<C> columnKey;
     private final CollisionId collisionId;
 
     public MiruActivityWALWriterImpl(
-        RowColumnValueStore<TenantId, MiruActivityWALRow, C, MiruPartitionedActivity, ? extends Exception> wal,
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, C, MiruPartitionedActivity, ? extends Exception> wal,
         ColumnKey<C> columnKey,
         CollisionId collisionId) {
         this.wal = wal;
@@ -54,7 +52,7 @@ public class MiruActivityWALWriterImpl<C> implements MiruActivityWALWriter {
         }
 
         List<RowColumValueTimestampAdd<MiruActivityWALRow, C, MiruPartitionedActivity>> took = rawAdds.take();
-        wal.multiRowsMultiAdd(new TenantId(new String(tenantId.getBytes(), Charsets.UTF_8)), took);
+        wal.multiRowsMultiAdd(tenantId, took);
     }
 
 }

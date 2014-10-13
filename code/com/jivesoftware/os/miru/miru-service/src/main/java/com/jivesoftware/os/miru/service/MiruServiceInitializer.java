@@ -61,9 +61,16 @@ public class MiruServiceInitializer {
         // heartbeat and ensurePartitions
         final ScheduledExecutorService serviceScheduledExecutor = Executors.newScheduledThreadPool(2,
             new NamedThreadFactory(threadGroup, "service"));
-        // rebuild, sip, checkActive
-        final ScheduledExecutorService partitionScheduledExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledExecutorThreads(),
-            new NamedThreadFactory(threadGroup, "partitions"));
+
+        final ScheduledExecutorService scheduledBootstrapExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledBootstrapThreads(),
+            new NamedThreadFactory(threadGroup, "scheduled_bootstrap"));
+
+        final ScheduledExecutorService scheduledRebuildExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledRebuildThreads(),
+            new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
+
+        final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledSipMigrateThreads(),
+            new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
+
         // query solvers
         final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads(),
             new NamedThreadFactory(threadGroup, "solver"));
@@ -71,8 +78,14 @@ public class MiruServiceInitializer {
         final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
             new NamedThreadFactory(threadGroup, "hbase_rebuild_consumer"));
 
-        final ExecutorService indexExecutors = Executors.newFixedThreadPool(config.getIndexerThreads(),
-            new NamedThreadFactory(threadGroup, "index"));
+        final ExecutorService rebuildIndexExecutor = Executors.newFixedThreadPool(config.getRebuildIndexerThreads(),
+            new NamedThreadFactory(threadGroup, "rebuild_index"));
+
+        final ExecutorService sipIndexExecutor = Executors.newFixedThreadPool(config.getSipIndexerThreads(),
+            new NamedThreadFactory(threadGroup, "sip_index"));
+
+        final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount(),
+            new NamedThreadFactory(threadGroup, "stream_factory"));
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
             config.getLongTailSolverWindowSize(),
@@ -80,11 +93,9 @@ public class MiruServiceInitializer {
 
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
-        final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount());
         MiruContextFactory streamFactory = new MiruContextFactory(
             schemaProvider,
             streamFactoryExecutor,
-            indexExecutors,
             readTrackingWALReader,
             resourceLocatorProvider.getDiskResourceLocator(),
             resourceLocatorProvider.getTransientResourceLocator(),
@@ -104,8 +115,12 @@ public class MiruServiceInitializer {
             streamFactory,
             activityWALReader,
             partitionEventHandler,
-            partitionScheduledExecutor,
-            rebuildExecutors);
+            scheduledBootstrapExecutor,
+            scheduledRebuildExecutor,
+            scheduledSipMigrateExecutor,
+            rebuildExecutors,
+            rebuildIndexExecutor,
+            sipIndexExecutor);
 
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
             httpClientFactory,
@@ -171,7 +186,9 @@ public class MiruServiceInitializer {
             @Override
             public void stop() throws Exception {
                 serviceScheduledExecutor.shutdownNow();
-                partitionScheduledExecutor.shutdownNow();
+                scheduledBootstrapExecutor.shutdownNow();
+                scheduledRebuildExecutor.shutdownNow();
+                scheduledSipMigrateExecutor.shutdownNow();
                 solverExecutor.shutdownNow();
                 streamFactoryExecutor.shutdownNow();
             }

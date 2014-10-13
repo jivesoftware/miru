@@ -1,10 +1,8 @@
 package com.jivesoftware.os.miru.client.rcvs;
 
-import com.google.common.base.Charsets;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -33,9 +31,9 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
 
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception>
         writerPartitionRegistry;
-    private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception>
+    private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activityWAL;
-    private final RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
+    private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activitySipWAL;
 
     private final ConcurrentHashMap<TenantPartitionWriterKey, AtomicInteger> cursors = new ConcurrentHashMap<>();
@@ -49,8 +47,8 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
 
     public MiruRCVSPartitionIdProvider(MiruClientConfig config,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry,
-        RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
-        RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
         this.writerPartitionRegistry = writerPartitionRegistry;
         this.activityWAL = activityWAL;
         this.activitySipWAL = activitySipWAL;
@@ -126,7 +124,7 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
         Long minTimestamp = tenantPartitionSmallestTimestamp.get(key);
         if (minTimestamp == null) {
             final AtomicLong got = new AtomicLong();
-            activityWAL.getKeys(new TenantId(new String(tenantId.getBytes(), Charsets.UTF_8)),
+            activityWAL.getKeys(tenantId,
                 new MiruActivityWALRow(partitionId.getId()),
                 new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), 0),
                 1l, 1, false, null, null,
@@ -153,7 +151,7 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
         TenantPartitionWriterKey key = new TenantPartitionWriterKey(tenantId, partitionId, writerId);
         AtomicInteger index = cursors.get(key);
         if (index == null) {
-            MiruPartitionedActivity begin = activitySipWAL.get(new TenantId(new String(tenantId.getBytes(), Charsets.UTF_8)),
+            MiruPartitionedActivity begin = activitySipWAL.get(tenantId,
                 new MiruActivityWALRow(partitionId.getId()),
                 new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId, Long.MAX_VALUE),
                 null, null);

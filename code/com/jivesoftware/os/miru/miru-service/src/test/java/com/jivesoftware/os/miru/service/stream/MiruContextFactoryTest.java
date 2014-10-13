@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.collect.Interners;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -55,9 +55,9 @@ public class MiruContextFactoryTest {
         when(config.getBitsetBufferSize()).thenReturn(32);
         when(config.getDefaultStorage()).thenReturn(MiruBackingStorage.memory.name());
 
-        RowColumnValueStoreImpl<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
+        RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
             new RowColumnValueStoreImpl<>();
-        RowColumnValueStoreImpl<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> readTrackingSipWAL =
+        RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> readTrackingSipWAL =
             new RowColumnValueStoreImpl<>();
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
@@ -66,7 +66,6 @@ public class MiruContextFactoryTest {
             Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
 
         streamFactory = new MiruContextFactory(new SingleSchemaProvider(schema),
-            Executors.newSingleThreadExecutor(),
             Executors.newSingleThreadExecutor(),
             new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
             new MiruTempDirectoryResourceLocator(),
@@ -93,7 +92,7 @@ public class MiruContextFactoryTest {
                 .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
                 .build();
             int id = inMemoryStream.getTimeIndex().nextId((long) i);
-            inMemoryStream.getIndexContext().index(Arrays.asList(new MiruActivityAndId<>(activity, id)));
+            inMemoryStream.getIndexContext().index(Arrays.asList(new MiruActivityAndId<>(activity, id)), MoreExecutors.sameThreadExecutor());
             inMemoryStream.getIndexContext().remove(activity, id);
         }
 
@@ -161,7 +160,7 @@ public class MiruContextFactoryTest {
         MiruContext<EWAHCompressedBitmap> inMem = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
         int id = inMem.getTimeIndex().nextId(System.currentTimeMillis());
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(0));
-        inMem.getIndexContext().index(Arrays.asList(new MiruActivityAndId<>(builder.build(), id)));
+        inMem.getIndexContext().index(Arrays.asList(new MiruActivityAndId<>(builder.build(), id)), MoreExecutors.sameThreadExecutor());
         inMem.getQueryContext().inboxIndex.index(streamId, id);
         inMem.getQueryContext().unreadTrackingIndex.index(streamId, id);
         return inMem;

@@ -57,6 +57,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(1_000)
     int getPartitionSipBatchSize();
 
+    @LongDefault(10_000)
+    long getPartitionRebuildFailureSleepMillis();
+
     @LongDefault(5_000)
     long getPartitionBootstrapIntervalInMillis();
 
@@ -83,7 +86,13 @@ public interface MiruServiceConfig extends Config {
     String getReadStreamIdsPropName();
 
     @IntDefault(24)
-    int getPartitionScheduledExecutorThreads();
+    int getPartitionScheduledBootstrapThreads();
+
+    @IntDefault(24)
+    int getPartitionScheduledRebuildThreads();
+
+    @IntDefault(24)
+    int getPartitionScheduledSipMigrateThreads();
 
     @IntDefault(24)
     int getSolverExecutorThreads();
@@ -92,5 +101,8 @@ public interface MiruServiceConfig extends Config {
     int getRebuilderThreads();
 
     @IntDefault(24)
-    int getIndexerThreads();
+    int getRebuildIndexerThreads();
+
+    @IntDefault(24)
+    int getSipIndexerThreads();
 }

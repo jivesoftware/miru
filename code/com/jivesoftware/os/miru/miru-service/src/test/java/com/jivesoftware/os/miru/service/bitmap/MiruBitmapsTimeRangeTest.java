@@ -104,11 +104,12 @@ public class MiruBitmapsTimeRangeTest {
 
         return new Object[][]{
             { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }, };
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
+        };
     }
 
     @DataProvider (name = "oddTimeIndexDataProvider")
-    public <BM> Object[][] oddTimeIndexDataProvider(MiruBitmaps<BM> bitmaps) throws Exception {
+    public Object[][] oddTimeIndexDataProvider() throws Exception {
 
         final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         final long[] timestamps = new long[size];
@@ -122,7 +123,8 @@ public class MiruBitmapsTimeRangeTest {
 
         return new Object[][]{
             { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }, };
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
+        };
     }
 
     @DataProvider (name = "singleEntryTimeIndexDataProvider")
@@ -135,7 +137,8 @@ public class MiruBitmapsTimeRangeTest {
 
         return new Object[][]{
             { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }, };
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
+        };
     }
 
     private MiruInMemoryTimeIndex buildInMemoryTimeIndex(MiruTenantId tenantId, final long[] timestamps) throws Exception {

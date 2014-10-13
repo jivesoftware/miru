@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.wal.activity;
 
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriterImpl.CollisionId;
@@ -17,8 +16,8 @@ public class MiruWriteToActivityAndSipWAL implements MiruActivityWALWriter {
     private final MiruActivityWALWriter activitySipWALWriter;
 
     public MiruWriteToActivityAndSipWAL(
-        RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
-        RowColumnValueStore<TenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
 
         this.activityWALWriter = new MiruActivityWALWriterImpl<>(activityWAL,
             ACTIVITY_WAL_COLUMN_KEY,

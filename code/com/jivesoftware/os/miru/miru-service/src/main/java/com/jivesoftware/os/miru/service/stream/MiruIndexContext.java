@@ -51,7 +51,6 @@ public class MiruIndexContext<BM> {
     private final MiruAuthzIndex authzIndex;
     private final MiruRemovalIndex removalIndex;
     private final MiruActivityInternExtern activityInterner;
-    private final ExecutorService indexExecutor;
     private final MiruIndexUtil indexUtil = new MiruIndexUtil();
     private final BloomIndex<BM> bloomIndex;
 
@@ -64,8 +63,7 @@ public class MiruIndexContext<BM> {
         MiruFields<BM> fieldIndex,
         MiruAuthzIndex authzIndex,
         MiruRemovalIndex removalIndex,
-        MiruActivityInternExtern activityInterner,
-        ExecutorService indexExecutor) {
+        MiruActivityInternExtern activityInterner) {
 
         this.bitmaps = bitmaps;
         this.schema = schema;
@@ -74,12 +72,11 @@ public class MiruIndexContext<BM> {
         this.authzIndex = authzIndex;
         this.removalIndex = removalIndex;
         this.activityInterner = activityInterner;
-        this.indexExecutor = indexExecutor;
 
         this.bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
     }
 
-    public void index(final List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
+    public void index(final List<MiruActivityAndId<MiruActivity>> activityAndIds, ExecutorService indexExecutor) throws Exception {
         @SuppressWarnings("unchecked")
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
@@ -103,13 +100,13 @@ public class MiruIndexContext<BM> {
         }
         awaitInternFutures(internFutures);
 
-        List<Future<List<FieldValuesWork>>> fieldWorkFutures = composeFieldValuesWork(internalActivityAndIds);
-        final List<Future<List<BloomWork>>> bloominsWorkFutures = composeBloominsWork(internalActivityAndIds);
-        final List<Future<List<AggregateFieldsWork>>> aggregateFieldsWorkFutures = composeAggregateFieldsWork(internalActivityAndIds);
+        List<Future<List<FieldValuesWork>>> fieldWorkFutures = composeFieldValuesWork(internalActivityAndIds, indexExecutor);
+        final List<Future<List<BloomWork>>> bloominsWorkFutures = composeBloominsWork(internalActivityAndIds, indexExecutor);
+        final List<Future<List<AggregateFieldsWork>>> aggregateFieldsWorkFutures = composeAggregateFieldsWork(internalActivityAndIds, indexExecutor);
 
         List<FieldValuesWork>[] fieldsWork = awaitFieldWorkFutures(fieldWorkFutures);
 
-        List<Future<?>> fieldFutures = indexFieldValues(fieldsWork);
+        List<Future<?>> fieldFutures = indexFieldValues(fieldsWork, indexExecutor);
 
         Future<List<BloomWork>> bloominsSortFuture = indexExecutor.submit(new Callable<List<BloomWork>>() {
             @Override
@@ -148,9 +145,9 @@ public class MiruIndexContext<BM> {
                 return null;
             }
         }));
-        otherFutures.addAll(indexAggregateFields(aggregateFieldsWork));
-        otherFutures.addAll(indexBloomins(bloominsWork));
-        otherFutures.addAll(indexWriteTimeAggregates(internalActivityAndIds));
+        otherFutures.addAll(indexAggregateFields(aggregateFieldsWork, indexExecutor));
+        otherFutures.addAll(indexBloomins(bloominsWork, indexExecutor));
+        otherFutures.addAll(indexWriteTimeAggregates(internalActivityAndIds, indexExecutor));
         for (final List<MiruActivityAndId<MiruInternalActivity>> partition : Lists.partition(internalActivityAndIds, partitionSize)) {
             otherFutures.add(indexExecutor.submit(new Callable<Void>() {
                 @Override
@@ -287,7 +284,8 @@ public class MiruIndexContext<BM> {
         }
     }
 
-    private List<Future<List<FieldValuesWork>>> composeFieldValuesWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds)
+    private List<Future<List<FieldValuesWork>>> composeFieldValuesWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
+        ExecutorService indexExecutor)
         throws Exception {
 
         List<Integer> fieldIds = schema.getFieldIds();
@@ -321,7 +319,7 @@ public class MiruIndexContext<BM> {
         return workFutures;
     }
 
-    private List<Future<?>> indexFieldValues(final List<FieldValuesWork>[] work) throws Exception {
+    private List<Future<?>> indexFieldValues(final List<FieldValuesWork>[] work, ExecutorService indexExecutor) throws Exception {
         List<Integer> fieldIds = schema.getFieldIds();
         List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (int fieldId = 0; fieldId < work.length; fieldId++) {
@@ -356,7 +354,8 @@ public class MiruIndexContext<BM> {
         authzIndex.repair(authz, id, value);
     }
 
-    private List<Future<List<BloomWork>>> composeBloominsWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
+    private List<Future<List<BloomWork>>> composeBloominsWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
+        ExecutorService indexExecutor) throws Exception {
         List<MiruFieldDefinition> fieldsWithBlooms = schema.getFieldsWithBlooms();
 
         List<Future<List<BloomWork>>> workFutures = Lists.newArrayList();
@@ -396,7 +395,7 @@ public class MiruIndexContext<BM> {
         return workFutures;
     }
 
-    private List<Future<?>> indexBloomins(List<BloomWork> bloomWorks) {
+    private List<Future<?>> indexBloomins(List<BloomWork> bloomWorks, ExecutorService indexExecutor) {
         int callableCount = 0;
         List<Future<?>> futures = Lists.newArrayList();
         for (final BloomWork bloomWork : bloomWorks) {
@@ -418,7 +417,8 @@ public class MiruIndexContext<BM> {
         return futures;
     }
 
-    private List<Future<?>> indexWriteTimeAggregates(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds) throws Exception {
+    private List<Future<?>> indexWriteTimeAggregates(List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds, ExecutorService indexExecutor)
+        throws Exception {
         List<MiruFieldDefinition> writeTimeAggregateFields = schema.getWriteTimeAggregateFields();
         // rough estimate of necessary capacity
         List<Future<?>> futures = Lists.newArrayListWithCapacity(internalActivityAndIds.size() * writeTimeAggregateFields.size());
@@ -455,8 +455,8 @@ public class MiruIndexContext<BM> {
 
     // Answers the question,
     // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
-    private List<Future<List<AggregateFieldsWork>>> composeAggregateFieldsWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds)
-        throws Exception {
+    private List<Future<List<AggregateFieldsWork>>> composeAggregateFieldsWork(final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
+        ExecutorService indexExecutor) throws Exception {
 
         List<MiruFieldDefinition> fieldsWithAggregates = schema.getFieldsWithAggregates();
 
@@ -506,7 +506,7 @@ public class MiruIndexContext<BM> {
         return workFutures;
     }
 
-    private List<Future<?>> indexAggregateFields(List<AggregateFieldsWork> aggregateFieldsWorks) throws Exception {
+    private List<Future<?>> indexAggregateFields(List<AggregateFieldsWork> aggregateFieldsWorks, ExecutorService indexExecutor) throws Exception {
         int callableCount = 0;
         List<Future<?>> futures = Lists.newArrayListWithCapacity(aggregateFieldsWorks.size());
         for (final AggregateFieldsWork aggregateFieldsWork : aggregateFieldsWorks) {

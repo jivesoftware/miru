@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
-import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -57,11 +56,7 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator
 
     @Override
     public long sizeInMemory() throws Exception {
-        long sizeInBytes = termToIndex.estimateSizeInBytes() * 16; // 2 refs
-        for (KeyValueStore.Entry<MiruTermId, MiruFieldIndexKey> entry : termToIndex) {
-            sizeInBytes += entry.getKey().getBytes().length + entry.getValue().sizeInBytes();
-        }
-        return sizeInBytes;
+        return termToIndex.estimateSizeInBytes();
     }
 
     @Override

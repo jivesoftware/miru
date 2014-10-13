@@ -85,7 +85,7 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                             // streamSip is exclusive of the given timestamp, so subtract 1
                             activityWALReader.streamSip(tenantId, partitionId, afterTimestamp - 1, limit, stream);
                         } else {
-                            activityWALReader.stream(tenantId, partitionId, afterTimestamp, limit, stream);
+                            activityWALReader.stream(tenantId, partitionId, afterTimestamp, limit, 10_000, stream);
                         }
                     } catch (Exception e) {
                         log.error("Failed to read activity WAL", e);

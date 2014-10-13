@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -121,7 +122,7 @@ class MiruPartitionAccessor<BM> {
         ingress, rebuild, sip;
     }
 
-    int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities, IndexStrategy strategy) throws Exception {
+    int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities, IndexStrategy strategy, ExecutorService indexExecutor) throws Exception {
         int count = 0;
         semaphore.acquire();
         try {
@@ -135,21 +136,21 @@ class MiruPartitionAccessor<BM> {
                     if (partitionedActivity.partitionId.equals(coord.partitionId)) {
                         if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN
                             || partitionedActivity.type == MiruPartitionedActivity.Type.END) {
-                            handleActivityType(batch);
+                            handleActivityType(batch, indexExecutor);
                             batch.clear();
                             handleBoundaryType(partitionedActivity);
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.ACTIVITY) {
                             batch.add(partitionedActivity);
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.REPAIR) {
                             if (strategy != IndexStrategy.rebuild) {
-                                handleActivityType(batch);
+                                handleActivityType(batch, indexExecutor);
                                 batch.clear();
                                 handleRepairType(partitionedActivity);
                             } else {
                                 batch.add(partitionedActivity);
                             }
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.REMOVE) {
-                            handleActivityType(batch);
+                            handleActivityType(batch, indexExecutor);
                             batch.clear();
                             handleRemoveType(partitionedActivity, strategy);
                         } else {
@@ -161,7 +162,7 @@ class MiruPartitionAccessor<BM> {
                     }
                     count++;
                 }
-                handleActivityType(batch);
+                handleActivityType(batch, indexExecutor);
             }
         } finally {
             semaphore.release();
@@ -177,7 +178,7 @@ class MiruPartitionAccessor<BM> {
         }
     }
 
-    private void handleActivityType(List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+    private void handleActivityType(List<MiruPartitionedActivity> partitionedActivities, ExecutorService indexExecutor) throws Exception {
         if (!partitionedActivities.isEmpty()) {
             MiruTimeIndex timeIndex = context.getTimeIndex();
 
@@ -192,7 +193,7 @@ class MiruPartitionAccessor<BM> {
             }
 
             if (!indexables.isEmpty()) {
-                context.getIndexContext().index(indexables);
+                context.getIndexContext().index(indexables, indexExecutor);
             }
         }
     }

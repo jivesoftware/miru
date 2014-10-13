@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.wal.readtracking;
 
-import com.jivesoftware.os.jive.utils.id.TenantId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriterImpl.CollisionId;
@@ -17,8 +16,8 @@ public class MiruWriteToReadTrackingAndSipWAL implements MiruReadTrackingWALWrit
     private final MiruReadTrackingWALWriter readTrackingSipWALWriter;
 
     public MiruWriteToReadTrackingAndSipWAL(
-        RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
-        RowColumnValueStore<TenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {
+        RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
+        RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {
 
         this.readTrackingWALWriter = new MiruReadTrackingWALWriterImpl<>(readTrackingWAL,
             READTRACKING_WAL_COLUMN_KEY,

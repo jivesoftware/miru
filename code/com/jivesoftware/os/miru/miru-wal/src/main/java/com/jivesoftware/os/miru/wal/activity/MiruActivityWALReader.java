@@ -12,7 +12,12 @@ public interface MiruActivityWALReader {
         boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception;
     }
 
-    void stream(MiruTenantId tenantId, MiruPartitionId partitionId, long afterTimestamp, int batchSize, StreamMiruActivityWAL streamMiruActivityWAL)
+    void stream(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        long afterTimestamp,
+        int batchSize,
+        long sleepOnFailureMillis,
+        StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 
     void streamSip(MiruTenantId tenantId, MiruPartitionId partitionId, long afterTimestamp, int batchSize, StreamMiruActivityWAL streamMiruActivityWAL)
