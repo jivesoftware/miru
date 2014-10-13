@@ -63,6 +63,9 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(5_000)
     long getPartitionRunnableIntervalInMillis();
 
+    @LongDefault(30_000)
+    long getPartitionBanUnregisteredSchemaMillis();
+
     @IntDefault(10_000)
     int getPartitionAuthzCacheSize();
 

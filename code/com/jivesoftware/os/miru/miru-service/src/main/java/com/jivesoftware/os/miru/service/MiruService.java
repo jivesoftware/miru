@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -126,7 +127,9 @@ public class MiruService implements Miru {
         boolean debug)
         throws Exception {
 
-        if (schemaProvider.getSchema(tenantId) == null) {
+        try {
+            schemaProvider.getSchema(tenantId);
+        } catch (MiruSchemaUnvailableException e) {
             return new MiruResponse<>(null, null, 0, true, Collections.singletonList("Schema has not been registered for this tenantId"));
         }
 

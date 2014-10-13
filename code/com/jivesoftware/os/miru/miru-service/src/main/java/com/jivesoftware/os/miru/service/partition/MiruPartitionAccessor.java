@@ -121,11 +121,12 @@ class MiruPartitionAccessor<BM> {
         ingress, rebuild, sip;
     }
 
-    boolean indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities, IndexStrategy strategy) throws Exception {
+    int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities, IndexStrategy strategy) throws Exception {
+        int count = 0;
         semaphore.acquire();
         try {
             if (closed.get()) {
-                return false;
+                return -1;
             }
             synchronized (context) {
                 List<MiruPartitionedActivity> batch = new ArrayList<>();
@@ -158,14 +159,14 @@ class MiruPartitionAccessor<BM> {
                         // This activity has been handled, so remove it from the backing list
                         partitionedActivities.remove();
                     }
+                    count++;
                 }
                 handleActivityType(batch);
-
             }
         } finally {
             semaphore.release();
         }
-        return true;
+        return count;
     }
 
     private void handleBoundaryType(MiruPartitionedActivity partitionedActivity) {

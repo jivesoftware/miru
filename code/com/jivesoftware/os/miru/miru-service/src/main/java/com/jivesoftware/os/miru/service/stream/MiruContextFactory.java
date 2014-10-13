@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFields;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
@@ -106,10 +107,14 @@ public class MiruContextFactory {
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
-        for (MiruBackingStorage storage : MiruBackingStorage.values()) {
-            if (checkMarkedStorage(coord, storage, numberOfChunkStores)) {
-                return storage;
+        try {
+            for (MiruBackingStorage storage : MiruBackingStorage.values()) {
+                if (checkMarkedStorage(coord, storage, numberOfChunkStores)) {
+                    return storage;
+                }
             }
+        } catch (MiruSchemaUnvailableException e) {
+            log.warn("Schema not registered for tenant {}, using default storage", coord.tenantId);
         }
         return defaultStorage;
     }
@@ -128,7 +133,7 @@ public class MiruContextFactory {
         }
     }
 
-    private <BM> MiruContext<BM> allocateInMemory(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) {
+    private <BM> MiruContext<BM> allocateInMemory(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
@@ -143,6 +148,7 @@ public class MiruContextFactory {
         MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps);
         exportHandles.put("index", index);
 
+        @SuppressWarnings("unchecked")
         MiruInMemoryField<BM>[] fields = new MiruInMemoryField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruInMemoryField<>(schema.getFieldDefinition(fieldId), index);
@@ -212,6 +218,7 @@ public class MiruContextFactory {
         MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps);
         exportHandles.put("index", index);
 
+        @SuppressWarnings("unchecked")
         MiruHybridField<BM>[] fields = new MiruHybridField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruHybridField<>(
@@ -287,7 +294,7 @@ public class MiruContextFactory {
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
             filesToPaths(diskResourceLocator.getMapDirectories(identifier, "activity")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "activity")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "activity")),
             multiChunkStore,
             new MiruInternalActivityMarshaller(),
             Optional.<Filer>of(diskResourceLocator.getByteBufferBackedFiler(identifier, "activity", 4)));
@@ -296,10 +303,11 @@ public class MiruContextFactory {
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
             filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
             multiChunkStore);
         importHandles.put("index", index);
 
+        @SuppressWarnings("unchecked")
         MiruOnDiskField<BM>[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(
@@ -394,6 +402,7 @@ public class MiruContextFactory {
             multiChunkStore);
         importHandles.put("index", index);
 
+        @SuppressWarnings("unchecked")
         MiruOnDiskField<BM>[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(schema.getFieldDefinition(fieldId),
@@ -486,7 +495,7 @@ public class MiruContextFactory {
         }
     }
 
-    @SuppressWarnings ({ "unchecked", "rawtypes" })
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private <BM> MiruContext<BM> copy(MiruTenantId tenantId, MiruContext<BM> from, MiruContext<BM> to) throws Exception {
         Map<String, BulkImport<?>> importHandles = to.getImportHandles();
         for (Map.Entry<String, BulkExport<?>> entry : from.getExportHandles().entrySet()) {
@@ -520,7 +529,7 @@ public class MiruContextFactory {
         }
     }
 
-    private boolean checkMarkedStorage(MiruPartitionCoord coord, MiruBackingStorage storage, int numberOfChunks) throws IOException {
+    private boolean checkMarkedStorage(MiruPartitionCoord coord, MiruBackingStorage storage, int numberOfChunks) throws Exception {
         File file = diskResourceLocator.getFilerFile(new MiruPartitionCoordIdentifier(coord), storage.name());
         if (file.exists()) {
             MiruSchema schema = schemaProvider.getSchema(coord.tenantId);

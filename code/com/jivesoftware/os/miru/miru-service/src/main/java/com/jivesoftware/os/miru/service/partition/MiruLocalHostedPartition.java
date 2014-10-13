@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
+import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
@@ -61,6 +62,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final int partitionRebuildBatchSize;
     private final int partitionSipBatchSize;
     private final long partitionRunnableIntervalInMillis;
+    private final long partitionBanUnregisteredSchemaMillis;
     private final long partitionMigrationWaitInMillis;
     private final long maxSipClockSkew;
     private final int maxSipReplaySize;
@@ -81,7 +83,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         int partitionRebuildBatchSize,
         int partitionSipBatchSize,
         long partitionBootstrapIntervalInMillis,
-        long partitionRunnableIntervalInMillis)
+        long partitionRunnableIntervalInMillis,
+        long partitionBanUnregisteredSchemaMillis)
         throws Exception {
 
         this.timestamper = timestamper;
@@ -96,6 +99,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.partitionRebuildBatchSize = partitionRebuildBatchSize;
         this.partitionSipBatchSize = partitionSipBatchSize;
         this.partitionRunnableIntervalInMillis = partitionRunnableIntervalInMillis;
+        this.partitionBanUnregisteredSchemaMillis = partitionBanUnregisteredSchemaMillis;
         this.partitionMigrationWaitInMillis = 3_000; //TODO config
         this.maxSipClockSkew = TimeUnit.SECONDS.toMillis(10); //TODO config
         this.maxSipReplaySize = 100; //TODO config
@@ -223,14 +227,20 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         MiruPartitionAccessor<BM> accessor = accessorRef.get();
         if (accessor.isOpenForWrites()) {
             //TODO handle return case
-            accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress);
+            int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress);
+            if (count > 0) {
+                log.inc("indexIngress>written", count);
+            }
         } else {
+            int count = 0;
             while (partitionedActivities.hasNext()) {
                 MiruPartitionedActivity partitionedActivity = partitionedActivities.next();
                 if (partitionedActivity.partitionId.equals(coord.partitionId)) {
                     partitionedActivities.remove();
+                    count++;
                 }
             }
+            log.inc("indexIngress>dropped", count);
         }
 
         if (partitionWakeOnIndex) {
@@ -395,6 +405,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
     protected class BootstrapRunnable implements Runnable {
 
+        private final AtomicLong banUnregisteredSchema = new AtomicLong();
+
         @Override
         public void run() {
             try {
@@ -431,9 +443,15 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             }
 
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
-            if (partitionEventHandler.isCoordActive(coord)) {
+            if (partitionEventHandler.isCoordActive(coord) && banUnregisteredSchema.get() < System.currentTimeMillis()) {
                 if (accessor.info.state == MiruPartitionState.offline) {
-                    open(accessor, new MiruPartitionCoordInfo(MiruPartitionState.bootstrap, accessor.info.storage));
+                    try {
+                        open(accessor, new MiruPartitionCoordInfo(MiruPartitionState.bootstrap, accessor.info.storage));
+                    } catch (MiruPartitionUnavailableException e) {
+                        log.warn("Partition is active for tenant {} but no schema is registered, banning for {} ms",
+                            coord.tenantId, partitionBanUnregisteredSchemaMillis);
+                        banUnregisteredSchema.set(System.currentTimeMillis() + partitionBanUnregisteredSchemaMillis);
+                    }
                 }
             } else {
                 if (accessor.info.state != MiruPartitionState.offline) {
@@ -534,12 +552,15 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     }
 
                     log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                    int count = partitionedActivities.size();
                     try {
                         accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild);
                         accessor.rebuildTimestamp.set(rebuildTimestamp.get());
                         accessor.sipTimestamp.set(sipTimestamp.get());
                     } finally {
                         log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                        log.inc("rebuild>tenant>" + coord.tenantId, count);
+                        log.inc("rebuild>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, count);
                     }
                     partitionedActivities.clear();
 

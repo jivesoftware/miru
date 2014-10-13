@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.schema;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
@@ -43,11 +44,11 @@ public class RegistrySchemaProvider implements MiruSchemaProvider {
                     if (schema != null) {
                         return schema;
                     } else {
-                        throw new MiruSchemaUnvailableException("Tenant not registered");
+                        throw new RuntimeException("Tenant not registered");
                     }
                 }
             });
-        } catch (ExecutionException e) {
+        } catch (UncheckedExecutionException | ExecutionException e) {
             throw new MiruSchemaUnvailableException(e);
         }
     }

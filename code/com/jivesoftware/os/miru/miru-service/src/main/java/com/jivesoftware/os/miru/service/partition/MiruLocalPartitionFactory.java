@@ -49,6 +49,7 @@ public class MiruLocalPartitionFactory {
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),
             config.getPartitionBootstrapIntervalInMillis(),
-            config.getPartitionRunnableIntervalInMillis());
+            config.getPartitionRunnableIntervalInMillis(),
+            config.getPartitionBanUnregisteredSchemaMillis());
     }
 }

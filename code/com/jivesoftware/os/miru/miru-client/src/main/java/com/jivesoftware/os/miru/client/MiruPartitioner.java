@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
+import com.jivesoftware.os.jive.utils.logger.ValueType;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -186,6 +187,12 @@ public class MiruPartitioner {
 
         activityWALWriter.write(tenantId, partitionedActivities);
         activityLookupTable.add(tenantId, partitionedActivities);
+
+        if (!partitionedActivities.isEmpty()) {
+            log.set(ValueType.COUNT, "partitioner>index>" + tenantId + ">" + currentPartition.getId(),
+                partitionedActivities.get(partitionedActivities.size() - 1).index);
+            log.set(ValueType.COUNT, "partitioner>partition>" + tenantId, currentPartition.getId());
+        }
 
         if (partitionRolloverOccurred) {
             partitionIdProvider.setLargestPartitionIdForWriter(tenantId, currentPartition, writerId);

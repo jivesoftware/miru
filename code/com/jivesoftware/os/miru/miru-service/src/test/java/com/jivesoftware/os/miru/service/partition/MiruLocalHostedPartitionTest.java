@@ -22,7 +22,8 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
-import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
+import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
@@ -63,10 +64,12 @@ import static org.testng.Assert.assertNotNull;
 
 public class MiruLocalHostedPartitionTest {
 
-    private MiruContextFactory streamFactory;
+    private MiruContextFactory contextFactory;
     private MiruSchema schema;
+    private MiruSchemaProvider schemaProvider;
     private MiruRCVSClusterRegistry clusterRegistry;
     private MiruPartitionCoord coord;
+    private MiruBackingStorage defaultStorage;
     private MiruActivityWALReaderImpl activityWALReader;
     private MiruPartitionEventHandler partitionEventHandler;
     private ScheduledExecutorService scheduledExecutorService;
@@ -93,10 +96,11 @@ public class MiruLocalHostedPartitionTest {
         partitionId = MiruPartitionId.of(0);
         MiruHost host = new MiruHost("localhost", 49_600);
         coord = new MiruPartitionCoord(tenantId, partitionId, host);
+        defaultStorage = MiruBackingStorage.memory;
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
-        when(config.getDefaultStorage()).thenReturn(MiruBackingStorage.memory.name());
+        when(config.getDefaultStorage()).thenReturn(defaultStorage.name());
 
         RowColumnValueStoreImpl<TenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity> activityWAL =
             new RowColumnValueStoreImpl<>();
@@ -109,6 +113,9 @@ public class MiruLocalHostedPartitionTest {
             new RowColumnValueStoreImpl<>();
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
+        schemaProvider = mock(MiruSchemaProvider.class);
+        when(schemaProvider.getSchema(any(MiruTenantId.class))).thenReturn(schema);
+
         bitmaps = new MiruBitmapsEWAH(2);
 
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(
@@ -118,14 +125,14 @@ public class MiruLocalHostedPartitionTest {
             // makes sense to share string internment as this is authz in both cases
             Interners.<String>newWeakInterner());
 
-        streamFactory = new MiruContextFactory(new SingleSchemaProvider(schema),
+        contextFactory = new MiruContextFactory(schemaProvider,
             Executors.newSingleThreadExecutor(),
             Executors.newSingleThreadExecutor(),
             new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
             new MiruTempDirectoryResourceLocator(),
             new MiruTempDirectoryResourceLocator(),
             20,
-            MiruBackingStorage.memory,
+            defaultStorage,
             activityInternExtern);
         clusterRegistry = new MiruRCVSClusterRegistry(
             timestamper,
@@ -154,8 +161,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testBootstrapToOnline() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor,  false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run();
@@ -171,8 +178,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testInactiveToOffline() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -187,8 +194,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testMigrateToMemMapped() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -203,8 +210,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testMoveMemMappedToDisk() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -221,8 +228,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testMoveMemMappedToMemoryFixed() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -239,8 +246,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testMoveMemoryToMemoryFixed() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -254,8 +261,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testMoveMemoryToMemory() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -269,8 +276,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testQueryHandleOfflineMemMappedHotDeploy() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -292,8 +299,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test (expectedExceptions = MiruPartitionUnavailableException.class)
     public void testQueryHandleOfflineMemoryException() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -312,8 +319,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testRemove() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // bootstrap
@@ -327,8 +334,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testWakeOnIndex_false() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, false, 100, 100, 5_000, 5_000, 30_000);
 
         indexNormalActivity(localHostedPartition);
         waitForRef(bootstrapRunnable).run(); // stays offline
@@ -339,14 +346,30 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testWakeOnIndex_true() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper,
-            bitmaps, coord, streamFactory, activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000);
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor, true, 100, 100, 5_000, 5_000, 30_000);
 
         indexNormalActivity(localHostedPartition);
         waitForRef(bootstrapRunnable).run(); // bootstrap
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
+    }
+
+    @Test
+    public void testSchemaNotRegistered_checkActive() throws Exception {
+        when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, contextFactory,
+            activityWALReader, partitionEventHandler, scheduledExecutorService, rebuildExecutor,  false, 100, 100, 5_000, 5_000, 30_000);
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
+        assertEquals(localHostedPartition.getStorage(), defaultStorage);
+
+        setActive(true);
+        waitForRef(bootstrapRunnable).run(); // no effect
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
+        assertEquals(localHostedPartition.getStorage(), defaultStorage);
     }
 
     private void setActive(boolean active) throws Exception {
