@@ -83,6 +83,7 @@ public class MiruContextFactory {
 
     private final int numberOfChunkStores = 24; // TODO expose to config;
     private final int partitionAuthzCacheSize;
+    private final int hybridFieldInitialPageCapacity;
     private final MiruBackingStorage defaultStorage;
 
     public MiruContextFactory(MiruSchemaProvider schemaProvider,
@@ -91,6 +92,7 @@ public class MiruContextFactory {
         MiruResourceLocator diskResourceLocator,
         MiruHybridResourceLocator transientResourceLocator,
         int partitionAuthzCacheSize,
+        int hybridFieldInitialPageCapacity,
         MiruBackingStorage defaultStorage,
         MiruActivityInternExtern activityInternExtern) {
         this.schemaProvider = schemaProvider;
@@ -100,6 +102,7 @@ public class MiruContextFactory {
         this.hybridResourceLocator = transientResourceLocator;
         this.activityInternExtern = activityInternExtern;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
+        this.hybridFieldInitialPageCapacity = hybridFieldInitialPageCapacity;
         this.defaultStorage = defaultStorage;
     }
 
@@ -220,7 +223,8 @@ public class MiruContextFactory {
             fields[fieldId] = new MiruHybridField<>(
                 schema.getFieldDefinition(fieldId),
                 index,
-                filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "field" + fieldId)));
+                filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "field" + fieldId)),
+                hybridFieldInitialPageCapacity);
             exportHandles.put("field" + fieldId, fields[fieldId]);
         }
 

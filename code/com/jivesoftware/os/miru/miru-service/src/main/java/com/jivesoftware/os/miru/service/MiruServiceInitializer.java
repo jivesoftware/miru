@@ -100,6 +100,7 @@ public class MiruServiceInitializer {
             resourceLocatorProvider.getDiskResourceLocator(),
             resourceLocatorProvider.getTransientResourceLocator(),
             config.getPartitionAuthzCacheSize(),
+            config.getHybridFieldInitialPageCapacity(),
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             internExtern);
 

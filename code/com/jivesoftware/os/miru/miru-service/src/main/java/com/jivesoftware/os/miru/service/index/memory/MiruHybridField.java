@@ -42,13 +42,13 @@ public class MiruHybridField<BM> implements MiruField<BM>, BulkExport<Iterator<B
     private final VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
     private final StripingLocksProvider<MiruTermId> stripingLocks = new StripingLocksProvider<>(96);
 
-    public MiruHybridField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex<BM> index, String[] mapDirectories) {
+    public MiruHybridField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex<BM> index, String[] mapDirectories, int initialPageCapacity) {
         this.fieldDefinition = fieldDefinition;
         this.index = index;
         this.nextTermId = new AtomicInteger();
 
         this.termToIndex = new VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey>(
-            mapDirectories, KEY_SIZE_THRESHOLDS, PAYLOAD_SIZE, 100, 64, null) {
+            mapDirectories, KEY_SIZE_THRESHOLDS, PAYLOAD_SIZE, initialPageCapacity, 64, null) {
 
             @Override
             protected int keyLength(MiruTermId key) {

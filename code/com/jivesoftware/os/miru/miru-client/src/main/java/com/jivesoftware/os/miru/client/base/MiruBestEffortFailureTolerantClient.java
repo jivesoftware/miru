@@ -149,7 +149,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
 
     private Set<MiruHost> electHostsForTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, MiruReplicaSet replicaSet) throws Exception {
         if (replicaSet.getCountOfMissingReplicas() > 0) {
-            return  replicaSetDirector.electToReplicaSetForTenantPartition(tenantId,
+            return replicaSetDirector.electToReplicaSetForTenantPartition(tenantId,
                 partitionId,
                 replicaSet,
                 System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1) // TODO expose to config!

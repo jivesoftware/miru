@@ -72,6 +72,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(10_000)
     int getPartitionAuthzCacheSize();
 
+    @IntDefault(1_000)
+    int getHybridFieldInitialPageCapacity();
+
     @StringDefault("hybrid")
     String getDefaultStorage();
     void setDefaultStorage(String storageType);
