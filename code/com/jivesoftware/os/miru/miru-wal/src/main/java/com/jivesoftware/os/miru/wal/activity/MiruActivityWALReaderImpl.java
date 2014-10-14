@@ -45,13 +45,12 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
 
         MiruActivityWALRow rowKey = rowKey(partitionId);
 
-        MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp);
-
         final List<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
         final MutableBoolean streaming = new MutableBoolean(true);
+        final MutableLong lastTimestamp = new MutableLong(afterTimestamp);
         while (streaming.booleanValue()) {
-            final MutableLong lastTimestamp = new MutableLong(afterTimestamp);
             try {
+                MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), lastTimestamp.longValue());
                 activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                     new CallbackStream<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>>() {
                         @Override
@@ -60,8 +59,6 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
 
                             if (v != null) {
                                 cvats.add(v);
-                            } else {
-                                streaming.setValue(false);
                             }
                             if (cvats.size() < batchSize) {
                                 return v;
@@ -71,16 +68,20 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                         }
                     });
 
+                if (cvats.size() < batchSize) {
+                    streaming.setValue(false);
+                }
                 for (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
-                    if (!streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
-                        lastTimestamp.setValue(v.getColumn().getCollisionId());
+                    if (streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
+                        // activityWAL is inclusive of the given timestamp, so add 1
+                        lastTimestamp.setValue(v.getColumn().getCollisionId() + 1);
+                    } else {
                         streaming.setValue(false);
                         break;
                     }
                 }
                 cvats.clear();
             } catch (Exception e) {
-                start = new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), lastTimestamp.longValue());
                 try {
                     Thread.sleep(sleepOnFailureMillis);
                 } catch (InterruptedException ie) {
@@ -95,28 +96,58 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
     public void streamSip(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         long afterTimestamp,
-        int batchSize,
+        final int batchSize,
+        long sleepOnFailureMillis,
         final StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception {
 
         MiruActivityWALRow rowKey = rowKey(partitionId);
 
-        MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp);
+        final List<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
+        final MutableBoolean streaming = new MutableBoolean(true);
+        final MutableLong lastTimestamp = new MutableLong(afterTimestamp);
+        while (streaming.booleanValue()) {
+            try {
+                MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), lastTimestamp.longValue());
+                activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
+                    new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
+                        @Override
+                        public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback(
+                            ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v) throws Exception {
 
-        activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
-            new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
-                @Override
-                public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback(
-                    ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v) throws Exception {
-
-                    if (v != null) {
-                        if (!streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
-                            return null;
+                            if (v != null) {
+                                cvats.add(v);
+                            }
+                            if (cvats.size() < batchSize) {
+                                return v;
+                            } else {
+                                return null;
+                            }
                         }
-                    }
-                    return v;
+                    });
+
+                if (cvats.size() < batchSize) {
+                    streaming.setValue(false);
                 }
-            });
+                for (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
+                    if (streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
+                        // activitySipWAL is exclusive of the given timestamp, so do NOT add 1
+                        lastTimestamp.setValue(v.getColumn().getCollisionId());
+                    } else {
+                        streaming.setValue(false);
+                        break;
+                    }
+                }
+                cvats.clear();
+            } catch (Exception e) {
+                try {
+                    Thread.sleep(sleepOnFailureMillis);
+                } catch (InterruptedException ie) {
+                    Thread.interrupted();
+                    throw new RuntimeException("Interrupted during retry after failure, expect partial results");
+                }
+            }
+        }
     }
 
     @Override

@@ -20,7 +20,12 @@ public interface MiruActivityWALReader {
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 
-    void streamSip(MiruTenantId tenantId, MiruPartitionId partitionId, long afterTimestamp, int batchSize, StreamMiruActivityWAL streamMiruActivityWAL)
+    void streamSip(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        long afterTimestamp,
+        int batchSize,
+        long sleepOnFailureMillis,
+        StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 
     MiruPartitionedActivity findExisting(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionedActivity activity) throws Exception;

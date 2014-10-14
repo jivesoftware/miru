@@ -33,6 +33,8 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private static final long SLEEP_ON_FAILURE_MILLIS = 10_000;
+
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
@@ -83,9 +85,9 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                         };
                         if (sip) {
                             // streamSip is exclusive of the given timestamp, so subtract 1
-                            activityWALReader.streamSip(tenantId, partitionId, afterTimestamp - 1, limit, stream);
+                            activityWALReader.streamSip(tenantId, partitionId, afterTimestamp - 1, limit, SLEEP_ON_FAILURE_MILLIS, stream);
                         } else {
-                            activityWALReader.stream(tenantId, partitionId, afterTimestamp, limit, 10_000, stream);
+                            activityWALReader.stream(tenantId, partitionId, afterTimestamp, limit, SLEEP_ON_FAILURE_MILLIS, stream);
                         }
                     } catch (Exception e) {
                         log.error("Failed to read activity WAL", e);

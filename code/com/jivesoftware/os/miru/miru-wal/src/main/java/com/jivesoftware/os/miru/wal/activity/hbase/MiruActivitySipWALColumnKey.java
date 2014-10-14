@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.wal.activity.hbase;
 
 import com.google.common.base.Optional;
 
-public class MiruActivitySipWALColumnKey {
+public class MiruActivitySipWALColumnKey implements Comparable<MiruActivitySipWALColumnKey> {
     private final byte sort;
     private final long collisionId;
     private final Optional<Long> sipId;
@@ -30,6 +30,20 @@ public class MiruActivitySipWALColumnKey {
 
     public Optional<Long> getSipId() {
         return sipId;
+    }
+
+    @Override
+    public int compareTo(MiruActivitySipWALColumnKey o) {
+        int result = Byte.compare(sort, o.sort);
+        if (result == 0) {
+            result = Long.compare(collisionId, o.collisionId);
+        }
+        if (result == 0) {
+            long a = sipId.or(Long.MAX_VALUE);
+            long b = o.sipId.or(Long.MAX_VALUE);
+            result = Long.compare(a, b);
+        }
+        return result;
     }
 
     @Override

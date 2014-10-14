@@ -620,7 +620,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
             long afterTimestamp = accessor.sipTimestamp.get();
             final List<MiruPartitionedActivity> partitionedActivities = Lists.newLinkedList();
-            activityWALReader.streamSip(coord.tenantId, coord.partitionId, afterTimestamp, partitionSipBatchSize,
+            activityWALReader.streamSip(coord.tenantId, coord.partitionId, afterTimestamp, partitionSipBatchSize, partitionRebuildFailureSleepMillis,
                 new MiruActivityWALReader.StreamMiruActivityWAL() {
                     @Override
                     public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {

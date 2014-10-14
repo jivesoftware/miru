@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.wal.activity.hbase;
 
-public class MiruActivityWALColumnKey {
+public class MiruActivityWALColumnKey implements Comparable<MiruActivityWALColumnKey> {
     private final byte sort;
     private final long collisionId;
 
@@ -23,6 +23,15 @@ public class MiruActivityWALColumnKey {
             "sort=" + sort +
             ", collisionId=" + collisionId +
             '}';
+    }
+
+    @Override
+    public int compareTo(MiruActivityWALColumnKey o) {
+        int result = Byte.compare(sort, o.sort);
+        if (result == 0) {
+            result = Long.compare(collisionId, o.collisionId);
+        }
+        return result;
     }
 
     @Override
