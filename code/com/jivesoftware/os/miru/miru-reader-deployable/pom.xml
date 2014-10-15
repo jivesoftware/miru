@@ -117,5 +117,9 @@
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>health</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>merlin-config</artifactId>
+        </dependency>
     </dependencies>
 </project>
