@@ -77,8 +77,6 @@
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>health</artifactId>
-            <version>0.52-SNAPSHOT</version>
-            <type>jar</type>
         </dependency>
     </dependencies>
 </project>
