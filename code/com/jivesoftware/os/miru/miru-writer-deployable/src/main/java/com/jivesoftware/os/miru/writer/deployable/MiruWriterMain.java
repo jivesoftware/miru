@@ -17,6 +17,10 @@ package com.jivesoftware.os.miru.writer.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
+import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.client.MiruClient;
@@ -36,6 +40,7 @@ import com.jivesoftware.os.rcvs.hbase.HBaseSetOfSortedMapsImplInitializer.HBaseS
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.util.concurrent.TimeUnit;
+import org.merlin.config.Config;
 
 public class MiruWriterMain {
 
@@ -45,7 +50,27 @@ public class MiruWriterMain {
 
     public void run(String[] args) throws Exception {
 
-        Deployable deployable = new Deployable(args);
+        final Deployable deployable = new Deployable(args);
+
+        HealthFactory.initialize(new HealthCheckConfigBinder() {
+
+            @Override
+            public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                return deployable.config(configurationInterfaceClass);
+            }
+        }, new HealthCheckRegistry() {
+
+            @Override
+            public void register(HealthChecker healthChecker) {
+                deployable.addHealthCheck(healthChecker);
+            }
+
+            @Override
+            public void unregister(HealthChecker healthChecker) {
+                throw new UnsupportedOperationException("Not supported yet.");
+            }
+        });
+
         deployable.buildStatusReporter(null).start();
         deployable.buildManageServer().start();
 
@@ -61,27 +86,27 @@ public class MiruWriterMain {
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-            registryStore.getHostsRegistry(),
-            registryStore.getExpectedTenantsRegistry(),
-            registryStore.getExpectedTenantPartitionsRegistry(),
-            registryStore.getReplicaRegistry(),
-            registryStore.getTopologyRegistry(),
-            registryStore.getConfigRegistry(),
-            3,
-            TimeUnit.HOURS.toMillis(1));
+                registryStore.getHostsRegistry(),
+                registryStore.getExpectedTenantsRegistry(),
+                registryStore.getExpectedTenantPartitionsRegistry(),
+                registryStore.getReplicaRegistry(),
+                registryStore.getTopologyRegistry(),
+                registryStore.getConfigRegistry(),
+                3,
+                TimeUnit.HOURS.toMillis(1));
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
-            new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
-            clusterRegistry);
+                new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
+                clusterRegistry);
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 
         MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig,
-            clusterRegistry,
-            replicaSetDirector,
-            registryStore,
-            wal,
-            instanceConfig.getInstanceName());
+                clusterRegistry,
+                replicaSetDirector,
+                registryStore,
+                wal,
+                instanceConfig.getInstanceName());
 
         deployable.addEndpoints(MiruClientEndpoints.class);
         deployable.addInjectables(MiruClient.class, miruClient);
