@@ -10,10 +10,10 @@
     <artifactId>global-version-management</artifactId>
     <packaging>pom</packaging>
     <properties>
-        <jive-utils-version>0.51</jive-utils-version>
+        <jive-utils-version>0.52</jive-utils-version>
         <rcvs-version>0.5</rcvs-version>
         <filer-version>0.3</filer-version>
-        <upena-version>0.7</upena-version>
+        <upena-version>0.10</upena-version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -61,6 +61,11 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>log4j-over-slf4j</artifactId>
                 <version>1.6.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.jive.utils</groupId>
+                <artifactId>health</artifactId>
+                <version>${jive-utils-version}</version>
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.jive.utils</groupId>

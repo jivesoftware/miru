@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.reader.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Interners;
+import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
@@ -80,6 +81,7 @@ public class MiruReaderMain {
 
         Deployable deployable = new Deployable(args);
         deployable.buildStatusReporter(null).start();
+        deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
         deployable.buildManageServer().start();
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);

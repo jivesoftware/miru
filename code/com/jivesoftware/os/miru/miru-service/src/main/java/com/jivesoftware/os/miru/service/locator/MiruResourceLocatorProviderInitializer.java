@@ -15,6 +15,13 @@
  */
 package com.jivesoftware.os.miru.service.locator;
 
+import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
+import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
+import com.jivesoftware.os.jive.utils.health.api.ScheduledMinMaxHealthCheckConfig;
+import com.jivesoftware.os.jive.utils.health.checkers.DiskFreeHealthChecker;
+import com.jivesoftware.os.jive.utils.logger.Counter;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import java.io.File;
@@ -23,40 +30,87 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
+import org.merlin.config.defaults.LongDefault;
+import org.merlin.config.defaults.StringDefault;
 
 /**
  * @author jonathan
  */
 public class MiruResourceLocatorProviderInitializer {
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
+    static interface ResidentResourceDiskCheck extends ScheduledMinMaxHealthCheckConfig {
+
+        @StringDefault ("resident>resource>disk")
+        @Override
+        public String getName();
+
+        @LongDefault (80)
+        @Override
+        public Long getMax();
+
+    }
+
+    static interface TransientResourceDiskCheck extends ScheduledMinMaxHealthCheckConfig {
+
+        @StringDefault ("transient>resource>disk")
+        @Override
+        public String getName();
+
+        @LongDefault (80)
+        @Override
+        public Long getMax();
+
+    }
+
     public MiruLifecyle<MiruResourceLocatorProvider> initialize(final MiruServiceConfig config) throws IOException {
 
         final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(6); //TODO expose to config
 
-        File[] diskPaths = pathToFile(config.getDiskResourceLocatorPaths().split(","));
-        for (File diskPath : diskPaths) {
-            FileUtils.forceMkdir(diskPath);
+        final File[] residentDiskPaths = pathToFile(config.getDiskResourceLocatorPaths().split(","));
+        for (File residentDiskPath : residentDiskPaths) {
+            FileUtils.forceMkdir(residentDiskPath);
         }
-        final MiruResourceLocator diskResourceLocator = new DiskIdentifierPartResourceLocator(
-                diskPaths,
-                config.getDiskResourceInitialChunkSize());
 
-        File[] transientPaths = pathToFile(config.getTransientResourceLocatorPaths().split(","));
+        HealthFactory.scheduleHealthChecker(ResidentResourceDiskCheck.class,
+            new HealthFactory.HealthCheckerConstructor<Counter, ResidentResourceDiskCheck>() {
+
+                @Override
+                public HealthChecker<Counter> construct(ResidentResourceDiskCheck config) {
+                    return new DiskFreeHealthChecker(config, residentDiskPaths);
+                }
+            });
+
+        final MiruResourceLocator residentDiskResourceLocator = new DiskIdentifierPartResourceLocator(
+            residentDiskPaths,
+            config.getDiskResourceInitialChunkSize());
+
+        final File[] transientPaths = pathToFile(config.getTransientResourceLocatorPaths().split(","));
         for (File transientPath : transientPaths) {
             FileUtils.forceMkdir(transientPath);
         }
 
+        HealthFactory.scheduleHealthChecker(TransientResourceDiskCheck.class,
+            new HealthFactory.HealthCheckerConstructor<Counter, TransientResourceDiskCheck>() {
+
+                @Override
+                public HealthChecker<Counter> construct(TransientResourceDiskCheck config) {
+                    return new DiskFreeHealthChecker(config, transientPaths);
+                }
+            });
+
         final MiruHybridResourceCleaner cleaner = new MiruHybridResourceCleaner(transientPaths);
         final MiruHybridResourceLocator transientResourceLocator = new HybridIdentifierPartResourceLocator(
-                transientPaths,
-                config.getTransientResourceInitialChunkSize(),
-                cleaner);
+            transientPaths,
+            config.getTransientResourceInitialChunkSize(),
+            cleaner);
 
         final MiruResourceLocatorProvider miruResourceLocatorProvider = new MiruResourceLocatorProvider() {
 
             @Override
             public MiruResourceLocator getDiskResourceLocator() {
-                return diskResourceLocator;
+                return residentDiskResourceLocator;
             }
 
             @Override
@@ -74,13 +128,13 @@ public class MiruResourceLocatorProviderInitializer {
             @Override
             public void start() throws Exception {
                 scheduledExecutor.scheduleWithFixedDelay(
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                                cleaner.clean();
-                            }
-                        },
-                        0, 5, TimeUnit.MINUTES); //TODO config?
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            cleaner.clean();
+                        }
+                    },
+                    0, 5, TimeUnit.MINUTES); //TODO config?
             }
 
             @Override
