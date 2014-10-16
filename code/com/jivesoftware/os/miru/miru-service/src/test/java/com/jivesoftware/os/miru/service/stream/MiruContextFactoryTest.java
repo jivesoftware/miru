@@ -4,6 +4,7 @@ import com.google.common.collect.Interners;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -85,7 +86,7 @@ public class MiruContextFactoryTest {
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, host);
 
-        MiruContext<EWAHCompressedBitmap> inMemoryStream = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
+        MiruContext<EWAHCompressedBitmap> inMemoryStream = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory, new HeapByteBufferFactory());
 
         for (int i = 0; i < numberOfActivities; i++) {
             String[] authz = { "aaaabbbbcccc" };
@@ -158,7 +159,7 @@ public class MiruContextFactoryTest {
             builder.putFieldValue(fieldName.getFieldName(), "defg");
         }
 
-        MiruContext<EWAHCompressedBitmap> inMem = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
+        MiruContext<EWAHCompressedBitmap> inMem = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory, new HeapByteBufferFactory());
         int id = inMem.getTimeIndex().nextId(System.currentTimeMillis());
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(0));
         inMem.getIndexContext().index(Arrays.asList(new MiruActivityAndId<>(builder.build(), id)), MoreExecutors.sameThreadExecutor());

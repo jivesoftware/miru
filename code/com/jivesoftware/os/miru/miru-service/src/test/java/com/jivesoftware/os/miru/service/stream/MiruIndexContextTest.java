@@ -10,6 +10,7 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.keyed.store.FileBackedKeyedStore;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -133,7 +134,7 @@ public class MiruIndexContextTest {
         MiruInMemoryActivityIndex miruInMemoryActivityIndex = new MiruInMemoryActivityIndex();
 
         // Miru in-memory fields
-        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4));
+        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4), new HeapByteBufferFactory());
         MiruInMemoryField<EWAHCompressedBitmap>[] inMemoryMiruFieldArray = buildInMemoryMiruFieldArray(miruInMemoryIndex, fieldDefinitions);
         MiruFields<EWAHCompressedBitmap> inMemoryMiruFields = new MiruFields<>(inMemoryMiruFieldArray, miruInMemoryIndex);
 

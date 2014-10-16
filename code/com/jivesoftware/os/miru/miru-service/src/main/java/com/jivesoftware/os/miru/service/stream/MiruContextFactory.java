@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
@@ -119,11 +120,11 @@ public class MiruContextFactory {
         return defaultStorage;
     }
 
-    public <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
+    public <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage, ByteBufferFactory  byteBufferFactory) throws Exception {
         if (storage == MiruBackingStorage.memory || storage == MiruBackingStorage.memory_fixed) {
-            return allocateInMemory(bitmaps, coord);
+            return allocateInMemory(bitmaps, coord, byteBufferFactory);
         } else if (storage == MiruBackingStorage.hybrid || storage == MiruBackingStorage.hybrid_fixed) {
-            return allocateHybrid(bitmaps, coord);
+            return allocateHybrid(bitmaps, coord, byteBufferFactory);
         } else if (storage == MiruBackingStorage.mem_mapped) {
             return allocateMemMapped(bitmaps, coord);
         } else if (storage == MiruBackingStorage.disk) {
@@ -133,19 +134,19 @@ public class MiruContextFactory {
         }
     }
 
-    private <BM> MiruContext<BM> allocateInMemory(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+    private <BM> MiruContext<BM> allocateInMemory(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ByteBufferFactory  byteBufferFactory) throws Exception {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         Map<String, BulkExport<?>> exportHandles = Maps.newHashMap();
 
-        MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent());
+        MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent(), byteBufferFactory);
         exportHandles.put("timeIndex", timeIndex);
 
         MiruInMemoryActivityIndex activityIndex = new MiruInMemoryActivityIndex();
         exportHandles.put("activityIndex", activityIndex);
 
-        MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps);
+        MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps, byteBufferFactory);
         exportHandles.put("index", index);
 
         @SuppressWarnings("unchecked")
@@ -188,7 +189,7 @@ public class MiruContextFactory {
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.<MultiChunkStore>absent()).exportable(exportHandles);
     }
 
-    private <BM> MiruContext<BM> allocateHybrid(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+    private <BM> MiruContext<BM> allocateHybrid(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ByteBufferFactory  byteBufferFactory) throws Exception {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
@@ -196,7 +197,7 @@ public class MiruContextFactory {
 
         MiruResourcePartitionIdentifier identifier = hybridResourceLocator.acquire();
 
-        MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent());
+        MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent(), byteBufferFactory);
         exportHandles.put("timeIndex", timeIndex);
 
         MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(
@@ -214,7 +215,7 @@ public class MiruContextFactory {
             Optional.<Filer>absent());
         exportHandles.put("activityIndex", activityIndex);
 
-        MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps);
+        MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps, byteBufferFactory);
         exportHandles.put("index", index);
 
         @SuppressWarnings("unchecked")

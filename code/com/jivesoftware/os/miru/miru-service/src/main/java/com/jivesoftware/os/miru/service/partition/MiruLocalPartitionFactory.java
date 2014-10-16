@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
+import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
@@ -20,6 +21,7 @@ public class MiruLocalPartitionFactory {
     private final MiruContextFactory miruContextFactory;
     private final MiruActivityWALReader activityWALReader;
     private final MiruPartitionEventHandler partitionEventHandler;
+    private final ByteBufferFactory byteBufferFactory;
     private final ScheduledExecutorService scheduledBoostrapExecutor;
     private final ScheduledExecutorService scheduledRebuildExecutor;
     private final ScheduledExecutorService scheduledSipMigrateExecutor;
@@ -28,21 +30,23 @@ public class MiruLocalPartitionFactory {
     private final ExecutorService sipIndexExecutor;
 
     public MiruLocalPartitionFactory(Timestamper timestamper,
-        MiruServiceConfig config,
-        MiruContextFactory miruContextFactory,
-        MiruActivityWALReader activityWALReader,
-        MiruPartitionEventHandler partitionEventHandler,
-        ScheduledExecutorService scheduledBoostrapExecutor,
-        ScheduledExecutorService scheduledRebuildExecutor,
-        ScheduledExecutorService scheduledSipMigrateExecutor,
-        ExecutorService rebuildExecutors,
-        ExecutorService rebuildIndexExecutor,
-        ExecutorService sipIndexExecutor) {
+            MiruServiceConfig config,
+            MiruContextFactory miruContextFactory,
+            MiruActivityWALReader activityWALReader,
+            MiruPartitionEventHandler partitionEventHandler,
+            ByteBufferFactory byteBufferFactory,
+            ScheduledExecutorService scheduledBoostrapExecutor,
+            ScheduledExecutorService scheduledRebuildExecutor,
+            ScheduledExecutorService scheduledSipMigrateExecutor,
+            ExecutorService rebuildExecutors,
+            ExecutorService rebuildIndexExecutor,
+            ExecutorService sipIndexExecutor) {
         this.timestamper = timestamper;
         this.config = config;
         this.miruContextFactory = miruContextFactory;
         this.activityWALReader = activityWALReader;
         this.partitionEventHandler = partitionEventHandler;
+        this.byteBufferFactory = byteBufferFactory;
         this.scheduledBoostrapExecutor = scheduledBoostrapExecutor;
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
         this.scheduledSipMigrateExecutor = scheduledSipMigrateExecutor;
@@ -53,20 +57,21 @@ public class MiruLocalPartitionFactory {
 
     public <BM> MiruHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         return new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, miruContextFactory,
-            activityWALReader,
-            partitionEventHandler,
-            scheduledBoostrapExecutor,
-            scheduledRebuildExecutor,
-            scheduledSipMigrateExecutor,
-            rebuildExecutors,
-            rebuildIndexExecutor,
-            sipIndexExecutor,
-            config.getPartitionWakeOnIndex(),
-            config.getPartitionRebuildBatchSize(),
-            config.getPartitionSipBatchSize(),
-            config.getPartitionRebuildFailureSleepMillis(),
-            config.getPartitionBootstrapIntervalInMillis(),
-            config.getPartitionRunnableIntervalInMillis(),
-            config.getPartitionBanUnregisteredSchemaMillis());
+                activityWALReader,
+                partitionEventHandler,
+                byteBufferFactory,
+                scheduledBoostrapExecutor,
+                scheduledRebuildExecutor,
+                scheduledSipMigrateExecutor,
+                rebuildExecutors,
+                rebuildIndexExecutor,
+                sipIndexExecutor,
+                config.getPartitionWakeOnIndex(),
+                config.getPartitionRebuildBatchSize(),
+                config.getPartitionSipBatchSize(),
+                config.getPartitionRebuildFailureSleepMillis(),
+                config.getPartitionBootstrapIntervalInMillis(),
+                config.getPartitionRunnableIntervalInMillis(),
+                config.getPartitionBanUnregisteredSchemaMillis());
     }
 }

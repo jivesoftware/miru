@@ -2,6 +2,8 @@ package com.jivesoftware.os.miru.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.jivesoftware.os.filer.io.ByteBufferFactory;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -36,6 +38,7 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -46,63 +49,63 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MiruServiceInitializer {
 
     public MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
-        MiruRegistryStore registryStore,
-        MiruClusterRegistry clusterRegistry,
-        MiruHost miruHost,
-        MiruSchemaProvider schemaProvider,
-        MiruWAL wal,
-        HttpClientFactory httpClientFactory,
-        MiruResourceLocatorProvider resourceLocatorProvider,
-        MiruActivityInternExtern internExtern,
-        MiruBitmapsProvider bitmapsProvider) throws IOException {
+            MiruRegistryStore registryStore,
+            MiruClusterRegistry clusterRegistry,
+            MiruHost miruHost,
+            MiruSchemaProvider schemaProvider,
+            MiruWAL wal,
+            HttpClientFactory httpClientFactory,
+            MiruResourceLocatorProvider resourceLocatorProvider,
+            MiruActivityInternExtern internExtern,
+            MiruBitmapsProvider bitmapsProvider) throws IOException {
 
         final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
 
         // heartbeat and ensurePartitions
         final ScheduledExecutorService serviceScheduledExecutor = Executors.newScheduledThreadPool(2,
-            new NamedThreadFactory(threadGroup, "service"));
+                new NamedThreadFactory(threadGroup, "service"));
 
         final ScheduledExecutorService scheduledBootstrapExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledBootstrapThreads(),
-            new NamedThreadFactory(threadGroup, "scheduled_bootstrap"));
+                new NamedThreadFactory(threadGroup, "scheduled_bootstrap"));
 
         final ScheduledExecutorService scheduledRebuildExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledRebuildThreads(),
-            new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
+                new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
 
         final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledSipMigrateThreads(),
-            new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
+                new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
 
         // query solvers
         final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads(),
-            new NamedThreadFactory(threadGroup, "solver"));
+                new NamedThreadFactory(threadGroup, "solver"));
 
         final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
-            new NamedThreadFactory(threadGroup, "hbase_rebuild_consumer"));
+                new NamedThreadFactory(threadGroup, "hbase_rebuild_consumer"));
 
         final ExecutorService rebuildIndexExecutor = Executors.newFixedThreadPool(config.getRebuildIndexerThreads(),
-            new NamedThreadFactory(threadGroup, "rebuild_index"));
+                new NamedThreadFactory(threadGroup, "rebuild_index"));
 
         final ExecutorService sipIndexExecutor = Executors.newFixedThreadPool(config.getSipIndexerThreads(),
-            new NamedThreadFactory(threadGroup, "sip_index"));
+                new NamedThreadFactory(threadGroup, "sip_index"));
 
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount(),
-            new NamedThreadFactory(threadGroup, "stream_factory"));
+                new NamedThreadFactory(threadGroup, "stream_factory"));
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
-            config.getLongTailSolverWindowSize(),
-            config.getLongTailSolverPercentile());
+                config.getLongTailSolverWindowSize(),
+                config.getLongTailSolverPercentile());
 
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
         MiruContextFactory streamFactory = new MiruContextFactory(
-            schemaProvider,
-            streamFactoryExecutor,
-            readTrackingWALReader,
-            resourceLocatorProvider.getDiskResourceLocator(),
-            resourceLocatorProvider.getTransientResourceLocator(),
-            config.getPartitionAuthzCacheSize(),
-            config.getHybridFieldInitialPageCapacity(),
-            MiruBackingStorage.valueOf(config.getDefaultStorage()),
-            internExtern);
+                schemaProvider,
+                streamFactoryExecutor,
+                readTrackingWALReader,
+                resourceLocatorProvider.getDiskResourceLocator(),
+                resourceLocatorProvider.getTransientResourceLocator(),
+                config.getPartitionAuthzCacheSize(),
+                config.getHybridFieldInitialPageCapacity(),
+                MiruBackingStorage.valueOf(config.getDefaultStorage()),
+                internExtern);
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
@@ -111,51 +114,66 @@ public class MiruServiceInitializer {
 
         MiruPartitionInfoProvider partitionInfoProvider = new CachedClusterPartitionInfoProvider();
 
+        ByteBufferFactory byteBufferFactory;
+        if (config.getUseOffHeapBuffers()) {
+            byteBufferFactory = new HeapByteBufferFactory();
+
+        } else {
+            byteBufferFactory = new ByteBufferFactory() {
+
+                @Override
+                public ByteBuffer allocate(long _size) {
+                    return ByteBuffer.allocateDirect((int) _size);
+                }
+            };
+        }
+
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(new CurrentTimestamper(),
-            config,
-            streamFactory,
-            activityWALReader,
-            partitionEventHandler,
-            scheduledBootstrapExecutor,
-            scheduledRebuildExecutor,
-            scheduledSipMigrateExecutor,
-            rebuildExecutors,
-            rebuildIndexExecutor,
-            sipIndexExecutor);
+                config,
+                streamFactory,
+                activityWALReader,
+                partitionEventHandler,
+                byteBufferFactory,
+                scheduledBootstrapExecutor,
+                scheduledRebuildExecutor,
+                scheduledSipMigrateExecutor,
+                rebuildExecutors,
+                rebuildIndexExecutor,
+                sipIndexExecutor);
 
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
-            httpClientFactory,
-            objectMapper);
+                httpClientFactory,
+                objectMapper);
 
         MiruTenantTopologyFactory tenantTopologyFactory = new MiruTenantTopologyFactory(config,
-            bitmapsProvider,
-            miruHost,
-            localPartitionFactory,
-            remotePartitionFactory,
-            partitionComparison);
+                bitmapsProvider,
+                miruHost,
+                localPartitionFactory,
+                remotePartitionFactory,
+                partitionComparison);
 
         MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(partitionInfoProvider,
-            tenantTopologyFactory,
-            clusterRegistry);
+                tenantTopologyFactory,
+                clusterRegistry);
 
         final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, clusterRegistry, expectedTenants);
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
 
         MiruSolver solver = new MiruLowestLatencySolver(solverExecutor,
-            config.getDefaultInitialSolvers(),
-            config.getDefaultMaxNumberOfSolvers(),
-            config.getDefaultAddAnotherSolverAfterNMillis(),
-            config.getDefaultFailAfterNMillis());
+                config.getDefaultInitialSolvers(),
+                config.getDefaultMaxNumberOfSolvers(),
+                config.getDefaultAddAnotherSolverAfterNMillis(),
+                config.getDefaultFailAfterNMillis());
 
         final MiruService miruService = new MiruService(
-            miruHost,
-            partitionDirector,
-            partitionComparison,
-            activityWALWriter,
-            activityLookupTable,
-            solver,
-            schemaProvider);
+                miruHost,
+                partitionDirector,
+                partitionComparison,
+                activityWALWriter,
+                activityLookupTable,
+                solver,
+                schemaProvider);
 
         return new MiruLifecyle<MiruService>() {
 
@@ -211,8 +229,8 @@ public class MiruServiceInitializer {
         @Override
         public Thread newThread(Runnable r) {
             Thread t = new Thread(g, r,
-                namePrefix + threadNumber.getAndIncrement(),
-                0);
+                    namePrefix + threadNumber.getAndIncrement(),
+                    0);
             if (t.isDaemon()) {
                 t.setDaemon(false);
             }

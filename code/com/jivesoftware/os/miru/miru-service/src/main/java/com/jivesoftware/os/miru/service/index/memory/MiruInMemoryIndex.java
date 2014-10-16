@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
+import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.map.store.BytesObjectMapStore;
@@ -21,15 +22,15 @@ import java.util.Iterator;
  * @author jonathan
  */
 public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>>>,
-    BulkExport<Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>>> {
+        BulkExport<Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final BytesObjectMapStore<Long, MiruInvertedIndex<BM>> index;
     private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
 
-    public MiruInMemoryIndex(MiruBitmaps<BM> bitmaps) {
+    public MiruInMemoryIndex(MiruBitmaps<BM> bitmaps, ByteBufferFactory byteBufferFactory) {
         this.bitmaps = bitmaps;
-        this.index = new BytesObjectMapStore<Long, MiruInvertedIndex<BM>>(8, 10, null, new HeapByteBufferFactory()) {
+        this.index = new BytesObjectMapStore<Long, MiruInvertedIndex<BM>>(8, 10, null, byteBufferFactory) {
             @Override
             public byte[] keyBytes(Long key) {
                 return FilerIO.longBytes(key);

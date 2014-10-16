@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -59,7 +60,7 @@ public class MiruFieldTest {
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1");
         MiruInMemoryField<EWAHCompressedBitmap> miruInMemoryField = new MiruInMemoryField<>(fieldDefinition,
-                new MiruInMemoryIndex<>(new MiruBitmapsEWAH(2)));
+                new MiruInMemoryIndex<>(new MiruBitmapsEWAH(2), new HeapByteBufferFactory()));
 
         for (int id = 0; id < 10; id++) {
             ids.add(id);

@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
 import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
 import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
@@ -145,7 +146,7 @@ public class MiruTimeIndexTest {
         int capacity = 100; //1_000_000;
         MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         long start = System.currentTimeMillis();
-        final MiruInMemoryTimeIndex inMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent());
+        final MiruInMemoryTimeIndex inMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(), new HeapByteBufferFactory());
         for (int i = 0; i < capacity; i++) {
             inMemoryTimeIndex.nextId(i * 10);
         }
@@ -209,7 +210,7 @@ public class MiruTimeIndexTest {
         int capacity = 1_000;
 
         // Set up and import in-memory implementation
-        final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent());
+        final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(), new HeapByteBufferFactory());
 
         final long[] importValues = new long[capacity];
         for (int i = 0; i < capacity; i++) {
@@ -275,7 +276,7 @@ public class MiruTimeIndexTest {
     public Object[][] miruTimeIndexDataProviderWithRangeData() throws Exception {
         // Set up and import in-memory implementation
         MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
-        final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent());
+        final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(), new HeapByteBufferFactory());
 
         final long[] importValues = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
 

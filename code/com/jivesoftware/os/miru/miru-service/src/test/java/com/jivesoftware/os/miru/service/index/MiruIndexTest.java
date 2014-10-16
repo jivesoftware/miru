@@ -7,6 +7,7 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -88,7 +89,7 @@ public class MiruIndexTest {
 
     @DataProvider(name = "miruIndexDataProvider")
     public Object[][] miruIndexDataProvider() throws Exception {
-        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4));
+        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4), new HeapByteBufferFactory());
 
         String[] mapDirs = new String[] {
             Files.createTempDirectory("map").toFile().getAbsolutePath(),
@@ -113,7 +114,7 @@ public class MiruIndexTest {
     public Object[][] miruIndexDataProviderWithData() throws Exception {
         IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
-        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4));
+        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4), new HeapByteBufferFactory());
 
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
         bitmap.set(1);
