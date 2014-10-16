@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
+import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -38,7 +39,6 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -117,15 +117,8 @@ public class MiruServiceInitializer {
         ByteBufferFactory byteBufferFactory;
         if (config.getUseOffHeapBuffers()) {
             byteBufferFactory = new HeapByteBufferFactory();
-
         } else {
-            byteBufferFactory = new ByteBufferFactory() {
-
-                @Override
-                public ByteBuffer allocate(long _size) {
-                    return ByteBuffer.allocateDirect((int) _size);
-                }
-            };
+            byteBufferFactory = new DirectByteBufferFactory();
         }
 
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(new CurrentTimestamper(),
