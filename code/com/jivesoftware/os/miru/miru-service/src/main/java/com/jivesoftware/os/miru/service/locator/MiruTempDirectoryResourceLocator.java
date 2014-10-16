@@ -112,4 +112,9 @@ public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocat
         return subDirectories;
     }
 
+    @Override
+    public boolean isFileBackedChunkStore() {
+        return true;
+    }
+
 }

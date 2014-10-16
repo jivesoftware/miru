@@ -111,4 +111,7 @@ public interface MiruServiceConfig extends Config {
     
     @BooleanDefault(true)
     public boolean getUseOffHeapBuffers();
+    
+    @BooleanDefault(false)
+    public boolean getTransientIsFileBackedChunkStore();
 }

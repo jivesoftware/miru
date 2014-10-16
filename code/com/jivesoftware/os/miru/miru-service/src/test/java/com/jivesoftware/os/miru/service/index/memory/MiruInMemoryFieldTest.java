@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
@@ -56,7 +57,7 @@ public class MiruInMemoryFieldTest {
             if (doMapStore) {
                 // bytebuffer mapstore setup
                 VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey> mapStore =
-                    new VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey>(new int[] { 2, 4, 8, 16 }, 10, null) {
+                    new VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey>(new int[] { 2, 4, 8, 16 }, 10, null, new HeapByteBufferFactory()) {
 
                         @Override
                         protected int keyLength(MiruTermId key) {

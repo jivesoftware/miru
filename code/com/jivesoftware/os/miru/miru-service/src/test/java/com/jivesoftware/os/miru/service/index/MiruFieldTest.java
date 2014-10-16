@@ -60,7 +60,7 @@ public class MiruFieldTest {
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1");
         MiruInMemoryField<EWAHCompressedBitmap> miruInMemoryField = new MiruInMemoryField<>(fieldDefinition,
-                new MiruInMemoryIndex<>(new MiruBitmapsEWAH(2), new HeapByteBufferFactory()));
+                new MiruInMemoryIndex<>(new MiruBitmapsEWAH(2), new HeapByteBufferFactory()), new HeapByteBufferFactory());
 
         for (int id = 0; id < 10; id++) {
             ids.add(id);
