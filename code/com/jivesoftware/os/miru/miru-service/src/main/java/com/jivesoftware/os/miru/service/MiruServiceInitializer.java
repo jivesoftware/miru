@@ -116,9 +116,9 @@ public class MiruServiceInitializer {
 
         ByteBufferFactory byteBufferFactory;
         if (config.getUseOffHeapBuffers()) {
-            byteBufferFactory = new HeapByteBufferFactory();
-        } else {
             byteBufferFactory = new DirectByteBufferFactory();
+        } else {
+            byteBufferFactory = new HeapByteBufferFactory();
         }
 
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(new CurrentTimestamper(),

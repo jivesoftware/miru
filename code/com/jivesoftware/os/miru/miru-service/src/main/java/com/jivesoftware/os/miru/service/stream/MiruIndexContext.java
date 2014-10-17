@@ -44,7 +44,6 @@ public class MiruIndexContext<BM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruBitmaps<BM> bitmaps;
     private final MiruSchema schema;
     private final MiruActivityIndex activityIndex;
     private final MiruFields<BM> fieldIndex;
@@ -65,7 +64,6 @@ public class MiruIndexContext<BM> {
         MiruRemovalIndex removalIndex,
         MiruActivityInternExtern activityInterner) {
 
-        this.bitmaps = bitmaps;
         this.schema = schema;
         this.activityIndex = activityIndex;
         this.fieldIndex = fieldIndex;
@@ -99,6 +97,7 @@ public class MiruIndexContext<BM> {
             }));
         }
         awaitInternFutures(internFutures);
+        activityAndIds.clear();  // This frees up the MiruActivityAndId<MiruActivity> to be garbage collected.
 
         List<Future<List<FieldValuesWork>>> fieldWorkFutures = composeFieldValuesWork(internalActivityAndIds, indexExecutor);
         final List<Future<List<BloomWork>>> bloominsWorkFutures = composeBloominsWork(internalActivityAndIds, indexExecutor);
@@ -159,11 +158,11 @@ public class MiruIndexContext<BM> {
         }
         awaitOtherFutures(otherFutures);
 
-        if (!activityAndIds.isEmpty()) {
-            activityIndex.ready(activityAndIds.get(activityAndIds.size() - 1).id);
+        if (!internalActivityAndIds.isEmpty()) {
+            activityIndex.ready(internalActivityAndIds.get(internalActivityAndIds.size() - 1).id);
         }
 
-        log.debug("End: Index batch of {}", activityAndIds.size());
+        log.debug("End: Index batch of {}", internalActivityAndIds.size());
     }
 
     public void set(List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {

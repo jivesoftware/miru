@@ -12,7 +12,7 @@
     <properties>
         <jive-utils-version>0.52</jive-utils-version>
         <rcvs-version>0.5</rcvs-version>
-        <filer-version>0.8</filer-version>
+        <filer-version>0.10</filer-version>
         <upena-version>0.12</upena-version>
     </properties>
     <dependencyManagement>

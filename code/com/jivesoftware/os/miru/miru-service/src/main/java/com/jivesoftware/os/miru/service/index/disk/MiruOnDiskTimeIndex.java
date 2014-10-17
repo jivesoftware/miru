@@ -4,7 +4,8 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
-import com.jivesoftware.os.filer.map.store.FileBackMapStore;
+import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
+import com.jivesoftware.os.filer.map.store.PartitionedMapChunkBackedMapStore;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -37,11 +38,13 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     private int searchIndexSizeInBytes;
 
     private final MiruFilerProvider filerProvider;
-    private final FileBackMapStore<Long, Integer> timestampToIndex;
+    private final PartitionedMapChunkBackedMapStore<Long, Integer> timestampToIndex;
 
     public MiruOnDiskTimeIndex(MiruFilerProvider filerProvider, String[] mapDirectories) throws IOException {
         this.filerProvider = filerProvider;
-        this.timestampToIndex = new FileBackMapStore<Long, Integer>(mapDirectories, 8, 4, 32, 64, null) {
+        
+        FileBackedMapChunkFactory  chunkFactory = new FileBackedMapChunkFactory(8, 4, 32, mapDirectories);
+        this.timestampToIndex = new PartitionedMapChunkBackedMapStore<Long, Integer>(chunkFactory, 64, null) {
 
             private final int numPartitions = 4;
 

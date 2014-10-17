@@ -5,7 +5,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.map.store.BytesObjectMapStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;

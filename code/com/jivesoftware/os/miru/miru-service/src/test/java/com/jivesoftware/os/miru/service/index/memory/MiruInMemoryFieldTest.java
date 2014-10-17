@@ -31,7 +31,7 @@ public class MiruInMemoryFieldTest {
             if (doConcurrentMap) {
                 // concurrent map setup
                 ConcurrentMap<MiruTermId, MiruFieldIndexKey> concurrentMap = new ConcurrentHashMap<>(
-                    10, 0.5f, 64);
+                        10, 0.5f, 64);
 
                 // concurrent map insert
                 long start = System.currentTimeMillis();
@@ -56,24 +56,24 @@ public class MiruInMemoryFieldTest {
 
             if (doMapStore) {
                 // bytebuffer mapstore setup
-                VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey> mapStore =
-                    new VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey>(new int[] { 2, 4, 8, 16 }, 10, null, new HeapByteBufferFactory()) {
+                VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey> mapStore
+                        = new VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey>(new int[]{2, 4, 8, 16}, 10, null, new HeapByteBufferFactory()) {
 
-                        @Override
-                        protected int keyLength(MiruTermId key) {
-                            return key.getBytes().length;
-                        }
+                            @Override
+                            protected int keyLength(MiruTermId key) {
+                                return key.getBytes().length;
+                            }
 
-                        @Override
-                        public byte[] keyBytes(MiruTermId key) {
-                            return key.getBytes();
-                        }
+                            @Override
+                            public byte[] keyBytes(MiruTermId key) {
+                                return key.getBytes();
+                            }
 
-                        @Override
-                        public MiruTermId bytesKey(byte[] bytes, int offset) {
-                            return new MiruTermId(bytes);
-                        }
-                    };
+                            @Override
+                            public MiruTermId bytesKey(byte[] bytes, int offset) {
+                                return new MiruTermId(bytes);
+                            }
+                        };
 
                 // bytebuffer mapstore insert
                 long start = System.currentTimeMillis();
@@ -81,8 +81,8 @@ public class MiruInMemoryFieldTest {
                     MiruTermId key = new MiruTermId(bytesForTerm(termId));
                     mapStore.add(key, fieldIndexKeys[termId]);
                 }
-                System.out.println("VariableKeySizeBytesObjectMapStore: Inserted " + mapStore.estimatedMaxNumberOfKeys() + " in " +
-                    (System.currentTimeMillis() - start) + "ms");
+                System.out.println("VariableKeySizeBytesObjectMapStore: Inserted " + numTerms + " in "
+                        + (System.currentTimeMillis() - start) + "ms");
 
                 // bytebuffer mapstore retrieve
                 start = System.currentTimeMillis();
@@ -94,8 +94,8 @@ public class MiruInMemoryFieldTest {
                 if (i == numIterations - 1 && sleepOnCompletion > 0) {
                     Thread.sleep(sleepOnCompletion);
                 }
-                System.out.println("VariableKeySizeBytesObjectMapStore: Retrieved " + mapStore.estimatedMaxNumberOfKeys() + " in " +
-                    (System.currentTimeMillis() - start) + "ms");
+                System.out.println("VariableKeySizeBytesObjectMapStore: Retrieved " + numTerms + " in "
+                        + (System.currentTimeMillis() - start) + "ms");
             }
         }
     }

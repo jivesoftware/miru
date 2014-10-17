@@ -191,7 +191,8 @@ class MiruPartitionAccessor<BM> {
                     indexables.add(new MiruActivityAndId<>(activity, id));
                 }
             }
-
+            
+            partitionedActivities.clear(); // The frees up the MiruPartitionedActivity to be garbage collected.
             if (!indexables.isEmpty()) {
                 context.getIndexContext().index(indexables, indexExecutor);
             }

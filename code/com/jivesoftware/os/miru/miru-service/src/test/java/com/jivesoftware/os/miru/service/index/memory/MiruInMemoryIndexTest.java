@@ -127,7 +127,7 @@ public class MiruInMemoryIndexTest {
                     byteBufferMapStore.add(key, obj[fieldId * numFields + termId]);
                 }
             }
-            System.out.println("ByteBufferMapStore: Inserted " + byteBufferMapStore.estimatedMaxNumberOfKeys() + " in " +
+            System.out.println("ByteBufferMapStore: Inserted " + numTerms * numFields + " in " +
                 (System.currentTimeMillis() - start) + "ms");
 
             // bytebuffer mapstore retrieve
@@ -139,7 +139,7 @@ public class MiruInMemoryIndexTest {
                     assertTrue(retrieved == obj[fieldId * numFields + termId], "Failed at " + fieldId + ", " + termId);
                 }
             }
-            System.out.println("ByteBufferMapStore: Retrieved " + byteBufferMapStore.estimatedMaxNumberOfKeys() + " in " +
+            System.out.println("ByteBufferMapStore: Retrieved " + numTerms * numFields + " in " +
                 (System.currentTimeMillis() - start) + "ms");
         }
     }
