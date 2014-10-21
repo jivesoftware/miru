@@ -23,10 +23,12 @@ public interface MiruServiceConfig extends Config {
     @StringDefault("var/lib/miru/transient")
     String getTransientResourceLocatorPaths();
 
-    @LongDefault(33_554_432) // 32 MB
+    @LongDefault(33_554_432)
+        // 32 MB
     long getDiskResourceInitialChunkSize();
 
-    @LongDefault(4_096) // 4 KB
+    @LongDefault(4_096)
+        // 4 KB
     long getTransientResourceInitialChunkSize();
 
     @LongDefault(5_000)
@@ -46,6 +48,7 @@ public interface MiruServiceConfig extends Config {
 
     @LongDefault(30_000)
     long getDefaultFailAfterNMillis();
+
     void setDefaultFailAfterNMillis(long millis);
 
     @BooleanDefault(true)
@@ -77,6 +80,7 @@ public interface MiruServiceConfig extends Config {
 
     @StringDefault("hybrid")
     String getDefaultStorage();
+
     void setDefaultStorage(String storageType);
 
     @IntDefault(1_000)
@@ -108,10 +112,10 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(24)
     int getSipIndexerThreads();
-    
+
     @BooleanDefault(true)
     public boolean getUseOffHeapBuffers();
-    
+
     @BooleanDefault(false)
     public boolean getTransientIsFileBackedChunkStore();
 }

@@ -12,6 +12,9 @@ import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
 import com.jivesoftware.os.filer.keyed.store.RandomAccessSwappableFiler;
+import com.jivesoftware.os.filer.map.store.ByteBufferFactoryBackedMapChunkFactory;
+import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
+import com.jivesoftware.os.filer.map.store.MapChunkFactory;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -71,7 +74,7 @@ public class MiruContextFactory {
 
     private static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final String DISK_FORMAT_VERSION = "version-4";
+    private static final String DISK_FORMAT_VERSION = "version-5";
 
     private final MiruSchemaProvider schemaProvider;
     private final ExecutorService executorService;
@@ -88,14 +91,14 @@ public class MiruContextFactory {
     private final MiruBackingStorage defaultStorage;
 
     public MiruContextFactory(MiruSchemaProvider schemaProvider,
-            ExecutorService executorService,
-            MiruReadTrackingWALReader readTrackingWALReader,
-            MiruResourceLocator diskResourceLocator,
-            MiruHybridResourceLocator transientResourceLocator,
-            int partitionAuthzCacheSize,
-            int hybridFieldInitialPageCapacity,
-            MiruBackingStorage defaultStorage,
-            MiruActivityInternExtern activityInternExtern) {
+        ExecutorService executorService,
+        MiruReadTrackingWALReader readTrackingWALReader,
+        MiruResourceLocator diskResourceLocator,
+        MiruHybridResourceLocator transientResourceLocator,
+        int partitionAuthzCacheSize,
+        int hybridFieldInitialPageCapacity,
+        MiruBackingStorage defaultStorage,
+        MiruActivityInternExtern activityInternExtern) {
         this.schemaProvider = schemaProvider;
         this.executorService = executorService;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -120,7 +123,8 @@ public class MiruContextFactory {
         return defaultStorage;
     }
 
-    public <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage, ByteBufferFactory byteBufferFactory) throws Exception {
+    public <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage, ByteBufferFactory byteBufferFactory)
+        throws Exception {
         if (storage == MiruBackingStorage.memory || storage == MiruBackingStorage.memory_fixed) {
             return allocateInMemory(bitmaps, coord, byteBufferFactory);
         } else if (storage == MiruBackingStorage.hybrid || storage == MiruBackingStorage.hybrid_fixed) {
@@ -161,11 +165,11 @@ public class MiruContextFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-                .maximumSize(partitionAuthzCacheSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-                .build();
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
         MiruInMemoryAuthzIndex<BM> authzIndex = new MiruInMemoryAuthzIndex<>(
-                bitmaps, new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            bitmaps, new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         exportHandles.put("authzIndex", authzIndex);
 
         MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(bitmaps);
@@ -183,8 +187,8 @@ public class MiruContextFactory {
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
 
         MiruRequestContext<BM> requestContext = new MiruRequestContext<>(executorService,
-                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-                readTrackContext, readTrackingWALReader, streamLocks);
+            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+            readTrackContext, readTrackingWALReader, streamLocks);
 
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.<MultiChunkStore>absent()).exportable(exportHandles);
     }
@@ -203,11 +207,11 @@ public class MiruContextFactory {
         MultiChunkStore multiChunkStore;
         if (hybridResourceLocator.isFileBackedChunkStore()) {
             multiChunkStore = new ChunkStoreInitializer().initializeMulti(
-                    filesToPaths(hybridResourceLocator.getChunkDirectories(identifier, "chunk")),
-                    "activity",
-                    numberOfChunkStores,
-                    hybridResourceLocator.getInitialChunkSize(),
-                    true);
+                filesToPaths(hybridResourceLocator.getChunkDirectories(identifier, "chunk")),
+                "activity",
+                numberOfChunkStores,
+                hybridResourceLocator.getInitialChunkSize(),
+                true);
         } else {
             ChunkStoreInitializer initializer = new ChunkStoreInitializer();
             ChunkStoreInitializer.MultiChunkStoreBuilder builder = new ChunkStoreInitializer.MultiChunkStoreBuilder();
@@ -217,12 +221,13 @@ public class MiruContextFactory {
             multiChunkStore = builder.build();
         }
 
+        MapChunkFactory mapChunkFactory = new ByteBufferFactoryBackedMapChunkFactory(4, false, 8, false, 100, byteBufferFactory);
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
-                filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "activity")),
-                filesToPaths(hybridResourceLocator.getSwapDirectories(identifier, "activity")),
-                multiChunkStore,
-                new MiruInternalActivityMarshaller(),
-                Optional.<Filer>absent());
+            mapChunkFactory,
+            mapChunkFactory,
+            multiChunkStore,
+            new MiruInternalActivityMarshaller(),
+            Optional.<Filer>absent());
         exportHandles.put("activityIndex", activityIndex);
 
         MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps, byteBufferFactory);
@@ -232,10 +237,10 @@ public class MiruContextFactory {
         MiruHybridField<BM>[] fields = new MiruHybridField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruHybridField<>(
-                    schema.getFieldDefinition(fieldId),
-                    index,
-                    filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "field" + fieldId)),
-                    hybridFieldInitialPageCapacity);
+                schema.getFieldDefinition(fieldId),
+                index,
+                byteBufferFactory,
+                hybridFieldInitialPageCapacity);
             exportHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -244,11 +249,11 @@ public class MiruContextFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-                .maximumSize(partitionAuthzCacheSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-                .build();
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
         MiruInMemoryAuthzIndex<BM> authzIndex = new MiruInMemoryAuthzIndex<>(bitmaps,
-                new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         exportHandles.put("authzIndex", authzIndex);
 
         MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(bitmaps);
@@ -266,12 +271,12 @@ public class MiruContextFactory {
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
 
         MiruRequestContext<BM> requestContext = new MiruRequestContext<>(executorService,
-                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-                readTrackContext, readTrackingWALReader, streamLocks);
+            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+            readTrackContext, readTrackingWALReader, streamLocks);
 
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.of(multiChunkStore))
-                .exportable(exportHandles)
-                .withTransientResource(identifier);
+            .exportable(exportHandles)
+            .withTransientResource(identifier);
     }
 
     private <BM> MiruContext<BM> allocateMemMapped(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
@@ -289,41 +294,42 @@ public class MiruContextFactory {
         memMap.createNewFile();
 
         MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(
-                filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk")),
-                "stream",
-                numberOfChunkStores,
-                diskResourceLocator.getInitialChunkSize(),
-                true);
+            filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk")),
+            "stream",
+            numberOfChunkStores,
+            diskResourceLocator.getInitialChunkSize(),
+            true);
 
         Map<String, BulkImport<?>> importHandles = Maps.newHashMap();
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
-                new MemMappedFilerProvider(identifier, "timeIndex"),
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "timestampToIndex")));
+            new MemMappedFilerProvider(identifier, "timeIndex"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "timestampToIndex")));
         importHandles.put("timeIndex", timeIndex);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "activity")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "activity")),
-                multiChunkStore,
-                new MiruInternalActivityMarshaller(),
-                Optional.<Filer>of(diskResourceLocator.getByteBufferBackedFiler(identifier, "activity", 4)));
-
+            new FileBackedMapChunkFactory(4, false, 8, false, 100,
+                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "activity"))),
+            new FileBackedMapChunkFactory(4, false, 8, false, 100,
+                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "activity"))),
+            multiChunkStore,
+            new MiruInternalActivityMarshaller(),
+            Optional.<Filer>of(diskResourceLocator.getRandomAccessFiler(identifier, "activity", "rw")));
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
-                multiChunkStore);
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
+            multiChunkStore);
         importHandles.put("index", index);
 
         @SuppressWarnings("unchecked")
         MiruOnDiskField<BM>[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(
-                    schema.getFieldDefinition(fieldId),
-                    index,
-                    filesToPaths(diskResourceLocator.getMapDirectories(identifier, "field-" + fieldId)));
+                schema.getFieldDefinition(fieldId),
+                index,
+                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "field-" + fieldId)));
             importHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -332,30 +338,30 @@ public class MiruContextFactory {
 
         //TODO share the cache?
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-                .maximumSize(partitionAuthzCacheSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-                .build();
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
         MiruOnDiskAuthzIndex<BM> authzIndex = new MiruOnDiskAuthzIndex<>(bitmaps,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "authz")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "authz")),
-                multiChunkStore,
-                new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "authz")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "authz")),
+            multiChunkStore,
+            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex<BM> removalIndex = new MiruOnDiskRemovalIndex<>(bitmaps, new RandomAccessSwappableFiler(
-                diskResourceLocator.getFilerFile(identifier, "removal")));
+            diskResourceLocator.getFilerFile(identifier, "removal")));
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "unread")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "unread")),
-                multiChunkStore);
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "unread")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "unread")),
+            multiChunkStore);
         importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "inbox")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "inbox")),
-                multiChunkStore);
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "inbox")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "inbox")),
+            multiChunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
         MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
@@ -364,8 +370,8 @@ public class MiruContextFactory {
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
 
         MiruRequestContext<BM> requestContext = new MiruRequestContext<>(executorService,
-                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-                readTrackContext, readTrackingWALReader, streamLocks);
+            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+            readTrackContext, readTrackingWALReader, streamLocks);
 
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.of(multiChunkStore)).importable(importHandles);
     }
@@ -386,37 +392,39 @@ public class MiruContextFactory {
         onDisk.createNewFile();
 
         MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(
-                filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk")),
-                "stream",
-                numberOfChunkStores,
-                diskResourceLocator.getInitialChunkSize(),
-                true);
+            filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk")),
+            "stream",
+            numberOfChunkStores,
+            diskResourceLocator.getInitialChunkSize(),
+            true);
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
-                new OnDiskFilerProvider(identifier, "timeIndex"),
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "timestampToIndex")));
+            new OnDiskFilerProvider(identifier, "timeIndex"),
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "timestampToIndex")));
         importHandles.put("timeIndex", timeIndex);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "activity")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "activity")),
-                multiChunkStore,
-                new MiruInternalActivityMarshaller(),
-                Optional.<Filer>of(diskResourceLocator.getRandomAccessFiler(identifier, "activity", "rw")));
+            new FileBackedMapChunkFactory(4, false, 8, false, 100,
+                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "activity"))),
+            new FileBackedMapChunkFactory(4, false, 8, false, 100,
+                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "activity"))),
+            multiChunkStore,
+            new MiruInternalActivityMarshaller(),
+            Optional.<Filer>of(diskResourceLocator.getRandomAccessFiler(identifier, "activity", "rw")));
         importHandles.put("activityIndex", activityIndex);
 
         MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
-                multiChunkStore);
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
+            multiChunkStore);
         importHandles.put("index", index);
 
         @SuppressWarnings("unchecked")
         MiruOnDiskField<BM>[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(schema.getFieldDefinition(fieldId),
-                    index,
-                    filesToPaths(diskResourceLocator.getMapDirectories(identifier, "field-" + fieldId)));
+                index,
+                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "field-" + fieldId)));
             importHandles.put("field" + fieldId, fields[fieldId]);
         }
 
@@ -424,30 +432,30 @@ public class MiruContextFactory {
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-                .maximumSize(partitionAuthzCacheSize)
-                .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-                .build();
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
         MiruOnDiskAuthzIndex<BM> authzIndex = new MiruOnDiskAuthzIndex<>(bitmaps,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "authz")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "authz")),
-                multiChunkStore,
-                new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "authz")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "authz")),
+            multiChunkStore,
+            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex<BM> removalIndex = new MiruOnDiskRemovalIndex<>(bitmaps, new RandomAccessSwappableFiler(
-                diskResourceLocator.getFilerFile(identifier, "removal")));
+            diskResourceLocator.getFilerFile(identifier, "removal")));
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "unread")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "unread")),
-                multiChunkStore);
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "unread")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "unread")),
+            multiChunkStore);
         importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "inbox")),
-                filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "inbox")),
-                multiChunkStore);
+            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "inbox")),
+            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "inbox")),
+            multiChunkStore);
         importHandles.put("inboxIndex", inboxIndex);
 
         MiruIndexContext<BM> indexContext = new MiruIndexContext<>(bitmaps, schema, activityIndex, fieldIndex, authzIndex, removalIndex, activityInternExtern);
@@ -456,8 +464,8 @@ public class MiruContextFactory {
         MiruReadTrackContext<BM> readTrackContext = new MiruReadTrackContext<>(bitmaps, schema, fieldIndex, timeIndex, unreadTrackingIndex, streamLocks);
 
         MiruRequestContext<BM> requestContext = new MiruRequestContext<>(executorService,
-                schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
-                readTrackContext, readTrackingWALReader, streamLocks);
+            schema, timeIndex, activityIndex, fieldIndex, authzIndex, removalIndex, unreadTrackingIndex, inboxIndex,
+            readTrackContext, readTrackingWALReader, streamLocks);
 
         return new MiruContext<>(indexContext, requestContext, readTrackContext, timeIndex, Optional.of(multiChunkStore)).importable(importHandles);
     }
@@ -503,7 +511,7 @@ public class MiruContextFactory {
         }
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private <BM> MiruContext<BM> copy(MiruTenantId tenantId, MiruContext<BM> from, MiruContext<BM> to) throws Exception {
         Map<String, BulkImport<?>> importHandles = to.getImportHandles();
         for (Map.Entry<String, BulkExport<?>> entry : from.getExportHandles().entrySet()) {
@@ -565,9 +573,9 @@ public class MiruContextFactory {
         }
 
         return diskResourceAnalyzer.checkExists(
-                diskResourceLocator.getPartitionPaths(identifier),
-                Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "activity", "removal"),
-                mapDirectories);
+            diskResourceLocator.getPartitionPaths(identifier),
+            Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "activity", "removal"),
+            mapDirectories);
     }
 
     private boolean checkOnDisk(MiruSchema schema, MiruPartitionCoord coord, int numberOfChunks) throws IOException {
@@ -583,9 +591,9 @@ public class MiruContextFactory {
         }
 
         return diskResourceAnalyzer.checkExists(
-                diskResourceLocator.getPartitionPaths(identifier),
-                Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "activity", "removal"),
-                mapDirectories);
+            diskResourceLocator.getPartitionPaths(identifier),
+            Lists.newArrayList(DISK_FORMAT_VERSION, "timeIndex", "activity", "removal"),
+            mapDirectories);
     }
 
     private String[] filesToPaths(File[] files) {

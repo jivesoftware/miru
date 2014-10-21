@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.io.KeyMarshaller;
 import com.jivesoftware.os.filer.map.store.BytesObjectMapStore;
 import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
 import gnu.trove.impl.Constants;
@@ -107,17 +108,18 @@ public class MiruInMemoryIndexTest {
 
             // bytebuffer mapstore setup
             BytesObjectMapStore<Long, Object> byteBufferMapStore =
-                new BytesObjectMapStore<Long, Object>(8, numFields * numTerms * 2, null, new HeapByteBufferFactory()) {
-                    @Override
-                    public byte[] keyBytes(Long key) {
-                        return FilerIO.longBytes(key);
-                    }
+                new BytesObjectMapStore<>(8, false, numFields * numTerms * 2, null, new HeapByteBufferFactory(),
+                    new KeyMarshaller<Long>() {
+                        @Override
+                        public byte[] keyBytes(Long key) {
+                            return FilerIO.longBytes(key);
+                        }
 
-                    @Override
-                    public Long bytesKey(byte[] bytes, int offset) {
-                        return FilerIO.bytesLong(bytes, offset);
-                    }
-                };
+                        @Override
+                        public Long bytesKey(byte[] bytes, int offset) {
+                            return FilerIO.bytesLong(bytes, offset);
+                        }
+                    });
 
             // bytebuffer mapstore insert
             start = System.currentTimeMillis();

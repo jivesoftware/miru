@@ -4,8 +4,9 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.keyed.store.FileBackedKeyedStore;
+import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
+import com.jivesoftware.os.filer.map.store.MapChunkFactory;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -31,14 +32,14 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final FileBackedKeyedStore keyedStore;
+    private final PartitionedMapChunkBackedKeyedStore keyedStore;
     private final AtomicInteger indexSize = new AtomicInteger(-1);
     private final MiruInternalActivityMarshaller internalActivityMarshaller;
     private final Optional<Filer> indexSizeFiler;
 
-    public MiruHybridActivityIndex(String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore,
+    public MiruHybridActivityIndex(MapChunkFactory mapChunkFactory, MapChunkFactory swapChunkFactory, MultiChunkStore chunkStore,
         MiruInternalActivityMarshaller internalActivityMarshaller, Optional<Filer> indexSizeFiler) throws Exception {
-        this.keyedStore = new FileBackedKeyedStore(mapDirectories, swapDirectories, 4, 100, chunkStore, 24); //TODO expose to config
+        this.keyedStore = new PartitionedMapChunkBackedKeyedStore(mapChunkFactory, swapChunkFactory, chunkStore, 24);
         this.internalActivityMarshaller = internalActivityMarshaller;
         this.indexSizeFiler = indexSizeFiler;
     }

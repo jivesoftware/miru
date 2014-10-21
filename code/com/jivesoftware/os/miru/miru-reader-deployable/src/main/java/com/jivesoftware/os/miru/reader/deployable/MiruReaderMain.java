@@ -85,7 +85,7 @@ public class MiruReaderMain {
     public void run(String[] args) throws Exception {
 
         final Deployable deployable = new Deployable(args);
-        
+
         HealthFactory.initialize(new HealthCheckConfigBinder() {
 
             @Override
@@ -104,7 +104,7 @@ public class MiruReaderMain {
                 throw new UnsupportedOperationException("Not supported yet.");
             }
         });
-        
+
         deployable.buildStatusReporter(null).start();
         deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
         deployable.buildManageServer().start();
@@ -124,16 +124,16 @@ public class MiruReaderMain {
         mapper.registerModule(new GuavaModule());
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
-                setOfSortedMapsInitializer, mapper);
+            setOfSortedMapsInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-                registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                3,
-                TimeUnit.HOURS.toMillis(1));
+            registryStore.getHostsRegistry(),
+            registryStore.getExpectedTenantsRegistry(),
+            registryStore.getExpectedTenantPartitionsRegistry(),
+            registryStore.getReplicaRegistry(),
+            registryStore.getTopologyRegistry(),
+            registryStore.getConfigRegistry(),
+            3,
+            TimeUnit.HOURS.toMillis(1));
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 

@@ -3,8 +3,9 @@ package com.jivesoftware.os.miru.service.index.disk;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.keyed.store.FileBackedKeyedStore;
+import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
+import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruIndex;
@@ -19,13 +20,18 @@ import java.util.Iterator;
 public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final FileBackedKeyedStore index;
+    private final PartitionedMapChunkBackedKeyedStore index;
     private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
     private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore) throws Exception {
         this.bitmaps = bitmaps;
-        this.index = new FileBackedKeyedStore(mapDirectories, swapDirectories, 8, 100, chunkStore, 4); //TODO expose to config
+        //TODO expose to config
+        this.index = new PartitionedMapChunkBackedKeyedStore(
+            new FileBackedMapChunkFactory(8, false, 8, false, 100, mapDirectories),
+            new FileBackedMapChunkFactory(8, false, 8, false, 100, swapDirectories),
+            chunkStore,
+            4); //TODO expose number of partitions
     }
 
     @Override

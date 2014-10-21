@@ -68,17 +68,6 @@ public class MiruIndexTest {
         long key = indexKeyFunction.getKey(1, 2);
         MiruInvertedIndex expected = importData.get(key);
 
-        long sizeInBytes = miruIndex.sizeInMemory() + miruIndex.sizeOnDisk();
-        if (miruBackingStorage.equals(MiruBackingStorage.memory)) {
-            long expectedSizeInBytes = importData.get(key).sizeInMemory() + importData.get(key).sizeOnDisk();
-            assertEquals(sizeInBytes, expectedSizeInBytes);
-        } else if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
-            // See MapStore.cost() for more information. FileBackedMemMappedByteBufferFactory.allocate() adds the extra byte
-            long initialMapStoreSizeInBytes = 2_426 + 1;
-
-            assertEquals(sizeInBytes, initialMapStoreSizeInBytes); // chunk store is shared and not included in index size
-        }
-
         Optional<MiruInvertedIndex<BM>> invertedIndex = miruIndex.get(1, 2);
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.isPresent());

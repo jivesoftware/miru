@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
+import com.jivesoftware.os.filer.io.KeyMarshaller;
 import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -28,24 +29,19 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator
 
     public MiruInMemoryField(MiruFieldDefinition fieldDefinition, MiruInMemoryIndex<BM> index, ByteBufferFactory byteBufferFactory) {
         this.fieldDefinition = fieldDefinition;
-        this.termToIndex = new VariableKeySizeBytesObjectMapStore<MiruTermId, MiruFieldIndexKey>(
-            new int[] { 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 }, 10, null, byteBufferFactory) {
+        this.termToIndex = new VariableKeySizeBytesObjectMapStore<>(
+            new int[] { 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 }, 10, null, byteBufferFactory,
+            new KeyMarshaller<MiruTermId>() {
+                @Override
+                public byte[] keyBytes(MiruTermId key) {
+                    return key.getBytes();
+                }
 
-            @Override
-            protected int keyLength(MiruTermId key) {
-                return key.getBytes().length;
-            }
-
-            @Override
-            public byte[] keyBytes(MiruTermId key) {
-                return key.getBytes();
-            }
-
-            @Override
-            public MiruTermId bytesKey(byte[] bytes, int offset) {
-                return new MiruTermId(bytes);
-            }
-        };
+                @Override
+                public MiruTermId bytesKey(byte[] bytes, int offset) {
+                    return new MiruTermId(bytes);
+                }
+            });
         this.index = index;
         this.nextTermId = new AtomicInteger();
     }

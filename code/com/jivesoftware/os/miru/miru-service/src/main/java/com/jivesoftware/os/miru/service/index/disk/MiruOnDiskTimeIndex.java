@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.service.index.disk;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.KeyPartitioner;
+import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
 import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
 import com.jivesoftware.os.filer.map.store.PartitionedMapChunkBackedMapStore;
@@ -42,46 +44,47 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
 
     public MiruOnDiskTimeIndex(MiruFilerProvider filerProvider, String[] mapDirectories) throws IOException {
         this.filerProvider = filerProvider;
-        
-        FileBackedMapChunkFactory  chunkFactory = new FileBackedMapChunkFactory(8, 4, 32, mapDirectories);
-        this.timestampToIndex = new PartitionedMapChunkBackedMapStore<Long, Integer>(chunkFactory, 64, null) {
 
-            private final int numPartitions = 4;
+        FileBackedMapChunkFactory chunkFactory = new FileBackedMapChunkFactory(8, false, 4, false, 32, mapDirectories);
+        this.timestampToIndex = new PartitionedMapChunkBackedMapStore<>(chunkFactory, 64, null,
+            new KeyPartitioner<Long>() {
+                private final int numPartitions = 4;
 
-            @Override
-            public String keyPartition(Long key) {
-                return "partition-" + (key % numPartitions);
-            }
-
-            @Override
-            public Iterable<String> keyPartitions() {
-                List<String> partitions = Lists.newArrayListWithCapacity(numPartitions);
-                for (int i = 0; i < numPartitions; i++) {
-                    partitions.add(String.valueOf(i));
+                @Override
+                public String keyPartition(Long key) {
+                    return "partition-" + (key % numPartitions);
                 }
-                return partitions;
-            }
 
-            @Override
-            public byte[] keyBytes(Long key) {
-                return FilerIO.longBytes(key);
-            }
+                @Override
+                public Iterable<String> allPartitions() {
+                    List<String> partitions = Lists.newArrayListWithCapacity(numPartitions);
+                    for (int i = 0; i < numPartitions; i++) {
+                        partitions.add(String.valueOf(i));
+                    }
+                    return partitions;
+                }
+            },
+            new KeyValueMarshaller<Long, Integer>() {
+                @Override
+                public byte[] keyBytes(Long key) {
+                    return FilerIO.longBytes(key);
+                }
 
-            @Override
-            public byte[] valueBytes(Integer value) {
-                return FilerIO.intBytes(value);
-            }
+                @Override
+                public byte[] valueBytes(Integer value) {
+                    return FilerIO.intBytes(value);
+                }
 
-            @Override
-            public Long bytesKey(byte[] bytes, int offset) {
-                return FilerIO.bytesLong(bytes, offset);
-            }
+                @Override
+                public Long bytesKey(byte[] bytes, int offset) {
+                    return FilerIO.bytesLong(bytes, offset);
+                }
 
-            @Override
-            public Integer bytesValue(Long key, byte[] valueBytes, int offset) {
-                return FilerIO.bytesInt(valueBytes, offset);
-            }
-        };
+                @Override
+                public Integer bytesValue(Long key, byte[] valueBytes, int offset) {
+                    return FilerIO.bytesInt(valueBytes, offset);
+                }
+            });
 
         File file = filerProvider.getBackingFile();
         if (file.length() > 0) {

@@ -6,8 +6,10 @@ import com.google.common.io.BaseEncoding;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
-import com.jivesoftware.os.filer.keyed.store.VariableKeySizeFileBackedKeyedStore;
+import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
+import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -17,6 +19,7 @@ import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -27,13 +30,13 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     static final Splitter splitter = Splitter.on('.');
 
     private final MiruBitmaps<BM> bitmaps;
-    private final VariableKeySizeFileBackedKeyedStore keyedStore;
+    private final VariableKeySizeMapChunkBackedKeyedStore keyedStore;
     private final MiruAuthzCache<BM> cache;
     private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskAuthzIndex(MiruBitmaps<BM> bitmaps,
-        String[] mapDirectories,
-        String[] swapDirectories,
+        String[] baseMapDirectories,
+        String[] baseSwapDirectories,
         MultiChunkStore chunkStore,
         MiruAuthzCache<BM> cache)
         throws Exception {
@@ -43,8 +46,24 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
         int[] keySizeThresholds = { 4, 16, 64, 256, 1_024 };
         //TODO actual capacity? should this be shared with a key prefix?
         //TODO expose to config
-        this.keyedStore = new VariableKeySizeFileBackedKeyedStore(mapDirectories, swapDirectories, chunkStore, keySizeThresholds, 100, 4);
+        VariableKeySizeMapChunkBackedKeyedStore.Builder keyedStoreBuilder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+        for (int keySize : keySizeThresholds) {
+            String[] mapDirectories = new String[baseMapDirectories.length];
+            for (int i = 0; i < mapDirectories.length; i++) {
+                mapDirectories[i] = new File(baseMapDirectories[i], String.valueOf(keySize)).getAbsolutePath();
+            }
+            String[] swapDirectories = new String[baseSwapDirectories.length];
+            for (int i = 0; i < mapDirectories.length; i++) {
+                swapDirectories[i] = new File(baseSwapDirectories[i], String.valueOf(keySize)).getAbsolutePath();
+            }
+            keyedStoreBuilder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
+                new FileBackedMapChunkFactory(keySize, false, 8, false, 100, mapDirectories),
+                new FileBackedMapChunkFactory(keySize, false, 8, false, 100, swapDirectories),
+                chunkStore,
+                4)); //TODO expose num partitions to config
+        }
 
+        this.keyedStore = keyedStoreBuilder.build();
         this.cache = cache;
     }
 

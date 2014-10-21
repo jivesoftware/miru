@@ -1,7 +1,10 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.filer.map.store.VariableKeySizeFileBackMapStore;
+import com.jivesoftware.os.filer.io.KeyPartitioner;
+import com.jivesoftware.os.filer.io.KeyValueMarshaller;
+import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
+import com.jivesoftware.os.filer.map.store.VariableKeySizeMapChunkBackedMapStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStoreException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -12,6 +15,7 @@ import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruFieldIndexKey;
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
@@ -21,34 +25,19 @@ import java.util.Iterator;
  */
 public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Iterator<BulkEntry<MiruTermId, MiruFieldIndexKey>>> {
 
-    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024}; //TODO make this configurable per field?
+    private static final int[] KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024 }; //TODO make this configurable per field?
     private static final int PAYLOAD_SIZE = 8; // 2 ints (MiruFieldIndexKey)
 
     private final MiruFieldDefinition fieldDefinition;
     private final MiruOnDiskIndex<BM> index;
-    private final VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
+    private final VariableKeySizeMapChunkBackedMapStore<MiruTermId, MiruFieldIndexKey> termToIndex;
 
-    public MiruOnDiskField(MiruFieldDefinition fieldDefinition, MiruOnDiskIndex<BM> index, String[] mapDirectories) {
+    public MiruOnDiskField(MiruFieldDefinition fieldDefinition, MiruOnDiskIndex<BM> index, String[] baseMapDirectories) throws Exception {
         this.fieldDefinition = fieldDefinition;
         this.index = index;
 
-        this.termToIndex = new VariableKeySizeFileBackMapStore<MiruTermId, MiruFieldIndexKey>(
-            mapDirectories, KEY_SIZE_THRESHOLDS, PAYLOAD_SIZE, 100, 8, null) {
-
-            @Override
-            protected int keyLength(MiruTermId key) {
-                return key.getBytes().length;
-            }
-
-            @Override
-            public String keyPartition(MiruTermId key) {
-                return "0";
-            }
-
-            @Override
-            protected Iterable<String> keyPartitions(int i) {
-                return Collections.singletonList("0");
-            }
+        VariableKeySizeMapChunkBackedMapStore.Builder<MiruTermId, MiruFieldIndexKey> mapStoreBuilder = new VariableKeySizeMapChunkBackedMapStore
+            .Builder<>(64, null, new KeyValueMarshaller<MiruTermId, MiruFieldIndexKey>() {
 
             @Override
             public byte[] keyBytes(MiruTermId key) {
@@ -76,7 +65,28 @@ public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Iterator<B
                 ByteBuffer buf = ByteBuffer.wrap(bytes, offset, 8); // 2 ints
                 return new MiruFieldIndexKey(buf.getInt(), buf.getInt());
             }
-        };
+        });
+
+        for (int keySize : KEY_SIZE_THRESHOLDS) {
+            String[] mapDirectories = new String[baseMapDirectories.length];
+            for (int i = 0; i < mapDirectories.length; i++) {
+                mapDirectories[i] = new File(baseMapDirectories[i], String.valueOf(keySize)).getAbsolutePath();
+            }
+            mapStoreBuilder.add(keySize, new FileBackedMapChunkFactory(keySize, true, PAYLOAD_SIZE, false, 100, mapDirectories),
+                new KeyPartitioner<MiruTermId>() {
+                    @Override
+                    public String keyPartition(MiruTermId miruTermId) {
+                        return "0";
+                    }
+
+                    @Override
+                    public Iterable<String> allPartitions() {
+                        return Collections.singletonList("0");
+                    }
+                });
+        }
+
+        this.termToIndex = mapStoreBuilder.build();
     }
 
     @Override

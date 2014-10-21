@@ -27,13 +27,13 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     private final AtomicInteger id;
     private final KeyValueStore<Long, Integer> timestampToIndex;
     private final Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream;
-    
+
     private final Object timestampsLock = new Object();
     private long[] timestamps;
     private final int initialCapacity = 32; //TODO configure?
 
     public MiruInMemoryTimeIndex(Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
-            ByteBufferFactory byteBufferFactory) {
+        ByteBufferFactory byteBufferFactory) {
         this.timestamps = new long[initialCapacity];
         this.id = new AtomicInteger(0);
         this.timestampToIndex = new PrimitivesMapStoresBuilder()
