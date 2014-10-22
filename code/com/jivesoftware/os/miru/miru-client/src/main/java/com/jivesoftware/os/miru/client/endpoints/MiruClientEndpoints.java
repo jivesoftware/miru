@@ -38,10 +38,9 @@ import org.merlin.config.defaults.StringDefault;
 import static com.jivesoftware.os.miru.client.endpoints.MiruClientConstants.CLIENT_SERVICE_ENDPOINT_PREFIX;
 
 /**
- *
  * @author jonathan
  */
-@Path (CLIENT_SERVICE_ENDPOINT_PREFIX)
+@Path(CLIENT_SERVICE_ENDPOINT_PREFIX)
 public class MiruClientEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -55,7 +54,7 @@ public class MiruClientEndpoints {
 
     static interface IngressHealth extends TimerHealthCheckConfig {
 
-        @StringDefault ("http>ingress")
+        @StringDefault("http>ingress")
         @Override
         String getName();
     }
@@ -63,9 +62,9 @@ public class MiruClientEndpoints {
     private final HealthTimer ingressHealthTimer = HealthFactory.getHealthTimer(IngressHealth.class, TimerHealthChecker.FACTORY);
 
     @POST
-    @Path ("ingress")
-    @Consumes (MediaType.APPLICATION_JSON)
-    @Produces (MediaType.APPLICATION_JSON)
+    @Path("ingress")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response ingressActivities(List<MiruActivity> activities) {
         if (activities == null) {
             return Response
@@ -82,22 +81,23 @@ public class MiruClientEndpoints {
             log.error("Failed to add activities.", e);
             return Response.serverError().build();
         } finally {
-            ingressHealthTimer.stopTimer("Its take to long to ingress " + activities.size() + "activities. ");
+            ingressHealthTimer.stopTimer("Took too long to ingress " + activities.size() + " activities. ");
         }
     }
 
     static interface RemoveHealth extends TimerHealthCheckConfig {
 
-        @StringDefault ("http>remove")
+        @StringDefault("http>remove")
         @Override
         String getName();
     }
+
     private final HealthTimer removeHealthTimer = HealthFactory.getHealthTimer(RemoveHealth.class, TimerHealthChecker.FACTORY);
 
     @POST
-    @Path ("remove")
-    @Consumes (MediaType.APPLICATION_JSON)
-    @Produces (MediaType.APPLICATION_JSON)
+    @Path("remove")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response removeActivities(List<MiruActivity> activities) {
         if (activities == null) {
             return Response
@@ -114,22 +114,23 @@ public class MiruClientEndpoints {
             log.error("Failed to remove activities.", e);
             return Response.serverError().build();
         } finally {
-            removeHealthTimer.stopTimer("Its take to long to remove " + activities.size() + "activities. ");
+            removeHealthTimer.stopTimer("Took too long to remove " + activities.size() + " activities. ");
         }
     }
 
     static interface IngressReadAllHealth extends TimerHealthCheckConfig {
 
-        @StringDefault ("http>ingressReadAll")
+        @StringDefault("http>ingressReadAll")
         @Override
         String getName();
     }
+
     private final HealthTimer ingressReadAllTimer = HealthFactory.getHealthTimer(IngressReadAllHealth.class, TimerHealthChecker.FACTORY);
 
     @POST
-    @Path ("ingressReadAll")
-    @Consumes (MediaType.APPLICATION_JSON)
-    @Produces (MediaType.APPLICATION_JSON)
+    @Path("ingressReadAll")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response ingressReadAll(List<MiruReadEvent> events) {
         if (events == null) {
             return Response
@@ -148,22 +149,23 @@ public class MiruClientEndpoints {
             log.error("Failed to read activities.", e);
             return Response.serverError().build();
         } finally {
-            ingressReadAllTimer.stopTimer("Its take to long to ingressReadAll " + events.size() + "events. ");
+            ingressReadAllTimer.stopTimer("Took too long to ingressReadAll " + events.size() + " events. ");
         }
     }
 
     static interface IngressReadHealth extends TimerHealthCheckConfig {
 
-        @StringDefault ("http>ingressRead")
+        @StringDefault("http>ingressRead")
         @Override
         String getName();
     }
+
     private HealthTimer ingressReadTimer = HealthFactory.getHealthTimer(IngressReadHealth.class, TimerHealthChecker.FACTORY);
 
     @POST
-    @Path ("ingressRead")
-    @Consumes (MediaType.APPLICATION_JSON)
-    @Produces (MediaType.APPLICATION_JSON)
+    @Path("ingressRead")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response ingressRead(List<MiruReadEvent> events) {
         if (events == null) {
             return Response
@@ -182,22 +184,23 @@ public class MiruClientEndpoints {
             log.error("Failed to read activities.", e);
             return Response.serverError().build();
         } finally {
-            ingressReadTimer.stopTimer("Its take to long to ingressRead " + events.size() + "events. ");
+            ingressReadTimer.stopTimer("Took too long to ingressRead " + events.size() + " events. ");
         }
     }
 
     static interface IngressUnreadHealth extends TimerHealthCheckConfig {
 
-        @StringDefault ("http>ingressUnread")
+        @StringDefault("http>ingressUnread")
         @Override
         String getName();
     }
+
     private final HealthTimer ingressUnreadTimer = HealthFactory.getHealthTimer(IngressUnreadHealth.class, TimerHealthChecker.FACTORY);
 
     @POST
-    @Path ("ingressUnread")
-    @Consumes (MediaType.APPLICATION_JSON)
-    @Produces (MediaType.APPLICATION_JSON)
+    @Path("ingressUnread")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response ingressUnread(List<MiruReadEvent> events) {
         if (events == null) {
             return Response
@@ -216,7 +219,7 @@ public class MiruClientEndpoints {
             log.error("Failed to unread activities.", e);
             return Response.serverError().build();
         } finally {
-            ingressUnreadTimer.stopTimer("Its take to long to ingressUnread " + events.size() + "events. ");
+            ingressUnreadTimer.stopTimer("Took too long to ingressUnread " + events.size() + " events. ");
         }
     }
 

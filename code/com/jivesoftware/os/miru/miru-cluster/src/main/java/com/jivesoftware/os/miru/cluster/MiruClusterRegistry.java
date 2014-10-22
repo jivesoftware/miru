@@ -55,6 +55,8 @@ public interface MiruClusterRegistry {
 
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
 
+    void rejiggerTopologies(List<MiruTenantId> tenantIds, MiruHost localhost) throws Exception;
+
     class HostHeartbeat {
 
         public final MiruHost host;

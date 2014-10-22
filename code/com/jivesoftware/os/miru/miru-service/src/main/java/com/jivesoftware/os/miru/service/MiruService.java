@@ -283,6 +283,10 @@ public class MiruService implements Miru {
         partitionDirector.removeTopology(tenantId, partitionId, host);
     }
 
+    public void rejiggerTopologies() throws Exception {
+        partitionDirector.rejiggerTopologies();
+    }
+
     public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception {
         return partitionDirector.checkInfo(tenantId, partitionId, info);
     }

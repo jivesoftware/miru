@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.cluster.rcvs;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -10,6 +11,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -36,11 +38,13 @@ import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -305,6 +309,54 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     @Override
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
         topologyRegistry.remove(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey(partitionId, host), timestamper);
+    }
+
+    @Override
+    public void rejiggerTopologies(List<MiruTenantId> tenantIds, MiruHost localhost) throws Exception {
+        Random random = new Random();
+        for (MiruTenantId tenantId : tenantIds) {
+            MiruTenantConfig config = getTenantConfig(tenantId);
+            int numberOfReplicas = config.getInt(MiruTenantConfigFields.number_of_replicas, defaultNumberOfReplicas);
+            ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = getPartitionsForTenant(tenantId);
+            Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> replicaTable = HashBasedTable.create();
+            for (MiruPartition partition : partitionsForTenant.values()) {
+                List<MiruPartition> partitions = replicaTable.get(tenantId, partition.coord.partitionId);
+                if (partitions == null) {
+                    partitions = Lists.newArrayList();
+                    replicaTable.put(tenantId, partition.coord.partitionId, partitions);
+                }
+                partitions.add(partition);
+            }
+            for (Table.Cell<MiruTenantId, MiruPartitionId, List<MiruPartition>> cell : replicaTable.cellSet()) {
+                List<MiruPartition> partitions = cell.getValue();
+                if (partitions.size() < numberOfReplicas) {
+                    continue;
+                }
+
+                List<MiruPartition> eligible = Lists.newArrayList();
+                MiruPartition local = null;
+                for (MiruPartition partition : partitions) {
+                    if (partition.info.state == MiruPartitionState.offline) {
+                        eligible.add(partition);
+                    } else if (partition.coord.host.equals(localhost)) {
+                        local = partition;
+                    }
+                }
+
+                // favor an offline partition
+                if (eligible.isEmpty()) {
+                    if (local != null) {
+                        // if no partitions are offline, choose ourselves
+                        eligible = Collections.singletonList(local);
+                    } else {
+                        // finally, use any online partition
+                        eligible = partitions;
+                    }
+                }
+                MiruPartition remove = eligible.get(random.nextInt(eligible.size()));
+                removeTopology(tenantId, cell.getColumnKey(), remove.coord.host);
+            }
+        }
     }
 
     private ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> getTopologyValueAndTimestamp(

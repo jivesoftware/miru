@@ -3,6 +3,10 @@ package com.jivesoftware.os.miru.plugin.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
+import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
@@ -43,6 +47,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
+import org.merlin.config.Config;
 import org.testng.Assert;
 
 /**
@@ -57,6 +62,23 @@ public class MiruPluginTestBootstrap {
             MiruBackingStorage desiredStorage,
             final MiruBitmaps<BM> bitmaps)
             throws Exception {
+
+        HealthFactory.initialize(
+            new HealthCheckConfigBinder() {
+                @Override
+                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                    return BindInterfaceToConfiguration.bindDefault(configurationInterfaceClass);
+                }
+            },
+            new HealthCheckRegistry() {
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
+
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultStorage(desiredStorage.name());

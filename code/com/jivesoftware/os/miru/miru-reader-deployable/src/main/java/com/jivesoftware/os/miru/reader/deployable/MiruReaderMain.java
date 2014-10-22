@@ -86,24 +86,24 @@ public class MiruReaderMain {
 
         final Deployable deployable = new Deployable(args);
 
-        HealthFactory.initialize(new HealthCheckConfigBinder() {
+        HealthFactory.initialize(
+            new HealthCheckConfigBinder() {
+                @Override
+                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                    return deployable.config(configurationInterfaceClass);
+                }
+            },
+            new HealthCheckRegistry() {
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
 
-            @Override
-            public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                return deployable.config(configurationInterfaceClass);
-            }
-        }, new HealthCheckRegistry() {
-
-            @Override
-            public void register(HealthChecker healthChecker) {
-                deployable.addHealthCheck(healthChecker);
-            }
-
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-        });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
 
         deployable.buildStatusReporter(null).start();
         deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));

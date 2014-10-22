@@ -5,6 +5,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
+import com.jivesoftware.os.jive.utils.health.api.HealthCounter;
+import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
+import com.jivesoftware.os.jive.utils.health.api.MinMaxHealthCheckConfig;
+import com.jivesoftware.os.jive.utils.health.api.MinMaxHealthChecker;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -36,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import org.merlin.config.defaults.LongDefault;
+import org.merlin.config.defaults.StringDefault;
 
 /**
  * @author jonathan
@@ -76,6 +82,22 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
     private final AtomicReference<MiruPartitionAccessor<BM>> accessorRef = new AtomicReference<>();
     private final Object factoryLock = new Object();
+
+    private interface BootstrapCount extends MinMaxHealthCheckConfig {
+        @StringDefault("rebuild>pending")
+        String getName();
+
+        @StringDefault("Too many pending rebuilds.")
+        String getUnhealthyMessage();
+
+        @LongDefault(0)
+        Long getMin();
+
+        @LongDefault(1_000)
+        Long getMax();
+    }
+
+    private final HealthCounter bootstrapCounter = HealthFactory.getHealthCounter(MinMaxHealthCheckConfig.class, MinMaxHealthChecker.FACTORY);
 
     public MiruLocalHostedPartition(
             Timestamper timestamper,
@@ -414,6 +436,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             Optional<Long> refreshTimestamp = Optional.absent();
             if (update.info.state != MiruPartitionState.offline) {
                 refreshTimestamp = Optional.of(timestamper.get());
+            }
+            if (existing.info.state != MiruPartitionState.bootstrap && update.info.state == MiruPartitionState.bootstrap) {
+                bootstrapCounter.inc("Too many pending rebuilds.");
+            } else if (existing.info.state == MiruPartitionState.bootstrap && update.info.state != MiruPartitionState.bootstrap) {
+                bootstrapCounter.dec("Too many pending rebuilds.");
             }
             MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(sizeInMemory(), sizeOnDisk());
             partitionEventHandler.partitionChanged(coord, update.info, metrics, refreshTimestamp);

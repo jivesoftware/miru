@@ -24,6 +24,9 @@
                 Show ({$numTenants})
             </a>
         </td>
+        <td>
+            <input type="button" value="Rebalance" onclick="miru.hosts.rejigger(this, '{$host.logicalName}', {$host.port})" />
+        </td>
     </tr>
     <tr id="host-{$host.logicalName|escapeUri}-{$host.port}" style="display:none;">
         <td colspan="2"></td>

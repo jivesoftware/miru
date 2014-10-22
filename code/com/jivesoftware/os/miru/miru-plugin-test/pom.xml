@@ -24,6 +24,10 @@
             <artifactId>http-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>health</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
             <version>0.110-SNAPSHOT</version>

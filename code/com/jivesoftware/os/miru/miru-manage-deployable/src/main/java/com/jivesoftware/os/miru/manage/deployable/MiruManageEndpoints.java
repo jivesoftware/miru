@@ -1,11 +1,22 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import java.util.Arrays;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -158,4 +169,18 @@ public class MiruManageEndpoints {
         return Response.ok(rendered).build();
     }
 
+    @POST
+    @Path("/rejigger")
+    @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response rejigger(@FormParam("host") String host, @FormParam("port") int port) {
+        HttpClientConfig httpClientConfig = HttpClientConfig.newBuilder().build();
+        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
+            .createHttpClientFactory(Arrays.<HttpClientConfiguration>asList(httpClientConfig));
+        HttpClient client = httpClientFactory.createClient(host, port);
+
+        String endpointUrl = "http://" + host + ":" + port + "/miru/config/topology/rejigger";
+        String response = new RequestHelper(client, new ObjectMapper()).executeRequest("", endpointUrl, String.class, null);
+        return Response.ok(response).build();
+    }
 }

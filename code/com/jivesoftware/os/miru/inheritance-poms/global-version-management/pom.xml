@@ -10,7 +10,7 @@
     <artifactId>global-version-management</artifactId>
     <packaging>pom</packaging>
     <properties>
-        <jive-utils-version>0.52</jive-utils-version>
+        <jive-utils-version>0.53</jive-utils-version>
         <rcvs-version>0.5</rcvs-version>
         <filer-version>0.11</filer-version>
         <upena-version>0.13</upena-version>
