@@ -34,17 +34,11 @@ import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
-import org.merlin.config.defaults.StringDefault;
 
 public class MiruManageMain {
 
     public static void main(String[] args) throws Exception {
         new MiruManageMain().run(args);
-    }
-
-    private interface ManageInstanceConfig extends InstanceConfig {
-        @StringDefault("dev")
-        String getClusterName();
     }
 
     public void run(String[] args) throws Exception {
@@ -53,10 +47,9 @@ public class MiruManageMain {
         deployable.buildStatusReporter(null).start();
         deployable.buildManageServer().start();
 
-        InstanceConfig instanceConfig = deployable.config(ManageInstanceConfig.class);
+        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
         HBaseSetOfSortedMapsConfig hbaseConfig = deployable.config(HBaseSetOfSortedMapsConfig.class);
-        hbaseConfig.setHBaseZookeeperQuorum("soa-prime-data1.phx1.jivehosted.com");
         SetOfSortedMapsImplInitializer<Exception> setOfSortedMapsInitializer = new HBaseSetOfSortedMapsImplInitializer(hbaseConfig);
 
         ObjectMapper mapper = new ObjectMapper();
