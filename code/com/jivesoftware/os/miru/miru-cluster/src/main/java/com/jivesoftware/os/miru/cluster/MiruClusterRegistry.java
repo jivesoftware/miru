@@ -24,6 +24,8 @@ public interface MiruClusterRegistry {
 
     MiruTenantConfig getTenantConfig(MiruTenantId tenantId) throws Exception;
 
+    int getNumberOfReplicas(MiruTenantId tenantId) throws Exception;
+
     List<MiruTenantId> getTenantsForHost(MiruHost miruHost) throws Exception;
 
     void addToReplicaRegistry(MiruTenantId tenantId, MiruPartitionId partitionId, long nextId, MiruHost host) throws Exception;
@@ -54,8 +56,6 @@ public interface MiruClusterRegistry {
     void removeHost(MiruHost host) throws Exception;
 
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
-
-    void rejiggerTopologies(List<MiruTenantId> tenantIds, MiruHost localhost) throws Exception;
 
     class HostHeartbeat {
 

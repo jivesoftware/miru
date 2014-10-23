@@ -36,13 +36,15 @@ public class MiruManageInitializer {
 
         @StringDefault("resources/soy")
         String getPathToSoyResources();
+
         void setPathToSoyResources(String pathToSoyResources);
     }
 
     public MiruManageService initialize(MiruManageConfig config,
-            MiruClusterRegistry clusterRegistry,
-            MiruRegistryStore registryStore,
-            MiruWAL miruWAL) throws Exception {
+        MiruClusterRegistry clusterRegistry,
+        MiruRegistryStore registryStore,
+        MiruWAL miruWAL)
+        throws Exception {
 
         File soyPath = new File(System.getProperty("user.dir"), config.getPathToSoyResources());
         SoyFileSet.Builder soyFileSetBuilder = new SoyFileSet.Builder();
@@ -61,20 +63,20 @@ public class MiruManageInitializer {
         MiruHeaderRegion headerRegion = new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer);
 
         return new MiruManageService(
-                new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
-                        new MiruAdminRegion("soy.miru.page.adminRegion", renderer)),
-                new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
-                        new MiruHostsRegion("soy.miru.page.hostsRegion", renderer, clusterRegistry,
-                        new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer, clusterRegistry),
-                        new MiruHostFocusRegion("soy.miru.section.hostFocusRegion", renderer, clusterRegistry))),
-                new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
-                        new MiruTenantsRegion("soy.miru.page.tenantsRegion", renderer,
-                        new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry))),
-                new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
-                        new MiruLookupRegion("soy.miru.page.lookupRegion", renderer, activityLookupTable)),
-                new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
-                        new MiruActivityWALRegion("soy.miru.page.activityWalRegion", renderer, clusterRegistry, activityWALReader)),
-                new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
-                        new MiruReadWALRegion("soy.miru.page.readWalRegion", renderer, readTrackingWALReader)));
+            new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
+                new MiruAdminRegion("soy.miru.page.adminRegion", renderer)),
+            new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
+                new MiruHostsRegion("soy.miru.page.hostsRegion", renderer, clusterRegistry,
+                    new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer, clusterRegistry),
+                    new MiruHostFocusRegion("soy.miru.section.hostFocusRegion", renderer, clusterRegistry))),
+            new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
+                new MiruTenantsRegion("soy.miru.page.tenantsRegion", renderer,
+                    new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry))),
+            new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
+                new MiruLookupRegion("soy.miru.page.lookupRegion", renderer, activityLookupTable)),
+            new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
+                new MiruActivityWALRegion("soy.miru.page.activityWalRegion", renderer, clusterRegistry, activityWALReader)),
+            new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
+                new MiruReadWALRegion("soy.miru.page.readWalRegion", renderer, readTrackingWALReader)));
     }
 }

@@ -9,7 +9,7 @@ miru.hosts = {
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/manage/rejigger",
+            url: "/miru/manage/topology/shift",
             data: {
                 "host": host,
                 "port": port

@@ -32,7 +32,5 @@ public interface MiruPartitionDirector {
 
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
 
-    void rejiggerTopologies() throws Exception;
-
     boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;
 }

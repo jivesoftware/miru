@@ -30,14 +30,6 @@
             <artifactId>server-http-jetty-jersey</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>http-client-rest</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>http-client</artifactId>
-        </dependency>
-        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>
@@ -48,6 +40,10 @@
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>logger</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>ordered-id</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -115,11 +111,6 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>ordered-id</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

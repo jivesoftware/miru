@@ -17,6 +17,8 @@ package com.jivesoftware.os.miru.manage.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
@@ -32,11 +34,17 @@ import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
+import org.merlin.config.defaults.StringDefault;
 
 public class MiruManageMain {
 
     public static void main(String[] args) throws Exception {
         new MiruManageMain().run(args);
+    }
+
+    private interface ManageInstanceConfig extends InstanceConfig {
+        @StringDefault("dev")
+        String getClusterName();
     }
 
     public void run(String[] args) throws Exception {
@@ -45,9 +53,10 @@ public class MiruManageMain {
         deployable.buildStatusReporter(null).start();
         deployable.buildManageServer().start();
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+        InstanceConfig instanceConfig = deployable.config(ManageInstanceConfig.class);
 
         HBaseSetOfSortedMapsConfig hbaseConfig = deployable.config(HBaseSetOfSortedMapsConfig.class);
+        hbaseConfig.setHBaseZookeeperQuorum("soa-prime-data1.phx1.jivehosted.com");
         SetOfSortedMapsImplInitializer<Exception> setOfSortedMapsInitializer = new HBaseSetOfSortedMapsImplInitializer(hbaseConfig);
 
         ObjectMapper mapper = new ObjectMapper();
@@ -68,7 +77,13 @@ public class MiruManageMain {
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 
-        MiruManageService miruManageService = new MiruManageInitializer().initialize(manageConfig, clusterRegistry, registryStore, wal);
+        MiruManageService miruManageService = new MiruManageInitializer().initialize(manageConfig,
+            clusterRegistry,
+            registryStore,
+            wal);
+
+        MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
+            new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -79,6 +94,7 @@ public class MiruManageMain {
 
         deployable.addEndpoints(MiruManageEndpoints.class);
         deployable.addInjectables(MiruManageService.class, miruManageService);
+        deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
         deployable.addResource(sourceTree);
 
         deployable.buildServer().start();

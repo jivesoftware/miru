@@ -1,18 +1,10 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.http.client.HttpClient;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.util.Arrays;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -32,9 +24,11 @@ import javax.ws.rs.core.Response;
 public class MiruManageEndpoints {
 
     private final MiruManageService miruManageService;
+    private final MiruRebalanceDirector rebalanceDirector;
 
-    public MiruManageEndpoints(@Context MiruManageService miruManageService) {
+    public MiruManageEndpoints(@Context MiruManageService miruManageService, @Context MiruRebalanceDirector rebalanceDirector) {
         this.miruManageService = miruManageService;
+        this.rebalanceDirector = rebalanceDirector;
     }
 
     @GET
@@ -57,8 +51,8 @@ public class MiruManageEndpoints {
     @Path("/hosts/{logicalName}/{port}")
     @Produces(MediaType.TEXT_HTML)
     public Response getHostsWithFocus(
-            @PathParam("logicalName") String logicalName,
-            @PathParam("port") int port) {
+        @PathParam("logicalName") String logicalName,
+        @PathParam("port") int port) {
         String rendered = miruManageService.renderHostsWithFocus(new MiruHost(logicalName, port));
         return Response.ok(rendered).build();
     }
@@ -91,13 +85,13 @@ public class MiruManageEndpoints {
     @Path("/lookup/{tenantId}")
     @Produces(MediaType.TEXT_HTML)
     public Response getActivityWALForTenant(
-            @PathParam("tenantId") String tenantId,
-            @QueryParam("afterTimestamp") Long afterTimestamp,
-            @QueryParam("limit") Integer limit) {
+        @PathParam("tenantId") String tenantId,
+        @QueryParam("afterTimestamp") Long afterTimestamp,
+        @QueryParam("limit") Integer limit) {
         String rendered = miruManageService.renderLookupWithFocus(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                Optional.fromNullable(afterTimestamp),
-                Optional.fromNullable(limit));
+            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+            Optional.fromNullable(afterTimestamp),
+            Optional.fromNullable(limit));
         return Response.ok(rendered).build();
     }
 
@@ -121,17 +115,17 @@ public class MiruManageEndpoints {
     @Path("/wal/activity/{tenantId}/{partitionId}")
     @Produces(MediaType.TEXT_HTML)
     public Response getActivityWALForTenantPartition(
-            @PathParam("tenantId") String tenantId,
-            @PathParam("partitionId") int partitionId,
-            @QueryParam("sip") Boolean sip,
-            @QueryParam("afterTimestamp") Long afterTimestamp,
-            @QueryParam("limit") Integer limit) {
+        @PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
+        @QueryParam("sip") Boolean sip,
+        @QueryParam("afterTimestamp") Long afterTimestamp,
+        @QueryParam("limit") Integer limit) {
         String rendered = miruManageService.renderActivityWALWithFocus(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId),
-                Optional.fromNullable(sip),
-                Optional.fromNullable(afterTimestamp),
-                Optional.fromNullable(limit));
+            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+            MiruPartitionId.of(partitionId),
+            Optional.fromNullable(sip),
+            Optional.fromNullable(afterTimestamp),
+            Optional.fromNullable(limit));
         return Response.ok(rendered).build();
     }
 
@@ -155,32 +149,34 @@ public class MiruManageEndpoints {
     @Path("/wal/read/{tenantId}/{streamId}")
     @Produces(MediaType.TEXT_HTML)
     public Response getReadWALForTenantPartition(
-            @PathParam("tenantId") String tenantId,
-            @PathParam("streamId") String streamId,
-            @QueryParam("sip") Boolean sip,
-            @QueryParam("afterTimestamp") Long afterTimestamp,
-            @QueryParam("limit") Integer limit) {
+        @PathParam("tenantId") String tenantId,
+        @PathParam("streamId") String streamId,
+        @QueryParam("sip") Boolean sip,
+        @QueryParam("afterTimestamp") Long afterTimestamp,
+        @QueryParam("limit") Integer limit) {
         String rendered = miruManageService.renderReadWALWithFocus(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                streamId,
-                Optional.fromNullable(sip),
-                Optional.fromNullable(afterTimestamp),
-                Optional.fromNullable(limit));
+            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+            streamId,
+            Optional.fromNullable(sip),
+            Optional.fromNullable(afterTimestamp),
+            Optional.fromNullable(limit));
         return Response.ok(rendered).build();
     }
 
     @POST
-    @Path("/rejigger")
+    @Path("/topology/shift")
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response rejigger(@FormParam("host") String host, @FormParam("port") int port) {
-        HttpClientConfig httpClientConfig = HttpClientConfig.newBuilder().build();
-        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Arrays.<HttpClientConfiguration>asList(httpClientConfig));
-        HttpClient client = httpClientFactory.createClient(host, port);
-
-        String endpointUrl = "http://" + host + ":" + port + "/miru/config/topology/rejigger";
-        String response = new RequestHelper(client, new ObjectMapper()).executeRequest("", endpointUrl, String.class, null);
-        return Response.ok(response).build();
+    public Response shiftTopologies(@FormParam("host") String host, @FormParam("port") int port) {
+        try {
+            rebalanceDirector.shiftTopologies(new MiruHost(host, port), 0.10f, false);
+            return Response.ok("" +
+                    "         \\_/-.--.--.--.--.--.\n" +
+                    "         (\")__)__)__)__)__)__)\n" +
+                    "          ^ \"\" \"\" \"\" \"\" \"\" \"\"\n\n").build();
+        } catch (Throwable t) {
+            return Response.serverError().entity(t.getMessage()).build();
+        }
     }
+
 }

@@ -157,18 +157,6 @@ public class MiruReaderConfigEndpoints {
     }
 
     @POST
-    @Path("/topology/rejigger")
-    public Response rejiggerTopologies() {
-        try {
-            miruService.rejiggerTopologies();
-            return Response.ok("dance, baby, dance").build();
-        } catch (Throwable t) {
-            log.error("Failed to rejigger topologies");
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
-    @POST
     @Path("/check/{tenantId}/{partitionId}/{state}/{storage}")
     public Response check(
         @PathParam("tenantId") String tenantId,

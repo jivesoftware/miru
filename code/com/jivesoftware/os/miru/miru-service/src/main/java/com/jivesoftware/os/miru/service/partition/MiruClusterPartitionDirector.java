@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -116,17 +115,6 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     @Override
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
         clusterRegistry.removeTopology(tenantId, partitionId, host);
-    }
-
-    /** Rebalance topologies by removing a random host from every replica set */
-    @Override
-    public void rejiggerTopologies() throws Exception {
-        Collection<MiruTenantTopology<?>> topologies = expectedTenants.topologies();
-        List<MiruTenantId> tenantIds = Lists.newArrayListWithCapacity(topologies.size());
-        for (MiruTenantTopology<?> topology : topologies) {
-            tenantIds.add(topology.getTenantId());
-        }
-        clusterRegistry.rejiggerTopologies(tenantIds, host);
     }
 
     /** Check if the given tenant partition is in the desired state */
