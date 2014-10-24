@@ -7,6 +7,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -14,13 +15,20 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import java.util.Collections;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import javax.imageio.ImageIO;
 
 /**
  *
@@ -31,94 +39,64 @@ public class MiruRebalanceDirector {
 
     private final MiruClusterRegistry clusterRegistry;
     private final OrderIdProvider orderIdProvider;
-    private final Random random = new Random();
+
+    private Function<MiruPartition, MiruHost> partitionToHost = new Function<MiruPartition, MiruHost>() {
+        @Override
+        public MiruHost apply(MiruPartition input) {
+            return input.coord.host;
+        }
+    };
+    private Function<MiruClusterRegistry.HostHeartbeat, MiruHost> heartbeatToHost = new Function<MiruClusterRegistry.HostHeartbeat, MiruHost>() {
+        @Override
+        public MiruHost apply(MiruClusterRegistry.HostHeartbeat input) {
+            return input.host;
+        }
+    };
 
     public MiruRebalanceDirector(MiruClusterRegistry clusterRegistry, OrderIdProvider orderIdProvider) {
         this.clusterRegistry = clusterRegistry;
         this.orderIdProvider = orderIdProvider;
     }
 
-    public void shiftTopologies(MiruHost fromHost, float probability, boolean currentPartitionOnly) throws Exception {
-        List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(clusterRegistry.getAllHosts(),
-            new Function<MiruClusterRegistry.HostHeartbeat, MiruHost>() {
-                @Override
-                public MiruHost apply(MiruClusterRegistry.HostHeartbeat input) {
-                    return input.host;
-                }
-            }));
+    public void shiftTopologies(MiruHost fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
+        LinkedHashSet<MiruClusterRegistry.HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
+        List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(hostHeartbeats, heartbeatToHost));
 
+        int moved = 0;
+        int skipped = 0;
+        int missed = 0;
         for (MiruTenantId tenantId : clusterRegistry.getTenantsForHost(fromHost)) {
             int numberOfReplicas = clusterRegistry.getNumberOfReplicas(tenantId);
             ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
             MiruPartitionId currentPartitionId = findCurrentPartitionId(partitionsForTenant);
             Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> replicaTable = extractPartitions(
-                currentPartitionOnly, tenantId, partitionsForTenant, currentPartitionId);
+                selectHostsStrategy.isCurrentPartitionOnly(), tenantId, partitionsForTenant, currentPartitionId);
             for (Table.Cell<MiruTenantId, MiruPartitionId, List<MiruPartition>> cell : replicaTable.cellSet()) {
-                if (random.nextFloat() > probability) {
-                    LOG.inc("rebalance>skipped");
+                MiruPartitionId partitionId = cell.getColumnKey();
+                List<MiruPartition> partitions = cell.getValue();
+                Set<MiruHost> hostsWithPartition = Sets.newHashSet(Collections2.transform(partitions, partitionToHost));
+                if (!hostsWithPartition.contains(fromHost)) {
+                    missed++;
+                    LOG.trace("Missed {} {}", tenantId, partitionId);
+                    continue;
+                } else if (!shiftPredicate.needsToShift(tenantId, partitionId, hostHeartbeats, partitions)) {
+                    skipped++;
+                    LOG.trace("Skipped {} {}", tenantId, partitionId);
                     continue;
                 }
-                List<MiruHost> hostsToElect = selectHostsToElect(fromHost, allHosts, numberOfReplicas, cell.getValue());
-                electHosts(tenantId, cell.getColumnKey(), hostsToElect);
-                LOG.inc("rebalance>moved");
+                List<MiruHost> hostsToElect = selectHostsStrategy.selectHosts(fromHost, allHosts, partitions, numberOfReplicas);
+                electHosts(tenantId, partitionId, Lists.transform(partitions, partitionToHost), hostsToElect);
+                moved++;
             }
         }
+        LOG.info("Done shifting, moved={} skipped={} missed={}", moved, skipped, missed);
+        LOG.inc("rebalance>moved", moved);
+        LOG.inc("rebalance>skipped", skipped);
+        LOG.inc("rebalance>missed", missed);
     }
 
-    private List<MiruHost> selectHostsToElect(MiruHost fromHost, List<MiruHost> allHosts, int numberOfReplicas, List<MiruPartition> partitions) {
-        int numHosts = allHosts.size();
-        List<MiruHost> hostsToElect = Lists.newArrayListWithCapacity(numberOfReplicas);
-        if (partitions.isEmpty()) {
-            for (int index = allHosts.indexOf(fromHost), j = 0; j < numberOfReplicas && j < numHosts; index++, j++) {
-                MiruHost hostToElect = allHosts.get(index % numHosts);
-                LOG.debug("Empty {}", hostToElect);
-                hostsToElect.add(hostToElect);
-            }
-        } else {
-            Set<MiruHost> hostsWithReplica = Sets.newHashSet();
-            List<Integer> hostIndexes = Lists.newArrayListWithCapacity(hostsWithReplica.size());
-            for (MiruPartition partition : partitions) {
-                hostsWithReplica.add(partition.coord.host);
-                hostIndexes.add(allHosts.indexOf(partition.coord.host));
-            }
-            Collections.sort(hostIndexes);
-            int start = startOfContiguousRun(numHosts, hostIndexes);
-
-            boolean contiguous = (start >= 0);
-            if (contiguous) {
-                //    \_/-.--.--.--.--.--.
-                //    (")__)__)__)__)__)__)
-                //     ^ "" "" "" "" "" ""
-                // magical caterpillar to the right, since walking from next neighbor might cycle
-                // e.g. hosts=0-9, partitions=0,8,9, shift(0)=8,9,0
-                // instead we do shift(0)=9,0,1
-                for (int index = hostIndexes.get(start) + 1, j = 0; j < numberOfReplicas && j < numHosts; index++, j++) {
-                    MiruHost hostToElect = allHosts.get(index % numHosts);
-                    LOG.debug("Caterpillar {}", hostToElect);
-                    hostsToElect.add(hostToElect);
-                }
-            } else {
-                // safe to walk from next neighbor
-                int neighborIndex = -1;
-                for (int index = allHosts.indexOf(fromHost) + 1, j = 0; j < numHosts; index++, j++) {
-                    if (hostIndexes.contains(index % numHosts)) {
-                        neighborIndex = index;
-                        break;
-                    }
-                }
-                //TODO consider adding isOnline check
-                for (int index = neighborIndex, j = 0; j < numberOfReplicas && j < numHosts; index++, j++) {
-                    MiruHost hostToElect = allHosts.get(index % numHosts);
-                    LOG.debug("Neighbor {}", hostToElect);
-                    hostsToElect.add(hostToElect);
-                }
-            }
-        }
-        return hostsToElect;
-    }
-
-    private void electHosts(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruHost> hostsToElect) throws Exception {
-        LOG.debug("Elect {} to {} {}", hostsToElect, tenantId, partitionId);
+    private void electHosts(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruHost> fromHosts, List<MiruHost> hostsToElect) throws Exception {
+        LOG.debug("Elect from {} to {} for {} {}", fromHosts, hostsToElect, tenantId, partitionId);
         for (MiruHost hostToElect : hostsToElect) {
             clusterRegistry.ensurePartitionCoord(new MiruPartitionCoord(tenantId, partitionId, hostToElect));
             clusterRegistry.addToReplicaRegistry(tenantId, partitionId, Long.MAX_VALUE - orderIdProvider.nextId(), hostToElect);
@@ -161,33 +139,99 @@ public class MiruRebalanceDirector {
         return currentPartitionId;
     }
 
-    // example:
-    //   0. 1. 2.
-    // [ 0, 8, 9 ]
-    protected int startOfContiguousRun(int numHosts, List<Integer> hostIndexes) {
-        // i=0. index=0, contains(9)? -> yes
-        // i=1. index=8, contains(7)? -> no. start=1
-        int start = -1;
-        for (int i = 0; i < hostIndexes.size(); i++) {
-            int index = hostIndexes.get(i);
-            if (!hostIndexes.contains((index + numHosts - 1) % numHosts)) {
-                start = i;
-                break;
+    private static final int VISUAL_PARTITION_HEIGHT = 4;
+    private static final int VISUAL_PADDING = 2;
+    private static final Color[] COLORS;
+
+    static {
+        COLORS = new Color[MiruPartitionState.values().length];
+        Arrays.fill(COLORS, Color.BLACK);
+        COLORS[MiruPartitionState.offline.ordinal()] = Color.GRAY;
+        COLORS[MiruPartitionState.bootstrap.ordinal()] = Color.BLUE;
+        COLORS[MiruPartitionState.rebuilding.ordinal()] = Color.CYAN;
+        COLORS[MiruPartitionState.online.ordinal()] = Color.GREEN;
+    }
+
+    public void visualizeTopologies(int width, OutputStream out) throws Exception {
+        LinkedHashSet<MiruClusterRegistry.HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
+        Set<MiruHost> unhealthyHosts = Sets.newHashSet();
+        for (MiruClusterRegistry.HostHeartbeat heartbeat : heartbeats) {
+            if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
+                unhealthyHosts.add(heartbeat.host);
             }
         }
 
-        // start=1
-        // index=8, j=0<3. contains(8)? -> yes
-        // index=9, j=1<3. contains(9)? -> yes
-        // index=10, j=2<3. contains(0)? -> yes
-        if (start >= 0) {
-            for (int index = hostIndexes.get(start), j = 0; j < hostIndexes.size(); index++, j++) {
-                if (!hostIndexes.contains(index % numHosts)) {
-                    start = -1;
-                    break;
+        List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(heartbeats,
+            new Function<MiruClusterRegistry.HostHeartbeat, MiruHost>() {
+                @Override
+                public MiruHost apply(MiruClusterRegistry.HostHeartbeat input) {
+                    return input.host;
+                }
+            }));
+
+        final Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
+        clusterRegistry.allTopologies(new CallbackStream<MiruTopologyStatus>() {
+            @Override
+            public MiruTopologyStatus callback(MiruTopologyStatus status) throws Exception {
+                if (status != null) {
+                    MiruPartitionCoord coord = status.partition.coord;
+                    List<MiruTopologyStatus> statuses = topologies.get(coord.tenantId, coord.partitionId);
+                    if (statuses == null) {
+                        statuses = Lists.newArrayList();
+                        topologies.put(coord.tenantId, coord.partitionId, statuses);
+                    }
+                    statuses.add(status);
+                }
+                return status;
+            }
+        });
+        int numHosts = allHosts.size();
+        int numPartitions = topologies.size();
+        if (numHosts == 0 || numPartitions == 0) {
+            throw new IllegalStateException("Not enough data");
+        }
+
+        int visualHostWidth = (width - VISUAL_PADDING) / allHosts.size() - VISUAL_PADDING;
+        BufferedImage bi = new BufferedImage(
+            VISUAL_PADDING + (visualHostWidth + VISUAL_PADDING) * numHosts,
+            VISUAL_PADDING + (VISUAL_PARTITION_HEIGHT + VISUAL_PADDING) * numPartitions,
+            BufferedImage.TYPE_INT_RGB);
+        Graphics2D ig2 = bi.createGraphics();
+
+        int y = VISUAL_PADDING;
+        for (List<MiruTopologyStatus> statuses : topologies.values()) {
+            int unhealthyPartitions = 0;
+            for (MiruTopologyStatus status : statuses) {
+                if (unhealthyHosts.contains(status.partition.coord.host)) {
+                    unhealthyPartitions++;
                 }
             }
+            Color unhealthyColor = null;
+            if (unhealthyPartitions > 0) {
+                int numReplicas = statuses.size();
+                float unhealthyPct = (float) unhealthyPartitions / (float) numReplicas;
+                if (unhealthyPct < 0.33f) {
+                    unhealthyColor = Color.YELLOW;
+                } else if (unhealthyPct < 0.67f) {
+                    unhealthyColor = Color.ORANGE;
+                } else {
+                    unhealthyColor = Color.RED;
+                }
+            }
+
+            for (MiruTopologyStatus status : statuses) {
+                int x = VISUAL_PADDING + allHosts.indexOf(status.partition.coord.host) * (visualHostWidth + VISUAL_PADDING);
+                if (unhealthyHosts.contains(status.partition.coord.host)) {
+                    ig2.setColor(unhealthyColor);
+                } else {
+                    ig2.setColor(COLORS[status.partition.info.state.ordinal()]);
+                }
+                ig2.fillRect(x, y, visualHostWidth, VISUAL_PARTITION_HEIGHT);
+            }
+
+            y += VISUAL_PARTITION_HEIGHT + VISUAL_PADDING;
         }
-        return start;
+
+        ImageIO.write(bi, "PNG", out);
     }
 }

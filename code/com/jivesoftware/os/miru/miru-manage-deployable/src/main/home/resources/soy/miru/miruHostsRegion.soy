@@ -3,8 +3,8 @@
 /**
  * Hosts page
  *
- * @param hosts
- * @param hostFocusRegion
+ * @param? hosts
+ * @param? hostFocusRegion
  */
 {template .hostsRegion}
     <div class="panel panel-default">
@@ -18,14 +18,14 @@
                         <th>Last heartbeat</th>
                         <th>Size in memory</th>
                         <th>Size on disk</th>
-                        <th>Tenants</th>
-                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {foreach $host in $hosts}
-                        {$host|noAutoescape}
-                    {/foreach}
+                    {if $hosts}
+                        {foreach $host in $hosts}
+                            {$host|noAutoescape}
+                        {/foreach}
+                    {/if}
                 </tbody>
             </table>
         </div>

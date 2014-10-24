@@ -16,6 +16,7 @@ public class MiruManageService {
 
     private final MiruRegion<Void> adminRegion;
     private final MiruRegion<Optional<MiruHost>> hostsRegion;
+    private final MiruRegion<Void> balancerRegion;
     private final MiruRegion<Optional<MiruTenantId>> tenantsRegion;
     private final MiruRegion<MiruLookupRegionInput> lookupRegion;
     private final MiruRegion<MiruActivityWALRegionInput> activityWALRegion;
@@ -23,12 +24,14 @@ public class MiruManageService {
 
     public MiruManageService(MiruRegion<Void> adminRegion,
         MiruRegion<Optional<MiruHost>> hostsRegion,
+        MiruRegion<Void> balancerRegion,
         MiruRegion<Optional<MiruTenantId>> tenantsRegion,
         MiruRegion<MiruLookupRegionInput> lookupRegion,
         MiruRegion<MiruActivityWALRegionInput> activityWALRegion,
         MiruRegion<MiruReadWALRegionInput> readWALRegion) {
         this.adminRegion = adminRegion;
         this.hostsRegion = hostsRegion;
+        this.balancerRegion = balancerRegion;
         this.tenantsRegion = tenantsRegion;
         this.lookupRegion = lookupRegion;
         this.activityWALRegion = activityWALRegion;
@@ -45,6 +48,10 @@ public class MiruManageService {
 
     public String renderHostsWithFocus(MiruHost host) {
         return hostsRegion.render(Optional.of(host));
+    }
+
+    public String renderBalancer() {
+        return balancerRegion.render(null);
     }
 
     public String renderTenants() {

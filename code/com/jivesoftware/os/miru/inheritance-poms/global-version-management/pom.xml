@@ -11,7 +11,7 @@
     <packaging>pom</packaging>
     <properties>
         <jive-utils-version>0.53</jive-utils-version>
-        <rcvs-version>0.5</rcvs-version>
+        <rcvs-version>0.6-SNAPSHOT</rcvs-version>
         <filer-version>0.11</filer-version>
         <upena-version>0.13</upena-version>
     </properties>

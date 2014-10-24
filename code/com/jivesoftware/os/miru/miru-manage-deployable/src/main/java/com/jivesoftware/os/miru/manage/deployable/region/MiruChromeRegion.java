@@ -14,14 +14,12 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final R region;
-    private final String version;
 
     public MiruChromeRegion(String template, MiruSoyRenderer renderer, MiruHeaderRegion headerRegion, R region) {
         this.template = template;
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.region = region;
-        this.version = buildVersion();
     }
 
     @Override
@@ -30,7 +28,6 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
         data.put("header", headerRegion.render(null));
         data.put("region", region.render(input));
         data.put("title", region.getTitle());
-        data.put("version", version);
         return renderer.render(template, data);
 
         /*
@@ -39,16 +36,6 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
 
         context.put("jsmodules").value(jsmodulesVal);
         */
-    }
-
-    private String buildVersion() {
-        /*
-        GitInfo gitInfo = GitInfo.getInstance();
-        String branch = gitInfo.getBranch();
-        String branchSuffix = (gitInfo.getBranch().equals(gitInfo.getCommitId())) ? "" : "." + branch;
-        return gitInfo.getBuildTime() + "." + gitInfo.getCommitIdAbbrev() + branchSuffix;
-        */
-        return "unknown";
     }
 
 }

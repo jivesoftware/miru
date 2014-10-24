@@ -41,15 +41,23 @@ public class MiruManageMain {
         new MiruManageMain().run(args);
     }
 
+    /*
+    private interface DevInstanceConfig extends InstanceConfig {
+        @StringDefault("dev")
+        String getClusterName();
+    }
+    */
+
     public void run(String[] args) throws Exception {
 
         Deployable deployable = new Deployable(args);
         deployable.buildStatusReporter(null).start();
         deployable.buildManageServer().start();
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class); //config(DevInstanceConfig.class);
 
         HBaseSetOfSortedMapsConfig hbaseConfig = deployable.config(HBaseSetOfSortedMapsConfig.class);
+        //hbaseConfig.setHBaseZookeeperQuorum("soa-prime-data1.phx1.jivehosted.com");
         SetOfSortedMapsImplInitializer<Exception> setOfSortedMapsInitializer = new HBaseSetOfSortedMapsImplInitializer(hbaseConfig);
 
         ObjectMapper mapper = new ObjectMapper();

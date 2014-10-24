@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.cluster;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ListMultimap;
+import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -56,6 +57,8 @@ public interface MiruClusterRegistry {
     void removeHost(MiruHost host) throws Exception;
 
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
+
+    void allTopologies(final CallbackStream<MiruTopologyStatus> callbackStream) throws Exception;
 
     class HostHeartbeat {
 

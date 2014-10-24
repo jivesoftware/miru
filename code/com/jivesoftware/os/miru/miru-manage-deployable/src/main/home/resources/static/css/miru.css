@@ -27,3 +27,42 @@ div.pre-ish {
     white-space: pre-wrap;
     border-radius: 4px;
 }
+
+div.container {
+    width: 100% !important;
+}
+
+table.balancer {
+    border-collapse: separate;
+    border-spacing: 2px;
+}
+
+table.balancer > tbody > tr > td {
+    word-break: break-all;
+    word-wrap: break-word;
+    padding: 2px;
+}
+
+td.balancer-label {
+    vertical-align: top;
+}
+
+td.balancer-offline {
+    background-color: #808080;
+    color: white;
+}
+
+td.balancer-bootstrap {
+    background-color: #00f;
+    color: white;
+}
+
+td.balancer-rebuilding {
+    background-color: #0ff;
+    color: black;
+}
+
+td.balancer-online {
+    background-color: #0f0;
+    color: black;
+}

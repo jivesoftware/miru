@@ -7,8 +7,6 @@
  * @param heartbeat
  * @param sizeInMemory
  * @param sizeOnDisk
- * @param numTenants
- * @param tenants
  */
 {template .hostEntryRegion}
     <tr>
@@ -19,24 +17,5 @@
         <td>{$heartbeat} ms</td>
         <td>{$sizeInMemory}</td>
         <td>{$sizeOnDisk}</td>
-        <td>
-            <a href="#" onclick="document.getElementById('host-{$host.logicalName|escapeUri}-{$host.port}').style.display='table-row'; return false;">
-                Show ({$numTenants})
-            </a>
-        </td>
-        <td>
-            <input type="button" value="Rebalance" onclick="miru.hosts.rejigger(this, '{$host.logicalName}', {$host.port})" />
-        </td>
-    </tr>
-    <tr id="host-{$host.logicalName|escapeUri}-{$host.port}" style="display:none;">
-        <td colspan="2"></td>
-        <td colspan="4">
-            {foreach $tenant in $tenants}
-                {if not isFirst($tenant)}, {/if}
-                <a href="/miru/manage/tenants/{$tenant}#focus">{$tenant}</a>
-            {ifempty}
-                No tenants yet
-            {/foreach}
-        </td>
     </tr>
 {/template}

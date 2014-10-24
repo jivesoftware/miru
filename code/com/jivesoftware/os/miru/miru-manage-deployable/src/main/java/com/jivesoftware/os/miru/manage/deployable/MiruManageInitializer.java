@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruActivityWALRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruAdminRegion;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruBalancerRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruHostEntryRegion;
@@ -67,8 +68,10 @@ public class MiruManageInitializer {
                 new MiruAdminRegion("soy.miru.page.adminRegion", renderer)),
             new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
                 new MiruHostsRegion("soy.miru.page.hostsRegion", renderer, clusterRegistry,
-                    new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer, clusterRegistry),
+                    new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer),
                     new MiruHostFocusRegion("soy.miru.section.hostFocusRegion", renderer, clusterRegistry))),
+            new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
+                new MiruBalancerRegion("soy.miru.page.balancerRegion", renderer, clusterRegistry)),
             new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion,
                 new MiruTenantsRegion("soy.miru.page.tenantsRegion", renderer,
                     new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry))),

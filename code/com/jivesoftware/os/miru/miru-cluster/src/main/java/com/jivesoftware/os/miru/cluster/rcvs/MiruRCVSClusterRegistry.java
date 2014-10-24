@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.cluster.rcvs;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -10,6 +11,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -310,6 +312,61 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     @Override
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
         topologyRegistry.remove(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey(partitionId, host), timestamper);
+    }
+
+    @Override
+    public void allTopologies(final CallbackStream<MiruTopologyStatus> callbackStream) throws Exception {
+        final List<KeyedColumnValueCallbackStream<MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, Long>> callbacks = Lists.newArrayList();
+        final Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
+        topologyRegistry.getAllRowKeys(1_000, null, new CallbackStream<TenantIdAndRow<MiruVoidByte, MiruTenantId>>() {
+            @Override
+            public TenantIdAndRow<MiruVoidByte, MiruTenantId> callback(TenantIdAndRow<MiruVoidByte, MiruTenantId> r)
+                throws Exception {
+                if (r != null) {
+                    final MiruTenantId tenantId = r.getRow();
+                    callbacks.add(new KeyedColumnValueCallbackStream<>(tenantId,
+                        new CallbackStream<ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>>() {
+                            @Override
+                            public ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> callback(
+                                ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> c) throws Exception {
+                                if (c != null) {
+                                    MiruTopologyColumnValue value = c.getValue();
+                                    MiruHost host = c.getColumn().host;
+                                    MiruTopologyStatus status = new MiruTopologyStatus(
+                                        new MiruPartition(
+                                            new MiruPartitionCoord(tenantId, c.getColumn().partitionId, host),
+                                            new MiruPartitionCoordInfo(value.state, value.storage)),
+                                        new MiruPartitionCoordMetrics(value.sizeInMemory, value.sizeOnDisk));
+
+                                    List<MiruTopologyStatus> statuses = topologies.get(tenantId, c.getColumn().partitionId);
+                                    if (statuses == null) {
+                                        statuses = Lists.newArrayList();
+                                        topologies.put(tenantId, c.getColumn().partitionId, statuses);
+                                    }
+                                    statuses.add(status);
+                                }
+                                return c;
+                            }
+                        }));
+                }
+                return r;
+            }
+        });
+        topologyRegistry.multiRowGetAll(MiruVoidByte.INSTANCE, callbacks);
+        for (Map.Entry<MiruTenantId, Map<MiruPartitionId, List<MiruTopologyStatus>>> tenantEntry : topologies.rowMap().entrySet()) {
+            MiruTenantId tenantId = tenantEntry.getKey();
+            Set<MiruPartitionId> partitionIds = tenantEntry.getValue().keySet();
+            Map<MiruPartitionId, MiruReplicaSet> replicaSets = getReplicaSets(tenantId, partitionIds);
+            for (Map.Entry<MiruPartitionId, List<MiruTopologyStatus>> partitionEntry : tenantEntry.getValue().entrySet()) {
+                MiruReplicaSet replicaSet = replicaSets.get(partitionEntry.getKey());
+                for (MiruTopologyStatus status : partitionEntry.getValue()) {
+                    if (replicaSet.getHostsWithReplica().contains(status.partition.coord.host)) {
+                        callbackStream.callback(status);
+                    }
+                }
+            }
+        }
+        callbackStream.callback(null);
     }
 
     private ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> getTopologyValueAndTimestamp(

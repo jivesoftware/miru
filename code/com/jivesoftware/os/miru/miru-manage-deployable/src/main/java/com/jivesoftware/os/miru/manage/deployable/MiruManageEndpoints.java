@@ -2,9 +2,13 @@ package com.jivesoftware.os.miru.manage.deployable;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import java.io.IOException;
+import java.io.OutputStream;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -13,15 +17,19 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 
 /**
  *
  */
 @Path("/miru/manage")
 public class MiruManageEndpoints {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruManageService miruManageService;
     private final MiruRebalanceDirector rebalanceDirector;
@@ -54,6 +62,14 @@ public class MiruManageEndpoints {
         @PathParam("logicalName") String logicalName,
         @PathParam("port") int port) {
         String rendered = miruManageService.renderHostsWithFocus(new MiruHost(logicalName, port));
+        return Response.ok(rendered).build();
+    }
+
+    @GET
+    @Path("/balancer")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getBalancer() {
+        String rendered = miruManageService.renderBalancer();
         return Response.ok(rendered).build();
     }
 
@@ -167,16 +183,44 @@ public class MiruManageEndpoints {
     @Path("/topology/shift")
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response shiftTopologies(@FormParam("host") String host, @FormParam("port") int port) {
+    public Response shiftTopologies(@FormParam("host") String host, @FormParam("port") int port, @FormParam("direction") int direction) {
         try {
-            rebalanceDirector.shiftTopologies(new MiruHost(host, port), 0.10f, false);
-            return Response.ok("" +
-                    "         \\_/-.--.--.--.--.--.\n" +
-                    "         (\")__)__)__)__)__)__)\n" +
-                    "          ^ \"\" \"\" \"\" \"\" \"\" \"\"\n\n").build();
+            ShiftPredicate shiftPredicate;
+            if (direction == 0) {
+                shiftPredicate = new UnhealthyTopologyShiftPredicate(0.24f); //TODO should be passed in
+            } else {
+                shiftPredicate = new RandomShiftPredicate(0.10f);
+            }
+            rebalanceDirector.shiftTopologies(new MiruHost(host, port),
+                shiftPredicate,
+                new CaterpillarSelectHostsStrategy(direction, false));
+            return Response.ok("success").build();
         } catch (Throwable t) {
+            LOG.error("/topology/shift {} {} {}", new Object[] { host, port, direction }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
 
+    @GET
+    @Path("/topology/visual")
+    @Produces("image/png")
+    public Response visualizeTopologies(@QueryParam("width") final int width) {
+        try {
+            return Response.ok().entity(new StreamingOutput() {
+                @Override
+                public void write(OutputStream output)
+                    throws IOException, WebApplicationException {
+                    try {
+                        rebalanceDirector.visualizeTopologies(width, output);
+                        output.flush();
+                    } catch (Exception e) {
+                        throw new IOException("Problem generating visual", e);
+                    }
+                }
+            }).build();
+        } catch (Throwable t) {
+            LOG.error("/topology/visual {}", new Object[] { width }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
 }

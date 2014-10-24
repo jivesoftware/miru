@@ -84,6 +84,10 @@
         <span class="glyphicon glyphicon-bookmark"></span>{sp}
         Hosts
     </a>
+    <a class="list-group-item" href="/miru/manage/balancer">
+        <span class="glyphicon glyphicon-bookmark"></span>{sp}
+        Balancer
+    </a>
     <a class="list-group-item" href="/miru/manage/tenants">
         <span class="glyphicon glyphicon-bookmark"></span>{sp}
         Tenants
@@ -111,15 +115,12 @@
 {/template}
 
 /**
- * @param version
+ *
  */
 {template .footer}
 	<div class="row">
 		<div class="col-md-8">
-			<b><span class="glyphicon glyphicon-copyright-mark"></span> 2014 Jive Software</b> All rights reserved.
-		</div>
-		<div class="col-md-3">
-		    <span>{$version}</span>
+			<a href="https://github.com/jivesoftware/miru">Miru on GitHub</a>
 		</div>
 	</div>
 {/template}

@@ -1,0 +1,68 @@
+{namespace soy.miru.page}
+
+/**
+ * Balancer page
+ *
+ * @param? hosts
+ * @param? hostWidth
+ * @param? imageWidth
+ * @param? numHosts
+ */
+{template .balancerRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Balancer</div>
+        <div class="panel-body">
+            {if $hosts}
+                <table border="0" cellspacing="2" cellpadding="0" class="balancer">
+                    <tbody>
+                        <tr>
+                            <td class="balancer-label balancer-host">Host</td>
+                            {foreach $host in $hosts}
+                                <td style="width:{$hostWidth}px">{$host.logicalName}:{$host.port}</td>
+                            {/foreach}
+                        </tr>
+                        <tr>
+                            <td class="balancer-label balancer-offline">Offline</td>
+                            {foreach $host in $hosts}
+                                <td>{$host.numOffline}</td>
+                            {/foreach}
+                        </tr>
+                        <tr>
+                            <td class="balancer-label balancer-bootstrap">Bootstrap</td>
+                            {foreach $host in $hosts}
+                                <td>{$host.numBootstrap}</td>
+                            {/foreach}
+                        </tr>
+                        <tr>
+                            <td class="balancer-label balancer-rebuilding">Rebuilding</td>
+                            {foreach $host in $hosts}
+                                <td>{$host.numRebuilding}</td>
+                            {/foreach}
+                        </tr>
+                        <tr>
+                            <td class="balancer-label balancer-online">Online</td>
+                            {foreach $host in $hosts}
+                                <td>{$host.numOnline}</td>
+                            {/foreach}
+                        </tr>
+                        <tr>
+                            <td class="balancer-label balancer-action">Action</td>
+                            {foreach $host in $hosts}
+                                <td>
+                                    <input type="button" value="Rebalance" onclick="miru.balancer.rebalance(this, '{$host.logicalName}', {$host.port}, 1)" /><br/>
+                                    <input type="button" value="Evacuate" onclick="miru.balancer.rebalance(this, '{$host.logicalName}', {$host.port}, 0)" /><br/>
+                                </td>
+                            {/foreach}
+                        </tr>
+                        <tr>
+                            <td class="balancer-label balancer-topology">Topology</td>
+                            <td colspan="{$numHosts}">
+                                <img src="/miru/manage/topology/visual?width={$imageWidth}" />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            {/if}
+        </div>
+    </div>
+{/template}
