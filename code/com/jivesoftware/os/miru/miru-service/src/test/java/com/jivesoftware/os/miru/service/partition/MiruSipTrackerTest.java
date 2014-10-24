@@ -81,4 +81,19 @@ public class MiruSipTrackerTest {
         assertEquals(sipTracker.suggestTimestamp(initialTimestamp), oldestReplayTimestamp + 1);
     }
 
+    @Test
+    public void testWasSeenLastSip() throws Exception {
+        long baseTime = System.currentTimeMillis();
+        MiruSipTracker lastSipTracker = new MiruSipTracker(maxSipReplaySize, maxSipClockSkew, Sets.<TimeAndVersion>newHashSet());
+        for (int i = 0; i < 10; i++) {
+            if (i % 2 == 0) {
+                lastSipTracker.addSeenThisSip(new TimeAndVersion(baseTime + i, i));
+            }
+        }
+
+        MiruSipTracker sipTracker = new MiruSipTracker(maxSipReplaySize, maxSipClockSkew, lastSipTracker.getSeenThisSip());
+        for (int i = 0; i < 10; i++) {
+            assertEquals(sipTracker.wasSeenLastSip(new TimeAndVersion(baseTime + i, i)), i % 2 == 0);
+        }
+    }
 }

@@ -57,7 +57,7 @@ public class MiruSipTracker {
     }
 
     public boolean wasSeenLastSip(TimeAndVersion timeAndVersion) {
-        return !seenLastSip.contains(timeAndVersion);
+        return seenLastSip.contains(timeAndVersion);
     }
 
     public void addSeenThisSip(TimeAndVersion timeAndVersion) {
