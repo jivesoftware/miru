@@ -141,6 +141,7 @@ public class MiruRebalanceDirector {
 
     private static final int VISUAL_PARTITION_HEIGHT = 4;
     private static final int VISUAL_PADDING = 2;
+    private static final int VISUAL_PADDING_HALVED = VISUAL_PADDING / 2;
     private static final Color[] COLORS;
 
     static {
@@ -201,9 +202,17 @@ public class MiruRebalanceDirector {
         int y = VISUAL_PADDING;
         for (List<MiruTopologyStatus> statuses : topologies.values()) {
             int unhealthyPartitions = 0;
+            int offlinePartitions = 0;
+            int onlinePartitions = 0;
             for (MiruTopologyStatus status : statuses) {
                 if (unhealthyHosts.contains(status.partition.coord.host)) {
                     unhealthyPartitions++;
+                }
+                if (status.partition.info.state == MiruPartitionState.offline) {
+                    offlinePartitions++;
+                }
+                if (status.partition.info.state == MiruPartitionState.online) {
+                    onlinePartitions++;
                 }
             }
             Color unhealthyColor = null;
@@ -217,6 +226,15 @@ public class MiruRebalanceDirector {
                 } else {
                     unhealthyColor = Color.RED;
                 }
+            }
+
+            if (offlinePartitions < statuses.size() && onlinePartitions == 0) {
+                // partition appears to be awake, but nothing is online, so paint the background
+                ig2.setColor(Color.RED.darker().darker());
+                ig2.fillRect(VISUAL_PADDING_HALVED,
+                    y - VISUAL_PADDING_HALVED,
+                    VISUAL_PADDING_HALVED + (visualHostWidth + VISUAL_PADDING) * numHosts,
+                    y + VISUAL_PARTITION_HEIGHT + VISUAL_PADDING_HALVED);
             }
 
             for (MiruTopologyStatus status : statuses) {
