@@ -58,11 +58,15 @@ td.balancer-bootstrap {
 }
 
 td.balancer-rebuilding {
-    background-color: #0ff;
+    background-color: #f0f;
     color: black;
 }
 
 td.balancer-online {
     background-color: #0f0;
     color: black;
+}
+
+img.balancer-visual {
+    margin-bottom: -2px;
 }

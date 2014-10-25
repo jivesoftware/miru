@@ -57,7 +57,9 @@
                         <tr>
                             <td class="balancer-label balancer-topology">Topology</td>
                             <td colspan="{$numHosts}">
-                                <img src="/miru/manage/topology/visual?width={$imageWidth}" />
+                                {for $i in range(0, 20)}
+                                    <img class="balancer-visual" src="/miru/manage/topology/visual?width={$imageWidth}&amp;split=100&amp;index={$i}" />
+                                {/for}
                             </td>
                         </tr>
                     </tbody>

@@ -14,6 +14,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import java.util.LinkedHashSet;
@@ -47,7 +48,8 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
             LinkedHashSet<MiruClusterRegistry.HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
 
             final ListMultimap<MiruHost, MiruTopologyStatus> topologies = ArrayListMultimap.create();
-            clusterRegistry.allTopologies(new CallbackStream<MiruTopologyStatus>() {
+            List<MiruTenantId> tenantIds = clusterRegistry.allTenantIds();
+            clusterRegistry.topologiesForTenants(tenantIds, new CallbackStream<MiruTopologyStatus>() {
                 @Override
                 public MiruTopologyStatus callback(MiruTopologyStatus status) throws Exception {
                     if (status != null) {

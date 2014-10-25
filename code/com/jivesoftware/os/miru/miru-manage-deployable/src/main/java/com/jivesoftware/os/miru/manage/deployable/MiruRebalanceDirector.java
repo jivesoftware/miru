@@ -149,11 +149,11 @@ public class MiruRebalanceDirector {
         Arrays.fill(COLORS, Color.BLACK);
         COLORS[MiruPartitionState.offline.ordinal()] = Color.GRAY;
         COLORS[MiruPartitionState.bootstrap.ordinal()] = Color.BLUE;
-        COLORS[MiruPartitionState.rebuilding.ordinal()] = Color.CYAN;
+        COLORS[MiruPartitionState.rebuilding.ordinal()] = Color.MAGENTA;
         COLORS[MiruPartitionState.online.ordinal()] = Color.GREEN;
     }
 
-    public void visualizeTopologies(int width, OutputStream out) throws Exception {
+    public void visualizeTopologies(int width, int split, int index, OutputStream out) throws Exception {
         LinkedHashSet<MiruClusterRegistry.HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
         Set<MiruHost> unhealthyHosts = Sets.newHashSet();
         for (MiruClusterRegistry.HostHeartbeat heartbeat : heartbeats) {
@@ -171,7 +171,9 @@ public class MiruRebalanceDirector {
             }));
 
         final Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
-        clusterRegistry.allTopologies(new CallbackStream<MiruTopologyStatus>() {
+        List<MiruTenantId> tenantIds = clusterRegistry.allTenantIds();
+        tenantIds = Lists.partition(clusterRegistry.allTenantIds(), Math.max(1, (tenantIds.size() + split - 1) / split)).get(index);
+        clusterRegistry.topologiesForTenants(tenantIds, new CallbackStream<MiruTopologyStatus>() {
             @Override
             public MiruTopologyStatus callback(MiruTopologyStatus status) throws Exception {
                 if (status != null) {
@@ -230,11 +232,11 @@ public class MiruRebalanceDirector {
 
             if (offlinePartitions < statuses.size() && onlinePartitions == 0) {
                 // partition appears to be awake, but nothing is online, so paint the background
-                ig2.setColor(Color.RED.darker().darker());
+                ig2.setColor(new Color(64, 0, 0));
                 ig2.fillRect(VISUAL_PADDING_HALVED,
                     y - VISUAL_PADDING_HALVED,
-                    VISUAL_PADDING_HALVED + (visualHostWidth + VISUAL_PADDING) * numHosts,
-                    y + VISUAL_PARTITION_HEIGHT + VISUAL_PADDING_HALVED);
+                    (visualHostWidth + VISUAL_PADDING) * numHosts,
+                    VISUAL_PARTITION_HEIGHT + VISUAL_PADDING);
             }
 
             for (MiruTopologyStatus status : statuses) {
