@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.RandomStringUtils;
 
 /**
  *
@@ -74,6 +75,7 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
                         .put("numBootstrap", String.valueOf(stateCounts.count(MiruPartitionState.bootstrap)))
                         .put("numRebuilding", String.valueOf(stateCounts.count(MiruPartitionState.rebuilding)))
                         .put("numOnline", String.valueOf(stateCounts.count(MiruPartitionState.online)))
+                        .put("token", RandomStringUtils.randomAlphanumeric(8))
                         .build();
                 }
             }));

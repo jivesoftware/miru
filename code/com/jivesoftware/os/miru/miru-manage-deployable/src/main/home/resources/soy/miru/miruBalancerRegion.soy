@@ -7,6 +7,7 @@
  * @param? hostWidth
  * @param? imageWidth
  * @param? numHosts
+ * @param? token
  */
 {template .balancerRegion}
     <div class="panel panel-default">
@@ -57,8 +58,8 @@
                         <tr>
                             <td class="balancer-label balancer-topology">Topology</td>
                             <td colspan="{$numHosts}">
-                                {for $i in range(0, 20)}
-                                    <img class="balancer-visual" src="/miru/manage/topology/visual?width={$imageWidth}&amp;split=100&amp;index={$i}" />
+                                {for $i in range(0, 100)}
+                                    <img class="balancer-visual" src="/miru/manage/topology/visual?width={$imageWidth}&amp;split=100&amp;index={$i}&amp;token={$token}" />
                                 {/for}
                             </td>
                         </tr>

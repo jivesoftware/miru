@@ -204,14 +204,17 @@ public class MiruManageEndpoints {
     @GET
     @Path("/topology/visual")
     @Produces("image/png")
-    public Response visualizeTopologies(@QueryParam("width") final int width, @QueryParam("split") final int split, @QueryParam("index") final int index) {
+    public Response visualizeTopologies(@QueryParam("width") final int width,
+        @QueryParam("split") final int split,
+        @QueryParam("index") final int index,
+        @QueryParam("token") final String token) {
         try {
             return Response.ok().entity(new StreamingOutput() {
                 @Override
                 public void write(OutputStream output)
                     throws IOException, WebApplicationException {
                     try {
-                        rebalanceDirector.visualizeTopologies(width, split, index, output);
+                        rebalanceDirector.visualizeTopologies(width, split, index, token, output);
                         output.flush();
                     } catch (Exception e) {
                         throw new IOException("Problem generating visual", e);

@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
 import com.google.common.base.Function;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ListMultimap;
@@ -8,6 +10,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -27,6 +30,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 
@@ -146,33 +150,64 @@ public class MiruRebalanceDirector {
 
     static {
         COLORS = new Color[MiruPartitionState.values().length];
-        Arrays.fill(COLORS, Color.BLACK);
+        Arrays.fill(COLORS, Color.WHITE);
         COLORS[MiruPartitionState.offline.ordinal()] = Color.GRAY;
         COLORS[MiruPartitionState.bootstrap.ordinal()] = Color.BLUE;
         COLORS[MiruPartitionState.rebuilding.ordinal()] = Color.MAGENTA;
         COLORS[MiruPartitionState.online.ordinal()] = Color.GREEN;
     }
 
-    public void visualizeTopologies(int width, int split, int index, OutputStream out) throws Exception {
-        LinkedHashSet<MiruClusterRegistry.HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
-        Set<MiruHost> unhealthyHosts = Sets.newHashSet();
-        for (MiruClusterRegistry.HostHeartbeat heartbeat : heartbeats) {
-            if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
-                unhealthyHosts.add(heartbeat.host);
-            }
+    private static class VisualizeContext {
+        private final List<MiruHost> allHosts;
+        private final Set<MiruHost> unhealthyHosts;
+        private final List<List<MiruTenantId>> splitTenantIds;
+
+        private VisualizeContext(List<MiruHost> allHosts, Set<MiruHost> unhealthyHosts, List<List<MiruTenantId>> splitTenantIds) {
+            this.allHosts = allHosts;
+            this.unhealthyHosts = unhealthyHosts;
+            this.splitTenantIds = splitTenantIds;
+        }
+    }
+
+    private final Cache<String, VisualizeContext> contextCache = CacheBuilder.newBuilder()
+        .maximumSize(10)
+        .expireAfterAccess(10, TimeUnit.MINUTES)
+        .weakValues()
+        .build();
+    private final StripingLocksProvider<String> tokenLocks = new StripingLocksProvider<>(64);
+
+    public void visualizeTopologies(int width, final int split, int index, String token, OutputStream out) throws Exception {
+        VisualizeContext context;
+        synchronized (tokenLocks.lock(token)) {
+            context = contextCache.get(token, new Callable<VisualizeContext>() {
+                @Override
+                public VisualizeContext call() throws Exception {
+                    LinkedHashSet<MiruClusterRegistry.HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
+                    Set<MiruHost> unhealthyHosts = Sets.newHashSet();
+                    for (MiruClusterRegistry.HostHeartbeat heartbeat : heartbeats) {
+                        if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
+                            unhealthyHosts.add(heartbeat.host);
+                        }
+                    }
+
+                    List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(heartbeats,
+                        new Function<MiruClusterRegistry.HostHeartbeat, MiruHost>() {
+                            @Override
+                            public MiruHost apply(MiruClusterRegistry.HostHeartbeat input) {
+                                return input.host;
+                            }
+                        }));
+
+                    List<MiruTenantId> allTenantIds = clusterRegistry.allTenantIds();
+                    List<List<MiruTenantId>> splitTenantIds = Lists.partition(allTenantIds, Math.max(1, (allTenantIds.size() + split - 1) / split));
+
+                    return new VisualizeContext(allHosts, unhealthyHosts, splitTenantIds);
+                }
+            });
         }
 
-        List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(heartbeats,
-            new Function<MiruClusterRegistry.HostHeartbeat, MiruHost>() {
-                @Override
-                public MiruHost apply(MiruClusterRegistry.HostHeartbeat input) {
-                    return input.host;
-                }
-            }));
-
         final Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
-        List<MiruTenantId> tenantIds = clusterRegistry.allTenantIds();
-        tenantIds = Lists.partition(clusterRegistry.allTenantIds(), Math.max(1, (tenantIds.size() + split - 1) / split)).get(index);
+        List<MiruTenantId> tenantIds = context.splitTenantIds.get(index);
         clusterRegistry.topologiesForTenants(tenantIds, new CallbackStream<MiruTopologyStatus>() {
             @Override
             public MiruTopologyStatus callback(MiruTopologyStatus status) throws Exception {
@@ -188,13 +223,14 @@ public class MiruRebalanceDirector {
                 return status;
             }
         });
-        int numHosts = allHosts.size();
+
+        int numHosts = context.allHosts.size();
         int numPartitions = topologies.size();
         if (numHosts == 0 || numPartitions == 0) {
             throw new IllegalStateException("Not enough data");
         }
 
-        int visualHostWidth = (width - VISUAL_PADDING) / allHosts.size() - VISUAL_PADDING;
+        int visualHostWidth = (width - VISUAL_PADDING) / context.allHosts.size() - VISUAL_PADDING;
         BufferedImage bi = new BufferedImage(
             VISUAL_PADDING + (visualHostWidth + VISUAL_PADDING) * numHosts,
             VISUAL_PADDING + (VISUAL_PARTITION_HEIGHT + VISUAL_PADDING) * numPartitions,
@@ -207,7 +243,7 @@ public class MiruRebalanceDirector {
             int offlinePartitions = 0;
             int onlinePartitions = 0;
             for (MiruTopologyStatus status : statuses) {
-                if (unhealthyHosts.contains(status.partition.coord.host)) {
+                if (context.unhealthyHosts.contains(status.partition.coord.host)) {
                     unhealthyPartitions++;
                 }
                 if (status.partition.info.state == MiruPartitionState.offline) {
@@ -240,8 +276,8 @@ public class MiruRebalanceDirector {
             }
 
             for (MiruTopologyStatus status : statuses) {
-                int x = VISUAL_PADDING + allHosts.indexOf(status.partition.coord.host) * (visualHostWidth + VISUAL_PADDING);
-                if (unhealthyHosts.contains(status.partition.coord.host)) {
+                int x = VISUAL_PADDING + context.allHosts.indexOf(status.partition.coord.host) * (visualHostWidth + VISUAL_PADDING);
+                if (context.unhealthyHosts.contains(status.partition.coord.host)) {
                     ig2.setColor(unhealthyColor);
                 } else {
                     ig2.setColor(COLORS[status.partition.info.state.ordinal()]);
