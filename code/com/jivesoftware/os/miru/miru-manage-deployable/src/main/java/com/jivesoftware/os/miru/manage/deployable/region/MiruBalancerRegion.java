@@ -75,11 +75,11 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
                         .put("numBootstrap", String.valueOf(stateCounts.count(MiruPartitionState.bootstrap)))
                         .put("numRebuilding", String.valueOf(stateCounts.count(MiruPartitionState.rebuilding)))
                         .put("numOnline", String.valueOf(stateCounts.count(MiruPartitionState.online)))
-                        .put("token", RandomStringUtils.randomAlphanumeric(8))
                         .build();
                 }
             }));
             data.put("numHosts", String.valueOf(hostHeartbeats.size()));
+            data.put("token", RandomStringUtils.randomAlphanumeric(8));
 
             int totalWidth = 920;
             int hostWidth = totalWidth / hostHeartbeats.size() - 2;
