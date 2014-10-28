@@ -27,11 +27,13 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.imageio.ImageIO;
 
 /**
@@ -56,6 +58,8 @@ public class MiruRebalanceDirector {
             return input.host;
         }
     };
+
+    private final AtomicReference<List<MiruTopologyStatus>> topologies = new AtomicReference<>();
 
     public MiruRebalanceDirector(MiruClusterRegistry clusterRegistry, OrderIdProvider orderIdProvider) {
         this.clusterRegistry = clusterRegistry;
@@ -207,7 +211,7 @@ public class MiruRebalanceDirector {
         }
 
         final Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
-        List<MiruTenantId> tenantIds = context.splitTenantIds.get(index);
+        List<MiruTenantId> tenantIds = (index < context.splitTenantIds.size() - 1) ? context.splitTenantIds.get(index) : Collections.<MiruTenantId>emptyList();
         clusterRegistry.topologiesForTenants(tenantIds, new CallbackStream<MiruTopologyStatus>() {
             @Override
             public MiruTopologyStatus callback(MiruTopologyStatus status) throws Exception {

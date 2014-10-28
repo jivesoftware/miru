@@ -6,6 +6,7 @@ import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.KeyMarshaller;
 import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStoreException;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -49,6 +50,11 @@ public class MiruInMemoryField<BM> implements MiruField<BM>, BulkExport<Iterator
     @Override
     public MiruFieldDefinition getFieldDefinition() {
         return fieldDefinition;
+    }
+
+    @Override
+    public void notifyStateChange(MiruPartitionState state) {
+        // do nothing
     }
 
     @Override

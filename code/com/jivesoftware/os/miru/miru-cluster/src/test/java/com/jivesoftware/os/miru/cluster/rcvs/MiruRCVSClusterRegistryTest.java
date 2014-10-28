@@ -69,7 +69,7 @@ public class MiruRCVSClusterRegistryTest {
 
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
         MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(0, 0);
-        registry.updateTopology(coord, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk), metrics,
+        registry.updateTopology(coord, Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)), metrics,
             Optional.of(timestamper.get()));
 
         ListMultimap<MiruPartitionState, MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
@@ -96,7 +96,7 @@ public class MiruRCVSClusterRegistryTest {
 
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
         MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(0, 0);
-        registry.refreshTopology(coord, metrics, timestamper.get());
+        registry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), metrics, Optional.of(timestamper.get()));
 
         ListMultimap<MiruPartitionState, MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
         assertTrue(topologyStatusForTenantHost.containsKey(MiruPartitionState.offline));

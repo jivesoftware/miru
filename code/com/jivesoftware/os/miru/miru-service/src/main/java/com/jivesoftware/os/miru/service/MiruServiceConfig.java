@@ -78,6 +78,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(1_000)
     int getHybridFieldInitialPageCapacity();
 
+    @BooleanDefault(true)
+    boolean getHybridFieldMigratesToMapped();
+
     @StringDefault("hybrid")
     String getDefaultStorage();
 

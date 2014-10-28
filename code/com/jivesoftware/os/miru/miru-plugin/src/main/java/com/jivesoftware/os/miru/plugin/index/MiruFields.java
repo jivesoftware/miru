@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.miru.api.MiruPartitionState;
+
 /** @author jonathan */
 public class MiruFields<BM> {
 
@@ -9,6 +11,12 @@ public class MiruFields<BM> {
     public MiruFields(MiruField<BM>[] fields, MiruIndex index) {
         this.fields = fields;
         this.index = index;
+    }
+
+    public void notifyStateChange(MiruPartitionState state) throws Exception {
+        for (MiruField<BM> field : fields) {
+            field.notifyStateChange(state);
+        }
     }
 
     public MiruField<BM> getField(int fieldId) {

@@ -433,25 +433,38 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
     }
 
-    private boolean updatePartition(MiruPartitionAccessor<BM> existing, MiruPartitionAccessor<BM> update) throws Exception {
-        if (accessorRef.compareAndSet(existing, update)) {
-            log.decAtomic("state>" + existing.info.state.name());
-            log.incAtomic("state>" + update.info.state.name());
+    private boolean updatePartition(MiruPartitionAccessor<BM> existing, MiruPartitionAccessor<BM> update) {
+        synchronized (accessorRef) {
+            if (accessorRef.get() != existing) {
+                return false;
+            }
+
+            try {
+                update.notifyStateChange();
+            } catch (Exception e) {
+                log.error("Failed to notify state change, aborting", e);
+                return false;
+            }
+
             Optional<Long> refreshTimestamp = Optional.absent();
             if (update.info.state != MiruPartitionState.offline) {
                 refreshTimestamp = Optional.of(timestamper.get());
             }
+            update.refreshTimestamp.set(refreshTimestamp);
+
+            accessorRef.set(update);
+
+            log.decAtomic("state>" + existing.info.state.name());
+            log.incAtomic("state>" + update.info.state.name());
             if (existing.info.state != MiruPartitionState.bootstrap && update.info.state == MiruPartitionState.bootstrap) {
                 bootstrapCounter.inc("Too many pending rebuilds.");
             } else if (existing.info.state == MiruPartitionState.bootstrap && update.info.state != MiruPartitionState.bootstrap) {
                 bootstrapCounter.dec("Too many pending rebuilds.");
             }
-            MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(sizeInMemory(), sizeOnDisk());
-            partitionEventHandler.partitionChanged(coord, update.info, metrics, refreshTimestamp);
+
             log.info("Partition is now {}/{} for {}", update.info.state, update.info.storage, coord);
             return true;
         }
-        return false;
     }
 
     protected class BootstrapRunnable implements Runnable {
@@ -481,10 +494,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
 
         private void refreshTopology() throws Exception {
-            long timestamp = accessorRef.get().refreshTimestamp.getAndSet(0);
-            if (timestamp > 0) {
+            MiruPartitionAccessor<BM> accessor = accessorRef.get();
+            Optional<Long> timestamp = accessor.refreshTimestamp.getAndSet(null);
+            if (timestamp != null) {
                 MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(sizeInMemory(), sizeOnDisk());
-                partitionEventHandler.refreshTopology(coord, metrics, timestamp);
+                partitionEventHandler.updateTopology(coord, Optional.of(accessor.info), metrics, timestamp);
             }
         }
 

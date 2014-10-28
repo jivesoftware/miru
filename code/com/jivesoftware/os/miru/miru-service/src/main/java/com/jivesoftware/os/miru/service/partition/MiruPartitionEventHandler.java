@@ -17,13 +17,12 @@ public class MiruPartitionEventHandler {
         this.clusterRegistry = clusterRegistry;
     }
 
-    public void partitionChanged(MiruPartitionCoord coord, MiruPartitionCoordInfo info, MiruPartitionCoordMetrics metrics, Optional<Long> refreshTimestamp)
+    public void updateTopology(MiruPartitionCoord coord,
+        Optional<MiruPartitionCoordInfo> info,
+        MiruPartitionCoordMetrics metrics,
+        Optional<Long> refreshTimestamp)
         throws Exception {
         clusterRegistry.updateTopology(coord, info, metrics, refreshTimestamp);
-    }
-
-    public void refreshTopology(MiruPartitionCoord coord, MiruPartitionCoordMetrics metrics, long refreshTimestamp) throws Exception {
-        clusterRegistry.refreshTopology(coord, metrics, refreshTimestamp);
     }
 
     public boolean isCoordActive(MiruPartitionCoord coord) throws Exception {

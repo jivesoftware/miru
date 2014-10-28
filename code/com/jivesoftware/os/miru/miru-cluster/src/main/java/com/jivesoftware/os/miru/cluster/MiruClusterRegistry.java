@@ -45,10 +45,8 @@ public interface MiruClusterRegistry {
 
     Map<MiruPartitionId, MiruReplicaSet> getReplicaSets(MiruTenantId tenantId, Collection<MiruPartitionId> requiredPartitionId) throws Exception;
 
-    void updateTopology(MiruPartitionCoord coord, MiruPartitionCoordInfo coordInfo, MiruPartitionCoordMetrics coordMetrics, Optional<Long> refreshTimestamp)
-        throws Exception;
-
-    void refreshTopology(MiruPartitionCoord coord, MiruPartitionCoordMetrics metrics, long refreshTimestamp) throws Exception;
+    void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo, MiruPartitionCoordMetrics metrics,
+        Optional<Long> refreshTimestamp) throws Exception;
 
     boolean isPartitionActive(MiruPartitionCoord coord) throws Exception;
 

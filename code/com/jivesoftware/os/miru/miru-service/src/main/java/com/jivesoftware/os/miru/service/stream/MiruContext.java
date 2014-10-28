@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.plugin.context.MiruReadTrackContext;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
@@ -18,7 +19,7 @@ import java.util.Map;
 public class MiruContext<BM> {
 
     private final MiruIndexContext<BM> indexContext;
-    private final MiruRequestContext<BM> queryContext;
+    private final MiruRequestContext<BM> requestContext;
     private final MiruReadTrackContext<BM> readTrackContext;
     private final MiruTimeIndex timeIndex;
     private final Optional<MultiChunkStore> chunkStore;
@@ -28,12 +29,12 @@ public class MiruContext<BM> {
     private Optional<? extends MiruResourcePartitionIdentifier> transientResource;
 
     public MiruContext(MiruIndexContext<BM> indexContext,
-            MiruRequestContext<BM> queryContext,
+            MiruRequestContext<BM> requestContext,
             MiruReadTrackContext<BM> readTrackContext,
             MiruTimeIndex timeIndex,
             Optional<MultiChunkStore> chunkStore) {
         this.indexContext = indexContext;
-        this.queryContext = queryContext;
+        this.requestContext = requestContext;
         this.readTrackContext = readTrackContext;
         this.timeIndex = timeIndex;
         this.chunkStore = chunkStore;
@@ -57,37 +58,41 @@ public class MiruContext<BM> {
 
     public long sizeInMemory() throws Exception {
         long sizeInBytes = 0;
-        sizeInBytes += queryContext.activityIndex.sizeInMemory();
-        sizeInBytes += queryContext.authzIndex.sizeInMemory();
-        sizeInBytes += queryContext.fieldIndex.sizeInMemory();
-        sizeInBytes += queryContext.inboxIndex.sizeInMemory();
-        sizeInBytes += queryContext.removalIndex.sizeInMemory();
-        sizeInBytes += queryContext.timeIndex.sizeInMemory();
-        sizeInBytes += queryContext.unreadTrackingIndex.sizeInMemory();
+        sizeInBytes += requestContext.activityIndex.sizeInMemory();
+        sizeInBytes += requestContext.authzIndex.sizeInMemory();
+        sizeInBytes += requestContext.fieldIndex.sizeInMemory();
+        sizeInBytes += requestContext.inboxIndex.sizeInMemory();
+        sizeInBytes += requestContext.removalIndex.sizeInMemory();
+        sizeInBytes += requestContext.timeIndex.sizeInMemory();
+        sizeInBytes += requestContext.unreadTrackingIndex.sizeInMemory();
         return sizeInBytes;
     }
 
     public long sizeOnDisk() throws Exception {
         long sizeInBytes = 0;
-        sizeInBytes += queryContext.activityIndex.sizeOnDisk();
-        sizeInBytes += queryContext.authzIndex.sizeOnDisk();
-        sizeInBytes += queryContext.fieldIndex.sizeOnDisk();
-        sizeInBytes += queryContext.inboxIndex.sizeOnDisk();
-        sizeInBytes += queryContext.removalIndex.sizeOnDisk();
-        sizeInBytes += queryContext.timeIndex.sizeOnDisk();
-        sizeInBytes += queryContext.unreadTrackingIndex.sizeOnDisk();
+        sizeInBytes += requestContext.activityIndex.sizeOnDisk();
+        sizeInBytes += requestContext.authzIndex.sizeOnDisk();
+        sizeInBytes += requestContext.fieldIndex.sizeOnDisk();
+        sizeInBytes += requestContext.inboxIndex.sizeOnDisk();
+        sizeInBytes += requestContext.removalIndex.sizeOnDisk();
+        sizeInBytes += requestContext.timeIndex.sizeOnDisk();
+        sizeInBytes += requestContext.unreadTrackingIndex.sizeOnDisk();
         if (chunkStore.isPresent()) {
             sizeInBytes += chunkStore.get().sizeInBytes();
         }
         return sizeInBytes;
     }
 
+    public void notifyStateChange(MiruPartitionState state) throws Exception {
+        requestContext.fieldIndex.notifyStateChange(state);
+    }
+
     public MiruIndexContext<BM> getIndexContext() {
         return indexContext;
     }
 
-    public MiruRequestContext<BM> getQueryContext() {
-        return queryContext;
+    public MiruRequestContext<BM> getRequestContext() {
+        return requestContext;
     }
 
     public MiruReadTrackContext<BM> getReadTrackContext() {

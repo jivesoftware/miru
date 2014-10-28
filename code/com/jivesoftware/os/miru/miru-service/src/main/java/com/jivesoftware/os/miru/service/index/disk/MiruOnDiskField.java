@@ -6,6 +6,7 @@ import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
 import com.jivesoftware.os.filer.map.store.VariableKeySizeMapChunkBackedMapStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStoreException;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -92,6 +93,11 @@ public class MiruOnDiskField<BM> implements MiruField<BM>, BulkImport<Iterator<B
     @Override
     public MiruFieldDefinition getFieldDefinition() {
         return fieldDefinition;
+    }
+
+    @Override
+    public void notifyStateChange(MiruPartitionState state) {
+        // do nothing
     }
 
     @Override

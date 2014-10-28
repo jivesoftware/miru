@@ -74,6 +74,7 @@ public class MiruContextFactoryTest {
             new MiruTempDirectoryResourceLocator(),
             20,
             100,
+            false,
             MiruBackingStorage.memory,
             activityInterner);
 
@@ -101,24 +102,24 @@ public class MiruContextFactoryTest {
 
         MiruContext<EWAHCompressedBitmap> onDiskStream = streamFactory.copyToDisk(bitmaps, coord, inMemoryStream);
 
-        assertEquals(onDiskStream.getQueryContext().timeIndex.getSmallestTimestamp(), inMemoryStream.getQueryContext().timeIndex.getSmallestTimestamp());
-        assertEquals(onDiskStream.getQueryContext().timeIndex.getLargestTimestamp(), inMemoryStream.getQueryContext().timeIndex.getLargestTimestamp());
+        assertEquals(onDiskStream.getRequestContext().timeIndex.getSmallestTimestamp(), inMemoryStream.getRequestContext().timeIndex.getSmallestTimestamp());
+        assertEquals(onDiskStream.getRequestContext().timeIndex.getLargestTimestamp(), inMemoryStream.getRequestContext().timeIndex.getLargestTimestamp());
 
         MiruAuthzExpression authzExpression = new MiruAuthzExpression(Arrays.asList("aaaabbbbcccc"));
-        assertEquals(onDiskStream.getQueryContext().authzIndex.getCompositeAuthz(authzExpression),
-            inMemoryStream.getQueryContext().authzIndex.getCompositeAuthz(authzExpression));
-        assertEquals(onDiskStream.getQueryContext().removalIndex.getIndex(),
-            inMemoryStream.getQueryContext().removalIndex.getIndex());
+        assertEquals(onDiskStream.getRequestContext().authzIndex.getCompositeAuthz(authzExpression),
+            inMemoryStream.getRequestContext().authzIndex.getCompositeAuthz(authzExpression));
+        assertEquals(onDiskStream.getRequestContext().removalIndex.getIndex(),
+            inMemoryStream.getRequestContext().removalIndex.getIndex());
 
         for (int i = 0; i < numberOfActivities; i++) {
-            assertEquals(onDiskStream.getQueryContext().timeIndex.getTimestamp(i), inMemoryStream.getQueryContext().timeIndex.getTimestamp(i));
-            assertEquals(onDiskStream.getQueryContext().activityIndex.get(tenantId, i), inMemoryStream.getQueryContext().activityIndex.get(tenantId, i));
+            assertEquals(onDiskStream.getRequestContext().timeIndex.getTimestamp(i), inMemoryStream.getRequestContext().timeIndex.getTimestamp(i));
+            assertEquals(onDiskStream.getRequestContext().activityIndex.get(tenantId, i), inMemoryStream.getRequestContext().activityIndex.get(tenantId, i));
 
             int fieldId = schema.getFieldId(MiruFieldName.OBJECT_ID.getFieldName());
             if (fieldId >= 0) {
                 MiruTermId termId = new MiruTermId(String.valueOf(i).getBytes());
-                assertEquals(onDiskStream.getQueryContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex(),
-                    inMemoryStream.getQueryContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex());
+                assertEquals(onDiskStream.getRequestContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex(),
+                    inMemoryStream.getRequestContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex());
             }
         }
     }
@@ -164,8 +165,8 @@ public class MiruContextFactoryTest {
         int id = inMem.getTimeIndex().nextId(System.currentTimeMillis());
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(0));
         inMem.getIndexContext().index(new ArrayList<>(Arrays.asList(new MiruActivityAndId<>(builder.build(), id))), MoreExecutors.sameThreadExecutor());
-        inMem.getQueryContext().inboxIndex.index(streamId, id);
-        inMem.getQueryContext().unreadTrackingIndex.index(streamId, id);
+        inMem.getRequestContext().inboxIndex.index(streamId, id);
+        inMem.getRequestContext().unreadTrackingIndex.index(streamId, id);
         return inMem;
     }
 }

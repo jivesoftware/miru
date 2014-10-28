@@ -45,7 +45,7 @@ public class MiruPartitionAccessor<BM> {
 
     public final AtomicLong sipTimestamp;
     public final AtomicLong rebuildTimestamp;
-    public final AtomicLong refreshTimestamp;
+    public final AtomicReference<Optional<Long>> refreshTimestamp;
     public final AtomicReference<Set<TimeAndVersion>> seenLastSip;
 
     public final Set<Integer> beginWriters;
@@ -57,18 +57,18 @@ public class MiruPartitionAccessor<BM> {
     private final MiruIndexRepairs indexRepairs;
 
     MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
-            MiruPartitionCoord coord,
-            MiruPartitionCoordInfo info,
-            MiruContext<BM> context,
-            AtomicLong sipTimestamp,
-            AtomicLong rebuildTimestamp,
-            AtomicLong refreshTimestamp,
-            Set<TimeAndVersion> seenLastSip,
-            Set<Integer> beginWriters,
-            Set<Integer> endWriters,
-            Semaphore semaphore,
-            AtomicBoolean closed,
-            MiruIndexRepairs indexRepairs) {
+        MiruPartitionCoord coord,
+        MiruPartitionCoordInfo info,
+        MiruContext<BM> context,
+        AtomicLong sipTimestamp,
+        AtomicLong rebuildTimestamp,
+        AtomicReference<Optional<Long>> refreshTimestamp,
+        Set<TimeAndVersion> seenLastSip,
+        Set<Integer> beginWriters,
+        Set<Integer> endWriters,
+        Semaphore semaphore,
+        AtomicBoolean closed,
+        MiruIndexRepairs indexRepairs) {
         this.bitmaps = bitmaps;
         this.coord = coord;
         this.info = info;
@@ -85,18 +85,19 @@ public class MiruPartitionAccessor<BM> {
     }
 
     MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
-            MiruPartitionCoord coord,
-            MiruPartitionCoordInfo info,
-            MiruContext<BM> context,
-            long sipTimestamp,
-            MiruIndexRepairs indexRepairs) {
-        this(bitmaps, coord, info, context, new AtomicLong(sipTimestamp), new AtomicLong(), new AtomicLong(), Sets.<TimeAndVersion>newHashSet(),
-                Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean(), indexRepairs);
+        MiruPartitionCoord coord,
+        MiruPartitionCoordInfo info,
+        MiruContext<BM> context,
+        long sipTimestamp,
+        MiruIndexRepairs indexRepairs) {
+        this(bitmaps, coord, info, context, new AtomicLong(sipTimestamp), new AtomicLong(), new AtomicReference<Optional<Long>>(),
+            Sets.<TimeAndVersion>newHashSet(), Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean(),
+            indexRepairs);
     }
 
     MiruPartitionAccessor<BM> copyToState(MiruPartitionState state) {
         return new MiruPartitionAccessor<>(bitmaps, coord, info.copyToState(state), context, sipTimestamp, rebuildTimestamp, refreshTimestamp,
-                seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs);
+            seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs);
     }
 
     MiruContext<BM> close() throws InterruptedException {
@@ -127,12 +128,18 @@ public class MiruPartitionAccessor<BM> {
 
     boolean isMemoryComplete() {
         return info.storage.isMemoryBacked()
-                && info.state == MiruPartitionState.online
-                && !beginWriters.isEmpty() && beginWriters.equals(endWriters);
+            && info.state == MiruPartitionState.online
+            && !beginWriters.isEmpty() && beginWriters.equals(endWriters);
     }
 
     void markForRefresh() {
-        refreshTimestamp.set(System.currentTimeMillis());
+        refreshTimestamp.set(Optional.of(System.currentTimeMillis()));
+    }
+
+    void notifyStateChange() throws Exception {
+        if (context != null) {
+            context.notifyStateChange(info.state);
+        }
     }
 
     public static enum IndexStrategy {
@@ -153,7 +160,7 @@ public class MiruPartitionAccessor<BM> {
                     MiruPartitionedActivity partitionedActivity = partitionedActivities.next();
                     if (partitionedActivity.partitionId.equals(coord.partitionId)) {
                         if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN
-                                || partitionedActivity.type == MiruPartitionedActivity.Type.END) {
+                            || partitionedActivity.type == MiruPartitionedActivity.Type.END) {
                             handleActivityType(strategy, coord, batch, indexExecutor);
                             batch.clear();
                             handleBoundaryType(partitionedActivity);
@@ -197,9 +204,9 @@ public class MiruPartitionAccessor<BM> {
     }
 
     private void handleActivityType(IndexStrategy strategy,
-            MiruPartitionCoord coord,
-            List<MiruPartitionedActivity> partitionedActivities,
-            ExecutorService indexExecutor) throws Exception {
+        MiruPartitionCoord coord,
+        List<MiruPartitionedActivity> partitionedActivities,
+        ExecutorService indexExecutor) throws Exception {
         if (!partitionedActivities.isEmpty()) {
             MiruTimeIndex timeIndex = context.getTimeIndex();
 
@@ -288,7 +295,7 @@ public class MiruPartitionAccessor<BM> {
                 if (context == null) {
                     throw new MiruPartitionUnavailableException("Stream not set");
                 }
-                return context.getQueryContext();
+                return context.getRequestContext();
             }
 
             @Override
@@ -344,9 +351,9 @@ public class MiruPartitionAccessor<BM> {
 
             @Override
             public MiruPartitionAccessor<BM> migrated(MiruContext<BM> stream,
-                    Optional<MiruBackingStorage> storage,
-                    Optional<MiruPartitionState> state,
-                    long sipTimestamp) {
+                Optional<MiruBackingStorage> storage,
+                Optional<MiruPartitionState> state,
+                long sipTimestamp) {
 
                 MiruPartitionCoordInfo migratedInfo = info;
                 if (storage.isPresent()) {
@@ -368,12 +375,12 @@ public class MiruPartitionAccessor<BM> {
     @Override
     public String toString() {
         return "MiruPartitionAccessor{"
-                + "coord=" + coord
-                + ", info=" + info
-                + ", sipTimestamp=" + sipTimestamp
-                + ", rebuildTimestamp=" + rebuildTimestamp
-                + ", refreshTimestamp=" + refreshTimestamp
-                + ", closed=" + closed
-                + '}';
+            + "coord=" + coord
+            + ", info=" + info
+            + ", sipTimestamp=" + sipTimestamp
+            + ", rebuildTimestamp=" + rebuildTimestamp
+            + ", refreshTimestamp=" + refreshTimestamp
+            + ", closed=" + closed
+            + '}';
     }
 }

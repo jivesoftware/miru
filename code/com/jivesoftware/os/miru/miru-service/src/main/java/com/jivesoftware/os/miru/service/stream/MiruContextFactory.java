@@ -88,6 +88,7 @@ public class MiruContextFactory {
     private final int numberOfChunkStores = 24; // TODO expose to config;
     private final int partitionAuthzCacheSize;
     private final int hybridFieldInitialPageCapacity;
+    private final boolean hybridFieldMigratesToMapped;
     private final MiruBackingStorage defaultStorage;
 
     public MiruContextFactory(MiruSchemaProvider schemaProvider,
@@ -97,6 +98,7 @@ public class MiruContextFactory {
         MiruHybridResourceLocator transientResourceLocator,
         int partitionAuthzCacheSize,
         int hybridFieldInitialPageCapacity,
+        boolean hybridFieldMigratesToMapped,
         MiruBackingStorage defaultStorage,
         MiruActivityInternExtern activityInternExtern) {
         this.schemaProvider = schemaProvider;
@@ -104,6 +106,7 @@ public class MiruContextFactory {
         this.readTrackingWALReader = readTrackingWALReader;
         this.diskResourceLocator = diskResourceLocator;
         this.hybridResourceLocator = transientResourceLocator;
+        this.hybridFieldMigratesToMapped = hybridFieldMigratesToMapped;
         this.activityInternExtern = activityInternExtern;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.hybridFieldInitialPageCapacity = hybridFieldInitialPageCapacity;
@@ -240,6 +243,7 @@ public class MiruContextFactory {
                 schema.getFieldDefinition(fieldId),
                 index,
                 byteBufferFactory,
+                hybridFieldMigratesToMapped ? filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "field-" + fieldId)) : null,
                 hybridFieldInitialPageCapacity);
             exportHandles.put("field" + fieldId, fields[fieldId]);
         }
@@ -532,7 +536,7 @@ public class MiruContextFactory {
     }
 
     public <BM> void close(MiruContext<BM> context) {
-        MiruRequestContext requestContext = context.getQueryContext();
+        MiruRequestContext requestContext = context.getRequestContext();
         requestContext.activityIndex.close();
         requestContext.authzIndex.close();
         requestContext.timeIndex.close();

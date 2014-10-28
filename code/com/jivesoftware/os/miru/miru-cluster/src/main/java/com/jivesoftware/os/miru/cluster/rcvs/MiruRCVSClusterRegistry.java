@@ -44,7 +44,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.annotation.Nullable;
 
 public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
@@ -249,41 +248,42 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public void updateTopology(MiruPartitionCoord coord, MiruPartitionCoordInfo coordInfo, MiruPartitionCoordMetrics coordMetrics,
+    public void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo, MiruPartitionCoordMetrics metrics,
         Optional<Long> refreshTimestamp) throws Exception {
 
         synchronized (topologyLocks.lock(new TenantPartitionHostKey(coord))) {
-            ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = getTopologyValueAndTimestamp(
-                coord.tenantId, coord.partitionId, coord.host);
-            long timestamp;
-            if (valueAndTimestamp != null) {
-                timestamp = refreshTimestamp.or(Optional.fromNullable(valueAndTimestamp.getTimestamp())).or(0l);
+            MiruPartitionCoordInfo coordInfo;
+            if (optionalInfo.isPresent()) {
+                coordInfo = optionalInfo.get();
             } else {
-                timestamp = refreshTimestamp.or(0l);
+                ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = getTopologyValueAndTimestamp(
+                    coord.tenantId, coord.partitionId, coord.host);
+                if (valueAndTimestamp != null) {
+                    coordInfo = new MiruPartitionCoordInfo(valueAndTimestamp.getValue().state, valueAndTimestamp.getValue().storage);
+                } else {
+                    coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
+                }
             }
+
+            long timestamp;
+            if (refreshTimestamp.isPresent()) {
+                timestamp = refreshTimestamp.get();
+            } else {
+                ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = getTopologyValueAndTimestamp(
+                    coord.tenantId, coord.partitionId, coord.host);
+                if (valueAndTimestamp != null) {
+                    timestamp = valueAndTimestamp.getTimestamp() != null ? valueAndTimestamp.getTimestamp() : 0;
+                } else {
+                    timestamp = 0;
+                }
+            }
+
+            MiruTopologyColumnValue update = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, metrics.sizeInMemory, metrics.sizeOnDisk);
+
             Timestamper timestamper = new ConstantTimestamper(timestamp);
             topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
-                new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, coordMetrics.sizeInMemory, coordMetrics.sizeOnDisk), null, timestamper);
+                update, null, timestamper);
             log.debug("Updated {} to {} at {}", new Object[] { coord, coordInfo, refreshTimestamp });
-        }
-    }
-
-    @Override
-    public void refreshTopology(MiruPartitionCoord coord, MiruPartitionCoordMetrics metrics, long refreshTimestamp) throws Exception {
-        synchronized (topologyLocks.lock(new TenantPartitionHostKey(coord))) {
-            MiruTopologyColumnValue value = topologyRegistry.get(MiruVoidByte.INSTANCE, coord.tenantId,
-                new MiruTopologyColumnKey(coord.partitionId, coord.host), null, null);
-            MiruTopologyColumnValue refresh;
-            if (value != null) {
-                refresh = new MiruTopologyColumnValue(value.state, value.storage, metrics.sizeInMemory, metrics.sizeOnDisk);
-            } else {
-                // this has the side effect of bootstrapping the topology
-                refresh = new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, metrics.sizeInMemory, metrics.sizeOnDisk);
-            }
-            Timestamper timestamper = new ConstantTimestamper(refreshTimestamp);
-            topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
-                refresh, null, timestamper);
-            log.debug("Refreshed {} at {}", new Object[] { coord, refreshTimestamp });
         }
     }
 
@@ -361,16 +361,20 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                     }
                 }));
         }
-        topologyRegistry.multiRowGetAll(MiruVoidByte.INSTANCE, callbacks);
-        for (Map.Entry<MiruTenantId, Map<MiruPartitionId, List<MiruTopologyStatus>>> tenantEntry : topologies.rowMap().entrySet()) {
-            MiruTenantId tenantId = tenantEntry.getKey();
-            Set<MiruPartitionId> partitionIds = tenantEntry.getValue().keySet();
-            Map<MiruPartitionId, MiruReplicaSet> replicaSets = getReplicaSets(tenantId, partitionIds);
-            for (Map.Entry<MiruPartitionId, List<MiruTopologyStatus>> partitionEntry : tenantEntry.getValue().entrySet()) {
-                MiruReplicaSet replicaSet = replicaSets.get(partitionEntry.getKey());
-                for (MiruTopologyStatus status : partitionEntry.getValue()) {
-                    if (replicaSet.getHostsWithReplica().contains(status.partition.coord.host)) {
-                        callbackStream.callback(status);
+        if (!callbacks.isEmpty()) {
+            topologyRegistry.multiRowGetAll(MiruVoidByte.INSTANCE, callbacks);
+        }
+        if (!topologies.isEmpty()) {
+            for (Map.Entry<MiruTenantId, Map<MiruPartitionId, List<MiruTopologyStatus>>> tenantEntry : topologies.rowMap().entrySet()) {
+                MiruTenantId tenantId = tenantEntry.getKey();
+                Set<MiruPartitionId> partitionIds = tenantEntry.getValue().keySet();
+                Map<MiruPartitionId, MiruReplicaSet> replicaSets = getReplicaSets(tenantId, partitionIds);
+                for (Map.Entry<MiruPartitionId, List<MiruTopologyStatus>> partitionEntry : tenantEntry.getValue().entrySet()) {
+                    MiruReplicaSet replicaSet = replicaSets.get(partitionEntry.getKey());
+                    for (MiruTopologyStatus status : partitionEntry.getValue()) {
+                        if (replicaSet.getHostsWithReplica().contains(status.partition.coord.host)) {
+                            callbackStream.callback(status);
+                        }
                     }
                 }
             }
@@ -501,9 +505,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     private final Function<MiruTopologyStatus, MiruPartition> topologyStatusToPartition = new Function<MiruTopologyStatus, MiruPartition>() {
-        @Nullable
         @Override
-        public MiruPartition apply(@Nullable MiruTopologyStatus input) {
+        public MiruPartition apply(MiruTopologyStatus input) {
             return input.partition;
         }
     };

@@ -8,6 +8,7 @@ import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartition;
@@ -43,6 +44,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     private final MiruTenantTopologyFactory tenantTopologyFactory;
 
     private final ConcurrentMap<MiruTenantId, MiruTenantTopology<?>> expectedTopologies = Maps.newConcurrentMap();
+    private final StripingLocksProvider<MiruTenantId> tenantLocks = new StripingLocksProvider<>(64);
 
     private final Cache<MiruTenantId, MiruTenantTopology<?>> temporaryTopologies = CacheBuilder.newBuilder()
             .concurrencyLevel(24)
@@ -88,16 +90,18 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     public MiruTenantTopology<?> getTopology(final MiruTenantId tenantId) throws Exception {
         MiruTenantTopology<?> tenantTopology = expectedTopologies.get(tenantId);
         if (tenantTopology == null) {
-            tenantTopology = temporaryTopologies.get(tenantId, new Callable<MiruTenantTopology<?>>() {
-                @Override
-                public MiruTenantTopology<?> call() throws Exception {
-                    LOG.info("Added temporary topology for {}", tenantId);
-                    MiruTenantTopology<?> temporaryTopology = tenantTopologyFactory.create(tenantId);
-                    alignTopology(temporaryTopology);
-                    return temporaryTopology;
-                }
-            });
-            temporaryUpdateDeque.add(tenantTopology);
+            synchronized (tenantLocks.lock(tenantId)) {
+                tenantTopology = temporaryTopologies.get(tenantId, new Callable<MiruTenantTopology<?>>() {
+                    @Override
+                    public MiruTenantTopology<?> call() throws Exception {
+                        LOG.info("Added temporary topology for {}", tenantId);
+                        MiruTenantTopology<?> temporaryTopology = tenantTopologyFactory.create(tenantId);
+                        alignTopology(temporaryTopology);
+                        return temporaryTopology;
+                    }
+                });
+                temporaryUpdateDeque.add(tenantTopology);
+            }
         }
         return tenantTopology;
     }
@@ -118,30 +122,34 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
 
         Set<MiruTenantId> synced = Sets.newHashSet();
         for (MiruTenantId tenantId : expectedTenantsForHost) {
-            if (synced.add(tenantId)) {
-                MiruTenantTopology<?> tenantTopology = expectedTopologies.get(tenantId);
-                if (tenantTopology == null) {
-                    MiruTenantTopology<?> allowed = temporaryTopologies.getIfPresent(tenantId);
-                    if (allowed != null) {
-                        tenantTopology = allowed;
-                    } else {
-                        tenantTopology = tenantTopologyFactory.create(tenantId);
+            synchronized (tenantLocks.lock(tenantId)) {
+                if (synced.add(tenantId)) {
+                    MiruTenantTopology<?> tenantTopology = expectedTopologies.get(tenantId);
+                    if (tenantTopology == null) {
+                        MiruTenantTopology<?> allowed = temporaryTopologies.getIfPresent(tenantId);
+                        if (allowed != null) {
+                            tenantTopology = allowed;
+                        } else {
+                            tenantTopology = tenantTopologyFactory.create(tenantId);
+                        }
+                        expectedTopologies.putIfAbsent(tenantId, tenantTopology);
                     }
-                    expectedTopologies.putIfAbsent(tenantId, tenantTopology);
-                }
 
-                alignTopology(tenantTopology);
-                temporaryTopologies.invalidate(tenantId);
+                    alignTopology(tenantTopology);
+                    temporaryTopologies.invalidate(tenantId);
+                }
             }
         }
 
         for (MiruTenantId tenantId : expectedTopologies.keySet()) {
-            if (!synced.contains(tenantId)) {
-                final MiruTenantTopology removed = expectedTopologies.remove(tenantId);
-                if (removed != null) {
-                    // tenant is no longer expected, but instead of removing demote it to temporary, and enqueue for alignment
-                    temporaryTopologies.put(tenantId, removed);
-                    temporaryUpdateDeque.add(removed);
+            synchronized (tenantLocks.lock(tenantId)) {
+                if (!synced.contains(tenantId)) {
+                    final MiruTenantTopology removed = expectedTopologies.remove(tenantId);
+                    if (removed != null) {
+                        // tenant is no longer expected, but instead of removing demote it to temporary, and enqueue for alignment
+                        temporaryTopologies.put(tenantId, removed);
+                        temporaryUpdateDeque.add(removed);
+                    }
                 }
             }
         }
@@ -151,11 +159,13 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         while (!temporaryUpdateDeque.isEmpty()) {
             MiruTenantTopology<?> tenantTopology = temporaryUpdateDeque.removeFirst();
             MiruTenantId tenantId = tenantTopology.getTenantId();
-            if (synced.add(tenantId)) {
-                alignTopology(tenantTopology);
-            }
-            if (tenantTopology == lastTemporaryTopology) {
-                break;
+            synchronized (tenantLocks.lock(tenantId)) {
+                if (synced.add(tenantId)) {
+                    alignTopology(tenantTopology);
+                }
+                if (tenantTopology == lastTemporaryTopology) {
+                    break;
+                }
             }
         }
     }

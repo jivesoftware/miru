@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Optional;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
@@ -12,6 +13,7 @@ import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -159,6 +161,7 @@ public class MiruLocalHostedPartitionTest {
             new MiruTempDirectoryResourceLocator(),
             20,
             100,
+            false,
             defaultStorage,
             activityInternExtern);
         clusterRegistry = new MiruRCVSClusterRegistry(
@@ -443,7 +446,8 @@ public class MiruLocalHostedPartitionTest {
     }
 
     private void setActive(boolean active) throws Exception {
-        clusterRegistry.refreshTopology(coord, new MiruPartitionCoordMetrics(-1, -1), syntheticTimestamp.incrementAndGet());
+        clusterRegistry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), new MiruPartitionCoordMetrics(-1, -1),
+            Optional.of(syntheticTimestamp.incrementAndGet()));
         if (!active) {
             syntheticTimestamp.addAndGet(TimeUnit.HOURS.toMillis(1) + 1000);
         }
