@@ -189,6 +189,8 @@ class MiruPartitionAccessor<BM> {
                 if (!timeIndex.contains(activity.time)) {
                     int id = timeIndex.nextId(activity.time);
                     indexables.add(new MiruActivityAndId<>(activity, id));
+
+                    // TODO add a stream of notifications that sipping is repairing missing activity.
                 }
             }
 

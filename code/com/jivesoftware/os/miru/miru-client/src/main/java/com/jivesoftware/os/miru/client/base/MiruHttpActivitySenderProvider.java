@@ -1,12 +1,8 @@
 package com.jivesoftware.os.miru.client.base;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.http.client.HttpClient;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -14,8 +10,6 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruWriter;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.client.MiruActivitySenderProvider;
-import com.jivesoftware.os.miru.client.MiruClientConfig;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,15 +20,14 @@ public class MiruHttpActivitySenderProvider implements MiruActivitySenderProvide
 
     private final ObjectMapper objectMapper;
     private final String sendActivitesEndpointUrl;
-    private final int socketTimeoutInMillis;
-    private final int maxConnections; //  Not to be confused with naxConnections!
-
+    private final HttpClientFactory httpClientFactory;
+    
     private static final ConcurrentHashMap<String, RequestHelper> hostToRequestHelpers = new ConcurrentHashMap<>();
 
-    public MiruHttpActivitySenderProvider(MiruClientConfig config, ObjectMapper objectMapper) {
+    public MiruHttpActivitySenderProvider(HttpClientFactory httpClientFactory,
+            ObjectMapper objectMapper) {
         this.sendActivitesEndpointUrl = MiruWriter.WRITER_SERVICE_ENDPOINT_PREFIX + MiruWriter.ADD_ACTIVITIES;
-        this.socketTimeoutInMillis = config.getSocketTimeoutInMillis();
-        this.maxConnections = config.getMaxConnections();
+        this.httpClientFactory = httpClientFactory;
         this.objectMapper = objectMapper;
     }
 
@@ -64,14 +57,7 @@ public class MiruHttpActivitySenderProvider implements MiruActivitySenderProvide
     }
 
     private RequestHelper create(MiruHost host) {
-        Collection<HttpClientConfiguration> configurations = Lists.newArrayList();
-        HttpClientConfig baseConfig = HttpClientConfig.newBuilder() // TODO refator so this is passed in.
-            .setSocketTimeoutInMillis(socketTimeoutInMillis)
-            .setMaxConnections(maxConnections)
-            .build();
-        configurations.add(baseConfig);
-        HttpClientFactory createHttpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configurations);
-        HttpClient httpClient = createHttpClientFactory.createClient(host.getLogicalName(), host.getPort());
+        HttpClient httpClient = httpClientFactory.createClient(host.getLogicalName(), host.getPort());
         return new RequestHelper(httpClient, objectMapper);
     }
 }

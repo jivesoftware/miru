@@ -194,6 +194,9 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                             LOG.inc("sendForTenant>sent", tenantPartitionedActivities.size());
                             LOG.inc("sendForTenant>sent>host>" + coord.host, tenantPartitionedActivities.size());
                         } catch (Exception x) {
+                            
+                            // TODO add hook to track of tenant partition inconsistent 
+                            
                             LOG.warn("Failed to send {} activities for tenantId:{} to host:{}",
                                 tenantPartitionedActivities.size(), tenantId, coord.host);
                             LOG.inc("sendForTenant>notSent", tenantPartitionedActivities.size());

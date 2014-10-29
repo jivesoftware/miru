@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.io.IOException;
 import java.io.OutputStream;
+import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -26,6 +27,7 @@ import javax.ws.rs.core.StreamingOutput;
 /**
  *
  */
+@Singleton
 @Path("/miru/manage")
 public class MiruManageEndpoints {
 

@@ -17,6 +17,10 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+        </dependency>     
+        <dependency>
             <groupId>com.jivesoftware.os.upena</groupId>
             <artifactId>upena-main</artifactId>
             <type>jar</type>
@@ -93,5 +97,6 @@
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>merlin-config</artifactId>
         </dependency>
+         
     </dependencies>
 </project>

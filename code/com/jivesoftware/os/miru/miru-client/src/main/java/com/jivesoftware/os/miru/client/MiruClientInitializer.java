@@ -1,6 +1,11 @@
 package com.jivesoftware.os.miru.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.miru.client.base.MiruBestEffortFailureTolerantClient;
 import com.jivesoftware.os.miru.client.base.MiruHttpActivitySenderProvider;
 import com.jivesoftware.os.miru.client.rcvs.MiruRCVSPartitionIdProvider;
@@ -14,6 +19,7 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.MiruWriteToReadTrackingAndSipWAL;
+import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,7 +33,16 @@ public class MiruClientInitializer {
             int writerId) throws Exception {
 
         ExecutorService sendActivitiesToHostsThreadPool = Executors.newFixedThreadPool(config.getSendActivitiesThreadPoolSize());
-        MiruActivitySenderProvider activitySenderProvider = new MiruHttpActivitySenderProvider(config, new ObjectMapper());
+
+        Collection<HttpClientConfiguration> configurations = Lists.newArrayList();
+        HttpClientConfig baseConfig = HttpClientConfig.newBuilder() // TODO refator so this is passed in.
+                .setSocketTimeoutInMillis(config.getSocketTimeoutInMillis())
+                .setMaxConnections(config.getMaxConnections())
+                .build();
+        configurations.add(baseConfig);
+        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configurations);
+        MiruActivitySenderProvider activitySenderProvider = new MiruHttpActivitySenderProvider(httpClientFactory,
+                new ObjectMapper());
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());

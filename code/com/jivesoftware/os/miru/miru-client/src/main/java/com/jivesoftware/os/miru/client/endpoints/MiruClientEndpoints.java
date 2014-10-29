@@ -25,7 +25,9 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.client.MiruClient;
+import static com.jivesoftware.os.miru.client.endpoints.MiruClientConstants.CLIENT_SERVICE_ENDPOINT_PREFIX;
 import java.util.List;
+import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -35,11 +37,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.merlin.config.defaults.StringDefault;
 
-import static com.jivesoftware.os.miru.client.endpoints.MiruClientConstants.CLIENT_SERVICE_ENDPOINT_PREFIX;
-
 /**
  * @author jonathan
  */
+@Singleton
 @Path(CLIENT_SERVICE_ENDPOINT_PREFIX)
 public class MiruClientEndpoints {
 
