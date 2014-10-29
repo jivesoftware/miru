@@ -6,21 +6,28 @@ import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
+import com.jivesoftware.os.miru.service.partition.MiruIndexRepairs;
 import com.jivesoftware.os.miru.service.partition.MiruLocalPartitionFactory;
+import com.jivesoftware.os.miru.service.partition.MiruPartitionAccessor.IndexStrategy;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionEventHandler;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.MiruRemotePartitionFactory;
@@ -39,14 +46,18 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class MiruServiceInitializer {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
             MiruRegistryStore registryStore,
@@ -121,6 +132,24 @@ public class MiruServiceInitializer {
             byteBufferFactory = new HeapByteBufferFactory();
         }
 
+        MiruIndexRepairs indexRepairs = new MiruIndexRepairs() {
+            private final AtomicBoolean current = new AtomicBoolean(false);
+
+            @Override
+            public void repaired(IndexStrategy strategy, MiruPartitionCoord coord, List<MiruActivityAndId<MiruActivity>> indexables) {
+                if (!indexables.isEmpty() && current.compareAndSet(true, false)) {
+                    LOG.warn("strategy:" + strategy + " coord:" + coord  +" is NOT consistent.");
+                }
+            }
+
+            @Override
+            public void current(IndexStrategy strategy, MiruPartitionCoord coord) {
+                if (current.compareAndSet(false, true)) {
+                    LOG.info("strategy:" + strategy + " coord:" + coord + " is consistent.");
+                }
+            }
+        };
+
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(new CurrentTimestamper(),
                 config,
                 streamFactory,
@@ -132,7 +161,8 @@ public class MiruServiceInitializer {
                 scheduledSipMigrateExecutor,
                 rebuildExecutors,
                 rebuildIndexExecutor,
-                sipIndexExecutor);
+                sipIndexExecutor,
+                indexRepairs);
 
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
                 httpClientFactory,

@@ -28,6 +28,7 @@ public class MiruLocalPartitionFactory {
     private final ExecutorService rebuildExecutors;
     private final ExecutorService rebuildIndexExecutor;
     private final ExecutorService sipIndexExecutor;
+    private final MiruIndexRepairs indexRepairs;
 
     public MiruLocalPartitionFactory(Timestamper timestamper,
             MiruServiceConfig config,
@@ -40,7 +41,8 @@ public class MiruLocalPartitionFactory {
             ScheduledExecutorService scheduledSipMigrateExecutor,
             ExecutorService rebuildExecutors,
             ExecutorService rebuildIndexExecutor,
-            ExecutorService sipIndexExecutor) {
+            ExecutorService sipIndexExecutor,
+            MiruIndexRepairs indexRepairs) {
         this.timestamper = timestamper;
         this.config = config;
         this.miruContextFactory = miruContextFactory;
@@ -53,6 +55,7 @@ public class MiruLocalPartitionFactory {
         this.rebuildExecutors = rebuildExecutors;
         this.rebuildIndexExecutor = rebuildIndexExecutor;
         this.sipIndexExecutor = sipIndexExecutor;
+        this.indexRepairs = indexRepairs;
     }
 
     public <BM> MiruHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
@@ -66,6 +69,7 @@ public class MiruLocalPartitionFactory {
                 rebuildExecutors,
                 rebuildIndexExecutor,
                 sipIndexExecutor,
+                indexRepairs,
                 config.getPartitionWakeOnIndex(),
                 config.getPartitionRebuildBatchSize(),
                 config.getPartitionSipBatchSize(),
