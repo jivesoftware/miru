@@ -156,26 +156,27 @@ public class MiruPartitionAccessor<BM> {
             }
             synchronized (context) {
                 List<MiruPartitionedActivity> batch = new ArrayList<>();
+                int activityCount = 0;
                 while (partitionedActivities.hasNext()) {
                     MiruPartitionedActivity partitionedActivity = partitionedActivities.next();
                     if (partitionedActivity.partitionId.equals(coord.partitionId)) {
                         if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN
                             || partitionedActivity.type == MiruPartitionedActivity.Type.END) {
-                            handleActivityType(strategy, coord, batch, indexExecutor);
+                            activityCount += handleActivityType(batch, indexExecutor);
                             batch.clear();
                             handleBoundaryType(partitionedActivity);
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.ACTIVITY) {
                             batch.add(partitionedActivity);
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.REPAIR) {
                             if (strategy != IndexStrategy.rebuild) {
-                                handleActivityType(strategy, coord, batch, indexExecutor);
+                                activityCount += handleActivityType(batch, indexExecutor);
                                 batch.clear();
                                 handleRepairType(partitionedActivity);
                             } else {
                                 batch.add(partitionedActivity);
                             }
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.REMOVE) {
-                            handleActivityType(strategy, coord, batch, indexExecutor);
+                            activityCount += handleActivityType(batch, indexExecutor);
                             batch.clear();
                             handleRemoveType(partitionedActivity, strategy);
                         } else {
@@ -187,7 +188,12 @@ public class MiruPartitionAccessor<BM> {
                     }
                     count++;
                 }
-                handleActivityType(strategy, coord, batch, indexExecutor);
+                activityCount += handleActivityType(batch, indexExecutor);
+                if (activityCount > 0) {
+                    indexRepairs.repaired(strategy, coord, activityCount);
+                } else {
+                    indexRepairs.current(strategy, coord);
+                }
             }
         } finally {
             semaphore.release();
@@ -203,10 +209,11 @@ public class MiruPartitionAccessor<BM> {
         }
     }
 
-    private void handleActivityType(IndexStrategy strategy,
-        MiruPartitionCoord coord,
-        List<MiruPartitionedActivity> partitionedActivities,
-        ExecutorService indexExecutor) throws Exception {
+    private int handleActivityType(List<MiruPartitionedActivity> partitionedActivities,
+        ExecutorService indexExecutor)
+        throws Exception {
+
+        int activityCount = 0;
         if (!partitionedActivities.isEmpty()) {
             MiruTimeIndex timeIndex = context.getTimeIndex();
 
@@ -223,11 +230,10 @@ public class MiruPartitionAccessor<BM> {
             partitionedActivities.clear(); // The frees up the MiruPartitionedActivity to be garbage collected.
             if (!indexables.isEmpty()) {
                 context.getIndexContext().index(indexables, indexExecutor);
-                indexRepairs.repaired(strategy, coord, indexables);
+                activityCount = indexables.size();
             }
-        } else {
-            indexRepairs.current(strategy, coord);
         }
+        return activityCount;
     }
 
     private void handleRepairType(MiruPartitionedActivity partitionedActivity) throws Exception {

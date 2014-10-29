@@ -103,28 +103,28 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private static final HealthCounter bootstrapCounter = HealthFactory.getHealthCounter(BootstrapCount.class, MinMaxHealthChecker.FACTORY);
 
     public MiruLocalHostedPartition(
-            Timestamper timestamper,
-            MiruBitmaps<BM> bitmaps,
-            MiruPartitionCoord coord,
-            MiruContextFactory streamFactory,
-            MiruActivityWALReader activityWALReader,
-            MiruPartitionEventHandler partitionEventHandler,
-            ByteBufferFactory byteBufferFactory,
-            ScheduledExecutorService scheduledBootstrapExecutor,
-            ScheduledExecutorService scheduledRebuildExecutor,
-            ScheduledExecutorService scheduledSipMigrateExecutor,
-            ExecutorService hbaseRebuildExecutors,
-            ExecutorService rebuildIndexExecutor,
-            ExecutorService sipIndexExecutor,
-            MiruIndexRepairs indexRepairs,
-            boolean partitionWakeOnIndex,
-            int partitionRebuildBatchSize,
-            int partitionSipBatchSize,
-            long partitionRebuildFailureSleepMillis,
-            long partitionBootstrapIntervalInMillis,
-            long partitionRunnableIntervalInMillis,
-            long partitionBanUnregisteredSchemaMillis)
-            throws Exception {
+        Timestamper timestamper,
+        MiruBitmaps<BM> bitmaps,
+        MiruPartitionCoord coord,
+        MiruContextFactory streamFactory,
+        MiruActivityWALReader activityWALReader,
+        MiruPartitionEventHandler partitionEventHandler,
+        ByteBufferFactory byteBufferFactory,
+        ScheduledExecutorService scheduledBootstrapExecutor,
+        ScheduledExecutorService scheduledRebuildExecutor,
+        ScheduledExecutorService scheduledSipMigrateExecutor,
+        ExecutorService hbaseRebuildExecutors,
+        ExecutorService rebuildIndexExecutor,
+        ExecutorService sipIndexExecutor,
+        MiruIndexRepairs indexRepairs,
+        boolean partitionWakeOnIndex,
+        int partitionRebuildBatchSize,
+        int partitionSipBatchSize,
+        long partitionRebuildFailureSleepMillis,
+        long partitionBootstrapIntervalInMillis,
+        long partitionRunnableIntervalInMillis,
+        long partitionBanUnregisteredSchemaMillis)
+        throws Exception {
 
         this.timestamper = timestamper;
         this.bitmaps = bitmaps;
@@ -179,7 +179,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 optionalStream = Optional.of(stream);
             }
             MiruPartitionAccessor<BM> opened = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo.copyToState(openingState), optionalStream.orNull(),
-                    streamFactory.getSip(coord), indexRepairs);
+                streamFactory.getSip(coord), indexRepairs);
             if (updatePartition(accessor, opened)) {
                 clearFutures();
                 futures.add(scheduledRebuildExecutor.scheduleWithFixedDelay(new RebuildIndexRunnable(),

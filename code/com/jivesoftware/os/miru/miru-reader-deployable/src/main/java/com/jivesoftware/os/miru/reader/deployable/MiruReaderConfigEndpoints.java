@@ -6,8 +6,6 @@ import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
-import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX;
-import static com.jivesoftware.os.miru.api.MiruConfigReader.PARTITIONS_ENDPOINT;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -30,6 +28,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX;
+import static com.jivesoftware.os.miru.api.MiruConfigReader.PARTITIONS_ENDPOINT;
 
 @Singleton
 @Path(CONFIG_SERVICE_ENDPOINT_PREFIX)

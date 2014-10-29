@@ -16,10 +16,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionAccessor.IndexStrategy;
-import java.util.List;
 
 /**
  *
@@ -27,7 +24,7 @@ import java.util.List;
  */
 public interface MiruIndexRepairs {
 
-    void repaired(IndexStrategy strategy, MiruPartitionCoord coord, List<MiruActivityAndId<MiruActivity>> indexables);
+    void repaired(IndexStrategy strategy, MiruPartitionCoord coord, int numberRepaired);
 
     void current(IndexStrategy strategy, MiruPartitionCoord coord);
 

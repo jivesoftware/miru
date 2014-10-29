@@ -21,11 +21,11 @@ public class MiruHttpActivitySenderProvider implements MiruActivitySenderProvide
     private final ObjectMapper objectMapper;
     private final String sendActivitesEndpointUrl;
     private final HttpClientFactory httpClientFactory;
-    
+
     private static final ConcurrentHashMap<String, RequestHelper> hostToRequestHelpers = new ConcurrentHashMap<>();
 
     public MiruHttpActivitySenderProvider(HttpClientFactory httpClientFactory,
-            ObjectMapper objectMapper) {
+        ObjectMapper objectMapper) {
         this.sendActivitesEndpointUrl = MiruWriter.WRITER_SERVICE_ENDPOINT_PREFIX + MiruWriter.ADD_ACTIVITIES;
         this.httpClientFactory = httpClientFactory;
         this.objectMapper = objectMapper;

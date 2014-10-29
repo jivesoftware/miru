@@ -16,9 +16,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
-import java.util.List;
 
 /**
  *
@@ -27,7 +24,7 @@ import java.util.List;
 public class NoOpMiruIndexRepairs implements MiruIndexRepairs {
 
     @Override
-    public void repaired(MiruPartitionAccessor.IndexStrategy strategy, MiruPartitionCoord coord, List<MiruActivityAndId<MiruActivity>> indexables) {
+    public void repaired(MiruPartitionAccessor.IndexStrategy strategy, MiruPartitionCoord coord, int numberRepaired) {
     }
 
     @Override
