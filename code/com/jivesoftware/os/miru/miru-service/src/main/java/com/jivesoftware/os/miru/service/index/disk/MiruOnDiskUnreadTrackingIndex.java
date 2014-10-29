@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
+import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.util.Collections;
@@ -88,14 +89,15 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     @Override
     public void bulkImport(MiruTenantId tenantId, BulkExport<Map<MiruStreamId, MiruInvertedIndex<BM>>> importItems) throws Exception {
         Map<MiruStreamId, MiruInvertedIndex<BM>> importIndex = importItems.bulkExport(tenantId);
-        for (final Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : importIndex.entrySet()) {
+        for (Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : importIndex.entrySet()) {
             SwappableFiler filer = index.get(entry.getKey().getBytes(), newFilerInitialCapacity);
 
+            final BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>(entry.getValue().getIndex(), entry.getValue().lastId());
             MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
-            miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BM>() {
+            miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
                 @Override
-                public BM bulkExport(MiruTenantId tenantId) throws Exception {
-                    return entry.getValue().getIndex();
+                public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
+                    return bitmapAndLastId;
                 }
             });
         }

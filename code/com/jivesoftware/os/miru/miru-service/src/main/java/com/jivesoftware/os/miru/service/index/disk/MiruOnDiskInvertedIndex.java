@@ -6,6 +6,7 @@ import com.jivesoftware.os.filer.keyed.store.SwappingFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.io.DataInput;
@@ -14,11 +15,14 @@ import java.util.Collections;
 import java.util.List;
 
 /** @author jonathan */
-public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkImport<BM> {
+public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkImport<BitmapAndLastId<BM>> {
+
+    private static final int LAST_ID_LENGTH = 4;
 
     private final MiruBitmaps<BM> bitmaps;
     private final SwappableFiler filer;
     private final int startPosition;
+    private volatile int lastId = Integer.MIN_VALUE;
 
     public MiruOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps, SwappableFiler filer) {
         this(bitmaps, filer, 0);
@@ -34,10 +38,10 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
     public BM getIndex() throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
-            filer.seek(startPosition);
+            filer.seek(startPosition + LAST_ID_LENGTH);
             DataInput dataInput = FilerIO.asDataInput(filer);
             if (dataInput.readInt() > 0) {
-                filer.seek(startPosition);
+                filer.seek(startPosition + LAST_ID_LENGTH);
                 return bitmaps.deserialize(dataInput);
             }
         }
@@ -51,6 +55,9 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
 
     @Override
     public void append(int... ids) throws Exception {
+        if (ids.length == 0) {
+            return;
+        }
         synchronized (filer.lock()) {
             filer.sync();
             BM index = getIndex();
@@ -60,17 +67,31 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
                     + ", cardinality = " + bitmaps.cardinality(index)
                     + ", size in bits = " + bitmaps.sizeInBits(index));
             }
-            setIndex(index);
+
+            int appendLastId = ids[ids.length - 1];
+            if (appendLastId > lastId) {
+                lastId = appendLastId;
+            }
+
+            setIndex(index, lastId);
         }
     }
 
     @Override
-    public void appendAndExtend(List<Integer> ids, int lastId) throws Exception {
+    public void appendAndExtend(List<Integer> ids, int extendToId) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
             BM index = getIndex();
-            bitmaps.extend(index, ids, lastId + 1);
-            setIndex(index);
+            bitmaps.extend(index, ids, extendToId + 1);
+
+            if (!ids.isEmpty()) {
+                int appendLastId = ids.get(ids.size() - 1);
+                if (appendLastId > lastId) {
+                    lastId = appendLastId;
+                }
+            }
+
+            setIndex(index, lastId);
         }
     }
 
@@ -82,29 +103,59 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
             filer.sync();
             BM r = bitmaps.create();
             bitmaps.andNot(r, getIndex(), Collections.singletonList(remove));
-            setIndex(r);
+            setIndex(r, lastId);
         }
     }
 
     @Override
     public void set(int... ids) throws Exception { // Kinda crazy expensive way to set an intermediary bit.
+        if (ids.length == 0) {
+            return;
+        }
         BM set = bitmaps.create();
         bitmaps.set(set, ids);
         synchronized (filer.lock()) {
             filer.sync();
             BM r = bitmaps.create();
             bitmaps.or(r, Arrays.asList(getIndex(), set));
-            setIndex(r);
+
+            int setLastId = ids[ids.length - 1];
+            if (setLastId > lastId) {
+                lastId = setLastId;
+            }
+
+            setIndex(r, lastId);
         }
     }
 
     @Override
     public void setIntermediate(int... ids) throws Exception {
+        if (ids.length == 0) {
+            return;
+        }
         synchronized (filer.lock()) {
             filer.sync();
             BM r = bitmaps.setIntermediate(getIndex(), ids);
-            setIndex(r);
+
+            int setLastId = ids[ids.length - 1];
+            if (setLastId > lastId) {
+                lastId = setLastId;
+            }
+
+            setIndex(r, lastId);
         }
+    }
+
+    @Override
+    public int lastId() throws Exception {
+        if (lastId == Integer.MIN_VALUE) {
+            synchronized (filer.lock()) {
+                filer.sync();
+                filer.seek(startPosition);
+                lastId = FilerIO.readInt(filer, "lastId");
+            }
+        }
+        return lastId;
     }
 
     @Override
@@ -113,7 +164,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
             filer.sync();
             BM r = bitmaps.create();
             bitmaps.andNot(r, getIndex(), Collections.singletonList(mask));
-            setIndex(r);
+            setIndex(r, lastId);
         }
     }
 
@@ -123,7 +174,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
             filer.sync();
             BM r = bitmaps.create();
             bitmaps.or(r, Arrays.asList(getIndex(), mask));
-            setIndex(r);
+            setIndex(r, lastId);
         }
     }
 
@@ -133,7 +184,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
             filer.sync();
             BM andNot = bitmaps.create();
             bitmaps.andNotToSourceSize(andNot, getIndex(), masks);
-            setIndex(andNot);
+            setIndex(andNot, lastId);
         }
     }
 
@@ -143,7 +194,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
             filer.sync();
             BM or = bitmaps.create();
             bitmaps.orToSourceSize(or, getIndex(), mask);
-            setIndex(or);
+            setIndex(or, lastId);
         }
     }
 
@@ -157,22 +208,24 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
         return filer.length();
     }
 
-    private void setIndex(BM index) throws Exception {
+    private void setIndex(BM index, int setLastId) throws Exception {
         synchronized (filer.lock()) {
             filer.sync();
             filer.seek(0);
             byte[] initialBytes = new byte[startPosition];
             FilerIO.read(filer, initialBytes);
 
-            SwappingFiler swap = filer.swap(startPosition + bitmaps.serializedSizeInBytes(index));
+            SwappingFiler swap = filer.swap(startPosition + LAST_ID_LENGTH + bitmaps.serializedSizeInBytes(index));
             FilerIO.write(swap, initialBytes);
+            FilerIO.writeInt(swap, setLastId, "lastId");
             bitmaps.serialize(index, FilerIO.asDataOutput(swap));
             swap.commit();
         }
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<BM> importItems) throws Exception {
-        setIndex(importItems.bulkExport(tenantId));
+    public void bulkImport(MiruTenantId tenantId, BulkExport<BitmapAndLastId<BM>> importItems) throws Exception {
+        BitmapAndLastId<BM> bitmapAndLastId = importItems.bulkExport(tenantId);
+        setIndex(bitmapAndLastId.bitmap, bitmapAndLastId.lastId);
     }
 }

@@ -11,10 +11,14 @@ import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.RandomAccessSwappableFiler;
+import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.map.store.ByteBufferFactoryBackedMapChunkFactory;
 import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
 import com.jivesoftware.os.filer.map.store.MapChunkFactory;
+import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
+import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -28,6 +32,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruReadTrackContext;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFields;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -74,7 +79,7 @@ public class MiruContextFactory {
 
     private static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final String DISK_FORMAT_VERSION = "version-5";
+    private static final String DISK_FORMAT_VERSION = "version-6";
 
     private final MiruSchemaProvider schemaProvider;
     private final ExecutorService executorService;
@@ -87,8 +92,6 @@ public class MiruContextFactory {
 
     private final int numberOfChunkStores = 24; // TODO expose to config;
     private final int partitionAuthzCacheSize;
-    private final int hybridFieldInitialPageCapacity;
-    private final boolean hybridFieldMigratesToMapped;
     private final MiruBackingStorage defaultStorage;
 
     public MiruContextFactory(MiruSchemaProvider schemaProvider,
@@ -97,8 +100,6 @@ public class MiruContextFactory {
         MiruResourceLocator diskResourceLocator,
         MiruHybridResourceLocator transientResourceLocator,
         int partitionAuthzCacheSize,
-        int hybridFieldInitialPageCapacity,
-        boolean hybridFieldMigratesToMapped,
         MiruBackingStorage defaultStorage,
         MiruActivityInternExtern activityInternExtern) {
         this.schemaProvider = schemaProvider;
@@ -106,10 +107,8 @@ public class MiruContextFactory {
         this.readTrackingWALReader = readTrackingWALReader;
         this.diskResourceLocator = diskResourceLocator;
         this.hybridResourceLocator = transientResourceLocator;
-        this.hybridFieldMigratesToMapped = hybridFieldMigratesToMapped;
         this.activityInternExtern = activityInternExtern;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
-        this.hybridFieldInitialPageCapacity = hybridFieldInitialPageCapacity;
         this.defaultStorage = defaultStorage;
     }
 
@@ -141,6 +140,10 @@ public class MiruContextFactory {
         }
     }
 
+    //TODO push to schema
+    private static final int[] IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS = new int[] { 2, 4, 6, 8, 10, 12, 16, 64, 256, 1_024 };
+    //private static final int[] IN_MEMORY_FIELD_KEY_SIZE_PARTITIONS = new int[] { 1, 2, 2, 6, 8, 6, 2, 1, 1, 1 };
+
     private <BM> MiruContext<BM> allocateInMemory(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ByteBufferFactory byteBufferFactory) throws Exception {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
@@ -153,14 +156,20 @@ public class MiruContextFactory {
         MiruInMemoryActivityIndex activityIndex = new MiruInMemoryActivityIndex();
         exportHandles.put("activityIndex", activityIndex);
 
-        MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps, byteBufferFactory);
+        @SuppressWarnings("unchecked")
+        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] indexes = new VariableKeySizeBytesObjectMapStore[schema.fieldCount()];
+        for (int fieldId : schema.getFieldIds()) {
+            indexes[fieldId] = new VariableKeySizeBytesObjectMapStore<>(IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS, 10, null, byteBufferFactory,
+                PassThroughKeyMarshaller.INSTANCE);
+        }
+
+        MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps, indexes);
         exportHandles.put("index", index);
 
         @SuppressWarnings("unchecked")
         MiruInMemoryField<BM>[] fields = new MiruInMemoryField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
-            fields[fieldId] = new MiruInMemoryField<>(schema.getFieldDefinition(fieldId), index, byteBufferFactory);
-            exportHandles.put("field" + fieldId, fields[fieldId]);
+            fields[fieldId] = new MiruInMemoryField<>(schema.getFieldDefinition(fieldId), index);
         }
 
         MiruFields<BM> fieldIndex = new MiruFields<>(fields, index);
@@ -233,19 +242,20 @@ public class MiruContextFactory {
             Optional.<Filer>absent());
         exportHandles.put("activityIndex", activityIndex);
 
-        MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps, byteBufferFactory);
+        @SuppressWarnings("unchecked")
+        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] indexes = new VariableKeySizeBytesObjectMapStore[schema.fieldCount()];
+        for (int fieldId : schema.getFieldIds()) {
+            indexes[fieldId] = new VariableKeySizeBytesObjectMapStore<>(IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS, 10, null, byteBufferFactory,
+                PassThroughKeyMarshaller.INSTANCE);
+        }
+
+        MiruInMemoryIndex<BM> index = new MiruInMemoryIndex<>(bitmaps, indexes);
         exportHandles.put("index", index);
 
         @SuppressWarnings("unchecked")
         MiruHybridField<BM>[] fields = new MiruHybridField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
-            fields[fieldId] = new MiruHybridField<>(
-                schema.getFieldDefinition(fieldId),
-                index,
-                byteBufferFactory,
-                hybridFieldMigratesToMapped ? filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "field-" + fieldId)) : null,
-                hybridFieldInitialPageCapacity);
-            exportHandles.put("field" + fieldId, fields[fieldId]);
+            fields[fieldId] = new MiruHybridField<>(schema.getFieldDefinition(fieldId), index);
         }
 
         MiruFields<BM> fieldIndex = new MiruFields<>(fields, index);
@@ -282,6 +292,9 @@ public class MiruContextFactory {
             .exportable(exportHandles)
             .withTransientResource(identifier);
     }
+
+    //TODO push to schema
+    private static final int[] ON_DISK_FIELD_KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024 };
 
     private <BM> MiruContext<BM> allocateMemMapped(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         //TODO refactor OnDisk impls to take a shared VariableKeySizeFileBackedKeyedStore and a prefixed KeyProvider
@@ -321,10 +334,34 @@ public class MiruContextFactory {
             Optional.<Filer>of(diskResourceLocator.getRandomAccessFiler(identifier, "activity", "rw")));
         importHandles.put("activityIndex", activityIndex);
 
-        MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
-            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
-            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
-            multiChunkStore);
+        File[] baseIndexMapDirectories = diskResourceLocator.getMapDirectories(identifier, "index");
+        File[] baseIndexSwapDirectories = diskResourceLocator.getSwapDirectories(identifier, "index");
+
+        VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
+        for (int fieldId : schema.getFieldIds()) {
+            //TODO expose to config
+            VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+
+            for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
+                String[] mapDirectories = new String[baseIndexMapDirectories.length];
+                for (int i = 0; i < mapDirectories.length; i++) {
+                    mapDirectories[i] = new File(new File(baseIndexMapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
+                }
+                String[] swapDirectories = new String[baseIndexSwapDirectories.length];
+                for (int i = 0; i < swapDirectories.length; i++) {
+                    swapDirectories[i] = new File(new File(baseIndexSwapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
+                }
+                builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
+                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
+                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
+                    multiChunkStore,
+                    4)); //TODO expose number of partitions
+            }
+
+            indexes[fieldId] = builder.build();
+        }
+
+        MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps, indexes);
         importHandles.put("index", index);
 
         @SuppressWarnings("unchecked")
@@ -332,9 +369,7 @@ public class MiruContextFactory {
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(
                 schema.getFieldDefinition(fieldId),
-                index,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "field-" + fieldId)));
-            importHandles.put("field" + fieldId, fields[fieldId]);
+                index);
         }
 
         MiruFields<BM> fieldIndex = new MiruFields<>(fields, index);
@@ -417,19 +452,41 @@ public class MiruContextFactory {
             Optional.<Filer>of(diskResourceLocator.getRandomAccessFiler(identifier, "activity", "rw")));
         importHandles.put("activityIndex", activityIndex);
 
-        MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps,
-            filesToPaths(diskResourceLocator.getMapDirectories(identifier, "index")),
-            filesToPaths(diskResourceLocator.getSwapDirectories(identifier, "index")),
-            multiChunkStore);
+        File[] baseIndexMapDirectories = diskResourceLocator.getMapDirectories(identifier, "index");
+        File[] baseIndexSwapDirectories = diskResourceLocator.getSwapDirectories(identifier, "index");
+
+        VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
+        for (int fieldId : schema.getFieldIds()) {
+            //TODO expose to config
+            VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+
+            for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
+                String[] mapDirectories = new String[baseIndexMapDirectories.length];
+                for (int i = 0; i < mapDirectories.length; i++) {
+                    mapDirectories[i] = new File(new File(baseIndexMapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
+                }
+                String[] swapDirectories = new String[baseIndexSwapDirectories.length];
+                for (int i = 0; i < swapDirectories.length; i++) {
+                    swapDirectories[i] = new File(new File(baseIndexSwapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
+                }
+                builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
+                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
+                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
+                    multiChunkStore,
+                    4)); //TODO expose number of partitions
+            }
+
+            indexes[fieldId] = builder.build();
+        }
+
+        MiruOnDiskIndex<BM> index = new MiruOnDiskIndex<>(bitmaps, indexes);
         importHandles.put("index", index);
 
         @SuppressWarnings("unchecked")
         MiruOnDiskField<BM>[] fields = new MiruOnDiskField[schema.fieldCount()];
         for (int fieldId = 0; fieldId < fields.length; fieldId++) {
             fields[fieldId] = new MiruOnDiskField<>(schema.getFieldDefinition(fieldId),
-                index,
-                filesToPaths(diskResourceLocator.getMapDirectories(identifier, "field-" + fieldId)));
-            importHandles.put("field" + fieldId, fields[fieldId]);
+                index);
         }
 
         MiruFields<BM> fieldIndex = new MiruFields<>(fields, index);
@@ -552,11 +609,10 @@ public class MiruContextFactory {
     private boolean checkMarkedStorage(MiruPartitionCoord coord, MiruBackingStorage storage, int numberOfChunks) throws Exception {
         File file = diskResourceLocator.getFilerFile(new MiruPartitionCoordIdentifier(coord), storage.name());
         if (file.exists()) {
-            MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
             if (storage == MiruBackingStorage.mem_mapped) {
-                return checkMemMapped(schema, coord, numberOfChunks);
+                return checkMemMapped(coord, numberOfChunks);
             } else if (storage == MiruBackingStorage.disk) {
-                return checkOnDisk(schema, coord, numberOfChunks);
+                return checkOnDisk(coord, numberOfChunks);
             } else {
                 return true;
             }
@@ -564,11 +620,8 @@ public class MiruContextFactory {
         return false;
     }
 
-    private boolean checkMemMapped(MiruSchema schema, MiruPartitionCoord coord, int numberOfChunks) throws IOException {
+    private boolean checkMemMapped(MiruPartitionCoord coord, int numberOfChunks) throws IOException {
         List<String> mapDirectories = Lists.newArrayList("activity", "index", "authz", "unread", "inbox", "timestampToIndex");
-        for (int i = 0; i < schema.fieldCount(); i++) {
-            mapDirectories.add("field-" + i);
-        }
 
         MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
         String[] chunkPaths = filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk"));
@@ -582,11 +635,8 @@ public class MiruContextFactory {
             mapDirectories);
     }
 
-    private boolean checkOnDisk(MiruSchema schema, MiruPartitionCoord coord, int numberOfChunks) throws IOException {
+    private boolean checkOnDisk(MiruPartitionCoord coord, int numberOfChunks) throws IOException {
         List<String> mapDirectories = Lists.newArrayList("activity", "index", "authz", "unread", "inbox", "timestampToIndex");
-        for (int i = 0; i < schema.fieldCount(); i++) {
-            mapDirectories.add("field-" + i);
-        }
 
         MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
         String[] chunkPaths = filesToPaths(diskResourceLocator.getChunkDirectories(identifier, "chunk"));

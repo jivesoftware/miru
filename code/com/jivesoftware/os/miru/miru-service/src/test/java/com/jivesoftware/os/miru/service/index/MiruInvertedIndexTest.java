@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.keyed.store.RandomAccessSwappableFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -201,7 +202,7 @@ public class MiruInvertedIndexTest {
     public Object[][] miruInvertedIndexDataProviderWithOverhead() throws Exception {
         return new Object[][] {
                 { new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(4)), 0 },
-                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(4), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), 12 }
+                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(4), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), 16 }
                 /**
                  * @see com.googlecode.javaewah.EWAHCompressedBitmap#serializedSizeInBytes()
                  */
@@ -210,17 +211,17 @@ public class MiruInvertedIndexTest {
 
     @DataProvider(name = "miruInvertedIndexDataProviderWithData")
     public Object[][] miruInvertedIndexDataProviderWithData() throws Exception {
-        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
         MiruInMemoryInvertedIndex<EWAHCompressedBitmap> miruInMemoryInvertedIndex = new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(100));
 
         final EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
         bitmap.set(1);
         bitmap.set(2);
         bitmap.set(3);
-        miruInMemoryInvertedIndex.bulkImport(tenantId, new BulkExport<EWAHCompressedBitmap>() {
+        miruInMemoryInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<EWAHCompressedBitmap>>() {
             @Override
-            public EWAHCompressedBitmap bulkExport(MiruTenantId tenantId) throws Exception {
-                return bitmap;
+            public BitmapAndLastId<EWAHCompressedBitmap> bulkExport(MiruTenantId tenantId) throws Exception {
+                return new BitmapAndLastId<>(bitmap, 3);
             }
         });
 

@@ -4,8 +4,6 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.filer.io.Filer;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
@@ -15,6 +13,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
@@ -147,11 +146,16 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     public void bulkImport(MiruTenantId tenantId, BulkExport<Map<String, MiruInvertedIndex<BM>>> importItems) throws Exception {
         Map<String, MiruInvertedIndex<BM>> authzMap = importItems.bulkExport(tenantId);
         for (Map.Entry<String, MiruInvertedIndex<BM>> entry : authzMap.entrySet()) {
-            MiruInvertedIndex<BM> miruInvertedIndex = entry.getValue();
+            final MiruInvertedIndex<BM> fromMiruInvertedIndex = entry.getValue();
 
-            Filer filer = keyedStore.get(key(entry.getKey()), newFilerInitialCapacity);
-
-            bitmaps.serialize(miruInvertedIndex.getIndex(), FilerIO.asDataOutput(filer));
+            SwappableFiler filer = keyedStore.get(key(entry.getKey()), newFilerInitialCapacity);
+            MiruOnDiskInvertedIndex<BM> toMiruInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
+            toMiruInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
+                @Override
+                public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
+                    return new BitmapAndLastId<>(fromMiruInvertedIndex.getIndex(), fromMiruInvertedIndex.lastId());
+                }
+            });
         }
     }
 }

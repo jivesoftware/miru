@@ -4,6 +4,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.util.Arrays;
@@ -12,12 +13,13 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** @author jonathan */
-public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkImport<BM>, BulkExport<BM> {
+public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkImport<BitmapAndLastId<BM>>, BulkExport<BitmapAndLastId<BM>> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final ReusableBuffers<BM> reusable;
     private final AtomicReference<BM> read;
     private final AtomicReference<BM> write;
+    private volatile int lastId = -1;
     private volatile boolean needsMerge;
 
     public MiruInMemoryInvertedIndex(MiruBitmaps<BM> bitmaps) {
@@ -75,6 +77,9 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
 
     @Override
     public void append(int... ids) {
+        if (ids.length == 0) {
+            return;
+        }
         synchronized (write) {
             BM bitmap = writer();
             if (!bitmaps.set(bitmap, ids)) {
@@ -84,20 +89,32 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
                     + ", size in bits = " + bitmaps.sizeInBits(bitmap));
             }
             markForMerge();
+
+            int appendLastId = ids[ids.length - 1];
+            if (appendLastId > lastId) {
+                lastId = appendLastId;
+            }
         }
     }
 
     @Override
-    public void appendAndExtend(List<Integer> ids, int lastId) throws Exception {
+    public void appendAndExtend(List<Integer> ids, int extendToId) throws Exception {
         synchronized (write) {
             BM bitmap = writer();
-            bitmaps.extend(bitmap, ids, lastId + 1);
+            bitmaps.extend(bitmap, ids, extendToId + 1);
             markForMerge();
+
+            if (!ids.isEmpty()) {
+                int appendLastId = ids.get(ids.size() - 1);
+                if (appendLastId > lastId) {
+                    lastId = appendLastId;
+                }
+            }
         }
     }
 
     @Override
-    public void remove(int id) { // Kinda crazy expensive way to remove an intermediary bit.
+    public void remove(int id) {
         BM r = bitmaps.create();
         synchronized (write) {
             BM remove = reusable.next();
@@ -110,7 +127,10 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     }
 
     @Override
-    public void set(int... ids) { // Kinda crazy expensive way to set an intermediary bit.
+    public void set(int... ids) {
+        if (ids.length == 0) {
+            return;
+        }
         synchronized (write) {
             BM set = reusable.next();
             bitmaps.set(set, ids);
@@ -119,17 +139,35 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
             bitmaps.or(r, Arrays.asList(bitmap, set));
             write.set(r);
             markForMerge();
+
+            int setLastId = ids[ids.length - 1];
+            if (setLastId > lastId) {
+                lastId = setLastId;
+            }
         }
     }
 
     @Override
     public void setIntermediate(int... ids) {
+        if (ids.length == 0) {
+            return;
+        }
         synchronized (write) {
             BM bitmap = writer();
             BM r = bitmaps.setIntermediate(bitmap, ids);
             write.set(r);
             markForMerge();
+
+            int setLastId = ids[ids.length - 1];
+            if (setLastId > lastId) {
+                lastId = setLastId;
+            }
         }
+    }
+
+    @Override
+    public int lastId() {
+        return lastId;
     }
 
     @Override
@@ -210,18 +248,20 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     }
 
     @Override
-    public BM bulkExport(MiruTenantId tenantId) throws Exception {
+    public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
         synchronized (write) {
             merge();
-            return read.get();
+            return new BitmapAndLastId<>(read.get(), lastId);
         }
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<BM> importItems) throws Exception {
+    public void bulkImport(MiruTenantId tenantId, BulkExport<BitmapAndLastId<BM>> importItems) throws Exception {
         synchronized (write) {
-            write.set(importItems.bulkExport(tenantId));
+            BitmapAndLastId<BM> bitmapAndLastId = importItems.bulkExport(tenantId);
+            write.set(bitmapAndLastId.bitmap);
             merge();
+            lastId = bitmapAndLastId.lastId;
         }
     }
 

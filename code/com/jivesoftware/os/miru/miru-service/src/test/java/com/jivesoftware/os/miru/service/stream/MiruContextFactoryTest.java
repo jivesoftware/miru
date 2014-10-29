@@ -73,8 +73,6 @@ public class MiruContextFactoryTest {
             new MiruTempDirectoryResourceLocator(),
             new MiruTempDirectoryResourceLocator(),
             20,
-            100,
-            false,
             MiruBackingStorage.memory,
             activityInterner);
 

@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
+import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex.InboxAndLastActivityIndex;
@@ -101,7 +102,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
     public void bulkImport(MiruTenantId tenantId, BulkExport<InboxAndLastActivityIndex<BM>> importItems) throws Exception {
         InboxAndLastActivityIndex<BM> bulkImport = importItems.bulkExport(tenantId);
 
-        for (final Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : bulkImport.index.entrySet()) {
+        for (Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : bulkImport.index.entrySet()) {
             SwappableFiler filer = index.get(entry.getKey().getBytes(), newFilerInitialCapacity);
 
             synchronized (filer.lock()) {
@@ -114,11 +115,12 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
                 }
             }
 
+            final BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>(entry.getValue().getIndex(), entry.getValue().lastId());
             MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer, 4);
-            miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BM>() {
+            miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
                 @Override
-                public BM bulkExport(MiruTenantId tenantId) throws Exception {
-                    return entry.getValue().getIndex();
+                public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
+                    return bitmapAndLastId;
                 }
             });
         }

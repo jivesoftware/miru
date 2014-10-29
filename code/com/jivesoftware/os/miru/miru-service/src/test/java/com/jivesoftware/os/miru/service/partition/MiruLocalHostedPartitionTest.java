@@ -160,8 +160,6 @@ public class MiruLocalHostedPartitionTest {
             new MiruTempDirectoryResourceLocator(),
             new MiruTempDirectoryResourceLocator(),
             20,
-            100,
-            false,
             defaultStorage,
             activityInternExtern);
         clusterRegistry = new MiruRCVSClusterRegistry(

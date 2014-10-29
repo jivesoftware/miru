@@ -1,37 +1,29 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
-import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
+import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
 import java.util.Iterator;
 
 /** @author jonathan */
-public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>>> {
+public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final PartitionedMapChunkBackedKeyedStore index;
-    private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
+    private final VariableKeySizeMapChunkBackedKeyedStore[] indexes;
     private final long newFilerInitialCapacity = 512;
 
-    public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore) throws Exception {
+    public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, VariableKeySizeMapChunkBackedKeyedStore[] indexes) throws Exception {
         this.bitmaps = bitmaps;
-        //TODO expose to config
-        this.index = new PartitionedMapChunkBackedKeyedStore(
-            new FileBackedMapChunkFactory(8, false, 8, false, 100, mapDirectories),
-            new FileBackedMapChunkFactory(8, false, 8, false, 100, swapDirectories),
-            chunkStore,
-            4); //TODO expose number of partitions
+        this.indexes = indexes;
     }
 
     @Override
@@ -41,21 +33,21 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return index.mapStoreSizeInBytes();
+        return 0;
     }
 
     @Override
-    public MiruInvertedIndex<BM> allocate(int fieldId, int termId) throws Exception {
+    public MiruInvertedIndex<BM> allocate(int fieldId, MiruTermId termId) throws Exception {
         return getOrAllocate(fieldId, termId);
     }
 
     @Override
-    public void index(int fieldId, int termId, int... ids) throws Exception {
+    public void index(int fieldId, MiruTermId termId, int... ids) throws Exception {
         getOrAllocate(fieldId, termId).append(ids);
     }
 
     @Override
-    public void remove(int fieldId, int termId, int id) throws Exception {
+    public void remove(int fieldId, MiruTermId termId, int id) throws Exception {
         Optional<MiruInvertedIndex<BM>> got = get(fieldId, termId);
         if (got.isPresent()) {
             got.get().remove(id);
@@ -63,36 +55,52 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<B
     }
 
     @Override
-    public Optional<MiruInvertedIndex<BM>> get(int fieldId, int termId) throws Exception {
-        long key = indexKeyFunction.getKey(fieldId, termId);
-        SwappableFiler filer = index.get(FilerIO.longBytes(key), -1);
+    public Optional<MiruInvertedIndex<BM>> get(int fieldId, MiruTermId termId) throws Exception {
+        SwappableFiler filer = indexes[fieldId].get(termId.getBytes(), -1);
         if (filer == null) {
             return Optional.absent();
         }
         return Optional.<MiruInvertedIndex<BM>>of(new MiruOnDiskInvertedIndex<>(bitmaps, filer));
     }
 
-    private MiruInvertedIndex<BM> getOrAllocate(int fieldId, int termId) throws Exception {
-        long key = indexKeyFunction.getKey(fieldId, termId);
-        SwappableFiler filer = index.get(FilerIO.longBytes(key), newFilerInitialCapacity);
+    @Override
+    public Optional<MiruInvertedIndex<BM>> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+        SwappableFiler filer = indexes[fieldId].get(termId.getBytes(), -1);
+        if (filer == null) {
+            return Optional.absent();
+        }
+        MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
+        if (invertedIndex.lastId() <= considerIfIndexIdGreaterThanN) {
+            return Optional.absent();
+        }
+        return Optional.<MiruInvertedIndex<BM>>of(invertedIndex);
+    }
+
+    private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
+        SwappableFiler filer = indexes[fieldId].get(termId.getBytes(), newFilerInitialCapacity);
         return new MiruOnDiskInvertedIndex<>(bitmaps, filer);
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>>> importItems) throws Exception {
-        Iterator<BulkEntry<Long, MiruInvertedIndex<BM>>> iter = importItems.bulkExport(tenantId);
-        while (iter.hasNext()) {
-            BulkEntry<Long, MiruInvertedIndex<BM>> entry = iter.next();
-            SwappableFiler filer = index.get(FilerIO.longBytes(entry.key), newFilerInitialCapacity);
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> importItems) throws Exception {
+        Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>> fieldIterator = importItems.bulkExport(tenantId);
+        int fieldId = 0;
+        while (fieldIterator.hasNext()) {
+            Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>> iter = fieldIterator.next();
+            while (iter.hasNext()) {
+                BulkEntry<byte[], MiruInvertedIndex<BM>> entry = iter.next();
+                SwappableFiler filer = indexes[fieldId].get(entry.key, newFilerInitialCapacity);
 
-            final BM fieldTermIndex = entry.value.getIndex();
-            MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
-            miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BM>() {
-                @Override
-                public BM bulkExport(MiruTenantId tenantId) throws Exception {
-                    return fieldTermIndex;
-                }
-            });
+                final BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>(entry.value.getIndex(), entry.value.lastId());
+                MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
+                miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
+                    @Override
+                    public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
+                        return bitmapAndLastId;
+                    }
+                });
+            }
+            fieldId++;
         }
     }
 }

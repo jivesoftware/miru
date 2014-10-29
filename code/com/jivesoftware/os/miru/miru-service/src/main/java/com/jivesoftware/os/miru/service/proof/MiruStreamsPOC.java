@@ -3,7 +3,8 @@ package com.jivesoftware.os.miru.service.proof;
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
-import com.jivesoftware.os.miru.service.index.IndexKeyFunction;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -12,8 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** @author jonathan */
 public class MiruStreamsPOC {
-
-    private final IndexKeyFunction indexKeyFunction = new IndexKeyFunction();
 
     public static void main(String[] args) {
         Random rand = new Random(123_345);
@@ -30,7 +29,7 @@ public class MiruStreamsPOC {
             for (int f = 0; f < 4; f++) {
                 int field = rand.nextInt(numTermsPerField.length);
                 int term = rand.nextInt(numTermsPerField[field]);
-                streamsPOC.add(id, field, new int[] { term });
+                streamsPOC.add(id, field, new MiruTermId[] { new MiruTermId(FilerIO.intBytes(term)) });
             }
             if (docId % 1_000 == 0) {
                 System.out.println("indexed " + docId);
@@ -47,7 +46,7 @@ public class MiruStreamsPOC {
             for (int f = 0; f < numberOfFollowed; f++) {
                 int field = rand.nextInt(numTermsPerField.length);
                 int term = rand.nextInt(numTermsPerField[field]);
-                fieldQueries.add(new FieldQuery(field, new int[] { term }));
+                fieldQueries.add(new FieldQuery(field, new MiruTermId[] { new MiruTermId(FilerIO.intBytes(term)) }));
             }
             EWAHCompressedBitmap result = streamsPOC.query(fieldQueries, 1_000);
             long latency = (System.currentTimeMillis() - time);
@@ -58,20 +57,20 @@ public class MiruStreamsPOC {
         }
     }
 
-    private final Map<Long, EWAHCompressedBitmap> index = new ConcurrentHashMap<>();
+    private final Map<FieldAndTermId, EWAHCompressedBitmap> index = new ConcurrentHashMap<>();
 
-    public void add(int docId, int fieldId, int[] termIds) {
-        for (int termId : termIds) {
-            long key = indexKeyFunction.getKey(fieldId, termId);
+    public void add(int docId, int fieldId, MiruTermId[] termIds) {
+        for (MiruTermId termId : termIds) {
+            FieldAndTermId key = new FieldAndTermId(fieldId, termId);
             getOrAllocate(key).set(docId);
         }
     }
 
-    EWAHCompressedBitmap getOrAllocate(long fieldIdAndTermId) {
-        EWAHCompressedBitmap got = index.get(fieldIdAndTermId);
+    EWAHCompressedBitmap getOrAllocate(FieldAndTermId key) {
+        EWAHCompressedBitmap got = index.get(key);
         if (got == null) {
             got = new EWAHCompressedBitmap();
-            index.put(fieldIdAndTermId, got);
+            index.put(key, got);
         }
         return got;
     }
@@ -79,8 +78,8 @@ public class MiruStreamsPOC {
     EWAHCompressedBitmap query(List<FieldQuery> fieldQuerys, int resultCount) {
         List<EWAHCompressedBitmap> bitmaps = new ArrayList<>();
         for (FieldQuery fieldQuery : fieldQuerys) {
-            for (int termId : fieldQuery.termIds) {
-                long key = indexKeyFunction.getKey(fieldQuery.fieldId, termId);
+            for (MiruTermId termId : fieldQuery.termIds) {
+                FieldAndTermId key = new FieldAndTermId(fieldQuery.fieldId, termId);
                 EWAHCompressedBitmap got = index.get(key);
                 if (got != null) {
                     bitmaps.add(got);
@@ -171,13 +170,52 @@ public class MiruStreamsPOC {
     static class FieldQuery {
 
         int fieldId;
-        int[] termIds;
+        MiruTermId[] termIds;
 
-        FieldQuery(int fieldId, int[] termIds) {
+        FieldQuery(int fieldId, MiruTermId[] termIds) {
             this.fieldId = fieldId;
             this.termIds = termIds;
         }
 
+    }
+
+    private static class FieldAndTermId {
+
+        public final int fieldId;
+        public final MiruTermId termID;
+
+        private FieldAndTermId(int fieldId, MiruTermId termID) {
+            this.fieldId = fieldId;
+            this.termID = termID;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            FieldAndTermId that = (FieldAndTermId) o;
+
+            if (fieldId != that.fieldId) {
+                return false;
+            }
+            if (termID != null ? !termID.equals(that.termID) : that.termID != null) {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = fieldId;
+            result = 31 * result + (termID != null ? termID.hashCode() : 0);
+            return result;
+        }
     }
 
 }

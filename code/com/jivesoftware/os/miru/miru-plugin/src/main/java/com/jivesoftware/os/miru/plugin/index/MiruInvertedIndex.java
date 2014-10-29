@@ -44,6 +44,8 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
      */
     void setIntermediate(int... ids) throws Exception;
 
+    int lastId() throws Exception;
+
     void andNotToSourceSize(List<BM> masks) throws Exception;
 
     void orToSourceSize(BM mask) throws Exception;

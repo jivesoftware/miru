@@ -12,6 +12,10 @@ import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
+import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
+import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
+import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
+import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -135,7 +139,10 @@ public class MiruIndexContextTest {
         MiruInMemoryActivityIndex miruInMemoryActivityIndex = new MiruInMemoryActivityIndex();
 
         // Miru in-memory fields
-        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4), new HeapByteBufferFactory());
+        @SuppressWarnings("unchecked")
+        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>[] indexes = new VariableKeySizeBytesObjectMapStore[1];
+        indexes[0] = new VariableKeySizeBytesObjectMapStore<>(new int[] { 16 }, 10, null, new HeapByteBufferFactory(), PassThroughKeyMarshaller.INSTANCE);
+        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4), indexes);
         MiruInMemoryField<EWAHCompressedBitmap>[] inMemoryMiruFieldArray = buildInMemoryMiruFieldArray(miruInMemoryIndex, fieldDefinitions);
         MiruFields<EWAHCompressedBitmap> inMemoryMiruFields = new MiruFields<>(inMemoryMiruFieldArray, miruInMemoryIndex);
 
@@ -238,9 +245,9 @@ public class MiruIndexContextTest {
     private MiruInMemoryField<EWAHCompressedBitmap>[] buildInMemoryMiruFieldArray(MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex,
         MiruFieldDefinition[] fieldDefinitions) {
         return new MiruInMemoryField[] {
-            new MiruInMemoryField<>(fieldDefinitions[0], miruInMemoryIndex, new HeapByteBufferFactory()),
-            new MiruInMemoryField<>(fieldDefinitions[1], miruInMemoryIndex, new HeapByteBufferFactory()),
-            new MiruInMemoryField<>(fieldDefinitions[2], miruInMemoryIndex, new HeapByteBufferFactory())
+            new MiruInMemoryField<>(fieldDefinitions[0], miruInMemoryIndex),
+            new MiruInMemoryField<>(fieldDefinitions[1], miruInMemoryIndex),
+            new MiruInMemoryField<>(fieldDefinitions[2], miruInMemoryIndex)
         };
     }
 
@@ -259,17 +266,22 @@ public class MiruIndexContextTest {
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath()
         };
         MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMulti(chunksDirs, "data", 4, initialChunkStoreSizeInBytes, false);
-        MiruOnDiskIndex<EWAHCompressedBitmap> miruOnDiskIndex = new MiruOnDiskIndex<>(new MiruBitmapsEWAH(4), mapDirs, swapDirs, multiChunkStore);
+
+        VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];
+        VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+        builder.add(16, new PartitionedMapChunkBackedKeyedStore(
+            new FileBackedMapChunkFactory(16, true, 8, false, 100, mapDirs),
+            new FileBackedMapChunkFactory(16, true, 8, false, 100, swapDirs),
+            multiChunkStore,
+            4)); //TODO expose number of partitions
+        onDiskIndexes[0] = builder.build();
+
+        MiruOnDiskIndex<EWAHCompressedBitmap> miruOnDiskIndex = new MiruOnDiskIndex<>(new MiruBitmapsEWAH(4), onDiskIndexes);
         miruOnDiskIndex.bulkImport(tenantId, miruInMemoryIndex);
 
         MiruField<EWAHCompressedBitmap>[] miruFieldArray = new MiruField[3];
         for (int i = 0; i < 3; i++) {
-            String[] fieldMapDirs = new String[] {
-                Files.createTempDirectory("field-" + i).toFile().getAbsolutePath(),
-                Files.createTempDirectory("field-" + i).toFile().getAbsolutePath()
-            };
-            MiruOnDiskField<EWAHCompressedBitmap> miruField = new MiruOnDiskField<>(fieldDefinitions[i], miruOnDiskIndex, fieldMapDirs);
-            miruField.bulkImport(tenantId, inMemoryMiruFields[i]);
+            MiruOnDiskField<EWAHCompressedBitmap> miruField = new MiruOnDiskField<>(fieldDefinitions[i], miruOnDiskIndex);
             miruFieldArray[i] = miruField;
         }
 

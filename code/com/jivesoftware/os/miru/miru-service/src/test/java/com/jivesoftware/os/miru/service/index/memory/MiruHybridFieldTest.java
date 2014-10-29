@@ -2,12 +2,14 @@ package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
+import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
-import java.nio.file.Files;
 import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.Test;
 
@@ -19,23 +21,21 @@ public class MiruHybridFieldTest {
     @Test
     public void testMigrate() throws Exception {
         DirectByteBufferFactory directByteBufferFactory = new DirectByteBufferFactory();
+
+        @SuppressWarnings("unchecked")
+        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<RoaringBitmap>>[] indexes = new VariableKeySizeBytesObjectMapStore[1];
+        indexes[0] = new VariableKeySizeBytesObjectMapStore<>(new int[] { 16 }, 10, null, directByteBufferFactory, PassThroughKeyMarshaller.INSTANCE);
         MiruHybridField<RoaringBitmap> hybridField = new MiruHybridField<>(
             new MiruFieldDefinition(0, "doc"),
-            new MiruInMemoryIndex<>(new MiruBitmapsRoaring(), directByteBufferFactory),
-            directByteBufferFactory,
-            new String[] {
-                Files.createTempDirectory("field").toFile().getAbsolutePath(),
-                Files.createTempDirectory("field").toFile().getAbsolutePath()
-            },
-            16);
+            new MiruInMemoryIndex<>(new MiruBitmapsRoaring(), indexes));
 
         final int numTerms = 100;
         for (int i = 0; i < numTerms; i++) {
-            hybridField.index(new MiruTermId(new byte[] { (byte) i }), i);
+            hybridField.index(new MiruTermId(FilerIO.intBytes(i)), i);
         }
 
         for (int i = 0; i < numTerms; i++) {
-            Optional<MiruInvertedIndex<RoaringBitmap>> invertedIndex = hybridField.getInvertedIndex(new MiruTermId(new byte[] { (byte) i }));
+            Optional<MiruInvertedIndex<RoaringBitmap>> invertedIndex = hybridField.getInvertedIndex(new MiruTermId(FilerIO.intBytes(i)));
             assertTrue(invertedIndex.isPresent());
             assertFalse(invertedIndex.get().getIndex().contains(i - 1));
             assertTrue(invertedIndex.get().getIndex().contains(i));
@@ -45,7 +45,7 @@ public class MiruHybridFieldTest {
         hybridField.notifyStateChange(MiruPartitionState.online);
 
         for (int i = 0; i < numTerms; i++) {
-            Optional<MiruInvertedIndex<RoaringBitmap>> invertedIndex = hybridField.getInvertedIndex(new MiruTermId(new byte[] { (byte) i }));
+            Optional<MiruInvertedIndex<RoaringBitmap>> invertedIndex = hybridField.getInvertedIndex(new MiruTermId(FilerIO.intBytes(i)));
             assertTrue(invertedIndex.isPresent());
             assertFalse(invertedIndex.get().getIndex().contains(i - 1));
             assertTrue(invertedIndex.get().getIndex().contains(i));
