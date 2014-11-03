@@ -1,8 +1,13 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.keyed.store.IBA;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
+import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -13,9 +18,13 @@ import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.util.Iterator;
+import java.util.List;
 
-/** @author jonathan */
-public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> {
+/**
+ * @author jonathan
+ */
+public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>,
+    BulkExport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final VariableKeySizeMapChunkBackedKeyedStore[] indexes;
@@ -102,5 +111,21 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<
             }
             fieldId++;
         }
+    }
+
+    @Override
+    public Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>> bulkExport(MiruTenantId tenantId) throws Exception {
+        List<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>> iterators = Lists.newArrayListWithCapacity(indexes.length);
+        for (VariableKeySizeMapChunkBackedKeyedStore index : indexes) {
+            iterators.add(Iterators.transform(index.iterator(),
+                new Function<KeyValueStore.Entry<IBA, SwappableFiler>, BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
+                    @Override
+                    public BulkEntry<byte[], MiruInvertedIndex<BM>> apply(KeyValueStore.Entry<IBA, SwappableFiler> input) {
+                        return new BulkEntry<byte[], MiruInvertedIndex<BM>>(input.getKey().getBytes(),
+                            new MiruOnDiskInvertedIndex<>(bitmaps, input.getValue()));
+                    }
+                }));
+        }
+        return iterators.iterator();
     }
 }

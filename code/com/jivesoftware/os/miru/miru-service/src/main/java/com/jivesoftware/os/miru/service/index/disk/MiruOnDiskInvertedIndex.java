@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 /** @author jonathan */
-public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkImport<BitmapAndLastId<BM>> {
+public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkImport<BitmapAndLastId<BM>>, BulkExport<BitmapAndLastId<BM>> {
 
     private static final int LAST_ID_LENGTH = 4;
 
@@ -227,5 +227,10 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
     public void bulkImport(MiruTenantId tenantId, BulkExport<BitmapAndLastId<BM>> importItems) throws Exception {
         BitmapAndLastId<BM> bitmapAndLastId = importItems.bulkExport(tenantId);
         setIndex(bitmapAndLastId.bitmap, bitmapAndLastId.lastId);
+    }
+
+    @Override
+    public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
+        return new BitmapAndLastId<>(getIndexUnsafe(), lastId);
     }
 }
