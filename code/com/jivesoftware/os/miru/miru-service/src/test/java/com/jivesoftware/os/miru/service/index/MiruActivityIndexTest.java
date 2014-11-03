@@ -1,11 +1,12 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.filer.io.Filer;
-import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.filer.io.ByteBufferProvider;
+import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
+import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
+import com.jivesoftware.os.filer.map.store.MapChunkFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -13,10 +14,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.memory.MiruHybridActivityIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryActivityIndex;
-import com.jivesoftware.os.miru.service.locator.DiskIdentifierPartResourceLocator;
-import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
-import java.io.File;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -86,26 +83,38 @@ public class MiruActivityIndexTest {
 
     @DataProvider(name = "miruActivityIndexDataProvider")
     public Object[][] miruActivityIndexDataProvider() throws Exception {
-        MiruInMemoryActivityIndex miruInMemoryActivityIndex = new MiruInMemoryActivityIndex();
-
-        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
-
-        String[] chunkDirs = {
+        String[] byteBufferChunkDirs = {
             Files.createTempDirectory("memmap").toFile().getAbsolutePath(),
             Files.createTempDirectory("memmap").toFile().getAbsolutePath()
         };
-        MiruHybridActivityIndex hybridActivityIndex = new MiruHybridActivityIndex(
-            createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-            createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-            new ChunkStoreInitializer().initializeMulti(chunkDirs, "data", 4, 512, true),
-            new MiruInternalActivityMarshaller(),
-            Optional.<Filer>absent());
+        ByteBufferProviderBackedMapChunkFactory byteBufferProviderBackedMapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(
+            4, false, 8, false, 100, new ByteBufferProvider("memmap", new HeapByteBufferFactory()));
+        MiruHybridActivityIndex byteBufferHybridActivityIndex = new MiruHybridActivityIndex(
+            new PartitionedMapChunkBackedKeyedStore(
+                byteBufferProviderBackedMapChunkFactory,
+                byteBufferProviderBackedMapChunkFactory,
+                new ChunkStoreInitializer().initializeMultiFileBacked(byteBufferChunkDirs, "data", 4, 512, true),
+                24),
+            new MiruInternalActivityMarshaller());
 
-        hybridActivityIndex.bulkImport(tenantId, miruInMemoryActivityIndex);
+        String[] fileBackedChunkDirs = {
+            Files.createTempDirectory("memmap").toFile().getAbsolutePath(),
+            Files.createTempDirectory("memmap").toFile().getAbsolutePath()
+        };
+        MiruHybridActivityIndex fileBackedHybridActivityIndex = new MiruHybridActivityIndex(
+            new PartitionedMapChunkBackedKeyedStore(
+                createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
+                createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
+                new ChunkStoreInitializer().initializeMultiFileBacked(fileBackedChunkDirs, "data", 4, 512, true),
+                24),
+            new MiruInternalActivityMarshaller());
+
+        MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
+        fileBackedHybridActivityIndex.bulkImport(tenantId, byteBufferHybridActivityIndex);
 
         return new Object[][] {
-            { miruInMemoryActivityIndex, false },
-            { hybridActivityIndex, false }, };
+            { byteBufferHybridActivityIndex, false },
+            { fileBackedHybridActivityIndex, false }, };
     }
 
     @DataProvider(name = "miruActivityIndexDataProviderWithData")
@@ -117,8 +126,19 @@ public class MiruActivityIndexTest {
         final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
 
         // Add activities to in-memory index
-        MiruInMemoryActivityIndex miruInMemoryActivityIndex = new MiruInMemoryActivityIndex();
-        miruInMemoryActivityIndex.bulkImport(tenantId, new BulkExport<Iterator<MiruInternalActivity>>() {
+        HeapByteBufferFactory byteBufferFactory = new HeapByteBufferFactory();
+        ByteBufferProviderBackedMapChunkFactory byteBufferFactoryBackedMapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(
+            4, false, 8, false, 100,
+            new ByteBufferProvider("memmap", byteBufferFactory));
+        MiruHybridActivityIndex byteBufferHybridActivityIndex = new MiruHybridActivityIndex(
+            new PartitionedMapChunkBackedKeyedStore(
+                byteBufferFactoryBackedMapChunkFactory,
+                byteBufferFactoryBackedMapChunkFactory,
+                new ChunkStoreInitializer().initializeMultiByteBufferBacked("chunks", byteBufferFactory, 4, 512, true),
+                24),
+            new MiruInternalActivityMarshaller());
+
+        byteBufferHybridActivityIndex.bulkImport(tenantId, new BulkExport<Iterator<MiruInternalActivity>>() {
             @Override
             public Iterator<MiruInternalActivity> bulkExport(MiruTenantId tenantId) throws Exception {
                 return Arrays.asList(miruActivities).iterator();
@@ -126,42 +146,47 @@ public class MiruActivityIndexTest {
         });
 
         // Add activities to mem-mapped index
-        String[] chunkDirs = {
+        String[] fileBackedChunkDirs = {
             Files.createTempDirectory("memmap").toFile().getAbsolutePath(),
             Files.createTempDirectory("memmap").toFile().getAbsolutePath()
         };
-        MiruHybridActivityIndex miruMemMappedActivityIndex = new MiruHybridActivityIndex(
-            createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-            createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-            new ChunkStoreInitializer().initializeMulti(chunkDirs, "data", 4, 512, true),
-            new MiruInternalActivityMarshaller(),
-            Optional.<Filer>absent());
-        miruMemMappedActivityIndex.bulkImport(tenantId, miruInMemoryActivityIndex);
+        MiruHybridActivityIndex fileBackedHybridActivityIndex = new MiruHybridActivityIndex(
+            new PartitionedMapChunkBackedKeyedStore(
+                createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
+                createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
+                new ChunkStoreInitializer().initializeMultiFileBacked(fileBackedChunkDirs, "data", 4, 512, true),
+                24),
+            new MiruInternalActivityMarshaller());
+        fileBackedHybridActivityIndex.bulkImport(tenantId, byteBufferHybridActivityIndex);
 
         return new Object[][] {
-            { miruInMemoryActivityIndex, miruActivities },
-            { miruMemMappedActivityIndex, miruActivities }
+            { byteBufferHybridActivityIndex, miruActivities },
+            { fileBackedHybridActivityIndex, miruActivities }
         };
     }
 
-    private void testHybridToHybrid(Optional<Filer> filer1, Optional<Filer> filer2) throws Exception {
+    private MiruHybridActivityIndex buildHybridIndex(MapChunkFactory mapChunkFactory, MapChunkFactory swapChunkFactory) throws Exception {
+        // Add activities to first hybrid index
+        String[] chunkDirs1 = {
+            Files.createTempDirectory("memmap").toFile().getAbsolutePath(),
+            Files.createTempDirectory("memmap").toFile().getAbsolutePath()
+        };
+        return new MiruHybridActivityIndex(
+            new PartitionedMapChunkBackedKeyedStore(
+                mapChunkFactory,
+                swapChunkFactory,
+                new ChunkStoreInitializer().initializeMultiFileBacked(chunkDirs1, "data", 4, 512, true),
+                24),
+            new MiruInternalActivityMarshaller());
+    }
+
+    private void testHybridToHybrid(MiruHybridActivityIndex hybridIndex1, MiruHybridActivityIndex hybridIndex2) throws Exception {
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
         MiruInternalActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[0], 3);
         MiruInternalActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[0], 4);
         MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" }, 1);
         final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
 
-        // Add activities to first hybrid index
-        String[] chunkDirs1 = {
-            Files.createTempDirectory("memmap").toFile().getAbsolutePath(),
-            Files.createTempDirectory("memmap").toFile().getAbsolutePath()
-        };
-        MiruHybridActivityIndex hybridIndex1 = new MiruHybridActivityIndex(
-            createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-            createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-            new ChunkStoreInitializer().initializeMulti(chunkDirs1, "data", 4, 512, true),
-            new MiruInternalActivityMarshaller(),
-            filer1);
         hybridIndex1.bulkImport(tenantId, new BulkExport<Iterator<MiruInternalActivity>>() {
             @Override
             public Iterator<MiruInternalActivity> bulkExport(MiruTenantId tenantId) throws Exception {
@@ -169,17 +194,6 @@ public class MiruActivityIndexTest {
             }
         });
 
-        // Copy activities to second hybrid index
-        String[] chunkDirs2 = {
-            Files.createTempDirectory("memmap").toFile().getAbsolutePath(),
-            Files.createTempDirectory("memmap").toFile().getAbsolutePath()
-        };
-        MiruHybridActivityIndex hybridIndex2 = new MiruHybridActivityIndex(
-            createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-            createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-            new ChunkStoreInitializer().initializeMulti(chunkDirs2, "data", 4, 512, true),
-            new MiruInternalActivityMarshaller(),
-            filer2);
         hybridIndex2.bulkImport(tenantId, hybridIndex1);
 
         for (int i = 0; i < 3; i++) {
@@ -188,34 +202,24 @@ public class MiruActivityIndexTest {
     }
 
     @Test
-    public void testHybridToHybrid_noFiler() throws Exception {
-        testHybridToHybrid(Optional.<Filer>absent(), Optional.<Filer>absent());
+    public void testHybridToHybrid_direct() throws Exception {
+        ByteBufferProviderBackedMapChunkFactory mapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(
+            4, false, 8, false, 100,
+            new ByteBufferProvider("test", new DirectByteBufferFactory()));
+        testHybridToHybrid(
+            buildHybridIndex(mapChunkFactory, mapChunkFactory),
+            buildHybridIndex(mapChunkFactory, mapChunkFactory));
     }
 
     @Test
-    public void testHybridToHybrid_randomAccessFiler() throws Exception {
-        MiruTenantId tenantId = new MiruTenantId("tenant1".getBytes());
-        MiruPartitionId partitionId = MiruPartitionId.of(0);
-        MiruPartitionCoord coord1 = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49601));
-        MiruPartitionCoord coord2 = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49602));
-        File[] dirs = { Files.createTempDirectory("hybridToHybrid").toFile() };
-        DiskIdentifierPartResourceLocator resourceLocator = new DiskIdentifierPartResourceLocator(dirs, 4);
+    public void testHybridToHybrid_memMap() throws Exception {
         testHybridToHybrid(
-            Optional.<Filer>of(resourceLocator.getRandomAccessFiler(new MiruPartitionCoordIdentifier(coord1), "activity", "rw")),
-            Optional.<Filer>of(resourceLocator.getRandomAccessFiler(new MiruPartitionCoordIdentifier(coord2), "activity", "rw")));
-    }
-
-    @Test
-    public void testHybridToHybrid_byteBufferFiler() throws Exception {
-        MiruTenantId tenantId = new MiruTenantId("tenant1".getBytes());
-        MiruPartitionId partitionId = MiruPartitionId.of(0);
-        MiruPartitionCoord coord1 = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49601));
-        MiruPartitionCoord coord2 = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49602));
-        File[] dirs = { Files.createTempDirectory("hybridToHybrid").toFile() };
-        DiskIdentifierPartResourceLocator resourceLocator = new DiskIdentifierPartResourceLocator(dirs, 4);
-        testHybridToHybrid(
-            Optional.<Filer>of(resourceLocator.getByteBufferBackedFiler(new MiruPartitionCoordIdentifier(coord1), "activity", 4)),
-            Optional.<Filer>of(resourceLocator.getByteBufferBackedFiler(new MiruPartitionCoordIdentifier(coord2), "activity", 4)));
+            buildHybridIndex(
+                createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
+                createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2)),
+            buildHybridIndex(
+                createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
+                createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2)));
     }
 
     private MiruInternalActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfRandomFields) {

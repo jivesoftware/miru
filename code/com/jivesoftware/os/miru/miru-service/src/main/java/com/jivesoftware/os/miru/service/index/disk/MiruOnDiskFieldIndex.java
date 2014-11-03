@@ -6,7 +6,7 @@ import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedS
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkEntry;
@@ -15,13 +15,13 @@ import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.util.Iterator;
 
 /** @author jonathan */
-public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> {
+public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final VariableKeySizeMapChunkBackedKeyedStore[] indexes;
     private final long newFilerInitialCapacity = 512;
 
-    public MiruOnDiskIndex(MiruBitmaps<BM> bitmaps, VariableKeySizeMapChunkBackedKeyedStore[] indexes) throws Exception {
+    public MiruOnDiskFieldIndex(MiruBitmaps<BM> bitmaps, VariableKeySizeMapChunkBackedKeyedStore[] indexes) throws Exception {
         this.bitmaps = bitmaps;
         this.indexes = indexes;
     }
@@ -34,11 +34,6 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<I
     @Override
     public long sizeOnDisk() throws Exception {
         return 0;
-    }
-
-    @Override
-    public MiruInvertedIndex<BM> allocate(int fieldId, MiruTermId termId) throws Exception {
-        return getOrAllocate(fieldId, termId);
     }
 
     @Override
@@ -74,6 +69,11 @@ public class MiruOnDiskIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<I
             return Optional.absent();
         }
         return Optional.<MiruInvertedIndex<BM>>of(invertedIndex);
+    }
+
+    @Override
+    public MiruInvertedIndex<BM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
+        return getOrAllocate(fieldId, term);
     }
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {

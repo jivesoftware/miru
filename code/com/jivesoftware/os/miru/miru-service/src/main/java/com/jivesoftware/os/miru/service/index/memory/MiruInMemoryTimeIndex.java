@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service.index.memory;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
-import com.jivesoftware.os.filer.io.ByteBufferFactory;
+import com.jivesoftware.os.filer.map.store.MapChunkFactory;
 import com.jivesoftware.os.filer.map.store.PrimitivesMapStoresBuilder;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -33,12 +33,11 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     private final int initialCapacity = 32; //TODO configure?
 
     public MiruInMemoryTimeIndex(Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
-        ByteBufferFactory byteBufferFactory) {
+        MapChunkFactory mapChunkFactory) {
         this.timestamps = new long[initialCapacity];
         this.id = new AtomicInteger(0);
         this.timestampToIndex = new PrimitivesMapStoresBuilder()
-            .setByteBufferFactory(byteBufferFactory)
-            .setInitialPageCapacity(initialCapacity)
+            .setMapChunkFactory(mapChunkFactory)
             .buildLongInt();
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
     }

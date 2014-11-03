@@ -61,22 +61,22 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, combinedFilter, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), combinedFilter, filtered, -1);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
+            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
 
         // 3) Add in a time-range mask if we have it
         if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
             MiruTimeRange timeRange = request.query.timeRange;
-            ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
         // 4) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
 
         // AND it all together and return the results
         BM answer = bitmaps.create();

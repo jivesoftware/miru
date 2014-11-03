@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Random;
 import org.testng.annotations.Test;
 
-public class MiruInMemoryIndexTest {
+public class MiruHybridIndexTest {
 
     @Test(enabled = false)
     public void testKeyHash() {

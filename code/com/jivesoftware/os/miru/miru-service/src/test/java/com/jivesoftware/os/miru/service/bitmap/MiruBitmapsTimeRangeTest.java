@@ -2,9 +2,11 @@ package com.jivesoftware.os.miru.service.bitmap;
 
 import com.google.common.base.Optional;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -71,7 +73,7 @@ public class MiruBitmapsTimeRangeTest {
     }
 
     private <BM> void assertExpectedNumberOfConsecutiveBitsStartingFromN(MiruBitmaps<BM> bitmaps, BM bitmap, int expectedStartingFrom,
-            int expectedCardinality) {
+        int expectedCardinality) {
         int last = -1;
         int cardinality = 0;
         int startingFrom = -1;
@@ -99,13 +101,13 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
-        return new Object[][]{
-            {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
-            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndex}
+        return new Object[][] {
+            { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
         };
     }
 
@@ -118,33 +120,34 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
-        return new Object[][]{
-            {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
-            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndex}
+        return new Object[][] {
+            { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
         };
     }
 
     @DataProvider(name = "singleEntryTimeIndexDataProvider")
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
 
-        final long[] timestamps = new long[]{System.currentTimeMillis()};
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        final long[] timestamps = new long[] { System.currentTimeMillis() };
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex(tenantId, timestamps);
         MiruOnDiskTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex(tenantId, miruInMemoryTimeIndex);
 
-        return new Object[][]{
-            {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
-            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndex}
+        return new Object[][] {
+            { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
+            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
         };
     }
 
     private MiruInMemoryTimeIndex buildInMemoryTimeIndex(MiruTenantId tenantId, final long[] timestamps) throws Exception {
         MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent(),
-                new HeapByteBufferFactory());
+            new ByteBufferProviderBackedMapChunkFactory(8, false, 4, false, 10,
+                new ByteBufferProvider("timeIndex", new HeapByteBufferFactory())));
         for (long timestamp : timestamps) {
             miruInMemoryTimeIndex.nextId(timestamp);
         }

@@ -46,26 +46,26 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
         MiruTimeRange timeRange = request.query.timeRange;
 
         // Short-circuit if the time range doesn't live here
-        if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
+        if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
             solutionLog.log("No time index intersection");
             return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, bitmaps.create(), solutionLog),
                     solutionLog.asList());
         }
-        ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
+        ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
 
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, request.query.constraintsFilter, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, filtered, -1);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
+            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
 
         // AND it all together and return the results
         BM answer = bitmaps.create();

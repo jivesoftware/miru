@@ -67,29 +67,29 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
             MiruTimeRange timeRange = request.query.answerTimeRange;
 
             // Short-circuit if the time range doesn't live here
-            if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
+            if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
                 LOG.debug("No answer time index intersection");
                 return new MiruPartitionResponse<>(
                         aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
                         solutionLog.asList());
             }
-            ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
             MiruTimeRange timeRange = request.query.countTimeRange;
 
             // Short-circuit if the time range doesn't live here
-            if (!timeIndexIntersectsTimeRange(stream.timeIndex, timeRange)) {
+            if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
                 LOG.debug("No count time index intersection");
                 return new MiruPartitionResponse<>(
                         aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
                         solutionLog.asList());
             }
             counterAnds.add(bitmaps.buildTimeRangeMask(
-                    stream.timeIndex, request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp));
+                stream.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp));
         }
 
-        Optional<BM> inbox = stream.inboxIndex.getInbox(request.query.streamId);
+        Optional<BM> inbox = stream.getInboxIndex().getInbox(request.query.streamId);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -102,21 +102,21 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, request.query.constraintsFilter, filtered, -1);
+            aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, filtered, -1);
             ands.add(filtered);
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
+            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
 
         if (unreadOnly) {
-            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(request.query.streamId);
+            Optional<BM> unreadIndex = stream.getUnreadTrackingIndex().getUnread(request.query.streamId);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
         }
-        ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
 
         BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
@@ -125,7 +125,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         counterAnds.add(answer);
         if (!unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
-            Optional<BM> unreadIndex = stream.unreadTrackingIndex.getUnread(request.query.streamId);
+            Optional<BM> unreadIndex = stream.getUnreadTrackingIndex().getUnread(request.query.streamId);
             if (unreadIndex.isPresent()) {
                 counterAnds.add(unreadIndex.get());
             }

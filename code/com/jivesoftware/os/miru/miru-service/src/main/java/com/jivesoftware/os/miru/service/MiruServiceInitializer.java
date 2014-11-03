@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
@@ -20,7 +21,11 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
+import com.jivesoftware.os.miru.service.locator.MiruHybridResourceLocator;
+import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
+import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
@@ -36,6 +41,9 @@ import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTen
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.allocator.HybridMiruContextAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.OnDiskMiruContextAllocator;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
@@ -106,15 +114,62 @@ public class MiruServiceInitializer {
 
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
-        MiruContextFactory streamFactory = new MiruContextFactory(
-            schemaProvider,
-            streamFactoryExecutor,
+        ByteBufferFactory byteBufferFactory;
+        if (config.getUseOffHeapBuffers()) {
+            byteBufferFactory = new DirectByteBufferFactory();
+        } else {
+            byteBufferFactory = new HeapByteBufferFactory();
+        }
+
+        MiruHybridResourceLocator transientResourceLocator = resourceLocatorProvider.getTransientResourceLocator();
+        MiruContextAllocator hybridContextAllocator = new HybridMiruContextAllocator(schemaProvider,
+            internExtern,
             readTrackingWALReader,
-            resourceLocatorProvider.getDiskResourceLocator(),
-            resourceLocatorProvider.getTransientResourceLocator(),
-            config.getPartitionAuthzCacheSize(),
-            MiruBackingStorage.valueOf(config.getDefaultStorage()),
-            internExtern);
+            transientResourceLocator,
+            byteBufferFactory,
+            config.getPartitionNumberOfChunkStores(),
+            config.getPartitionAuthzCacheSize());
+
+        final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
+        MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
+            schemaProvider,
+            internExtern,
+            readTrackingWALReader,
+            diskResourceLocator,
+            new OnDiskMiruContextAllocator.MiruFilerProviderFactory() {
+                @Override
+                public MiruFilerProvider getFilerProvider(MiruResourcePartitionIdentifier identifier, String name) {
+                    return new OnDiskMiruContextAllocator.MemMappedFilerProvider(identifier, name, diskResourceLocator);
+                }
+            },
+            config.getPartitionNumberOfChunkStores(),
+            config.getPartitionAuthzCacheSize());
+        MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
+            schemaProvider,
+            internExtern,
+            readTrackingWALReader,
+            diskResourceLocator,
+            new OnDiskMiruContextAllocator.MiruFilerProviderFactory() {
+                @Override
+                public MiruFilerProvider getFilerProvider(MiruResourcePartitionIdentifier identifier, String name) {
+                    return new OnDiskMiruContextAllocator.OnDiskFilerProvider(identifier, name, diskResourceLocator);
+                }
+            },
+            config.getPartitionNumberOfChunkStores(),
+            config.getPartitionAuthzCacheSize());
+
+        MiruContextFactory streamFactory = new MiruContextFactory(
+            ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.memory_fixed, hybridContextAllocator)
+                .put(MiruBackingStorage.hybrid, hybridContextAllocator)
+                .put(MiruBackingStorage.hybrid_fixed, hybridContextAllocator)
+                .put(MiruBackingStorage.mem_mapped, memMappedContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
+            diskResourceLocator,
+            transientResourceLocator,
+            MiruBackingStorage.valueOf(config.getDefaultStorage()));
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
@@ -122,13 +177,6 @@ public class MiruServiceInitializer {
         objectMapper.registerModule(new GuavaModule());
 
         MiruPartitionInfoProvider partitionInfoProvider = new CachedClusterPartitionInfoProvider();
-
-        ByteBufferFactory byteBufferFactory;
-        if (config.getUseOffHeapBuffers()) {
-            byteBufferFactory = new DirectByteBufferFactory();
-        } else {
-            byteBufferFactory = new HeapByteBufferFactory();
-        }
 
         MiruIndexRepairs indexRepairs = new MiruIndexRepairs() {
             private final AtomicBoolean current = new AtomicBoolean(false);
@@ -154,7 +202,6 @@ public class MiruServiceInitializer {
             streamFactory,
             activityWALReader,
             partitionEventHandler,
-            byteBufferFactory,
             scheduledBootstrapExecutor,
             scheduledRebuildExecutor,
             scheduledSipMigrateExecutor,

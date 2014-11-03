@@ -11,21 +11,12 @@ public class HybridIdentifierPartResourceLocator extends AbstractIdentifierPartR
 
     private final MiruHybridResourceCleaner cleaner;
     private final Random random = new Random();
-    private final boolean fileBackedChunkStore;
 
     public HybridIdentifierPartResourceLocator(File[] paths,
-            long initialChunkSize,
-            boolean fileBackedChunkStore,
-            MiruHybridResourceCleaner cleaner
-    ) {
+        long initialChunkSize,
+        MiruHybridResourceCleaner cleaner) {
         super(paths, initialChunkSize);
-        this.fileBackedChunkStore = fileBackedChunkStore;
         this.cleaner = cleaner;
-    }
-
-    @Override
-    public boolean isFileBackedChunkStore() {
-        return fileBackedChunkStore;
     }
 
     @Override

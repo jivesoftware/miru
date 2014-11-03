@@ -10,7 +10,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruField;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import java.util.Collections;
@@ -26,11 +26,11 @@ public class NumberOfDistincts {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     public <BM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM> bitmaps,
-            MiruRequestContext<BM> requestContext,
-            MiruRequest<DistinctCountQuery> request,
-            Optional<DistinctCountReport> lastReport,
-            BM answer)
-            throws Exception {
+        MiruRequestContext<BM> requestContext,
+        MiruRequest<DistinctCountQuery> request,
+        Optional<DistinctCountReport> lastReport,
+        BM answer)
+        throws Exception {
 
         log.debug("Get number of distincts for answer={} query={}", answer, request);
 
@@ -43,14 +43,14 @@ public class NumberOfDistincts {
             aggregateTerms = Sets.newHashSet();
         }
 
-        int fieldId = requestContext.schema.getFieldId(request.query.aggregateCountAroundField);
+        int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            MiruField<BM> aggregateField = requestContext.fieldIndex.getField(fieldId);
+            MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndex();
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
 
             for (MiruTermId aggregateTermId : aggregateTerms) {
-                Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField.getInvertedIndex(aggregateTermId);
+                Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
                 if (!invertedIndex.isPresent()) {
                     continue;
                 }
@@ -69,7 +69,7 @@ public class NumberOfDistincts {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruTermId[] fieldValues = requestContext.activityIndex.get(request.tenantId, lastSetBit, fieldId);
+                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, lastSetBit, fieldId);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -83,7 +83,7 @@ public class NumberOfDistincts {
                     MiruTermId aggregateTermId = fieldValues[0];
 
                     aggregateTerms.add(aggregateTermId);
-                    Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField.getInvertedIndex(aggregateTermId);
+                    Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
                     checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     BM revisedAnswer = reusable.next();

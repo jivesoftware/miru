@@ -14,8 +14,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruField;
-import com.jivesoftware.os.miru.plugin.index.MiruFields;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,10 +32,10 @@ public class MiruAggregateUtil {
 
     public <BM> void stream(MiruBitmaps<BM> bitmaps,
             MiruTenantId tenantId,
-            MiruRequestContext stream,
+            MiruRequestContext<BM> requestContext,
             BM answer,
             Optional<BM> counter,
-            MiruField<BM> pivotField,
+            int pivotFieldId,
             String streamField,
             CallbackStream<MiruTermCount> terms)
             throws Exception {
@@ -50,7 +49,8 @@ public class MiruAggregateUtil {
         }
         CardinalityAndLastSetBit answerCollector = null;
         ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
-        int fieldId = stream.schema.getFieldId(streamField);
+        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndex();
+        int fieldId = requestContext.getSchema().getFieldId(streamField);
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
         LOG.debug("stream: field={} fieldId={} beforeCount={}", streamField, fieldId, beforeCount);
         int priorLastSetBit = Integer.MAX_VALUE;
@@ -66,7 +66,7 @@ public class MiruAggregateUtil {
                 break;
             }
 
-            MiruTermId[] fieldValues = stream.activityIndex.get(tenantId, lastSetBit, fieldId);
+            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(tenantId, lastSetBit, fieldId);
             if (traceEnabled) {
                 LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
             }
@@ -85,7 +85,7 @@ public class MiruAggregateUtil {
             } else {
                 MiruTermId pivotTerm = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
 
-                Optional<MiruInvertedIndex<BM>> invertedIndex = pivotField.getInvertedIndex(pivotTerm);
+                Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(pivotFieldId, pivotTerm);
                 checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
 
                 BM termIndex = invertedIndex.get().getIndex();
@@ -121,7 +121,7 @@ public class MiruAggregateUtil {
 
     public <BM> void filter(MiruBitmaps<BM> bitmaps,
             MiruSchema schema,
-            MiruFields<BM> fieldIndex,
+            MiruFieldIndex<BM> fieldIndex,
             MiruFilter filter,
             BM bitmapStorage,
             int considerIfIndexIdGreaterThanN)
@@ -131,12 +131,12 @@ public class MiruAggregateUtil {
             for (MiruFieldFilter fieldFilter : filter.fieldFilters.get()) {
                 int fieldId = schema.getFieldId(fieldFilter.fieldName);
                 if (fieldId >= 0) {
-                    MiruField<BM> field = fieldIndex.getField(fieldId);
                     List<BM> fieldBitmaps = new ArrayList<>();
                     for (String term : fieldFilter.values) {
-                        Optional<MiruInvertedIndex<BM>> got = field.getInvertedIndex(
-                                new MiruTermId(term.getBytes(Charsets.UTF_8)),
-                                considerIfIndexIdGreaterThanN);
+                        Optional<MiruInvertedIndex<BM>> got = fieldIndex.get(
+                            fieldId,
+                            new MiruTermId(term.getBytes(Charsets.UTF_8)),
+                            considerIfIndexIdGreaterThanN);
                         if (got.isPresent()) {
                             fieldBitmaps.add(got.get().getIndex());
                         }

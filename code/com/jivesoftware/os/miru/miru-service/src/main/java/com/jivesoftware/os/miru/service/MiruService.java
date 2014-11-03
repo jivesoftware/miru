@@ -22,7 +22,6 @@ import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruField;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
@@ -249,9 +248,9 @@ public class MiruService implements Miru {
     private <BM> String inspect(MiruHostedPartition<BM> partition, String fieldName, String termValue) throws Exception {
         try (MiruRequestHandle<BM> handle = partition.getQueryHandle()) {
             MiruRequestContext<BM> requestContext = handle.getRequestContext();
-            int fieldId = requestContext.schema.getFieldId(fieldName);
-            MiruField<BM> field = requestContext.fieldIndex.getField(fieldId);
-            Optional<? extends MiruInvertedIndex<BM>> invertedIndex = field.getInvertedIndex(new MiruTermId(termValue.getBytes(Charsets.UTF_8)));
+            int fieldId = requestContext.getSchema().getFieldId(fieldName);
+            Optional<? extends MiruInvertedIndex<BM>> invertedIndex = requestContext.getFieldIndex().get(
+                fieldId, new MiruTermId(termValue.getBytes(Charsets.UTF_8)));
             if (invertedIndex.isPresent()) {
                 return bitmapsDebug.toString(handle.getBitmaps(), invertedIndex.get().getIndex());
             } else {
@@ -270,14 +269,6 @@ public class MiruService implements Miru {
     public void removeHost(MiruHost host) throws Exception {
         partitionDirector.removeHost(host);
     }
-
-//    public void removeReplicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-//        partitionDirector.removeReplicas(tenantId, partitionId);
-//    }
-//
-//    public void moveReplica(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<MiruHost> fromHost) throws Exception {
-//        partitionDirector.moveReplica(tenantId, partitionId, fromHost, localhost);
-//    }
 
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
         partitionDirector.removeTopology(tenantId, partitionId, host);

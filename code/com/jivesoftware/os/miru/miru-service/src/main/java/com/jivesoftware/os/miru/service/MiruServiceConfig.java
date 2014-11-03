@@ -72,6 +72,9 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(30_000)
     long getPartitionBanUnregisteredSchemaMillis();
 
+    @IntDefault(24)
+    int getPartitionNumberOfChunkStores();
+
     @IntDefault(10_000)
     int getPartitionAuthzCacheSize();
 
@@ -112,7 +115,4 @@ public interface MiruServiceConfig extends Config {
 
     @BooleanDefault(true)
     public boolean getUseOffHeapBuffers();
-
-    @BooleanDefault(false)
-    public boolean getTransientIsFileBackedChunkStore();
 }

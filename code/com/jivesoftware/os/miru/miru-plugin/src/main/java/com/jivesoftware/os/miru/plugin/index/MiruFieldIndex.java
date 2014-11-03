@@ -7,13 +7,13 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
  *
  * @author jonathan
  */
-public interface MiruIndex<BM> {
+public interface MiruFieldIndex<BM> {
 
     Optional<MiruInvertedIndex<BM>> get(int fieldId, MiruTermId termId) throws Exception;
 
     Optional<MiruInvertedIndex<BM>> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception;
 
-    MiruInvertedIndex<BM> allocate(int fieldId, MiruTermId termId) throws Exception;
+    MiruInvertedIndex<BM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
 
     void index(int fieldId, MiruTermId termId, int... ids) throws Exception;
 

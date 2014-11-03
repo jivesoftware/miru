@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
@@ -25,7 +26,12 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
+import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
+import com.jivesoftware.os.miru.service.stream.allocator.HybridMiruContextAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.OnDiskMiruContextAllocator;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
@@ -33,7 +39,6 @@ import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
 import com.jivesoftware.os.rcvs.inmemory.RowColumnValueStoreImpl;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.Executors;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -56,6 +61,8 @@ public class MiruContextFactoryTest {
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
         when(config.getDefaultStorage()).thenReturn(MiruBackingStorage.memory.name());
+        when(config.getPartitionNumberOfChunkStores()).thenReturn(4);
+        when(config.getPartitionAuthzCacheSize()).thenReturn(2);
 
         RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
             new RowColumnValueStoreImpl<>();
@@ -64,21 +71,65 @@ public class MiruContextFactoryTest {
 
         schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
         bitmaps = new MiruBitmapsEWAH(4);
-        MiruActivityInternExtern activityInterner = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(), Interners.<MiruTermId>newWeakInterner(),
+
+        SingleSchemaProvider schemaProvider = new SingleSchemaProvider(schema);
+        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
+            Interners.<MiruTermId>newWeakInterner(),
             Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+        MiruReadTrackingWALReaderImpl readTrackingWALReader = new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL);
 
-        streamFactory = new MiruContextFactory(new SingleSchemaProvider(schema),
-            Executors.newSingleThreadExecutor(),
-            new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL),
-            new MiruTempDirectoryResourceLocator(),
-            new MiruTempDirectoryResourceLocator(),
-            20,
-            MiruBackingStorage.memory,
-            activityInterner);
+        final MiruTempDirectoryResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
+        final MiruTempDirectoryResourceLocator hybridResourceLocator = new MiruTempDirectoryResourceLocator();
+        MiruContextAllocator hybridContextAllocator = new HybridMiruContextAllocator(schemaProvider,
+            activityInternExtern,
+            readTrackingWALReader,
+            hybridResourceLocator,
+            new HeapByteBufferFactory(),
+            config.getPartitionNumberOfChunkStores(),
+            config.getPartitionAuthzCacheSize());
 
+        MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
+            schemaProvider,
+            activityInternExtern,
+            readTrackingWALReader,
+            diskResourceLocator,
+            new OnDiskMiruContextAllocator.MiruFilerProviderFactory() {
+                @Override
+                public MiruFilerProvider getFilerProvider(MiruResourcePartitionIdentifier identifier, String name) {
+                    return new OnDiskMiruContextAllocator.MemMappedFilerProvider(identifier, name, diskResourceLocator);
+                }
+            },
+            config.getPartitionNumberOfChunkStores(),
+            config.getPartitionAuthzCacheSize());
+        MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
+            schemaProvider,
+            activityInternExtern,
+            readTrackingWALReader,
+            diskResourceLocator,
+            new OnDiskMiruContextAllocator.MiruFilerProviderFactory() {
+                @Override
+                public MiruFilerProvider getFilerProvider(MiruResourcePartitionIdentifier identifier, String name) {
+                    return new OnDiskMiruContextAllocator.OnDiskFilerProvider(identifier, name, diskResourceLocator);
+                }
+            },
+            config.getPartitionNumberOfChunkStores(),
+            config.getPartitionAuthzCacheSize());
+
+        streamFactory = new MiruContextFactory(
+            ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.memory_fixed, hybridContextAllocator)
+                .put(MiruBackingStorage.hybrid, hybridContextAllocator)
+                .put(MiruBackingStorage.hybrid_fixed, hybridContextAllocator)
+                .put(MiruBackingStorage.mem_mapped, memMappedContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
+            diskResourceLocator,
+            hybridResourceLocator,
+            MiruBackingStorage.memory);
     }
 
-    @Test (enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
+    @Test(enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
     public void testCopyToDisk() throws Exception {
         int numberOfActivities = 5;
 
@@ -86,38 +137,39 @@ public class MiruContextFactoryTest {
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, host);
 
-        MiruContext<EWAHCompressedBitmap> inMemoryStream = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory, new HeapByteBufferFactory());
+        MiruIndexer<EWAHCompressedBitmap> indexer = new MiruIndexer<>(bitmaps);
+        MiruContext<EWAHCompressedBitmap> inMemContext = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
 
         for (int i = 0; i < numberOfActivities; i++) {
             String[] authz = { "aaaabbbbcccc" };
             MiruActivity activity = new MiruActivity.Builder(tenantId, (long) i, authz, 0)
                 .putFieldValue(MiruFieldName.OBJECT_ID.getFieldName(), String.valueOf(i))
                 .build();
-            int id = inMemoryStream.getTimeIndex().nextId((long) i);
-            inMemoryStream.getIndexContext().index(new ArrayList<>(Arrays.asList(new MiruActivityAndId<>(activity, id))), MoreExecutors.sameThreadExecutor());
-            inMemoryStream.getIndexContext().remove(activity, id);
+            int id = inMemContext.getTimeIndex().nextId((long) i);
+            indexer.index(inMemContext, new ArrayList<>(Arrays.asList(new MiruActivityAndId<>(activity, id))), MoreExecutors.sameThreadExecutor());
+            indexer.remove(inMemContext, activity, id);
         }
 
-        MiruContext<EWAHCompressedBitmap> onDiskStream = streamFactory.copyToDisk(bitmaps, coord, inMemoryStream);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = streamFactory.copy(bitmaps, coord, inMemContext, MiruBackingStorage.disk);
 
-        assertEquals(onDiskStream.getRequestContext().timeIndex.getSmallestTimestamp(), inMemoryStream.getRequestContext().timeIndex.getSmallestTimestamp());
-        assertEquals(onDiskStream.getRequestContext().timeIndex.getLargestTimestamp(), inMemoryStream.getRequestContext().timeIndex.getLargestTimestamp());
+        assertEquals(inMemContext.getTimeIndex().getSmallestTimestamp(), onDiskContext.getTimeIndex().getSmallestTimestamp());
+        assertEquals(inMemContext.getTimeIndex().getLargestTimestamp(), onDiskContext.getTimeIndex().getLargestTimestamp());
 
         MiruAuthzExpression authzExpression = new MiruAuthzExpression(Arrays.asList("aaaabbbbcccc"));
-        assertEquals(onDiskStream.getRequestContext().authzIndex.getCompositeAuthz(authzExpression),
-            inMemoryStream.getRequestContext().authzIndex.getCompositeAuthz(authzExpression));
-        assertEquals(onDiskStream.getRequestContext().removalIndex.getIndex(),
-            inMemoryStream.getRequestContext().removalIndex.getIndex());
+        assertEquals(onDiskContext.getAuthzIndex().getCompositeAuthz(authzExpression),
+            inMemContext.getAuthzIndex().getCompositeAuthz(authzExpression));
+        assertEquals(onDiskContext.getRemovalIndex().getIndex(),
+            inMemContext.getRemovalIndex().getIndex());
 
         for (int i = 0; i < numberOfActivities; i++) {
-            assertEquals(onDiskStream.getRequestContext().timeIndex.getTimestamp(i), inMemoryStream.getRequestContext().timeIndex.getTimestamp(i));
-            assertEquals(onDiskStream.getRequestContext().activityIndex.get(tenantId, i), inMemoryStream.getRequestContext().activityIndex.get(tenantId, i));
+            assertEquals(onDiskContext.getTimeIndex().getTimestamp(i), inMemContext.getTimeIndex().getTimestamp(i));
+            assertEquals(onDiskContext.getActivityIndex().get(tenantId, i), inMemContext.getActivityIndex().get(tenantId, i));
 
             int fieldId = schema.getFieldId(MiruFieldName.OBJECT_ID.getFieldName());
             if (fieldId >= 0) {
                 MiruTermId termId = new MiruTermId(String.valueOf(i).getBytes());
-                assertEquals(onDiskStream.getRequestContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex(),
-                    inMemoryStream.getRequestContext().fieldIndex.getField(fieldId).getInvertedIndex(termId).get().getIndex());
+                assertEquals(onDiskContext.getFieldIndex().get(fieldId, termId).get().getIndex(),
+                    inMemContext.getFieldIndex().get(fieldId, termId).get().getIndex());
             }
         }
     }
@@ -130,7 +182,7 @@ public class MiruContextFactoryTest {
 
         MiruContext<EWAHCompressedBitmap> inMem = minimalInMemory(coord);
 
-        MiruContext<EWAHCompressedBitmap> miruContext = streamFactory.copyToDisk(bitmaps, coord, inMem);
+        MiruContext<EWAHCompressedBitmap> miruContext = streamFactory.copy(bitmaps, coord, inMem, MiruBackingStorage.disk);
         streamFactory.markStorage(coord, MiruBackingStorage.disk);
         streamFactory.close(miruContext);
 
@@ -145,7 +197,7 @@ public class MiruContextFactoryTest {
 
         MiruContext<EWAHCompressedBitmap> inMem = minimalInMemory(coord);
 
-        MiruContext<EWAHCompressedBitmap> miruContext = streamFactory.copyMemMapped(bitmaps, coord, inMem);
+        MiruContext<EWAHCompressedBitmap> miruContext = streamFactory.copy(bitmaps, coord, inMem, MiruBackingStorage.mem_mapped);
         streamFactory.markStorage(coord, MiruBackingStorage.mem_mapped);
         streamFactory.close(miruContext);
 
@@ -154,17 +206,18 @@ public class MiruContextFactoryTest {
 
     private MiruContext<EWAHCompressedBitmap> minimalInMemory(MiruPartitionCoord coord) throws Exception {
         //TODO detecting backing storage fails if we haven't indexed at least 1 term for every field, 1 inbox, 1 unread
-        MiruActivity.Builder builder = new MiruActivity.Builder(coord.tenantId, 0, new String[]{ "abcd" }, 0);
+        MiruActivity.Builder builder = new MiruActivity.Builder(coord.tenantId, 0, new String[] { "abcd" }, 0);
         for (MiruFieldName fieldName : MiruFieldName.values()) {
             builder.putFieldValue(fieldName.getFieldName(), "defg");
         }
 
-        MiruContext<EWAHCompressedBitmap> inMem = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory, new HeapByteBufferFactory());
-        int id = inMem.getTimeIndex().nextId(System.currentTimeMillis());
+        MiruIndexer<EWAHCompressedBitmap> indexer = new MiruIndexer<>(bitmaps);
+        MiruContext<EWAHCompressedBitmap> inMemContext = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
+        int id = inMemContext.getTimeIndex().nextId(System.currentTimeMillis());
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(0));
-        inMem.getIndexContext().index(new ArrayList<>(Arrays.asList(new MiruActivityAndId<>(builder.build(), id))), MoreExecutors.sameThreadExecutor());
-        inMem.getRequestContext().inboxIndex.index(streamId, id);
-        inMem.getRequestContext().unreadTrackingIndex.index(streamId, id);
-        return inMem;
+        indexer.index(inMemContext, new ArrayList<>(Arrays.asList(new MiruActivityAndId<>(builder.build(), id))), MoreExecutors.sameThreadExecutor());
+        inMemContext.getInboxIndex().index(streamId, id);
+        inMemContext.getUnreadTrackingIndex().index(streamId, id);
+        return inMemContext;
     }
 }

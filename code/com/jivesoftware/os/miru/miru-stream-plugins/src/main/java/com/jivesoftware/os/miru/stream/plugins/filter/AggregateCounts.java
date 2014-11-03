@@ -13,7 +13,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruField;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -39,12 +39,12 @@ public class AggregateCounts {
     }
 
     public <BM> AggregateCountsAnswer getAggregateCounts(MiruBitmaps<BM> bitmaps,
-            MiruRequestContext<BM> requestContext,
-            MiruRequest<AggregateCountsQuery> request,
-            Optional<AggregateCountsReport> lastReport,
-            BM answer,
-            Optional<BM> counter)
-            throws Exception {
+        MiruRequestContext<BM> requestContext,
+        MiruRequest<AggregateCountsQuery> request,
+        Optional<AggregateCountsReport> lastReport,
+        BM answer,
+        Optional<BM> counter)
+        throws Exception {
 
         log.debug("Get aggregate counts for answer={} request={}", answer, request);
 
@@ -60,14 +60,13 @@ public class AggregateCounts {
         }
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
-        int fieldId = requestContext.schema.getFieldId(request.query.aggregateCountAroundField);
+        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndex();
+        int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            MiruField<BM> aggregateField = requestContext.fieldIndex.getField(fieldId);
-
             BM unreadIndex = null;
             if (!MiruStreamId.NULL.equals(request.query.streamId)) {
-                Optional<BM> unread = requestContext.unreadTrackingIndex.getUnread(request.query.streamId);
+                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(request.query.streamId);
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }
@@ -80,7 +79,7 @@ public class AggregateCounts {
             long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
             CardinalityAndLastSetBit answerCollector = null;
             for (MiruTermId aggregateTermId : aggregateTerms) { // Consider
-                Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField.getInvertedIndex(aggregateTermId);
+                Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
                 if (!invertedIndex.isPresent()) {
                     continue;
                 }
@@ -120,7 +119,7 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruInternalActivity activity = requestContext.activityIndex.get(request.tenantId, lastSetBit);
+                MiruInternalActivity activity = requestContext.getActivityIndex().get(request.tenantId, lastSetBit);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
@@ -137,7 +136,7 @@ public class AggregateCounts {
                     byte[] aggregateValue = aggregateTermId.getBytes();
                     aggregateTerms.add(aggregateTermId);
 
-                    Optional<MiruInvertedIndex<BM>> invertedIndex = aggregateField.getInvertedIndex(aggregateTermId);
+                    Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
                     checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     BM termIndex = invertedIndex.get().getIndex();
@@ -168,10 +167,10 @@ public class AggregateCounts {
                         }
 
                         AggregateCount aggregateCount = new AggregateCount(
-                                miruProvider.getActivityInternExtern(request.tenantId).extern(activity, requestContext.schema),
-                                aggregateValue,
-                                beforeCount - afterCount,
-                                unread);
+                            miruProvider.getActivityInternExtern(request.tenantId).extern(activity, requestContext.getSchema()),
+                            aggregateValue,
+                            beforeCount - afterCount,
+                            unread);
                         aggregateCounts.add(aggregateCount);
 
                         if (aggregateCounts.size() >= request.query.desiredNumberOfDistincts) {
@@ -186,7 +185,7 @@ public class AggregateCounts {
         }
 
         AggregateCountsAnswer result = new AggregateCountsAnswer(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms),
-                skippedDistincts, collectedDistincts);
+            skippedDistincts, collectedDistincts);
         log.debug("result={}", result);
         return result;
     }

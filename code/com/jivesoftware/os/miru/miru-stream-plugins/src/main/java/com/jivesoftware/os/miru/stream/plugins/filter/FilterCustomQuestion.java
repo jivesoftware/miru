@@ -55,18 +55,18 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         List<BM> ands = new ArrayList<>();
 
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, combinedFilter, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), combinedFilter, filtered, -1);
         ands.add(filtered);
 
-        ands.add(bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex())));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.authzIndex.getCompositeAuthz(request.authzExpression));
+            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
 
         if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
             MiruTimeRange timeRange = request.query.answerTimeRange;
-            ands.add(bitmaps.buildTimeRangeMask(stream.timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
         BM answer = bitmaps.create();
@@ -77,7 +77,7 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
             counter = bitmaps.create();
             bitmaps.and(counter, Arrays.asList(answer, bitmaps.buildTimeRangeMask(
-                    stream.timeIndex, request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp)));
+                stream.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp)));
         }
 
         return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.fromNullable(counter)),

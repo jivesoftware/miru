@@ -130,7 +130,7 @@ public class MiruPluginTestBootstrap {
                 httpClientFactory,
                 miruResourceLocatorProviderLifecyle.getService(),
                 activityInternExtern,
-                new SingleBitmapsProvider(bitmaps));
+                new SingleBitmapsProvider<>(bitmaps));
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();

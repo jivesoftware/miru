@@ -104,7 +104,6 @@ public class MiruResourceLocatorProviderInitializer {
         final MiruHybridResourceLocator transientResourceLocator = new HybridIdentifierPartResourceLocator(
             transientPaths,
             config.getTransientResourceInitialChunkSize(),
-            config.getTransientIsFileBackedChunkStore(),
             cleaner);
 
         final MiruResourceLocatorProvider miruResourceLocatorProvider = new MiruResourceLocatorProvider() {

@@ -8,10 +8,13 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
+import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
+import com.jivesoftware.os.filer.map.store.BytesObjectMapStore;
 import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
 import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
 import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
@@ -20,11 +23,11 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskFieldIndex;
+import com.jivesoftware.os.miru.service.index.memory.MiruHybridFieldIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
 import java.nio.file.Files;
 import java.util.Iterator;
@@ -37,20 +40,21 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-public class MiruIndexTest {
+public class MiruFieldIndexTest {
 
     private long initialChunkStoreSizeInBytes = 4_096;
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testGetMissingFieldTerm(MiruBitmaps<BM> bitmaps, MiruIndex<BM> miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
-        Optional<MiruInvertedIndex<BM>> invertedIndex = miruIndex.get(0, new MiruTermId(FilerIO.intBytes(1)));
+    public <BM> void testGetMissingFieldTerm(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws
+        Exception {
+        Optional<MiruInvertedIndex<BM>> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(1)));
         assertNotNull(invertedIndex);
         assertFalse(invertedIndex.isPresent());
     }
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testEmptyIndexSize(MiruBitmaps<BM> bitmaps, MiruIndex<BM> miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
-        long sizeInBytes = miruIndex.sizeInMemory() + miruIndex.sizeOnDisk();
+    public <BM> void testEmptyIndexSize(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+        long sizeInBytes = miruFieldIndex.sizeInMemory() + miruFieldIndex.sizeOnDisk();
         if (miruBackingStorage.equals(MiruBackingStorage.memory)) {
             assertEquals(sizeInBytes, 0);
         } else if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
@@ -62,22 +66,22 @@ public class MiruIndexTest {
     }
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testIndexFieldTerm(MiruBitmaps<BM> bitmaps, MiruIndex<BM> miruIndex, MiruBackingStorage miruBackingStorage) throws Exception {
-        miruIndex.index(0, new MiruTermId(FilerIO.intBytes(2)), 3);
-        Optional<MiruInvertedIndex<BM>> invertedIndex = miruIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));
+    public <BM> void testIndexFieldTerm(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+        miruFieldIndex.index(0, new MiruTermId(FilerIO.intBytes(2)), 3);
+        Optional<MiruInvertedIndex<BM>> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.isPresent());
         assertTrue(bitmaps.isSet(invertedIndex.get().getIndex(), 3));
     }
 
     @Test(dataProvider = "miruIndexDataProviderWithData")
-    public <BM> void testExpectedData(MiruIndex<BM> miruIndex, Map<MiruIBA, MiruInvertedIndex> importData, MiruBackingStorage miruBackingStorage)
+    public <BM> void testExpectedData(MiruFieldIndex<BM> miruFieldIndex, Map<MiruIBA, MiruInvertedIndex> importData, MiruBackingStorage miruBackingStorage)
         throws Exception {
 
         byte[] key = FilerIO.intBytes(2);
         MiruInvertedIndex expected = importData.get(new MiruIBA(key));
 
-        Optional<MiruInvertedIndex<BM>> invertedIndex = miruIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));
+        Optional<MiruInvertedIndex<BM>> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.isPresent());
 
@@ -89,9 +93,16 @@ public class MiruIndexTest {
     public Object[][] miruIndexDataProvider() throws Exception {
 
         @SuppressWarnings("unchecked")
-        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>[] indexes = new VariableKeySizeBytesObjectMapStore[1];
-        indexes[0] = new VariableKeySizeBytesObjectMapStore<>(new int[] { 16 }, 10, null, new HeapByteBufferFactory(), PassThroughKeyMarshaller.INSTANCE);
-        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4), indexes);
+        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>[] indexes = new VariableKeySizeBytesObjectMapStore[] {
+            new VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>(
+                new BytesObjectMapStore[] {
+                    new BytesObjectMapStore("16", 16, null,
+                        new ByteBufferProviderBackedMapChunkFactory(16, true, 0, false, 10, new ByteBufferProvider("field-0", new HeapByteBufferFactory())),
+                        PassThroughKeyMarshaller.INSTANCE)
+                },
+                PassThroughKeyMarshaller.INSTANCE)
+        };
+        MiruHybridFieldIndex<EWAHCompressedBitmap> miruInMemoryFieldIndex = new MiruHybridFieldIndex<>(new MiruBitmapsEWAH(4), indexes);
 
         String[] mapDirs = new String[] {
             Files.createTempDirectory("map").toFile().getAbsolutePath(),
@@ -113,11 +124,11 @@ public class MiruIndexTest {
             multiChunkStore,
             4)); //TODO expose number of partitions
         onDiskIndexes[0] = builder.build();
-        MiruOnDiskIndex<EWAHCompressedBitmap> miruOnDiskIndex = new MiruOnDiskIndex<>(new MiruBitmapsEWAH(4), onDiskIndexes);
+        MiruOnDiskFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = new MiruOnDiskFieldIndex<>(new MiruBitmapsEWAH(4), onDiskIndexes);
 
         return new Object[][] {
-            { new MiruBitmapsEWAH(4), miruInMemoryIndex, MiruBackingStorage.memory },
-            { new MiruBitmapsEWAH(4), miruOnDiskIndex, MiruBackingStorage.disk }
+            { new MiruBitmapsEWAH(4), miruInMemoryFieldIndex, MiruBackingStorage.memory },
+            { new MiruBitmapsEWAH(4), miruOnDiskFieldIndex, MiruBackingStorage.disk }
         };
     }
 
@@ -126,9 +137,16 @@ public class MiruIndexTest {
         MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
 
         @SuppressWarnings("unchecked")
-        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>[] indexes = new VariableKeySizeBytesObjectMapStore[1];
-        indexes[0] = new VariableKeySizeBytesObjectMapStore<>(new int[] { 16 }, 10, null, new HeapByteBufferFactory(), PassThroughKeyMarshaller.INSTANCE);
-        MiruInMemoryIndex<EWAHCompressedBitmap> miruInMemoryIndex = new MiruInMemoryIndex<>(new MiruBitmapsEWAH(4), indexes);
+        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>[] indexes = new VariableKeySizeBytesObjectMapStore[] {
+            new VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>(
+                new BytesObjectMapStore[] {
+                    new BytesObjectMapStore("16", 16, null,
+                        new ByteBufferProviderBackedMapChunkFactory(16, true, 0, false, 10, new ByteBufferProvider("field-0", new HeapByteBufferFactory())),
+                        PassThroughKeyMarshaller.INSTANCE)
+                },
+                PassThroughKeyMarshaller.INSTANCE)
+        };
+        MiruHybridFieldIndex<EWAHCompressedBitmap> miruInMemoryFieldIndex = new MiruHybridFieldIndex<>(new MiruBitmapsEWAH(4), indexes);
 
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
         bitmap.set(1);
@@ -139,7 +157,7 @@ public class MiruIndexTest {
 
         byte[] key = FilerIO.intBytes(2);
         final Map<MiruIBA, MiruInvertedIndex<EWAHCompressedBitmap>> importData = ImmutableMap.of(new MiruIBA(key), invertedIndex);
-        miruInMemoryIndex.bulkImport(tenantId, new BulkExport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>>>>() {
+        miruInMemoryFieldIndex.bulkImport(tenantId, new BulkExport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>>>>() {
             @Override
             public Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>>> bulkExport(MiruTenantId tenantId) throws Exception {
                 return Iterators.singletonIterator(Iterators.transform(importData.entrySet().iterator(),
@@ -174,12 +192,12 @@ public class MiruIndexTest {
             4)); //TODO expose number of partitions
         onDiskIndexes[0] = builder.build();
 
-        MiruOnDiskIndex<EWAHCompressedBitmap> miruOnDiskIndex = new MiruOnDiskIndex<>(new MiruBitmapsEWAH(4), onDiskIndexes);
-        miruOnDiskIndex.bulkImport(tenantId, miruInMemoryIndex);
+        MiruOnDiskFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = new MiruOnDiskFieldIndex<>(new MiruBitmapsEWAH(4), onDiskIndexes);
+        miruOnDiskFieldIndex.bulkImport(tenantId, miruInMemoryFieldIndex);
 
         return new Object[][] {
-            { miruInMemoryIndex, importData, MiruBackingStorage.memory },
-            { miruOnDiskIndex, importData, MiruBackingStorage.disk }
+            { miruInMemoryFieldIndex, importData, MiruBackingStorage.memory },
+            { miruOnDiskFieldIndex, importData, MiruBackingStorage.disk }
         };
     }
 }

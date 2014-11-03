@@ -48,7 +48,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.schema, stream.fieldIndex, request.query.constraintsFilter, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, filtered, -1);
         if (solutionLog.isEnabled()) {
             solutionLog.log("constrained down to {} items.", bitmaps.cardinality(filtered));
         }
@@ -56,7 +56,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            BM compositeAuthz = stream.authzIndex.getCompositeAuthz(request.authzExpression);
+            BM compositeAuthz = stream.getAuthzIndex().getCompositeAuthz(request.authzExpression);
             if (solutionLog.isEnabled()) {
                 solutionLog.log("compositeAuthz contains {} items.", bitmaps.cardinality(compositeAuthz));
             }
@@ -64,7 +64,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        BM buildIndexMask = bitmaps.buildIndexMask(stream.activityIndex.lastId(), Optional.of(stream.removalIndex.getIndex()));
+        BM buildIndexMask = bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex()));
         if (solutionLog.isEnabled()) {
             solutionLog.log("indexMask contains {} items.", bitmaps.cardinality(buildIndexMask));
         }

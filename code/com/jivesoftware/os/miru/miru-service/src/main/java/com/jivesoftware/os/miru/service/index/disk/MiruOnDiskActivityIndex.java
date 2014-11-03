@@ -1,5 +1,6 @@
-package com.jivesoftware.os.miru.service.index.memory;
+package com.jivesoftware.os.miru.service.index.disk;
 
+import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
@@ -21,21 +22,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * Hybrid impl. Activity data lives in a keyed store, last index is an atomic integer.
+ * Mem-mapped impl. Activity data lives in a keyed store, last index is an atomic integer backed by a filer.
+ * Since the filer is backed by disk, it's recommended that set() NOT be used due to performance concerns.
  */
-public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<Iterator<MiruInternalActivity>>, BulkExport<Iterator<MiruInternalActivity>> {
+public class MiruOnDiskActivityIndex implements MiruActivityIndex, BulkImport<Iterator<MiruInternalActivity>>, BulkExport<Iterator<MiruInternalActivity>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final PartitionedMapChunkBackedKeyedStore keyedStore;
     private final AtomicInteger indexSize = new AtomicInteger(-1);
     private final MiruInternalActivityMarshaller internalActivityMarshaller;
+    private final Filer indexSizeFiler;
 
-    public MiruHybridActivityIndex(PartitionedMapChunkBackedKeyedStore keyedStore,
-        MiruInternalActivityMarshaller internalActivityMarshaller)
+    public MiruOnDiskActivityIndex(PartitionedMapChunkBackedKeyedStore keyedStore,
+        MiruInternalActivityMarshaller internalActivityMarshaller,
+        Filer indexSizeFiler)
         throws Exception {
         this.keyedStore = keyedStore;
         this.internalActivityMarshaller = internalActivityMarshaller;
+        this.indexSizeFiler = indexSizeFiler;
     }
 
     @Override
@@ -113,6 +118,10 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
         int size = index + 1;
         synchronized (indexSize) {
             if (size > indexSize.get()) {
+                synchronized (indexSizeFiler.lock()) {
+                    indexSizeFiler.seek(0);
+                    FilerIO.writeInt(indexSizeFiler, size, "size");
+                }
                 log.debug("Capacity extended to {}", size);
                 indexSize.set(size);
             }
@@ -126,11 +135,23 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return keyedStore.mapStoreSizeInBytes();
+        return indexSizeFiler.length() + keyedStore.mapStoreSizeInBytes();
     }
 
     private int capacity() {
-        return indexSize.get();
+        try {
+            int size = indexSize.get();
+            if (size < 0) {
+                synchronized (indexSizeFiler.lock()) {
+                    indexSizeFiler.seek(0);
+                    size = FilerIO.readInt(indexSizeFiler, "size");
+                }
+                indexSize.set(size);
+            }
+            return size;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -198,10 +219,5 @@ public class MiruHybridActivityIndex implements MiruActivityIndex, BulkImport<It
                 throw new UnsupportedOperationException();
             }
         };
-    }
-
-    public void copyTo(MiruHybridActivityIndex to) throws Exception {
-        keyedStore.copyTo(to.keyedStore);
-        to.indexSize.set(indexSize.get());
     }
 }

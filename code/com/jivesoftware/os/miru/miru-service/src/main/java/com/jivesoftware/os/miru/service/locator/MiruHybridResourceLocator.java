@@ -10,6 +10,4 @@ public interface MiruHybridResourceLocator extends MiruResourceLocator {
     MiruResourcePartitionIdentifier acquire() throws IOException;
 
     void release(MiruResourcePartitionIdentifier identifier);
-
-    boolean isFileBackedChunkStore();
 }

@@ -9,7 +9,7 @@ import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -20,13 +20,13 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>,
+public class MiruHybridFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>,
     BulkExport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] indexes;
 
-    public MiruInMemoryIndex(MiruBitmaps<BM> bitmaps, VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] indexes) {
+    public MiruHybridFieldIndex(MiruBitmaps<BM> bitmaps, VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] indexes) {
         this.bitmaps = bitmaps;
         this.indexes = indexes;
     }
@@ -47,11 +47,6 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
     @Override
     public long sizeOnDisk() throws Exception {
         return 0;
-    }
-
-    @Override
-    public MiruInvertedIndex<BM> allocate(int fieldId, MiruTermId termId) throws Exception {
-        return getOrAllocate(fieldId, termId);
     }
 
     @Override
@@ -83,9 +78,14 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
         return Optional.fromNullable(unsafe);
     }
 
+    @Override
+    public MiruInvertedIndex<BM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
+        return getOrAllocate(fieldId, term);
+    }
+
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
-        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>> index = indexes[fieldId];
         byte[] key = termId.getBytes();
+        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>> index = indexes[fieldId];
         MiruInvertedIndex<BM> got = index.getUnsafe(key);
         if (got == null) {
             synchronized (index) {
@@ -128,6 +128,12 @@ public class MiruInMemoryIndex<BM> implements MiruIndex<BM>, BulkImport<Iterator
                 }
             }
             fieldId++;
+        }
+    }
+
+    public void copyTo(MiruHybridFieldIndex<BM> to) throws Exception {
+        for (int i = 0; i < indexes.length; i++) {
+            indexes[i].copyTo(to.indexes[i]);
         }
     }
 }

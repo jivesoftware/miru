@@ -48,8 +48,8 @@ public abstract class AbstractIdentifierPartResourceLocator implements MiruResou
         File file = getFilerFile(identifier, name);
         file.createNewFile();
 
-        FileBackedMemMappedByteBufferFactory bufferFactory = new FileBackedMemMappedByteBufferFactory(file);
-        ByteBuffer byteBuffer = bufferFactory.allocate(Math.max(file.length(), length));
+        FileBackedMemMappedByteBufferFactory bufferFactory = new FileBackedMemMappedByteBufferFactory(file.getParentFile());
+        ByteBuffer byteBuffer = bufferFactory.allocate(file.getName(), Math.max(file.length(), length));
         return new ByteBufferBackedFiler(file, byteBuffer);
     }
 

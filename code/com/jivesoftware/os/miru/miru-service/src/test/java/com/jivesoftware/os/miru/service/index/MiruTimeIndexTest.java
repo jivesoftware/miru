@@ -2,10 +2,12 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
@@ -144,9 +146,11 @@ public class MiruTimeIndexTest {
         int[] tryLevels = new int[] { 3 }; //{2, 3, 4, 5};
         int[] trySegments = new int[] { 16 }; //{4, 16, 32};
         int capacity = 100; //1_000_000;
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         long start = System.currentTimeMillis();
-        final MiruInMemoryTimeIndex inMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(), new HeapByteBufferFactory());
+        final MiruInMemoryTimeIndex inMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(),
+            new ByteBufferProviderBackedMapChunkFactory(8, false, 4, false, 32,
+                new ByteBufferProvider("timeIndex", new HeapByteBufferFactory())));
         for (int i = 0; i < capacity; i++) {
             inMemoryTimeIndex.nextId(i * 10);
         }
@@ -210,13 +214,15 @@ public class MiruTimeIndexTest {
         int capacity = 1_000;
 
         // Set up and import in-memory implementation
-        final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(), new HeapByteBufferFactory());
+        final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(),
+            new ByteBufferProviderBackedMapChunkFactory(8, false, 4, false, 32,
+                new ByteBufferProvider("timeIndex", new HeapByteBufferFactory())));
 
         final long[] importValues = new long[capacity];
         for (int i = 0; i < capacity; i++) {
             importValues[i] = i * 10;
         }
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         for (long timestamp : importValues) {
             miruInMemoryTimeIndex.nextId(timestamp);
         }
@@ -253,8 +259,8 @@ public class MiruTimeIndexTest {
             public Filer getFiler(long length) throws IOException {
                 memMap.createNewFile();
 
-                FileBackedMemMappedByteBufferFactory bufferFactory = new FileBackedMemMappedByteBufferFactory(memMap);
-                ByteBuffer byteBuffer = bufferFactory.allocate(length);
+                FileBackedMemMappedByteBufferFactory bufferFactory = new FileBackedMemMappedByteBufferFactory(memMap.getParentFile());
+                ByteBuffer byteBuffer = bufferFactory.allocate(memMap.getName(), length);
                 return new ByteBufferBackedFiler(memMap, byteBuffer);
             }
         };
@@ -275,8 +281,10 @@ public class MiruTimeIndexTest {
     @DataProvider(name = "miruTimeIndexDataProviderWithRangeData")
     public Object[][] miruTimeIndexDataProviderWithRangeData() throws Exception {
         // Set up and import in-memory implementation
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
-        final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(), new HeapByteBufferFactory());
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        final MiruInMemoryTimeIndex miruInMemoryTimeIndex = new MiruInMemoryTimeIndex(Optional.<TimeOrderAnomalyStream>absent(),
+            new ByteBufferProviderBackedMapChunkFactory(8, false, 4, false, 32,
+                new ByteBufferProvider("timeIndex", new HeapByteBufferFactory())));
 
         final long[] importValues = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
 
@@ -316,8 +324,8 @@ public class MiruTimeIndexTest {
             public Filer getFiler(long length) throws IOException {
                 memMap.createNewFile();
 
-                FileBackedMemMappedByteBufferFactory bufferFactory = new FileBackedMemMappedByteBufferFactory(memMap);
-                ByteBuffer byteBuffer = bufferFactory.allocate(length);
+                FileBackedMemMappedByteBufferFactory bufferFactory = new FileBackedMemMappedByteBufferFactory(memMap.getParentFile());
+                ByteBuffer byteBuffer = bufferFactory.allocate(memMap.getName(), length);
                 return new ByteBufferBackedFiler(memMap, byteBuffer);
             }
         };
