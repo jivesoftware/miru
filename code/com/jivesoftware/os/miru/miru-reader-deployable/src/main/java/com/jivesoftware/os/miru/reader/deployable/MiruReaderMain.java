@@ -36,6 +36,7 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
@@ -67,7 +68,6 @@ import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -118,6 +118,7 @@ public class MiruReaderMain {
         SetOfSortedMapsImplInitializer<Exception> setOfSortedMapsInitializer = new HBaseSetOfSortedMapsImplInitializer(hbaseConfig);
 
         MiruServiceConfig miruServiceConfig = deployable.config(MiruServiceConfig.class);
+        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
@@ -134,8 +135,8 @@ public class MiruReaderMain {
             registryStore.getReplicaRegistry(),
             registryStore.getTopologyRegistry(),
             registryStore.getConfigRegistry(),
-            3,
-            TimeUnit.HOURS.toMillis(1));
+            registryConfig.getDefaultNumberOfReplicas(),
+            registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 

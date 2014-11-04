@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.client.MiruClientConfig;
 import com.jivesoftware.os.miru.client.MiruClientInitializer;
 import com.jivesoftware.os.miru.client.endpoints.MiruClientEndpoints;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
@@ -39,7 +40,6 @@ import com.jivesoftware.os.rcvs.hbase.HBaseSetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.rcvs.hbase.HBaseSetOfSortedMapsImplInitializer.HBaseSetOfSortedMapsConfig;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
-import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruWriterMain {
@@ -83,6 +83,7 @@ public class MiruWriterMain {
         mapper.registerModule(new GuavaModule());
 
         MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
+        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
@@ -92,8 +93,8 @@ public class MiruWriterMain {
                 registryStore.getReplicaRegistry(),
                 registryStore.getTopologyRegistry(),
                 registryStore.getConfigRegistry(),
-                3,
-                TimeUnit.HOURS.toMillis(1));
+                registryConfig.getDefaultNumberOfReplicas(),
+                registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),

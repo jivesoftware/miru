@@ -49,13 +49,18 @@ public class MiruManageServiceTest {
         ObjectMapper mapper = new ObjectMapper();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", setOfSortedMapsImplInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-                registryStore.getHostsRegistry(), registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(), registryStore.getReplicaRegistry(), registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(), numberOfReplicas, TimeUnit.HOURS.toMillis(1));
+            registryStore.getHostsRegistry(),
+            registryStore.getExpectedTenantsRegistry(),
+            registryStore.getExpectedTenantPartitionsRegistry(),
+            registryStore.getReplicaRegistry(),
+            registryStore.getTopologyRegistry(),
+            registryStore.getConfigRegistry(),
+            numberOfReplicas,
+            TimeUnit.HOURS.toMillis(1));
         MiruWAL miruWAL = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer, mapper);
         miruManageService = new MiruManageInitializer().initialize(config, clusterRegistry, registryStore, miruWAL);
 
-        MiruReplicaSetDirector  replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
+        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
 
         tenantId = new MiruTenantId("test1".getBytes());
         partitionId = MiruPartitionId.of(0);
@@ -69,8 +74,8 @@ public class MiruManageServiceTest {
 
         replicaSetDirector.electToReplicaSetForTenantPartition(tenantId,
             partitionId,
-                new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), Sets.<MiruHost>newHashSet(), numberOfReplicas),
-                System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
+            new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), Sets.<MiruHost>newHashSet(), numberOfReplicas),
+            System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
     }
 
     @Test

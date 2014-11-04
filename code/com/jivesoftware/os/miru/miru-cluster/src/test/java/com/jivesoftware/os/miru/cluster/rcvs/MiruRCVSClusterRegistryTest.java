@@ -53,7 +53,8 @@ public class MiruRCVSClusterRegistryTest {
             new RowColumnValueStoreImpl<MiruTenantId, MiruPartitionId, Long, MiruHost>(),
             new RowColumnValueStoreImpl<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue>(),
             new RowColumnValueStoreImpl<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long>(),
-            numReplicas, TimeUnit.HOURS.toMillis(1));
+            numReplicas,
+            TimeUnit.HOURS.toMillis(1));
         replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), registry);
     }
 

@@ -63,6 +63,16 @@
                 <version>1.6.1</version>
             </dependency>
             <dependency>
+                <groupId>com.googlecode.javaewah</groupId>
+                <artifactId>JavaEWAH</artifactId>
+                <version>0.9.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.roaringbitmap</groupId>
+                <artifactId>RoaringBitmap</artifactId>
+                <version>0.4.5</version>
+            </dependency>
+            <dependency>
                 <groupId>com.jivesoftware.os.jive.utils</groupId>
                 <artifactId>health</artifactId>
                 <version>${jive-utils-version}</version>

@@ -56,12 +56,12 @@ import org.testng.Assert;
 public class MiruPluginTestBootstrap {
 
     public <BM> MiruProvider<MiruService> bootstrap(MiruTenantId tenantId,
-            MiruPartitionId partitionId,
-            MiruHost miruHost,
-            MiruSchema miruSchema,
-            MiruBackingStorage desiredStorage,
-            final MiruBitmaps<BM> bitmaps)
-            throws Exception {
+        MiruPartitionId partitionId,
+        MiruHost miruHost,
+        MiruSchema miruSchema,
+        MiruBackingStorage desiredStorage,
+        final MiruBitmaps<BM> bitmaps)
+        throws Exception {
 
         HealthFactory.initialize(
             new HealthCheckConfigBinder() {
@@ -85,7 +85,7 @@ public class MiruPluginTestBootstrap {
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
         ObjectMapper mapper = new ObjectMapper();
 
@@ -93,21 +93,21 @@ public class MiruPluginTestBootstrap {
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(
             new CurrentTimestamper(),
-                registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                3,
-                TimeUnit.HOURS.toMillis(1));
+            registryStore.getHostsRegistry(),
+            registryStore.getExpectedTenantsRegistry(),
+            registryStore.getExpectedTenantPartitionsRegistry(),
+            registryStore.getReplicaRegistry(),
+            registryStore.getTopologyRegistry(),
+            registryStore.getConfigRegistry(),
+            3,
+            TimeUnit.HOURS.toMillis(1));
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
 
         clusterRegistry.sendHeartbeatForHost(miruHost, 0, 0);
         replicaSetDirector.electToReplicaSetForTenantPartition(tenantId, partitionId,
-                new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3),
-                System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
+            new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3),
+            System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
 
@@ -120,17 +120,17 @@ public class MiruPluginTestBootstrap {
         MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
         miruResourceLocatorProviderLifecyle.start();
         final MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
-                Interners.<MiruTermId>newWeakInterner(), Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+            Interners.<MiruTermId>newWeakInterner(), Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
-                registryStore,
-                clusterRegistry,
-                miruHost,
-                new SingleSchemaProvider(miruSchema),
-                wal,
-                httpClientFactory,
-                miruResourceLocatorProviderLifecyle.getService(),
-                activityInternExtern,
-                new SingleBitmapsProvider<>(bitmaps));
+            registryStore,
+            clusterRegistry,
+            miruHost,
+            new SingleSchemaProvider(miruSchema),
+            wal,
+            httpClientFactory,
+            miruResourceLocatorProviderLifecyle.getService(),
+            activityInternExtern,
+            new SingleBitmapsProvider<>(bitmaps));
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();

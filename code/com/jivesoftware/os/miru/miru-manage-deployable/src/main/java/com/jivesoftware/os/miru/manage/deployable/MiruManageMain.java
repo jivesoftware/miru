@@ -20,6 +20,7 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
@@ -33,7 +34,6 @@ import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
-import java.util.concurrent.TimeUnit;
 
 public class MiruManageMain {
 
@@ -64,6 +64,7 @@ public class MiruManageMain {
         mapper.registerModule(new GuavaModule());
 
         MiruManageConfig manageConfig = deployable.config(MiruManageConfig.class);
+        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
@@ -73,8 +74,8 @@ public class MiruManageMain {
                 registryStore.getReplicaRegistry(),
                 registryStore.getTopologyRegistry(),
                 registryStore.getConfigRegistry(),
-                3,
-                TimeUnit.HOURS.toMillis(1));
+                registryConfig.getDefaultNumberOfReplicas(),
+                registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 

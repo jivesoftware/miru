@@ -230,7 +230,7 @@ public class MiruRebalanceDirector {
 
         int numHosts = context.allHosts.size();
         int numPartitions = topologies.size();
-        if (numHosts == 0 || numPartitions == 0) {
+        if (numHosts == 0) {
             throw new IllegalStateException("Not enough data");
         }
 
