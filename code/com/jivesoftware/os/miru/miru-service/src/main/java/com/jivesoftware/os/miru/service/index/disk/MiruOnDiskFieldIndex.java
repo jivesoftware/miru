@@ -128,4 +128,10 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<
         }
         return iterators.iterator();
     }
+
+    public void copyTo(MiruOnDiskFieldIndex<BM> to) throws Exception {
+        for (int i = 0; i < indexes.length; i++) {
+            indexes[i].copyTo(to.indexes[i]);
+        }
+    }
 }

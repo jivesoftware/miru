@@ -100,44 +100,16 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             new PartitionedMapChunkBackedKeyedStore(activityMapChunkFactory, activitySwapChunkFactory, multiChunkStore, 24),
             new MiruInternalActivityMarshaller());
 
-        /*
-         @SuppressWarnings("unchecked")
-        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] indexes = new VariableKeySizeBytesObjectMapStore[schema.fieldCount()];
-        for (int fieldId : schema.getFieldIds()) {
-            @SuppressWarnings("unchecked")
-            BytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] mapStores = new BytesObjectMapStore[IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS.length];
-            for (int i = 0; i < IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS.length; i++) {
-                int keySize = IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS[i];
-                ByteBufferProviderBackedMapChunkFactory fieldMapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(keySize, true,
-                    0, false, 32, new ByteBufferProvider("field-" + fieldId + "-keySize-" + keySize, byteBufferFactory));
-                mapStores[i] = new BytesObjectMapStore<>(String.valueOf(keySize), keySize, null, fieldMapChunkFactory, PassThroughKeyMarshaller.INSTANCE);
-            }
-            indexes[fieldId] = new VariableKeySizeBytesObjectMapStore<>(mapStores, PassThroughKeyMarshaller.INSTANCE);
-        }
-
-        MiruHybridFieldIndex<BM> fieldIndex = new MiruHybridFieldIndex<>(bitmaps, indexes);*/
-        // begin ondisk hack
-        MiruResourcePartitionIdentifier identifier = hybridResourceLocator.acquire();
-        File[] baseIndexMapDirectories = hybridResourceLocator.getMapDirectories(identifier, "index");
-        File[] baseIndexSwapDirectories = hybridResourceLocator.getSwapDirectories(identifier, "index");
-
         VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
         for (int fieldId : schema.getFieldIds()) {
             //TODO expose to config
             VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
 
             for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
-                String[] mapDirectories = new String[baseIndexMapDirectories.length];
-                for (int i = 0; i < mapDirectories.length; i++) {
-                    mapDirectories[i] = new File(new File(baseIndexMapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
-                }
-                String[] swapDirectories = new String[baseIndexSwapDirectories.length];
-                for (int i = 0; i < swapDirectories.length; i++) {
-                    swapDirectories[i] = new File(new File(baseIndexSwapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
-                }
+                String key = "fieldId-" + fieldId + "-keySize-" + keySize;
                 builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
-                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
-                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
+                    new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-map", byteBufferFactory)),
+                    new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-swap", byteBufferFactory)),
                     multiChunkStore,
                     4)); //TODO expose number of partitions
             }
@@ -146,8 +118,6 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         }
 
         MiruOnDiskFieldIndex<BM> fieldIndex = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
-
-        // end ondisk hack
 
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -235,12 +205,42 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 //
 //        MiruHybridFieldIndex<BM> fieldIndex = new MiruHybridFieldIndex<>(bitmaps, indexes);
 //        ((MiruHybridFieldIndex<BM>) from.fieldIndex).copyTo(fieldIndex);
+        File[] baseIndexMapDirectories = hybridResourceLocator.getMapDirectories(identifier, "index");
+        File[] baseIndexSwapDirectories = hybridResourceLocator.getSwapDirectories(identifier, "index");
+
+        VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
+        for (int fieldId : schema.getFieldIds()) {
+            //TODO expose to config
+            VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+
+            for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
+                String[] mapDirectories = new String[baseIndexMapDirectories.length];
+                for (int i = 0; i < mapDirectories.length; i++) {
+                    mapDirectories[i] = new File(new File(baseIndexMapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
+                }
+                String[] swapDirectories = new String[baseIndexSwapDirectories.length];
+                for (int i = 0; i < swapDirectories.length; i++) {
+                    swapDirectories[i] = new File(new File(baseIndexSwapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
+                }
+                builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
+                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
+                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
+                    multiChunkStore,
+                    4)); //TODO expose number of partitions
+            }
+
+            indexes[fieldId] = builder.build();
+        }
+
+        MiruOnDiskFieldIndex<BM> fieldIndex = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
+
+        ((MiruOnDiskFieldIndex<BM>) from.fieldIndex).copyTo(fieldIndex);
 
         LOG.info("Updated context when hybrid state changed to {}", state);
         return new MiruContext<>(schema,
             from.timeIndex,
             activityIndex,
-            from.fieldIndex,
+            fieldIndex,
             from.authzIndex,
             from.removalIndex,
             from.unreadTrackingIndex,
