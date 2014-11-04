@@ -15,6 +15,8 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
@@ -45,6 +47,7 @@ public class MiruClientInitializer {
                 new ObjectMapper());
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
         MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
 
@@ -52,7 +55,13 @@ public class MiruClientInitializer {
                 registryStore.getWriterPartitionRegistry(),
                 miruWAL.getActivityWAL(),
                 miruWAL.getActivitySipWAL());
-        MiruPartitioner miruPartitioner = new MiruPartitioner(writerId, miruPartitionIdProvider, activityWALWriter, readTrackingWALWriter, activityLookupTable);
+        MiruPartitioner miruPartitioner = new MiruPartitioner(writerId,
+            miruPartitionIdProvider,
+            activityWALWriter,
+            activityWALReader,
+            readTrackingWALWriter,
+            activityLookupTable,
+            config.getPartitionMaximumAgeInMillis());
 
         return new MiruBestEffortFailureTolerantClient(sendActivitiesToHostsThreadPool,
             clusterRegistry,

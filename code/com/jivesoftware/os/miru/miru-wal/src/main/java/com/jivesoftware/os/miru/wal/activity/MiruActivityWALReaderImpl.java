@@ -159,4 +159,27 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
             null, null);
     }
 
+    @Override
+    public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        final MutableLong oldestClockTimestamp = new MutableLong(-1);
+        activityWAL.getValues(tenantId,
+            new MiruActivityWALRow(partitionId.getId()),
+            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), 0L),
+            null,
+            1,
+            false,
+            null,
+            null,
+            new CallbackStream<MiruPartitionedActivity>() {
+                @Override
+                public MiruPartitionedActivity callback(MiruPartitionedActivity miruPartitionedActivity) throws Exception {
+                    if (miruPartitionedActivity != null && miruPartitionedActivity.type.isActivityType()) {
+                        oldestClockTimestamp.setValue(miruPartitionedActivity.clockTimestamp);
+                    }
+                    return null; // one and done
+                }
+            });
+        return oldestClockTimestamp.longValue();
+    }
+
 }

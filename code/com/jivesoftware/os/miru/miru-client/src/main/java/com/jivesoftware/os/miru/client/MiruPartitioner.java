@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVersionedActivityLookupEntry;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import java.util.ArrayList;
@@ -29,43 +30,64 @@ public class MiruPartitioner {
     private final int writerId;
     private final MiruPartitionIdProvider partitionIdProvider;
     private final MiruActivityWALWriter activityWALWriter;
+    private final MiruActivityWALReader activityWALReader;
     private final MiruReadTrackingWALWriter readTrackingWAL;
     private final MiruActivityLookupTable activityLookupTable;
+    private final long partitionMaximumAgeInMillis;
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
     private final StripingLocksProvider<MiruTenantId> locks = new StripingLocksProvider<>(64);
 
     public MiruPartitioner(int writerId,
         MiruPartitionIdProvider partitionIdProvider,
         MiruActivityWALWriter activityWALWriter,
+        MiruActivityWALReader activityWALReader,
         MiruReadTrackingWALWriter readTrackingWAL,
-        MiruActivityLookupTable activityLookupTable) {
+        MiruActivityLookupTable activityLookupTable,
+        long partitionMaximumAgeInMillis) {
         this.writerId = writerId;
         this.partitionIdProvider = partitionIdProvider;
         this.activityWALWriter = activityWALWriter;
+        this.activityWALReader = activityWALReader;
         this.readTrackingWAL = readTrackingWAL;
         this.activityLookupTable = activityLookupTable;
+        this.partitionMaximumAgeInMillis = partitionMaximumAgeInMillis;
     }
 
     public void checkForAlignmentWithOtherWriters(MiruTenantId tenantId) throws Exception {
         synchronized (locks.lock(tenantId)) {
             MiruPartitionId largestPartitionIdAcrossAllWriters = partitionIdProvider.getLargestPartitionIdAcrossAllWriters(tenantId);
             MiruPartitionCursor partitionCursor = partitionIdProvider.getCursor(tenantId, writerId);
-            if (partitionCursor.getPartitionId().compareTo(largestPartitionIdAcrossAllWriters) < 0) {
-
+            MiruPartitionId currentPartitionId = partitionCursor.getPartitionId();
+            if (currentPartitionId.compareTo(largestPartitionIdAcrossAllWriters) < 0) {
                 List<MiruPartitionedActivity> partitionedActivities = new ArrayList<>();
-                for (MiruPartitionId partition = partitionCursor.getPartitionId();
-                    partition.compareTo(largestPartitionIdAcrossAllWriters) < 0;
-                    partition = partition.next()) {
+                for (MiruPartitionId partitionId = currentPartitionId;
+                    partitionId.compareTo(largestPartitionIdAcrossAllWriters) < 0;
+                    partitionId = partitionId.next()) {
 
-                    int latestIndex = partitionIdProvider.getLatestIndex(tenantId, partition, writerId);
-                    partitionedActivities.add(partitionedActivityFactory.begin(writerId, partition, tenantId, latestIndex));
-                    partitionedActivities.add(partitionedActivityFactory.end(writerId, partition, tenantId, latestIndex));
+                    int latestIndex = partitionIdProvider.getLatestIndex(tenantId, partitionId, writerId);
+                    partitionedActivities.add(partitionedActivityFactory.begin(writerId, partitionId, tenantId, latestIndex));
+                    partitionedActivities.add(partitionedActivityFactory.end(writerId, partitionId, tenantId, latestIndex));
                 }
 
                 int latestIndex = partitionIdProvider.getLatestIndex(tenantId, largestPartitionIdAcrossAllWriters, writerId);
                 partitionedActivities.add(partitionedActivityFactory.begin(writerId, largestPartitionIdAcrossAllWriters, tenantId, latestIndex));
 
                 flush(tenantId, largestPartitionIdAcrossAllWriters, true, partitionedActivities);
+                partitionIdProvider.setLargestPartitionIdForWriter(tenantId, largestPartitionIdAcrossAllWriters, writerId);
+            } else {
+                long oldestActivityClockTimestamp = activityWALReader.oldestActivityClockTimestamp(tenantId, currentPartitionId);
+                long ageOfOldestActivity = System.currentTimeMillis() - oldestActivityClockTimestamp;
+                if (oldestActivityClockTimestamp > 0 && ageOfOldestActivity > partitionMaximumAgeInMillis) {
+                    List<MiruPartitionedActivity> partitionedActivities = new ArrayList<>();
+                    int currentLatestIndex = partitionIdProvider.getLatestIndex(tenantId, currentPartitionId, writerId);
+                    partitionedActivities.add(partitionedActivityFactory.end(writerId, currentPartitionId, tenantId, currentLatestIndex));
+
+                    MiruPartitionId nextPartitionId = currentPartitionId.next();
+                    int nextLatestIndex = partitionIdProvider.getLatestIndex(tenantId, nextPartitionId, writerId);
+                    partitionedActivities.add(partitionedActivityFactory.begin(writerId, nextPartitionId, tenantId, nextLatestIndex));
+
+                    flush(tenantId, nextPartitionId, true, partitionedActivities);
+                }
             }
         }
     }

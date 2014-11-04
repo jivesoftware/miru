@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 /** @author jonathan */
 public class MiruClusterPartitionDirector implements MiruPartitionDirector {
@@ -157,6 +158,8 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     public void ensureServerPartitions() {
         try {
             List<MiruTenantId> expectedTenantsForHost = clusterRegistry.getTenantsForHost(host);
+            Random random = new Random(host.hashCode());
+            Collections.shuffle(expectedTenantsForHost, random);
             expectedTenants.expect(expectedTenantsForHost);
         } catch (Throwable t) {
             LOG.error("EnsureServerPartitions encountered a problem", t);
