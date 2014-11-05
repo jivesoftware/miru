@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.List;
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /** @author jonathan */
@@ -46,11 +45,12 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
         MiruActivityWALRow rowKey = rowKey(partitionId);
 
         final List<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
-        final MutableBoolean streaming = new MutableBoolean(true);
-        final MutableLong lastTimestamp = new MutableLong(afterTimestamp);
-        while (streaming.booleanValue()) {
+        boolean streaming = true;
+        byte lastSort = MiruPartitionedActivity.Type.ACTIVITY.getSort();
+        long lastTimestamp = afterTimestamp;
+        while (streaming) {
             try {
-                MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), lastTimestamp.longValue());
+                MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(lastSort, lastTimestamp);
                 activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                     new CallbackStream<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>>() {
                         @Override
@@ -69,14 +69,15 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                     });
 
                 if (cvats.size() < batchSize) {
-                    streaming.setValue(false);
+                    streaming = false;
                 }
                 for (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
                     if (streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
                         // activityWAL is inclusive of the given timestamp, so add 1
-                        lastTimestamp.setValue(v.getColumn().getCollisionId() + 1);
+                        lastSort = v.getColumn().getSort();
+                        lastTimestamp = v.getColumn().getCollisionId() + 1;
                     } else {
-                        streaming.setValue(false);
+                        streaming = false;
                         break;
                     }
                 }
@@ -104,11 +105,12 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
         MiruActivityWALRow rowKey = rowKey(partitionId);
 
         final List<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
-        final MutableBoolean streaming = new MutableBoolean(true);
-        final MutableLong lastTimestamp = new MutableLong(afterTimestamp);
-        while (streaming.booleanValue()) {
+        boolean streaming = true;
+        byte lastSort = MiruPartitionedActivity.Type.ACTIVITY.getSort();
+        long lastTimestamp = afterTimestamp;
+        while (streaming) {
             try {
-                MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), lastTimestamp.longValue());
+                MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(lastSort, lastTimestamp);
                 activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                     new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
                         @Override
@@ -127,14 +129,15 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                     });
 
                 if (cvats.size() < batchSize) {
-                    streaming.setValue(false);
+                    streaming = false;
                 }
                 for (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
                     if (streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
                         // activitySipWAL is exclusive of the given timestamp, so do NOT add 1
-                        lastTimestamp.setValue(v.getColumn().getCollisionId());
+                        lastSort = v.getColumn().getSort();
+                        lastTimestamp = v.getColumn().getCollisionId();
                     } else {
-                        streaming.setValue(false);
+                        streaming = false;
                         break;
                     }
                 }
