@@ -30,5 +30,7 @@
         <module>miru-stream-plugins-test</module>
         <module>miru-reco-plugins</module>
         <module>miru-reco-plugins-test</module>
+        <module>miru-analytics-plugins</module>
+        <module>miru-analytics-plugins-test</module>
     </modules>
 </project>
