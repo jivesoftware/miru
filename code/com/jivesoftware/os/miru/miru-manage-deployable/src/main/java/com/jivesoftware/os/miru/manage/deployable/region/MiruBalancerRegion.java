@@ -86,7 +86,7 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
             data.put("imageWidth", String.valueOf(totalWidth));
             data.put("hostWidth", hostWidth);
         } catch (Exception e) {
-            log.error("Unable to retrieve data");
+            log.error("Unable to retrieve data", e);
         }
 
         return renderer.render(template, data);

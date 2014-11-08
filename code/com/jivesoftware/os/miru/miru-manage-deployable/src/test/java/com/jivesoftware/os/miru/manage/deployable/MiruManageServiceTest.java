@@ -17,7 +17,6 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer.MiruManageConfig;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
@@ -28,6 +27,7 @@ import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import static com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -42,7 +42,7 @@ public class MiruManageServiceTest {
     public void before() throws Exception {
         int numberOfReplicas = 3;
 
-        MiruManageConfig config = BindInterfaceToConfiguration.bindDefault(MiruManageConfig.class);
+        MiruSoyRendererConfig config = BindInterfaceToConfiguration.bindDefault(MiruSoyRendererConfig.class);
         config.setPathToSoyResources("src/main/home/resources/soy");
 
         InMemorySetOfSortedMapsImplInitializer setOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
@@ -58,7 +58,8 @@ public class MiruManageServiceTest {
             numberOfReplicas,
             TimeUnit.HOURS.toMillis(1));
         MiruWAL miruWAL = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer, mapper);
-        miruManageService = new MiruManageInitializer().initialize(config, clusterRegistry, registryStore, miruWAL);
+        MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
+        miruManageService = new MiruManageInitializer().initialize(renderer, clusterRegistry, registryStore, miruWAL);
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
 

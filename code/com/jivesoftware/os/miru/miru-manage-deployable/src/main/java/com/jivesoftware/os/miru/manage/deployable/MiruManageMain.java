@@ -17,6 +17,11 @@ package com.jivesoftware.os.miru.manage.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
@@ -24,7 +29,8 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer.MiruManageConfig;
+import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.rcvs.api.SetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
@@ -34,6 +40,12 @@ import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
+import java.util.Collections;
+import java.util.List;
+import org.merlin.config.Config;
+import org.merlin.config.defaults.StringDefault;
+
+import static com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 
 public class MiruManageMain {
 
@@ -47,6 +59,16 @@ public class MiruManageMain {
         String getClusterName();
     }
     */
+
+    public interface AnalyticsPluginConfig extends Config {
+
+        @StringDefault(/*"soa-prime-data6.phx1.jivehosted.com:10004" + ',' +*/
+            "soa-prime-data7.phx1.jivehosted.com:10004" /* + ',' +
+            "soa-prime-data8.phx1.jivehosted.com:10004" + ',' +
+            "soa-prime-data9.phx1.jivehosted.com:10004" + ',' +
+            "soa-prime-data10.phx1.jivehosted.com:10004" */)
+        String getReaderHostPorts();
+    }
 
     public void run(String[] args) throws Exception {
 
@@ -63,26 +85,43 @@ public class MiruManageMain {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
 
-        MiruManageConfig manageConfig = deployable.config(MiruManageConfig.class);
+        MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
         MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-                registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                registryConfig.getDefaultNumberOfReplicas(),
-                registryConfig.getDefaultTopologyIsStaleAfterMillis());
+            registryStore.getHostsRegistry(),
+            registryStore.getExpectedTenantsRegistry(),
+            registryStore.getExpectedTenantPartitionsRegistry(),
+            registryStore.getReplicaRegistry(),
+            registryStore.getTopologyRegistry(),
+            registryStore.getConfigRegistry(),
+            registryConfig.getDefaultNumberOfReplicas(),
+            registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 
-        MiruManageService miruManageService = new MiruManageInitializer().initialize(manageConfig,
+        MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
+
+        MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
             clusterRegistry,
             registryStore,
             wal);
+
+        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+        AnalyticsPluginConfig analyticsPluginConfig = deployable.config(AnalyticsPluginConfig.class);
+        String[] hostPorts = analyticsPluginConfig.getReaderHostPorts().split(",");
+        RequestHelper[] analyticsRequestHelpers = new RequestHelper[hostPorts.length];
+        for (int i = 0; i < hostPorts.length; i++) {
+            String[] hpSplit = hostPorts[i].split(":");
+            analyticsRequestHelpers[i] = new RequestHelper(httpClientFactory.createClient(hpSplit[0], Integer.parseInt(hpSplit[1])), mapper);
+        }
+
+        List<MiruManagePlugin> plugins = Lists.newArrayList(
+            new MiruManagePlugin("Analytics",
+                "/miru/manage/analytics",
+                AnalyticsPluginEndpoints.class,
+                new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, analyticsRequestHelpers)));
 
         MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
             new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())));
@@ -90,15 +129,21 @@ public class MiruManageMain {
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
         Resource sourceTree = new Resource(staticResourceDir)
-                //.addResourcePath("../../../../../src/main/resources") // fluff?
-                .addResourcePath(manageConfig.getPathToStaticResources())
-                .setContext("/static");
+            //.addResourcePath("../../../../../src/main/resources") // fluff?
+            .addResourcePath(rendererConfig.getPathToStaticResources())
+            .setContext("/static");
 
         deployable.addEndpoints(MiruManageEndpoints.class);
         deployable.addInjectables(MiruManageService.class, miruManageService);
         deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
-        deployable.addResource(sourceTree);
 
+        for (MiruManagePlugin plugin : plugins) {
+            miruManageService.registerPlugin(plugin);
+            deployable.addEndpoints(plugin.endpointsClass);
+            deployable.addInjectables(plugin.region.getClass(), plugin.region);
+        }
+
+        deployable.addResource(sourceTree);
         deployable.buildServer().start();
 
     }

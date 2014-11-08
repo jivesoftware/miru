@@ -63,6 +63,14 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>http-client-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>http-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>id</artifactId>
         </dependency>
         <dependency>
@@ -107,9 +115,19 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-analytics-plugins</artifactId>
+            <version>0.130-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
             <version>0.130-SNAPSHOT</version>
             <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-plugin</artifactId>
+            <version>0.130-SNAPSHOT</version>
         </dependency>
 
         <dependency>

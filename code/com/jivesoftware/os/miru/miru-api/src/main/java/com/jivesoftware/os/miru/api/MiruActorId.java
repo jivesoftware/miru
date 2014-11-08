@@ -27,6 +27,8 @@ import java.util.Objects;
  */
 public class MiruActorId {
 
+    public static final MiruActorId NOT_PROVIDED = new MiruActorId(new Id(Long.MAX_VALUE));
+
     private final Id actorId;
 
     @JsonCreator

@@ -43,8 +43,10 @@ public class AnalyticsEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<AnalyticsAnswer> response = injectable.score(request);
 
-            log.info("scoreAnalyticing: " + response.answer.waveform.waveform.length
-                + " in " + (System.currentTimeMillis() - t) + " ms");
+            if (response.answer != null && response.answer.waveform != null) {
+                log.info("scoreAnalyticing: " + response.answer.waveform.waveform.length
+                    + " in " + (System.currentTimeMillis() - t) + " ms");
+            }
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
