@@ -62,11 +62,11 @@ public class MiruManageMain {
 
     public interface AnalyticsPluginConfig extends Config {
 
-        @StringDefault(/*"soa-prime-data6.phx1.jivehosted.com:10004" + ',' +*/
-            "soa-prime-data7.phx1.jivehosted.com:10004" /* + ',' +
+        @StringDefault("soa-prime-data6.phx1.jivehosted.com:10004" + ',' +
+            "soa-prime-data7.phx1.jivehosted.com:10004" + ',' +
             "soa-prime-data8.phx1.jivehosted.com:10004" + ',' +
             "soa-prime-data9.phx1.jivehosted.com:10004" + ',' +
-            "soa-prime-data10.phx1.jivehosted.com:10004" */)
+            "soa-prime-data10.phx1.jivehosted.com:10004")
         String getReaderHostPorts();
     }
 

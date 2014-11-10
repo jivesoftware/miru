@@ -55,6 +55,9 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<MiruTenant
         Map<String, Object> data = Maps.newHashMap();
         try {
             if (input.isPresent()) {
+                MiruTenantId tenantId = input.get();
+                data.put("tenant", tenantId.toString());
+
                 final int numberOfDays = 30; //TODO input?
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -77,7 +80,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<MiruTenant
                 RequestHelper requestHelper = requestHelpers[new Random().nextInt(requestHelpers.length)];
                 @SuppressWarnings("unchecked")
                 MiruResponse<AnalyticsAnswer> response = requestHelper.executeRequest(
-                    new MiruRequest<>(input.get(), MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                    new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
                         new AnalyticsQuery(
                             new MiruTimeRange(packCurrentTime - packNDays, packCurrentTime),
                             32,

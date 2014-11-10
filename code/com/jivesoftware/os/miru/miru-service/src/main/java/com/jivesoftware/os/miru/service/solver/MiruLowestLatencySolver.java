@@ -52,27 +52,26 @@ public class MiruLowestLatencySolver implements MiruSolver {
             MiruSolutionLog solutionLog)
             throws InterruptedException {
 
-        int solvers = initialSolvers;
         long failAfterTime = System.currentTimeMillis() + failAfterNMillis;
         long addAnotherSolverAfterNMillis = suggestedTimeoutInMillis.or(defaultAddAnotherSolverAfterNMillis);
 
         CompletionService<MiruPartitionResponse<R>> completionService = new ExecutorCompletionService<>(executor);
-        int n = 0;
+        int solversAdded = 0;
+        int solversFailed = 0;
         long startTime = System.currentTimeMillis();
-        List<SolvableFuture<R>> futures = new ArrayList<>(n);
-        List<MiruPartitionCoord> triedPartitions = new ArrayList<>(n);
+        List<SolvableFuture<R>> futures = new ArrayList<>(initialSolvers);
+        List<MiruPartitionCoord> triedPartitions = new ArrayList<>(initialSolvers);
         MiruSolved<R> solved = null;
         try {
-            while (solvables.hasNext() && solvers > 0) {
+            while (solvables.hasNext() && solversAdded < initialSolvers) {
                 MiruSolvable<R> solvable = solvables.next();
-                solutionLog.log("Initial solver index={} coord={}", n, solvable.getCoord());
+                solutionLog.log("Initial solver index={} coord={}", solversAdded, solvable.getCoord());
                 triedPartitions.add(solvable.getCoord());
                 futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
-                solvers--;
-                n++;
+                solversAdded++;
             }
-            for (int i = 0; i < n; ++i) {
-                boolean mayAddSolver = (n < maxNumberOfSolvers && solvables.hasNext());
+            while (solversFailed < maxNumberOfSolvers && System.currentTimeMillis() < failAfterTime) {
+                boolean mayAddSolver = (solversAdded < maxNumberOfSolvers && solvables.hasNext());
                 long timeout = Math.max(failAfterTime - System.currentTimeMillis(), 0);
                 if (timeout == 0) {
                     break; // out of time
@@ -81,15 +80,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                     timeout = Math.min(timeout, addAnotherSolverAfterNMillis);
                 }
                 Future<MiruPartitionResponse<R>> future = completionService.poll(timeout, TimeUnit.MILLISECONDS);
-                if (future == null) {
-                    if (mayAddSolver) {
-                        MiruSolvable<R> solvable = solvables.next();
-                        solutionLog.log("Added a solver coord={}", solvable.getCoord());
-                        triedPartitions.add(solvable.getCoord());
-                        futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
-                        n++;
-                    }
-                } else {
+                if (future != null) {
                     try {
                         MiruPartitionResponse<R> response = future.get();
                         if (response != null) {
@@ -119,7 +110,15 @@ public class MiruLowestLatencySolver implements MiruSolver {
                     } catch (ExecutionException e) {
                         log.debug("Solver failed to execute", e.getCause());
                         solutionLog.log("Solver failed to execute.");
+                        solversFailed++;
                     }
+                }
+                if (mayAddSolver) {
+                    MiruSolvable<R> solvable = solvables.next();
+                    solutionLog.log("Added a solver coord={}", solvable.getCoord());
+                    triedPartitions.add(solvable.getCoord());
+                    futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
+                    solversAdded++;
                 }
             }
         } finally {
