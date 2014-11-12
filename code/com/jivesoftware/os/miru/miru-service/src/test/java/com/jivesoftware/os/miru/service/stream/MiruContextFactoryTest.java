@@ -184,7 +184,7 @@ public class MiruContextFactoryTest {
 
         MiruContext<EWAHCompressedBitmap> miruContext = streamFactory.copy(bitmaps, coord, inMem, MiruBackingStorage.disk);
         streamFactory.markStorage(coord, MiruBackingStorage.disk);
-        streamFactory.close(miruContext);
+        streamFactory.close(miruContext, MiruBackingStorage.disk);
 
         assertEquals(streamFactory.findBackingStorage(coord), MiruBackingStorage.disk);
     }
@@ -199,7 +199,7 @@ public class MiruContextFactoryTest {
 
         MiruContext<EWAHCompressedBitmap> miruContext = streamFactory.copy(bitmaps, coord, inMem, MiruBackingStorage.mem_mapped);
         streamFactory.markStorage(coord, MiruBackingStorage.mem_mapped);
-        streamFactory.close(miruContext);
+        streamFactory.close(miruContext, MiruBackingStorage.mem_mapped);
 
         assertEquals(streamFactory.findBackingStorage(coord), MiruBackingStorage.mem_mapped);
     }

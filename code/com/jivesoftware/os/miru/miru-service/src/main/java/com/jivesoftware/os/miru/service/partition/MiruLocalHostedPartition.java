@@ -220,7 +220,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 closed = updatePartition(accessor, closed);
                 if (closed != null) {
                     if (accessor.context != null) {
-                        streamFactory.close(accessor.close());
+                        streamFactory.close(accessor.close(), accessor.info.storage);
                     }
                     clearFutures();
                 }
@@ -346,7 +346,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             migrated = updatePartition(accessor, migrated);
                             if (migrated != null) {
                                 if (fromStream != null) {
-                                    streamFactory.close(fromStream);
+                                    streamFactory.close(fromStream, existingStorage);
                                 }
                                 streamFactory.markStorage(coord, destinationStorage);
                                 updated = true;
@@ -375,13 +375,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                         MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage), migrateToState, 0);
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            streamFactory.close(fromStream);
+                            streamFactory.close(fromStream, existingStorage);
                             streamFactory.cleanDisk(coord);
                             streamFactory.markStorage(coord, destinationStorage);
                             updated = true;
                         } else {
                             log.warn("Partition at {} failed to migrate to {}", coord, destinationStorage);
-                            streamFactory.close(toStream);
+                            streamFactory.close(toStream, destinationStorage);
                             streamFactory.markStorage(coord, existingStorage);
                         }
 
@@ -402,12 +402,12 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            streamFactory.close(fromStream);
+                            streamFactory.close(fromStream, existingStorage);
                             streamFactory.markStorage(coord, destinationStorage);
                             updated = true;
                         } else {
                             log.warn("Partition at {} failed to migrate to {}, attempting to rewind", coord, destinationStorage);
-                            streamFactory.close(toStream);
+                            streamFactory.close(toStream, destinationStorage);
                             streamFactory.cleanDisk(coord);
                             streamFactory.markStorage(coord, existingStorage);
                         }
@@ -422,12 +422,12 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            streamFactory.close(fromStream);
+                            streamFactory.close(fromStream, existingStorage);
                             streamFactory.markStorage(coord, destinationStorage);
                             updated = true;
                         } else {
                             log.info("Partition at {} failed to migrate to {}", coord, destinationStorage);
-                            streamFactory.close(toStream);
+                            streamFactory.close(toStream, destinationStorage);
                             streamFactory.markStorage(coord, existingStorage);
                         }
 
@@ -566,6 +566,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             final AtomicLong rebuildTimestamp = new AtomicLong(accessor.rebuildTimestamp.get());
             final AtomicLong sipTimestamp = new AtomicLong(accessor.sipTimestamp.get());
 
+            log.debug("Starting rebuild at {} for {}", rebuildTimestamp.get(), coord);
+
             hbaseRebuildExecutors.submit(new Runnable() {
 
                 @Override
@@ -582,6 +584,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                                 public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
                                     batch.add(partitionedActivity);
                                     if (batch.size() == partitionRebuildBatchSize) {
+                                        log.debug("Delivering batch of size {} for {}", partitionRebuildBatchSize, coord);
                                         queue.put(batch);
                                         batch = Lists.newArrayListWithCapacity(partitionRebuildBatchSize);
                                         batchRef.set(batch);
@@ -595,10 +598,12 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                         List<MiruPartitionedActivity> batch = batchRef.get();
                         if (!batch.isEmpty()) {
+                            log.debug("Delivering batch of size {} for {}", batch.size(), coord);
                             queue.put(batch);
                         }
 
                         // signals end of rebuild
+                        log.debug("Signaling end of rebuild for {}", coord);
                         queue.put(Collections.<MiruPartitionedActivity>emptyList());
                     } catch (Exception x) {
                         log.error("Failure while rebuilding {}", new Object[] { coord }, x);
@@ -607,14 +612,19 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             });
 
             List<MiruPartitionedActivity> partitionedActivities;
+            int totalIndexed = 0;
             while (true) {
                 partitionedActivities = queue.take();
                 if (partitionedActivities.isEmpty()) {
                     // end of rebuild
+                    log.debug("Ending rebuild for {}", coord);
                     break;
                 }
 
-                for (int i = partitionedActivities.size() - 1; i > -1; i--) {
+                int count = partitionedActivities.size();
+                totalIndexed += count;
+                log.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
+                for (int i = count - 1; i > -1; i--) {
                     MiruPartitionedActivity partitionedActivity = partitionedActivities.get(i);
                     // only adjust timestamps for activity types
                     if (partitionedActivity.type.isActivityType()) {
@@ -632,7 +642,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 }
 
                 log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
-                int count = partitionedActivities.size();
                 try {
                     accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, rebuildIndexExecutor);
                     accessor.rebuildTimestamp.set(rebuildTimestamp.get());

@@ -138,7 +138,7 @@ public class MiruPluginTestBootstrap {
         long t = System.currentTimeMillis();
         while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
             Thread.sleep(10);
-            if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(5000)) {
+            if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(5)) {
                 Assert.fail("Partition failed to come online");
             }
         }

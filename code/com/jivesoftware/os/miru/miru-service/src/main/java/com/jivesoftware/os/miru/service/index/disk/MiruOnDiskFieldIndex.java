@@ -4,7 +4,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.filer.keyed.store.IBA;
+import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;

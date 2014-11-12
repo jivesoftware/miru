@@ -137,7 +137,7 @@ public class MiruContextFactory {
         diskResourceLocator.clean(new MiruPartitionCoordIdentifier(coord));
     }
 
-    public <BM> void close(MiruContext<BM> context) {
+    public <BM> void close(MiruContext<BM> context, MiruBackingStorage storage) {
         context.activityIndex.close();
         context.authzIndex.close();
         context.timeIndex.close();
@@ -147,6 +147,8 @@ public class MiruContextFactory {
         if (context.transientResource.isPresent()) {
             hybridResourceLocator.release(context.transientResource.get());
         }
+
+        getAllocator(storage).close(context);
     }
 
 }

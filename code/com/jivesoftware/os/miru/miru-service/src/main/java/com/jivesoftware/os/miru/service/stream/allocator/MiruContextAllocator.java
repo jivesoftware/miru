@@ -16,4 +16,6 @@ public interface MiruContextAllocator {
 
     <BM> MiruContext<BM> stateChanged(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM> from, MiruPartitionState state)
         throws Exception;
+
+    <BM> void close(MiruContext<BM> context);
 }

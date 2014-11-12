@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
-    private static final String DISK_FORMAT_VERSION = "version-6";
+    private static final String DISK_FORMAT_VERSION = "version-7";
 
     //TODO push to schema
     private static final int[] ON_DISK_FIELD_KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024 };
@@ -120,7 +120,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             "stream",
             numberOfChunkStores,
             resourceLocator.getInitialChunkSize(),
-            true);
+            true,
+            24);
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
             filerProviderFactory.getFilerProvider(identifier, "timeIndex"),
@@ -220,6 +221,10 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
     public <BM> MiruContext<BM> stateChanged(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM> from, MiruPartitionState state)
         throws Exception {
         return from;
+    }
+
+    @Override
+    public <BM> void close(MiruContext<BM> context) {
     }
 
     private String[] filesToPaths(File[] files) {

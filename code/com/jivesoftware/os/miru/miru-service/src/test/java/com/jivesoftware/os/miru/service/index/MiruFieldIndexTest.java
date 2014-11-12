@@ -113,7 +113,7 @@ public class MiruFieldIndexTest {
             Files.createTempDirectory("swap").toFile().getAbsolutePath()
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", initialChunkStoreSizeInBytes, false);
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", initialChunkStoreSizeInBytes, false, 8);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
 
         VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];
@@ -180,7 +180,7 @@ public class MiruFieldIndexTest {
             Files.createTempDirectory("swap").toFile().getAbsolutePath()
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", initialChunkStoreSizeInBytes, false);
+        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", initialChunkStoreSizeInBytes, false, 8);
         MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
 
         VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];

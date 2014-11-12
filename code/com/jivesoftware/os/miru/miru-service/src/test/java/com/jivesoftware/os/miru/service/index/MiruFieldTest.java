@@ -99,7 +99,7 @@ public class MiruFieldTest {
         };
 
         // 512 min size, times 10 field indexes
-        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunkDirectories, "data", 4, 5_120, false);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunkDirectories, "data", 4, 5_120, false, 8);
 
         VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];
         VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();

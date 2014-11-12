@@ -165,7 +165,7 @@ public class MiruUnreadTrackingIndexTest {
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath(),
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath()
         };
-        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunksDirs, "data", 4, 4_096, false);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunksDirs, "data", 4, 4_096, false, 8);
         MiruOnDiskUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(
                 bitmaps, mapDirs, swapDirs, multiChunkStore);
         miruOnDiskUnreadTrackingIndex.bulkImport(tenantId, miruInMemoryUnreadTrackingIndex);

@@ -149,7 +149,8 @@ public class MiruIndexerTest {
             new PartitionedMapChunkBackedKeyedStore(
                 createFileBackedMapChunkFactory("activity", 4, false, 8, false, 100, 2),
                 createFileBackedMapChunkFactory("activity", 4, false, 8, false, 100, 2),
-                new MultiChunkStore(new ChunkStoreInitializer().create(new Object(), new ByteBufferProvider("chunks", new HeapByteBufferFactory()), 512, true)),
+                new MultiChunkStore(new ChunkStoreInitializer().create(
+                    new Object(), new ByteBufferProvider("chunks", new HeapByteBufferFactory()), 512, true, 8)),
                 24),
             new MiruInternalActivityMarshaller());
 
@@ -197,7 +198,7 @@ public class MiruIndexerTest {
             new PartitionedMapChunkBackedKeyedStore(
                 createFileBackedMapChunkFactory("activity", 4, false, 8, false, 100, 2),
                 createFileBackedMapChunkFactory("activity", 4, false, 8, false, 100, 2),
-                new MultiChunkStore(new ChunkStoreInitializer().initialize(hybridChunksDir, "memmap", 512, true)),
+                new MultiChunkStore(new ChunkStoreInitializer().initialize(hybridChunksDir, "memmap", 512, true, 8)),
                 24),
             new MiruInternalActivityMarshaller());
 
@@ -221,7 +222,7 @@ public class MiruIndexerTest {
             Files.createTempDirectory("chunk").toFile().getAbsolutePath()
         };
         MultiChunkStore hybridMultiChunkStore = new ChunkStoreInitializer()
-            .initializeMultiFileBacked(hybridChunksDirs, "data", 4, initialChunkStoreSizeInBytes, false);
+            .initializeMultiFileBacked(hybridChunksDirs, "data", 4, initialChunkStoreSizeInBytes, false, 8);
         // Miru on-disk authz index
         MiruOnDiskAuthzIndex<EWAHCompressedBitmap> miruOnDiskAuthzIndex = new MiruOnDiskAuthzIndex<>(
             new MiruBitmapsEWAH(4),
@@ -286,7 +287,7 @@ public class MiruIndexerTest {
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath(),
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath()
         };
-        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunksDirs, "data", 4, initialChunkStoreSizeInBytes, false);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunksDirs, "data", 4, initialChunkStoreSizeInBytes, false, 8);
 
         VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];
         VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();

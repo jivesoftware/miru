@@ -72,7 +72,7 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(30_000)
     long getPartitionBanUnregisteredSchemaMillis();
 
-    @IntDefault(24)
+    @IntDefault(3)
     int getPartitionNumberOfChunkStores();
 
     @IntDefault(10_000)

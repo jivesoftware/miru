@@ -89,8 +89,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent(),
             new ByteBufferProviderBackedMapChunkFactory(8, false, 4, false, 32, new ByteBufferProvider("timeIndex", byteBufferFactory)));
 
-        MultiChunkStore multiChunkStore = new ChunkStoreInitializer()
-            .initializeMultiByteBufferBacked("chunks", byteBufferFactory, numberOfChunkStores, hybridResourceLocator.getInitialChunkSize(), true);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiByteBufferBacked(
+            "chunks", byteBufferFactory, numberOfChunkStores, hybridResourceLocator.getInitialChunkSize(), true, 24);
 
         MapChunkFactory activityMapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(4, false, 8, false, 100,
             new ByteBufferProvider("activityIndex-map", byteBufferFactory));
@@ -169,7 +169,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             fromMultiChunkStore,
             filesToPaths(hybridResourceLocator.getChunkDirectories(identifier, "chunk")),
             "stream",
-            true);
+            true,
+            24);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
             new PartitionedMapChunkBackedKeyedStore(
@@ -250,6 +251,17 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             from.streamLocks,
             Optional.of(multiChunkStore),
             Optional.of(identifier));
+    }
+
+    @Override
+    public <BM> void close(MiruContext<BM> context) {
+        if (context.chunkStore.isPresent()) {
+            try {
+                context.chunkStore.get().delete();
+            } catch (Exception e) {
+                LOG.warn("Failed to delete chunk store", e);
+            }
+        }
     }
 
     private String[] filesToPaths(File[] files) {
