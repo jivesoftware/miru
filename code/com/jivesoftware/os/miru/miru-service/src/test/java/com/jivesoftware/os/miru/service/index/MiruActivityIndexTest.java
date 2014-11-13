@@ -93,7 +93,7 @@ public class MiruActivityIndexTest {
             new PartitionedMapChunkBackedKeyedStore(
                 byteBufferProviderBackedMapChunkFactory,
                 byteBufferProviderBackedMapChunkFactory,
-                new ChunkStoreInitializer().initializeMultiFileBacked(byteBufferChunkDirs, "data", 4, 512, true, 8),
+                new ChunkStoreInitializer().initializeMultiFileBacked(byteBufferChunkDirs, "data", 4, 512, true, 8, 64),
                 24),
             new MiruInternalActivityMarshaller());
 
@@ -105,7 +105,7 @@ public class MiruActivityIndexTest {
             new PartitionedMapChunkBackedKeyedStore(
                 createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
                 createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-                new ChunkStoreInitializer().initializeMultiFileBacked(fileBackedChunkDirs, "data", 4, 512, true, 8),
+                new ChunkStoreInitializer().initializeMultiFileBacked(fileBackedChunkDirs, "data", 4, 512, true, 8, 64),
                 24),
             new MiruInternalActivityMarshaller());
 
@@ -134,7 +134,7 @@ public class MiruActivityIndexTest {
             new PartitionedMapChunkBackedKeyedStore(
                 byteBufferFactoryBackedMapChunkFactory,
                 byteBufferFactoryBackedMapChunkFactory,
-                new ChunkStoreInitializer().initializeMultiByteBufferBacked("chunks", byteBufferFactory, 4, 512, true, 8),
+                new ChunkStoreInitializer().initializeMultiByteBufferBacked("chunks", byteBufferFactory, 4, 512, true, 8, 64),
                 24),
             new MiruInternalActivityMarshaller());
 
@@ -154,7 +154,7 @@ public class MiruActivityIndexTest {
             new PartitionedMapChunkBackedKeyedStore(
                 createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
                 createFileBackedMapChunkFactory("memmap", 4, false, 8, false, 100, 2),
-                new ChunkStoreInitializer().initializeMultiFileBacked(fileBackedChunkDirs, "data", 4, 512, true, 8),
+                new ChunkStoreInitializer().initializeMultiFileBacked(fileBackedChunkDirs, "data", 4, 512, true, 8, 64),
                 24),
             new MiruInternalActivityMarshaller());
         fileBackedHybridActivityIndex.bulkImport(tenantId, byteBufferHybridActivityIndex);
@@ -175,7 +175,7 @@ public class MiruActivityIndexTest {
             new PartitionedMapChunkBackedKeyedStore(
                 mapChunkFactory,
                 swapChunkFactory,
-                new ChunkStoreInitializer().initializeMultiFileBacked(chunkDirs1, "data", 4, 512, true, 8),
+                new ChunkStoreInitializer().initializeMultiFileBacked(chunkDirs1, "data", 4, 512, true, 8, 64),
                 24),
             new MiruInternalActivityMarshaller());
     }

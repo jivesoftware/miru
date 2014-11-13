@@ -29,7 +29,7 @@ public class MiruOnDiskInvertedIndexTest {
     @Test(enabled = false)
     public void testSetGetIndex() throws Exception {
         HeapByteBufferFactory byteBufferFactory = new HeapByteBufferFactory();
-        final MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiByteBufferBacked("test", byteBufferFactory, 1, 512, true, 8);
+        final MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiByteBufferBacked("test", byteBufferFactory, 1, 512, true, 8, 64);
         ByteBufferProviderBackedMapChunkFactory mapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(4, false, 8, false, 512,
             new ByteBufferProvider("test-bbp", byteBufferFactory));
         KeyPartitioner<IBA> keyPartitioner = new KeyPartitioner<IBA>() {

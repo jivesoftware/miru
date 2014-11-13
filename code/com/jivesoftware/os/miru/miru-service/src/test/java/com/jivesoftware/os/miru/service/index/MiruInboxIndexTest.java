@@ -127,7 +127,7 @@ public class MiruInboxIndexTest {
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "chunk", 4_096, false, 8);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(64, chunkStore);
         MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore);
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 
@@ -177,7 +177,7 @@ public class MiruInboxIndexTest {
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "chunk", 4_096, false, 8);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(64, chunkStore);
         MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore);
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 

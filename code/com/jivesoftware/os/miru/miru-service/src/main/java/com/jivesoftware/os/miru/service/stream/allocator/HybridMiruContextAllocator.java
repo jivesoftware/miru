@@ -60,6 +60,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
     private final int numberOfChunkStores;
     private final int partitionAuthzCacheSize;
     private final boolean partitionDeleteChunkStoreOnClose;
+    private final int partitionChunkStoreConcurrencyLevel;
+    private final int partitionChunkStoreStripingLevel;
 
     public HybridMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -68,7 +70,9 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         ByteBufferFactory byteBufferFactory,
         int numberOfChunkStores,
         int partitionAuthzCacheSize,
-        boolean partitionDeleteChunkStoreOnClose) {
+        boolean partitionDeleteChunkStoreOnClose,
+        int partitionChunkStoreConcurrencyLevel,
+        int partitionChunkStoreStripingLevel) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -77,6 +81,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.partitionDeleteChunkStoreOnClose = partitionDeleteChunkStoreOnClose;
+        this.partitionChunkStoreConcurrencyLevel = partitionChunkStoreConcurrencyLevel;
+        this.partitionChunkStoreStripingLevel = partitionChunkStoreStripingLevel;
     }
 
     @Override
@@ -93,7 +99,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             new ByteBufferProviderBackedMapChunkFactory(8, false, 4, false, 32, new ByteBufferProvider("timeIndex", byteBufferFactory)));
 
         MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiByteBufferBacked(
-            "chunks", byteBufferFactory, numberOfChunkStores, hybridResourceLocator.getInitialChunkSize(), true, 24);
+            "chunks", byteBufferFactory, numberOfChunkStores, hybridResourceLocator.getInitialChunkSize(), true,
+            partitionChunkStoreConcurrencyLevel, partitionChunkStoreStripingLevel);
 
         MapChunkFactory activityMapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(4, false, 8, false, 100,
             new ByteBufferProvider("activityIndex-map", byteBufferFactory));
@@ -173,7 +180,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             filesToPaths(hybridResourceLocator.getChunkDirectories(identifier, "chunk")),
             "stream",
             true,
-            24);
+            partitionChunkStoreConcurrencyLevel,
+            partitionChunkStoreStripingLevel);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
             new PartitionedMapChunkBackedKeyedStore(

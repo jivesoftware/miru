@@ -86,7 +86,7 @@ public class MiruAuthzIndexTest {
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", 16_384, false, 8);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(64, chunkStore);
         MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex =
              new MiruOnDiskAuthzIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore, cache(bitmaps, miruAuthzUtils, 10));
         smallMiruOnDiskAuthzIndex.bulkImport(tenantId, smallMiruInMemoryAuthzIndex);

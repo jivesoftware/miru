@@ -129,7 +129,9 @@ public class MiruServiceInitializer {
             byteBufferFactory,
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
-            config.getPartitionDeleteChunkStoreOnClose());
+            config.getPartitionDeleteChunkStoreOnClose(),
+            config.getPartitionChunkStoreConcurrencyLevel(),
+            config.getPartitionChunkStoreStripingLevel());
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
@@ -144,7 +146,9 @@ public class MiruServiceInitializer {
                 }
             },
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize());
+            config.getPartitionAuthzCacheSize(),
+            config.getPartitionChunkStoreConcurrencyLevel(),
+            config.getPartitionChunkStoreStripingLevel());
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
             schemaProvider,
             internExtern,
@@ -157,7 +161,9 @@ public class MiruServiceInitializer {
                 }
             },
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize());
+            config.getPartitionAuthzCacheSize(),
+            config.getPartitionChunkStoreConcurrencyLevel(),
+            config.getPartitionChunkStoreStripingLevel());
 
         MiruContextFactory streamFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

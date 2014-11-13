@@ -118,4 +118,10 @@ public interface MiruServiceConfig extends Config {
 
     @BooleanDefault(true)
     public boolean getUseOffHeapBuffers();
+
+    @IntDefault(24)
+    int getPartitionChunkStoreConcurrencyLevel();
+
+    @IntDefault(1024)
+    int getPartitionChunkStoreStripingLevel();
 }

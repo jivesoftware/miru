@@ -140,6 +140,8 @@ public class MiruLocalHostedPartitionTest {
         when(config.getDefaultStorage()).thenReturn(defaultStorage.name());
         when(config.getPartitionNumberOfChunkStores()).thenReturn(1);
         when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
+        when(config.getPartitionChunkStoreConcurrencyLevel()).thenReturn(8);
+        when(config.getPartitionChunkStoreStripingLevel()).thenReturn(64);
 
         RowColumnValueStoreImpl<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity> activityWAL =
             new RowColumnValueStoreImpl<>();
@@ -173,7 +175,9 @@ public class MiruLocalHostedPartitionTest {
             new HeapByteBufferFactory(),
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
-            config.getPartitionDeleteChunkStoreOnClose());
+            config.getPartitionDeleteChunkStoreOnClose(),
+            config.getPartitionChunkStoreConcurrencyLevel(),
+            config.getPartitionChunkStoreStripingLevel());
 
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
             schemaProvider,
@@ -187,7 +191,9 @@ public class MiruLocalHostedPartitionTest {
                 }
             },
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize());
+            config.getPartitionAuthzCacheSize(),
+            config.getPartitionChunkStoreConcurrencyLevel(),
+            config.getPartitionChunkStoreStripingLevel());
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
             schemaProvider,
             activityInternExtern,
@@ -200,7 +206,9 @@ public class MiruLocalHostedPartitionTest {
                 }
             },
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize());
+            config.getPartitionAuthzCacheSize(),
+            config.getPartitionChunkStoreConcurrencyLevel(),
+            config.getPartitionChunkStoreStripingLevel());
 
         contextFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

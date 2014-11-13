@@ -64,6 +64,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
     private final int numberOfChunkStores;
     private final int partitionAuthzCacheSize;
     private final MiruDiskResourceAnalyzer diskResourceAnalyzer = new MiruDiskResourceAnalyzer();
+    private final int partitionChunkStoreConcurrencyLevel;
+    private final int partitionChunkStoreStripingLevel;
 
     public OnDiskMiruContextAllocator(String contextName,
         MiruSchemaProvider schemaProvider,
@@ -72,7 +74,9 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         MiruResourceLocator resourceLocator,
         MiruFilerProviderFactory filerProviderFactory,
         int numberOfChunkStores,
-        int partitionAuthzCacheSize) {
+        int partitionAuthzCacheSize,
+        int partitionChunkStoreConcurrencyLevel,
+        int partitionChunkStoreStripingLevel) {
         this.contextName = contextName;
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
@@ -81,6 +85,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         this.filerProviderFactory = filerProviderFactory;
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
+        this.partitionChunkStoreConcurrencyLevel = partitionChunkStoreConcurrencyLevel;
+        this.partitionChunkStoreStripingLevel = partitionChunkStoreStripingLevel;
     }
 
     @Override
@@ -121,7 +127,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             numberOfChunkStores,
             resourceLocator.getInitialChunkSize(),
             true,
-            24);
+            partitionChunkStoreConcurrencyLevel,
+            partitionChunkStoreStripingLevel);
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
             filerProviderFactory.getFilerProvider(identifier, "timeIndex"),
