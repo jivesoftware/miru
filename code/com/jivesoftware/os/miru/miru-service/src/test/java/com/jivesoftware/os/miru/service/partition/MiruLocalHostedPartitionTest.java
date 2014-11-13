@@ -138,6 +138,8 @@ public class MiruLocalHostedPartitionTest {
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
         when(config.getDefaultStorage()).thenReturn(defaultStorage.name());
+        when(config.getPartitionNumberOfChunkStores()).thenReturn(1);
+        when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
 
         RowColumnValueStoreImpl<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity> activityWAL =
             new RowColumnValueStoreImpl<>();
@@ -170,7 +172,8 @@ public class MiruLocalHostedPartitionTest {
             new MiruTempDirectoryResourceLocator(),
             new HeapByteBufferFactory(),
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize());
+            config.getPartitionAuthzCacheSize(),
+            config.getPartitionDeleteChunkStoreOnClose());
 
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
             schemaProvider,

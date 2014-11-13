@@ -78,6 +78,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(10_000)
     int getPartitionAuthzCacheSize();
 
+    @BooleanDefault(true)
+    boolean getPartitionDeleteChunkStoreOnClose();
+
     @StringDefault("hybrid")
     String getDefaultStorage();
 

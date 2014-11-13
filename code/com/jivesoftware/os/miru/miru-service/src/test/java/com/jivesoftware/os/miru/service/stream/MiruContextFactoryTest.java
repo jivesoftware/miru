@@ -63,6 +63,7 @@ public class MiruContextFactoryTest {
         when(config.getDefaultStorage()).thenReturn(MiruBackingStorage.memory.name());
         when(config.getPartitionNumberOfChunkStores()).thenReturn(4);
         when(config.getPartitionAuthzCacheSize()).thenReturn(2);
+        when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
 
         RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
             new RowColumnValueStoreImpl<>();
@@ -86,7 +87,8 @@ public class MiruContextFactoryTest {
             hybridResourceLocator,
             new HeapByteBufferFactory(),
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize());
+            config.getPartitionAuthzCacheSize(),
+            config.getPartitionDeleteChunkStoreOnClose());
 
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
             schemaProvider,

@@ -59,6 +59,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
     private final ByteBufferFactory byteBufferFactory;
     private final int numberOfChunkStores;
     private final int partitionAuthzCacheSize;
+    private final boolean partitionDeleteChunkStoreOnClose;
 
     public HybridMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -66,7 +67,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         MiruHybridResourceLocator hybridResourceLocator,
         ByteBufferFactory byteBufferFactory,
         int numberOfChunkStores,
-        int partitionAuthzCacheSize) {
+        int partitionAuthzCacheSize,
+        boolean partitionDeleteChunkStoreOnClose) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -74,6 +76,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         this.byteBufferFactory = byteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
+        this.partitionDeleteChunkStoreOnClose = partitionDeleteChunkStoreOnClose;
     }
 
     @Override
@@ -255,7 +258,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
     @Override
     public <BM> void close(MiruContext<BM> context) {
-        if (context.chunkStore.isPresent()) {
+        if (context.chunkStore.isPresent() && partitionDeleteChunkStoreOnClose) {
             try {
                 context.chunkStore.get().delete();
             } catch (Exception e) {

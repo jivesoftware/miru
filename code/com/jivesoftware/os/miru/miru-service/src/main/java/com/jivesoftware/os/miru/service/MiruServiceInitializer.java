@@ -128,7 +128,8 @@ public class MiruServiceInitializer {
             transientResourceLocator,
             byteBufferFactory,
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize());
+            config.getPartitionAuthzCacheSize(),
+            config.getPartitionDeleteChunkStoreOnClose());
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
