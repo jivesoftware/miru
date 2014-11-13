@@ -565,6 +565,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             final ArrayBlockingQueue<List<MiruPartitionedActivity>> queue = new ArrayBlockingQueue<>(1);
             final AtomicLong rebuildTimestamp = new AtomicLong(accessor.rebuildTimestamp.get());
             final AtomicLong sipTimestamp = new AtomicLong(accessor.sipTimestamp.get());
+            final AtomicBoolean rebuilding = new AtomicBoolean(true);
 
             log.debug("Starting rebuild at {} for {}", rebuildTimestamp.get(), coord);
 
@@ -585,13 +586,20 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                                     batch.add(partitionedActivity);
                                     if (batch.size() == partitionRebuildBatchSize) {
                                         log.debug("Delivering batch of size {} for {}", partitionRebuildBatchSize, coord);
-                                        queue.put(batch);
+                                        synchronized (rebuilding) {
+                                            if (rebuilding.get()) {
+                                                queue.put(batch);
+                                            } else {
+                                                log.info("Aborting rebuild mid stream from WAL for {}", coord);
+                                                return false;
+                                            }
+                                        }
                                         batch = Lists.newArrayListWithCapacity(partitionRebuildBatchSize);
                                         batchRef.set(batch);
                                     }
 
-                                    // stop if the accessor has changed
-                                    return accessorRef.get() == accessor;
+                                    // stop if the rebuild has died, or the accessor has changed
+                                    return rebuilding.get() && accessorRef.get() == accessor;
                                 }
                             }
                         );
@@ -599,12 +607,26 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                         List<MiruPartitionedActivity> batch = batchRef.get();
                         if (!batch.isEmpty()) {
                             log.debug("Delivering batch of size {} for {}", batch.size(), coord);
-                            queue.put(batch);
+                            synchronized (rebuilding) {
+                                if (rebuilding.get()) {
+                                    queue.put(batch);
+                                } else {
+                                    log.info("Aborting rebuild final stream from WAL for {}", coord);
+                                    return;
+                                }
+                            }
                         }
 
                         // signals end of rebuild
                         log.debug("Signaling end of rebuild for {}", coord);
-                        queue.put(Collections.<MiruPartitionedActivity>emptyList());
+                        synchronized (rebuilding) {
+                            if (rebuilding.get()) {
+                                queue.put(Collections.<MiruPartitionedActivity>emptyList());
+                            } else {
+                                log.info("Aborting rebuild end of stream from WAL for {}", coord);
+                                return;
+                            }
+                        }
                     } catch (Exception x) {
                         log.error("Failure while rebuilding {}", new Object[] { coord }, x);
                     }
@@ -646,6 +668,14 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, rebuildIndexExecutor);
                     accessor.rebuildTimestamp.set(rebuildTimestamp.get());
                     accessor.sipTimestamp.set(sipTimestamp.get());
+                } catch (Exception e) {
+                    log.error("Failure during rebuild index for {}", coord);
+                    synchronized (rebuilding) {
+                        rebuilding.set(false);
+                        // clear the queue to free up hbase_rebuild thread
+                        queue.clear();
+                    }
+                    throw e;
                 } finally {
                     log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                     log.inc("rebuild", count);
