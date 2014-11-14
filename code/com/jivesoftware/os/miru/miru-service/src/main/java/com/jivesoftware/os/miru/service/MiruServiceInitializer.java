@@ -57,10 +57,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class MiruServiceInitializer {
 
@@ -98,9 +96,6 @@ public class MiruServiceInitializer {
 
         final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
             new NamedThreadFactory(threadGroup, "hbase_rebuild_consumer"));
-
-        final ExecutorService rebuildIndexExecutor = Executors.newFixedThreadPool(config.getRebuildIndexerThreads(),
-            new NamedThreadFactory(threadGroup, "rebuild_index"));
 
         final ExecutorService sipIndexExecutor = Executors.newFixedThreadPool(config.getSipIndexerThreads(),
             new NamedThreadFactory(threadGroup, "sip_index"));
@@ -213,8 +208,8 @@ public class MiruServiceInitializer {
             scheduledRebuildExecutor,
             scheduledSipMigrateExecutor,
             rebuildExecutors,
-            rebuildIndexExecutor,
             sipIndexExecutor,
+            config.getRebuildIndexerThreads(),
             indexRepairs);
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
             httpClientFactory,
@@ -289,30 +284,4 @@ public class MiruServiceInitializer {
         };
     }
 
-    private static class NamedThreadFactory implements ThreadFactory {
-
-        private final ThreadGroup g;
-        private final String namePrefix;
-        private final AtomicLong threadNumber;
-
-        public NamedThreadFactory(ThreadGroup g, String name) {
-            this.g = g;
-            namePrefix = name + "-";
-            threadNumber = new AtomicLong();
-        }
-
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(g, r,
-                namePrefix + threadNumber.getAndIncrement(),
-                0);
-            if (t.isDaemon()) {
-                t.setDaemon(false);
-            }
-            if (t.getPriority() != Thread.NORM_PRIORITY) {
-                t.setPriority(Thread.NORM_PRIORITY);
-            }
-            return t;
-        }
-    }
 }

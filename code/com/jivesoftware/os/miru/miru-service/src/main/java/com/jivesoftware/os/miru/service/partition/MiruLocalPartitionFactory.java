@@ -25,8 +25,8 @@ public class MiruLocalPartitionFactory {
     private final ScheduledExecutorService scheduledRebuildExecutor;
     private final ScheduledExecutorService scheduledSipMigrateExecutor;
     private final ExecutorService rebuildExecutors;
-    private final ExecutorService rebuildIndexExecutor;
     private final ExecutorService sipIndexExecutor;
+    private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
 
     public MiruLocalPartitionFactory(Timestamper timestamper,
@@ -38,8 +38,8 @@ public class MiruLocalPartitionFactory {
         ScheduledExecutorService scheduledRebuildExecutor,
         ScheduledExecutorService scheduledSipMigrateExecutor,
         ExecutorService rebuildExecutors,
-        ExecutorService rebuildIndexExecutor,
         ExecutorService sipIndexExecutor,
+        int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs) {
         this.timestamper = timestamper;
         this.config = config;
@@ -50,8 +50,8 @@ public class MiruLocalPartitionFactory {
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
         this.scheduledSipMigrateExecutor = scheduledSipMigrateExecutor;
         this.rebuildExecutors = rebuildExecutors;
-        this.rebuildIndexExecutor = rebuildIndexExecutor;
         this.sipIndexExecutor = sipIndexExecutor;
+        this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
     }
 
@@ -63,8 +63,8 @@ public class MiruLocalPartitionFactory {
             scheduledRebuildExecutor,
             scheduledSipMigrateExecutor,
             rebuildExecutors,
-            rebuildIndexExecutor,
             sipIndexExecutor,
+            rebuildIndexerThreads,
             indexRepairs,
             new MiruIndexer<>(bitmaps),
             config.getPartitionWakeOnIndex(),

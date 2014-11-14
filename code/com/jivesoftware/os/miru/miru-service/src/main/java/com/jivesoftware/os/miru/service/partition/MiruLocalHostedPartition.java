@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.service.NamedThreadFactory;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
@@ -33,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -65,8 +67,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final ScheduledExecutorService scheduledRebuildExecutor;
     private final ScheduledExecutorService scheduledSipMigrateExecutor;
     private final ExecutorService hbaseRebuildExecutors;
-    private final ExecutorService rebuildIndexExecutor;
     private final ExecutorService sipIndexExecutor;
+    private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM> indexer;
     private final boolean partitionWakeOnIndex;
@@ -113,8 +115,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         ScheduledExecutorService scheduledRebuildExecutor,
         ScheduledExecutorService scheduledSipMigrateExecutor,
         ExecutorService hbaseRebuildExecutors,
-        ExecutorService rebuildIndexExecutor,
         ExecutorService sipIndexExecutor,
+        int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer,
         boolean partitionWakeOnIndex,
@@ -135,8 +137,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
         this.scheduledSipMigrateExecutor = scheduledSipMigrateExecutor;
         this.hbaseRebuildExecutors = hbaseRebuildExecutors;
-        this.rebuildIndexExecutor = rebuildIndexExecutor;
         this.sipIndexExecutor = sipIndexExecutor;
+        this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
         this.partitionWakeOnIndex = partitionWakeOnIndex;
@@ -570,6 +572,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
             log.debug("Starting rebuild at {} for {}", rebuildTimestamp.get(), coord);
 
+            final ExecutorService rebuildIndexExecutor = Executors.newFixedThreadPool(rebuildIndexerThreads,
+                new NamedThreadFactory(Thread.currentThread().getThreadGroup(), "rebuild_index_" + coord.tenantId + "_" + coord.partitionId));
+
             hbaseRebuildExecutors.submit(new Runnable() {
 
                 @Override
@@ -684,6 +689,14 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     log.inc("rebuild>tenant>" + coord.tenantId, count);
                     log.inc("rebuild>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, count);
                 }
+            }
+
+            rebuildIndexExecutor.shutdown();
+            try {
+                rebuildIndexExecutor.awaitTermination(1, TimeUnit.MINUTES); //TODO expose to config
+            } catch (InterruptedException e) {
+                log.warn("Rebuild index executor for {} never shut down, threads may leak", coord);
+                Thread.interrupted();
             }
 
             return accessorRef.get() == accessor;
