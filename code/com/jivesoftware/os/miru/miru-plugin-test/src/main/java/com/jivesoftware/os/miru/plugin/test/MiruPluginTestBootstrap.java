@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -41,10 +42,13 @@ import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
+import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemorySetOfSortedMapsImplInitializer;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.merlin.config.Config;
@@ -60,7 +64,8 @@ public class MiruPluginTestBootstrap {
         MiruHost miruHost,
         MiruSchema miruSchema,
         MiruBackingStorage desiredStorage,
-        final MiruBitmaps<BM> bitmaps)
+        final MiruBitmaps<BM> bitmaps,
+        List<MiruPartitionedActivity> partitionedActivities)
         throws Exception {
 
         HealthFactory.initialize(
@@ -110,7 +115,10 @@ public class MiruPluginTestBootstrap {
             System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
-
+        if (!partitionedActivities.isEmpty()) {
+            MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
+            activityWALWriter.write(tenantId, partitionedActivities);
+        }
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer().initialize(config, miruHost);
 
@@ -136,9 +144,10 @@ public class MiruPluginTestBootstrap {
         final MiruService miruService = miruServiceLifecyle.getService();
 
         long t = System.currentTimeMillis();
+        int maxSecondsToComeOnline = 5 + partitionedActivities.size() / 1_000; // suppose 1K activities/sec
         while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
             Thread.sleep(10);
-            if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(5)) {
+            if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(maxSecondsToComeOnline)) {
                 Assert.fail("Partition failed to come online");
             }
         }

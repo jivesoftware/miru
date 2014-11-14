@@ -81,6 +81,16 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(true)
     boolean getPartitionDeleteChunkStoreOnClose();
 
+    @IntDefault(24)
+    int getPartitionChunkStoreConcurrencyLevel();
+
+    void setPartitionChunkStoreConcurrencyLevel(int partitionChunkStoreConcurrencyLevel);
+
+    @IntDefault(1024)
+    int getPartitionChunkStoreStripingLevel();
+
+    void setPartitionChunkStoreStripingLevel(int partitionChunkStoreStripingLevel);
+
     @StringDefault("hybrid")
     String getDefaultStorage();
 
@@ -113,15 +123,12 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(24)
     int getRebuildIndexerThreads();
 
+    void setRebuildIndexerThreads(int rebuildIndexerThreads);
+
     @IntDefault(24)
     int getSipIndexerThreads();
 
     @BooleanDefault(true)
     public boolean getUseOffHeapBuffers();
 
-    @IntDefault(24)
-    int getPartitionChunkStoreConcurrencyLevel();
-
-    @IntDefault(1024)
-    int getPartitionChunkStoreStripingLevel();
 }

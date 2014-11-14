@@ -37,6 +37,7 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsEndpoints;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -68,7 +69,7 @@ public class InMemoryEndpointsTest {
         MiruSchema schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenantId, partitionId, miruHost, schema, desiredStorage,
-            new MiruBitmapsRoaring());
+            new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
 
         MiruService miruService = miruProvider.getMiru(tenantId);
 

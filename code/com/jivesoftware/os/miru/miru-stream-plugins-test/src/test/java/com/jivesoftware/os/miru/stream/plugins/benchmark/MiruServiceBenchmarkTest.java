@@ -19,6 +19,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
@@ -37,6 +38,7 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCounts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -139,7 +141,7 @@ public class MiruServiceBenchmarkTest {
         MiruSchema schema = new MiruSchema(FIELDS);
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenantId, partitionId, miruHost, schema, MiruBackingStorage.hybrid,
-            new MiruBitmapsRoaring());
+            new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
         this.miruService = miruProvider.getMiru(tenantId);
         this.injectable = new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider));
 

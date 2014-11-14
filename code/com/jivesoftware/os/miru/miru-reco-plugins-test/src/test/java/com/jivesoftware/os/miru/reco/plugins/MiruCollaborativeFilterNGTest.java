@@ -8,12 +8,14 @@ package com.jivesoftware.os.miru.reco.plugins;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -58,27 +60,39 @@ public class MiruCollaborativeFilterNGTest {
     MiruHost miruHost = new MiruHost("logicalName", 1_234);
     CollaborativeFilterUtil util = new CollaborativeFilterUtil();
     MiruIndexUtil indexUtil = new MiruIndexUtil();
+    AtomicInteger time = new AtomicInteger();
+    AtomicInteger walIndex = new AtomicInteger();
+    Random rand = new Random(1_234);
+
+    int numqueries = 2;
+    int numberOfUsers = 2;
+    int numberOfDocument = 1000;
+    int numberOfViewsPerUser = 100;
 
     MiruService service;
     RecoInjectable injectable;
 
     @BeforeMethod
     public void setUpMethod() throws Exception {
+        MiruPartitionedActivityFactory factory = new MiruPartitionedActivityFactory();
+        List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList();
+        int writerId = 1;
+        int numActivities = 0;
+        partitionedActivities.add(factory.begin(writerId, partitionId, tenant1, numActivities));
+        for (int index = 1; index <= numActivities; index++) {
+            partitionedActivities.add(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "wilma",
+                String.valueOf(rand.nextInt(numberOfDocument)), walIndex.incrementAndGet()));
+        }
+
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring());
+            miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
         this.injectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil()));
     }
 
-    @Test (enabled = true)
+    @Test(enabled = true)
     public void basicTest() throws Exception {
-        AtomicInteger time = new AtomicInteger();
-        Random rand = new Random(1_234);
-        int numqueries = 2;
-        int numberOfUsers = 2;
-        int numberOfDocument = 1000;
-        int numberOfViewsPerUser = 100;
         System.out.println("Building activities....");
         long start = System.currentTimeMillis();
         int count = 0;
@@ -95,7 +109,7 @@ public class MiruCollaborativeFilterNGTest {
             for (int d = 0; d < numberOfViewsPerUser; d++) {
                 int docId = userRand.nextInt(numberOfDocument);
                 long activityTime = time.incrementAndGet();
-                batch.add(util.viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId)));
+                batch.add(util.viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId), walIndex.incrementAndGet()));
                 if (++count % 10_000 == 0) {
                     service.writeToIndex(batch);
                     batch.clear();
@@ -110,34 +124,52 @@ public class MiruCollaborativeFilterNGTest {
 
         System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
 
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "1")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "2")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "3")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "4")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "9")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "1",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "2",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "3",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "bob0", "9",
+            walIndex.incrementAndGet())));
 
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "1")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "2")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "3")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "4")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "10")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "1",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "2",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "3",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "frank", "10",
+            walIndex.incrementAndGet())));
 
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "2")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "3")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "4")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "11")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "2",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "3",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "jane", "11",
+            walIndex.incrementAndGet())));
 
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "3")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "4")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "12")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "12")));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "3",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "12",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.incrementAndGet(), "liz", "12",
+            walIndex.incrementAndGet())));
 
         System.out.println("Running queries...");
 
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + i;
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(
-                    indexUtil.makeFieldValueAggregate(new MiruTermId(user.getBytes(Charsets.UTF_8)), "doc").toString()));
+                indexUtil.makeFieldValueAggregate(new MiruTermId(user.getBytes(Charsets.UTF_8)), "doc").toString()));
             MiruFilter filter = new MiruFilter(
                 MiruFilterOperation.or,
                 Optional.of(Arrays.asList(miruFieldFilter)),
