@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.client;
 
 import org.merlin.config.Config;
+import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -31,4 +32,7 @@ public interface MiruClientConfig extends Config {
 
     @LongDefault(1_000 * 60 * 60 * 24 * 7) // 1 week
     Long getPartitionMaximumAgeInMillis();
+
+    @BooleanDefault(true)
+    Boolean getLiveIngress();
 }
