@@ -4,6 +4,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
@@ -31,6 +32,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     private final MiruBitmaps<BM> bitmaps;
     private final VariableKeySizeMapChunkBackedKeyedStore keyedStore;
     private final MiruAuthzCache<BM> cache;
+    private final StripingLocksProvider<String> stripingLocksProvider = new StripingLocksProvider<>(32);
     private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskAuthzIndex(MiruBitmaps<BM> bitmaps,
@@ -105,7 +107,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
         if (filer == null) {
             return null;
         }
-        return new MiruOnDiskInvertedIndex<>(bitmaps, filer);
+        return new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(authz));
     }
 
     private static byte[] key(String authz) {
@@ -149,7 +151,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
             final MiruInvertedIndex<BM> fromMiruInvertedIndex = entry.getValue();
 
             SwappableFiler filer = keyedStore.get(key(entry.getKey()), newFilerInitialCapacity);
-            MiruOnDiskInvertedIndex<BM> toMiruInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
+            MiruOnDiskInvertedIndex<BM> toMiruInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(entry.getKey()));
             toMiruInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
                 @Override
                 public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {

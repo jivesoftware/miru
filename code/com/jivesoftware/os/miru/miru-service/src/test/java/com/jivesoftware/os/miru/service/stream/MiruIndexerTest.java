@@ -240,7 +240,8 @@ public class MiruIndexerTest {
             4);
         MiruOnDiskRemovalIndex<EWAHCompressedBitmap> miruOnDiskRemovalIndex = new MiruOnDiskRemovalIndex<>(
             new MiruBitmapsEWAH(4),
-            removalStore.get(new byte[] { 0 }, 32));
+            removalStore.get(new byte[] { 0 }, 32),
+            new Object());
 
         MiruContext<EWAHCompressedBitmap> miruOnDiskContext = new MiruContext<>(miruSchema, null, miruOnDiskActivityIndex, miruOnDiskFieldIndex,
             miruOnDiskAuthzIndex, miruOnDiskRemovalIndex, null, null, null, activityInterner, null, Optional.<MultiChunkStore>absent(),

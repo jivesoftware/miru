@@ -192,7 +192,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex<BM> removalIndex = new MiruOnDiskRemovalIndex<>(bitmaps, new RandomAccessSwappableFiler(
-            resourceLocator.getFilerFile(identifier, "removal")));
+            resourceLocator.getFilerFile(identifier, "removal")), new Object());
         importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,

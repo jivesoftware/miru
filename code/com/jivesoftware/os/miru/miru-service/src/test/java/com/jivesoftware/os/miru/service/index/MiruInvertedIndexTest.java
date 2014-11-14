@@ -185,8 +185,11 @@ public class MiruInvertedIndexTest {
 
         return new Object[][] {
                 { new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(100)), memoryAppends, memorySets },
-                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))),
-                        diskAppends, diskSets }
+                { new MiruOnDiskInvertedIndex<>(
+                    new MiruBitmapsEWAH(100),
+                    new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")),
+                    new Object()),
+                    diskAppends, diskSets }
         };
     }
 
@@ -194,7 +197,9 @@ public class MiruInvertedIndexTest {
     public Object[][] miruInvertedIndexDataProvider() throws Exception {
         return new Object[][] {
                 { new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(100)) },
-                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(100), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))) }
+                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(100),
+                    new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")),
+                    new Object()) }
         };
     }
 
@@ -202,7 +207,10 @@ public class MiruInvertedIndexTest {
     public Object[][] miruInvertedIndexDataProviderWithOverhead() throws Exception {
         return new Object[][] {
                 { new MiruInMemoryInvertedIndex<>(new MiruBitmapsEWAH(4)), 0 },
-                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(4), new RandomAccessSwappableFiler(File.createTempFile("inverted", "index"))), 16 }
+                { new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(4),
+                    new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")),
+                    new Object()),
+                    16 }
                 /**
                  * @see com.googlecode.javaewah.EWAHCompressedBitmap#serializedSizeInBytes()
                  */
@@ -226,7 +234,7 @@ public class MiruInvertedIndexTest {
         });
 
         MiruOnDiskInvertedIndex<EWAHCompressedBitmap> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(new MiruBitmapsEWAH(100),
-                new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")));
+                new RandomAccessSwappableFiler(File.createTempFile("inverted", "index")), new Object());
         miruOnDiskInvertedIndex.bulkImport(tenantId, miruInMemoryInvertedIndex);
 
         return new Object[][] {

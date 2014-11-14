@@ -75,7 +75,8 @@ public class MiruOnDiskInvertedIndexTest {
 
         final MiruOnDiskInvertedIndex<RoaringBitmap> invertedIndex = new MiruOnDiskInvertedIndex<>(
             new MiruBitmapsRoaring(),
-            new AutoResizingChunkSwappableFiler(autoResizingChunkFiler, multiChunkStore, key, mapStore, swapStore));
+            new AutoResizingChunkSwappableFiler(autoResizingChunkFiler, multiChunkStore, key, mapStore, swapStore),
+            new Object());
 
         final int numIterations = 1_000;
         int poolSize = 24;

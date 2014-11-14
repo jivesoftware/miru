@@ -23,17 +23,18 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkI
 
     private final MiruBitmaps<BM> bitmaps;
     private final SwappableFiler filer;
+    private final Object mutationLock;
     private final int startPosition;
-    private final Object mutationLock = new Object();
     private volatile int lastId = Integer.MIN_VALUE;
 
-    public MiruOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps, SwappableFiler filer) {
-        this(bitmaps, filer, 0);
+    public MiruOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps, SwappableFiler filer, Object mutationLock) {
+        this(bitmaps, filer, mutationLock, 0);
     }
 
-    public MiruOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps, SwappableFiler filer, int startPosition) {
+    public MiruOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps, SwappableFiler filer, Object mutationLock, int startPosition) {
         this.bitmaps = bitmaps;
         this.filer = filer;
+        this.mutationLock = mutationLock;
         this.startPosition = startPosition;
     }
 

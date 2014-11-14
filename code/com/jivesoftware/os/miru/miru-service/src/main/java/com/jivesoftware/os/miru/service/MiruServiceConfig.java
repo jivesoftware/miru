@@ -75,6 +75,8 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(3)
     int getPartitionNumberOfChunkStores();
 
+    void setPartitionNumberOfChunkStores(int partitionNumberOfChunkStores);
+
     @IntDefault(10_000)
     int getPartitionAuthzCacheSize();
 

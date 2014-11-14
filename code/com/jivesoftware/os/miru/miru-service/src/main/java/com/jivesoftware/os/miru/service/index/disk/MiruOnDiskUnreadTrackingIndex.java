@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
 import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
@@ -22,6 +23,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
 
     private final MiruBitmaps<BM> bitmaps;
     private final PartitionedMapChunkBackedKeyedStore index;
+    private final StripingLocksProvider<MiruStreamId> stripingLocksProvider = new StripingLocksProvider<>(64);
     private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore)
@@ -46,7 +48,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
         if (filer == null) {
             return Optional.absent();
         }
-        return Optional.of(new MiruOnDiskInvertedIndex<>(bitmaps, filer).getIndex());
+        return Optional.of(new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId)).getIndex());
     }
 
     @Override
@@ -56,7 +58,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
 
     private MiruInvertedIndex<BM> getOrCreateUnread(MiruStreamId streamId) throws Exception {
         SwappableFiler filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
-        return new MiruOnDiskInvertedIndex<>(bitmaps, filer);
+        return new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId));
     }
 
     @Override
@@ -90,10 +92,11 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     public void bulkImport(MiruTenantId tenantId, BulkExport<Map<MiruStreamId, MiruInvertedIndex<BM>>> importItems) throws Exception {
         Map<MiruStreamId, MiruInvertedIndex<BM>> importIndex = importItems.bulkExport(tenantId);
         for (Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : importIndex.entrySet()) {
-            SwappableFiler filer = index.get(entry.getKey().getBytes(), newFilerInitialCapacity);
+            MiruStreamId streamId = entry.getKey();
+            SwappableFiler filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
 
             final BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>(entry.getValue().getIndex(), entry.getValue().lastId());
-            MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer);
+            MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId));
             miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
                 @Override
                 public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
