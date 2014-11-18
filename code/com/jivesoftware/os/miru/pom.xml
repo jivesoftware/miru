@@ -32,5 +32,5 @@
         <module>miru-reco-plugins-test</module>
         <module>miru-analytics-plugins</module>
         <module>miru-analytics-plugins-test</module>
-    </modules>
+  </modules>
 </project>

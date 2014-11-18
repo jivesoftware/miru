@@ -27,7 +27,7 @@ import java.util.Map;
  */
 public class MiruContextFactory {
 
-    private static MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final Map<MiruBackingStorage, MiruContextAllocator> allocators;
     private final MiruResourceLocator diskResourceLocator;

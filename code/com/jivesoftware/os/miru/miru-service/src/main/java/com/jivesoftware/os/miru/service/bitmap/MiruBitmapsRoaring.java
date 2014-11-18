@@ -209,8 +209,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
         if (largestId < 0 || smallestId > largestId) {
             return mask;
         }
-
-        mask.flip(smallestId, largestId);
+        if (smallestId == largestId) {
+            mask.add(smallestId);
+        } else {
+            mask.flip(smallestId, largestId);
+        }
         return mask;
     }
 

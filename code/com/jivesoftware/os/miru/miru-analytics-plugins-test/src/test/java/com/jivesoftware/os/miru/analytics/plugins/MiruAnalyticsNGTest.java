@@ -72,15 +72,16 @@ public class MiruAnalyticsNGTest {
 
         Random rand = new Random(1_234);
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
-        int numqueries = 2;
-        int numberOfUsers = 2;
-        int numberOfDocument = 100;
-        int numberOfViewsPerUser = 2;
+        int numberOfUsers = 10;
+        int numberOfDocument = 1000;
+        int numberOfViewsPerUser = 10;
         int numberOfActivities = numberOfUsers * numberOfViewsPerUser + 18;
         int numberOfBuckets = 32;
-        long timespan = numberOfBuckets * snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(3), 0, 0);
+        long timespan = snowflakeIdPacker.pack(numberOfBuckets * TimeUnit.HOURS.toMillis(3), 0, 0);
         long intervalPerActivity = timespan / numberOfActivities;
-        AtomicLong time = new AtomicLong(snowflakeIdPacker.pack(System.currentTimeMillis(), 0, 0) - timespan);
+        long smallestTime = snowflakeIdPacker.pack(numberOfBuckets * TimeUnit.HOURS.toMillis(3), 0, 0) - timespan;
+        AtomicLong time = new AtomicLong(smallestTime);
+
         System.out.println("Building activities....");
         long start = System.currentTimeMillis();
         int count = 0;
@@ -104,34 +105,12 @@ public class MiruAnalyticsNGTest {
 
         System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
 
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "1")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "2")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "3")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "4")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "9")));
-
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "1")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "2")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "3")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "4")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "10")));
-
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "2")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "3")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "4")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "11")));
-
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "3")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "4")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "12")));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "12")));
-
         System.out.println("Running queries...");
 
         long lastTime = time.get();
-        final MiruTimeRange timeRange = new MiruTimeRange(lastTime - timespan, lastTime);
-        for (int i = 0; i < numqueries; i++) {
-            String user = "bob" + rand.nextInt(numberOfUsers);
+        final MiruTimeRange timeRange = new MiruTimeRange(smallestTime, lastTime);
+        for (int i = 0; i < numberOfUsers; i++) {
+            String user = "bob" + i;
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(user));
             MiruFilter filter = new MiruFilter(
                 MiruFilterOperation.or,
@@ -144,7 +123,7 @@ public class MiruAnalyticsNGTest {
                 MiruAuthzExpression.NOT_PROVIDED,
                 new AnalyticsQuery(
                     timeRange,
-                    32,
+                    8,
                     filter
                    ), true);
             MiruResponse<AnalyticsAnswer> result = injectable.score(request);
