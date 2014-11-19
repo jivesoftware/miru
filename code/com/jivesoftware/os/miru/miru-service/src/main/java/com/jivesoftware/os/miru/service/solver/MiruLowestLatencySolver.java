@@ -122,6 +122,9 @@ public class MiruLowestLatencySolver implements MiruSolver {
                     triedPartitions.add(solvable.getCoord());
                     futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                     solversAdded++;
+                } else if (solversFailed == solversAdded) {
+                    solutionLog.log("All solvers failed to execute.");
+                    break;
                 }
             }
         } finally {
