@@ -6,6 +6,8 @@ import java.util.concurrent.Callable;
 
 /**
  *
+ * @param <A> answer type
+ * @param <P> report type
  */
 public class MiruSolvableFactory<A, P> {
 
@@ -27,8 +29,6 @@ public class MiruSolvableFactory<A, P> {
                     } else {
                         return question.askRemote(handle.getRequestHelper(), handle.getCoord().partitionId, report);
                     }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
                 }
             }
         };

@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.solver;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
-import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
@@ -48,7 +47,6 @@ public class MiruLowestLatencySolver implements MiruSolver {
     @Override
     public <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables,
         Optional<Long> suggestedTimeoutInMillis,
-        List<MiruPartition> orderedPartitions,
         MiruSolutionLog solutionLog)
         throws InterruptedException {
 
@@ -95,10 +93,14 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                         new MiruSolution(f.solvable.getCoord(),
                                             usedResultElapsed,
                                             totalElapsed,
-                                            orderedPartitions,
                                             triedPartitions,
                                             response.log),
                                         response.answer);
+                                    if (response.log != null) {
+                                        for (String l : response.log) {
+                                            solutionLog.log(l + " coord={}.", f.solvable.getCoord());
+                                        }
+                                    }
                                     break;
                                 }
                             }

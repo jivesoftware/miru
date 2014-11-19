@@ -11,7 +11,6 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -136,7 +135,7 @@ public class MiruService implements Miru {
 
         A answer = null;
         List<MiruSolution> solutions = Lists.newArrayList();
-        MiruSolutionLog solutionLog = new MiruSolutionLog(debug);
+        final MiruSolutionLog solutionLog = new MiruSolutionLog(debug);
         long totalElapsed;
 
         try {
@@ -152,45 +151,40 @@ public class MiruService implements Miru {
                     new Function<MiruHostedPartition<?>, MiruSolvable<A>>() {
                         @Override
                         public MiruSolvable<A> apply(final MiruHostedPartition<?> replica) {
+                            if (replica.isLocal()) {
+                                solutionLog.log("Created {} solvable for coord={}.", (replica.isLocal() ? "local" : "remote"), replica.getCoord());
+                            }
                             return solvableFactory.create(replica, solvableFactory.getReport(optionalAnswer));
                         }
                     });
-                List<MiruPartition> ordered = Lists.transform(orderedPartitions.partitions, new Function<MiruHostedPartition<?>, MiruPartition>() {
-                    @Override
-                    public MiruPartition apply(MiruHostedPartition<?> input) {
-                        return new MiruPartition(input.getCoord(), new MiruPartitionCoordInfo(input.getState(), input.getStorage()));
-                    }
-                });
 
                 Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
                     solvableFactory.getQueryKey());
-                solutionLog.log("Solving partition:" + orderedPartitions.partitionId.getId()
+                solutionLog.log("Solving partition:{}", orderedPartitions.partitionId.getId()
                     + " for tenant:" + orderedPartitions.tenantId
                     + " timeout:" + suggestedTimeoutInMillis.or(-1L));
 
                 long start = System.currentTimeMillis();
-                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered, solutionLog);
+                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, solutionLog);
                 if (solved == null) {
-                    solutionLog.log("No solution for partition:" + orderedPartitions.partitionId + ". ");
-                    solutionLog.log("Warning result set is incomplete! elapse:" + (System.currentTimeMillis() - start));
-                    // fatal timeout
+                    solutionLog.log("No solution for partition:{}", orderedPartitions.partitionId);
+                    solutionLog.log("Warning result set is incomplete! elapse:{}", (System.currentTimeMillis() - start));
                     //TODO annotate answer to indicate partial failure
-                    break;
+                    //break; //  TODO expose to query or config whether to break here or not. Or should we return nothing?
                 } else {
-                    solutionLog.log("Solved. elapse:" + (System.currentTimeMillis() - start) + "millis");
-                }
+                    solutionLog.log("Solved partition:{}. elapse:{} millis", orderedPartitions.partitionId, (System.currentTimeMillis() - start));
+                    solutions.add(solved.solution);
 
-                solutions.add(solved.solution);
+                    A currentAnswer = solved.answer;
+                    solutionLog.log("Mergining solution set from partition:{}", orderedPartitions.partitionId);
+                    start = System.currentTimeMillis();
+                    A merged = merger.merge(lastAnswer, currentAnswer, solutionLog);
+                    solutionLog.log("Merged. elapse:{} millis", (System.currentTimeMillis() - start));
 
-                A currentAnswer = solved.answer;
-                solutionLog.log("Mergining solution set from partition:" + orderedPartitions.partitionId + ".");
-                start = System.currentTimeMillis();
-                A merged = merger.merge(lastAnswer, currentAnswer, solutionLog);
-                solutionLog.log("Merged. elapse:" + (System.currentTimeMillis() - start) + "millis");
-
-                lastAnswer = Optional.of(merged);
-                if (evaluator.isDone(merged, solutionLog)) {
-                    break;
+                    lastAnswer = Optional.of(merged);
+                    if (evaluator.isDone(merged, solutionLog)) {
+                        break;
+                    }
                 }
             }
 

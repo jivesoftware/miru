@@ -4,7 +4,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -53,7 +52,7 @@ public class MiruHostedPartitionComparisonTest {
         assertEquals(ordered.get(1).getCoord(), p2.getCoord());
 
         timestamper.set(0);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p2.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(),
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p2.getCoord(), 0, 0,
             Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
 
         // p2 answered, so now it's on top
@@ -62,7 +61,7 @@ public class MiruHostedPartitionComparisonTest {
         assertEquals(ordered.get(1).getCoord(), p1.getCoord());
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p1.getCoord(), 0, 0, Collections.<MiruPartition>emptyList(),
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p1.getCoord(), 0, 0, 
             Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
 
         // p1 answered, so now it's on top
@@ -76,7 +75,7 @@ public class MiruHostedPartitionComparisonTest {
         List<MiruSolution> solutions = Lists.newArrayList();
         for (int i = 1; i <= 100; i++) {
             MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49_600 + i));
-            solutions.add(new MiruSolution(coord, i, i, Collections.<MiruPartition>emptyList(), Collections.<MiruPartitionCoord>emptyList(), null));
+            solutions.add(new MiruSolution(coord, i, i, Collections.<MiruPartitionCoord>emptyList(), null));
         }
         partitionComparison.analyzeSolutions(solutions, queryKey);
         assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, queryKey).get().longValue(), percentile);

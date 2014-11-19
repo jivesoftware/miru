@@ -4,6 +4,8 @@
  * Analytics plugin page
  *
  * @param? tenant
+ * @param? hours
+ * @param? buckets
  * @param? waveform
  * @param? summary
  * @param? elapse
@@ -12,14 +14,35 @@
     <div class="panel panel-default">
         <div class="panel-heading">Analytics</div>
         <div class="panel-body">
-            <label for="tenantPicker">Select Tenant</label>
-            <form id="tenantPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#tenantPicker" data-form-el="#tenantPickerForm"
-                data-jive-ui="jive/ui/typeahead/tenant_typeahead" method="post" name="tenantPickerForm" action="#"
-                //TODO wire this up correctly
-                onsubmit="location.href='/miru/manage/analytics/'+document.getElementById('tenantPicker').value+'#focus'; return false">
-                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                    class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
-                    name="tenantId" id="tenantPicker" data-original-title="" title="">
+            <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td>Tenant</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                                name="tenantId" id="tenantPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Hours</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="Hours" value="{$hours?:''}"
+                            name="hours" id="hoursPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Buckets</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
+                            name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <input type="submit" value="Run"/>
             </form>
         </div>
     </div>
@@ -27,7 +50,7 @@
         <div class="panel panel-default">
             <div class="panel-heading">Waveform</div>
             <div class="panel-body">
-                {$waveform}
+                <img alt="waveform" src="{$waveform}">
             </div>
         </div>
     {/if}

@@ -4,11 +4,13 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
+import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion.AnalyticsPluginRegionInput;
 import javax.inject.Singleton;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -28,19 +30,18 @@ public class AnalyticsPluginEndpoints {
         this.analyticsPluginRegion = analyticsPluginRegion;
     }
 
+
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response getTenants() {
-        String rendered = miruManageService.renderPlugin(analyticsPluginRegion, Optional.<MiruTenantId>absent());
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getTenantsForTenant(@PathParam("tenantId") String tenantId) {
-        String rendered = miruManageService.renderPlugin(analyticsPluginRegion, Optional.of(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8))));
+    public Response getTenantsForTenant(@QueryParam("tenantId") @DefaultValue("") String tenantId,
+        @QueryParam("hours") @DefaultValue("720") int hours,
+        @QueryParam("buckets") @DefaultValue("30") int buckets) {
+        String rendered = miruManageService.renderPlugin(analyticsPluginRegion,
+            Optional.of(new AnalyticsPluginRegionInput(
+                    new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                    hours,
+                    buckets)));
         return Response.ok(rendered).build();
     }
 }
