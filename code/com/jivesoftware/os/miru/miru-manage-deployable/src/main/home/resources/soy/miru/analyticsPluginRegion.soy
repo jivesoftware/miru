@@ -5,6 +5,8 @@
  *
  * @param? tenant
  * @param? waveform
+ * @param? summary
+ * @param? elapse
  */
 {template .analyticsPluginRegion}
     <div class="panel panel-default">
@@ -26,6 +28,14 @@
             <div class="panel-heading">Waveform</div>
             <div class="panel-body">
                 {$waveform}
+            </div>
+        </div>
+    {/if}
+    {if $summary}
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Summary {$elapse}</div>
+            <div class="panel-body">
+                <pre>{$summary}</pre>
             </div>
         </div>
     {/if}

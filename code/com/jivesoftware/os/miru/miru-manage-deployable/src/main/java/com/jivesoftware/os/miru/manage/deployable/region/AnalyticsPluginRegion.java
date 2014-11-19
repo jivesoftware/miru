@@ -1,6 +1,9 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Functions;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -91,7 +94,12 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<MiruTenant
                     null);
 
                 AnalyticsAnswer.Waveform waveform = response.answer.waveform;
+                data.put("elapse", String.valueOf(response.totalElapsed));
                 data.put("waveform", waveform.toString());
+
+                ObjectMapper mapper = new ObjectMapper();
+                mapper.enable(SerializationFeature.INDENT_OUTPUT);
+                data.put("summary", mapper.writeValueAsString(response.solutions) + " " + Joiner.on("\n").join(response.log));
             }
         } catch (Exception e) {
             log.error("Unable to retrieve data", e);
@@ -102,6 +110,6 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<MiruTenant
 
     @Override
     public String getTitle() {
-        return "Hosts";
+        return "Analytics";
     }
 }

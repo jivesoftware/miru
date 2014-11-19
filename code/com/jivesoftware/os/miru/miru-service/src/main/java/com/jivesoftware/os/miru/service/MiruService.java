@@ -164,18 +164,29 @@ public class MiruService implements Miru {
 
                 Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
                     solvableFactory.getQueryKey());
-                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered, solutionLog);
+                solutionLog.log("Solving partition:" + orderedPartitions.partitionId.getId()
+                    + " for tenant:" + orderedPartitions.tenantId
+                    + " timeout:" + suggestedTimeoutInMillis.or(-1L));
 
+                long start = System.currentTimeMillis();
+                MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, ordered, solutionLog);
                 if (solved == null) {
+                    solutionLog.log("No solution for partition:" + orderedPartitions.partitionId + ". ");
+                    solutionLog.log("Warning result set is incomplete! elapse:" + (System.currentTimeMillis() - start));
                     // fatal timeout
                     //TODO annotate answer to indicate partial failure
                     break;
+                } else {
+                    solutionLog.log("Solved. elapse:" + (System.currentTimeMillis() - start) + "millis");
                 }
 
                 solutions.add(solved.solution);
 
                 A currentAnswer = solved.answer;
+                solutionLog.log("Mergining solution set from partition:" + orderedPartitions.partitionId + ".");
+                start = System.currentTimeMillis();
                 A merged = merger.merge(lastAnswer, currentAnswer, solutionLog);
+                solutionLog.log("Merged. elapse:" + (System.currentTimeMillis() - start) + "millis");
 
                 lastAnswer = Optional.of(merged);
                 if (evaluator.isDone(merged, solutionLog)) {

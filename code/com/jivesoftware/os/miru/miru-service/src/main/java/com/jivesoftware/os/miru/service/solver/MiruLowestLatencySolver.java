@@ -33,11 +33,11 @@ public class MiruLowestLatencySolver implements MiruSolver {
     private final long failAfterNMillis;
 
     public MiruLowestLatencySolver(
-            Executor executor,
-            int initialSolvers,
-            int maxNumberOfSolvers,
-            long defaultAddAnotherSolverAfterNMillis,
-            long failAfterNMillis) {
+        Executor executor,
+        int initialSolvers,
+        int maxNumberOfSolvers,
+        long defaultAddAnotherSolverAfterNMillis,
+        long failAfterNMillis) {
         this.executor = executor;
         this.initialSolvers = initialSolvers;
         this.maxNumberOfSolvers = maxNumberOfSolvers;
@@ -47,10 +47,10 @@ public class MiruLowestLatencySolver implements MiruSolver {
 
     @Override
     public <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables,
-            Optional<Long> suggestedTimeoutInMillis,
-            List<MiruPartition> orderedPartitions,
-            MiruSolutionLog solutionLog)
-            throws InterruptedException {
+        Optional<Long> suggestedTimeoutInMillis,
+        List<MiruPartition> orderedPartitions,
+        MiruSolutionLog solutionLog)
+        throws InterruptedException {
 
         long failAfterTime = System.currentTimeMillis() + failAfterNMillis;
         long addAnotherSolverAfterNMillis = suggestedTimeoutInMillis.or(defaultAddAnotherSolverAfterNMillis);
@@ -74,6 +74,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 boolean mayAddSolver = (solversAdded < maxNumberOfSolvers && solvables.hasNext());
                 long timeout = Math.max(failAfterTime - System.currentTimeMillis(), 0);
                 if (timeout == 0) {
+                    solutionLog.log("Ran out of time. Took more than " + failAfterTime + "millis to compute a solution.");
                     break; // out of time
                 }
                 if (mayAddSolver) {
@@ -91,13 +92,13 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                     long usedResultElapsed = System.currentTimeMillis() - f.startTime;
                                     long totalElapsed = System.currentTimeMillis() - startTime;
                                     solved = new MiruSolved<>(
-                                            new MiruSolution(f.solvable.getCoord(),
-                                                    usedResultElapsed,
-                                                    totalElapsed,
-                                                    orderedPartitions,
-                                                    triedPartitions,
-                                                    response.log),
-                                            response.answer);
+                                        new MiruSolution(f.solvable.getCoord(),
+                                            usedResultElapsed,
+                                            totalElapsed,
+                                            orderedPartitions,
+                                            triedPartitions,
+                                            response.log),
+                                        response.answer);
                                     break;
                                 }
                             }
@@ -109,9 +110,11 @@ public class MiruLowestLatencySolver implements MiruSolver {
                         }
                     } catch (ExecutionException e) {
                         log.debug("Solver failed to execute", e.getCause());
-                        solutionLog.log("Solver failed to execute.");
+                        solutionLog.log("Solver failed to execute. cause:" + e.getMessage());
                         solversFailed++;
                     }
+                } else {
+                    solutionLog.log("No solution completed within " + timeout + "millis. Will add addition solver if possible.");
                 }
                 if (mayAddSolver) {
                     MiruSolvable<R> solvable = solvables.next();
