@@ -95,7 +95,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<MiruTenant
 
                 AnalyticsAnswer.Waveform waveform = response.answer.waveform;
                 data.put("elapse", String.valueOf(response.totalElapsed));
-                data.put("waveform", waveform.toString());
+                data.put("waveform", waveform == null ? "" : waveform.toString());
 
                 ObjectMapper mapper = new ObjectMapper();
                 mapper.enable(SerializationFeature.INDENT_OUTPUT);
