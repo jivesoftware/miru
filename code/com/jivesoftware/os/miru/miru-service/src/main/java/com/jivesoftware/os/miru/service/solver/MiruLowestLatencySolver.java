@@ -72,7 +72,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 boolean mayAddSolver = (solversAdded < maxNumberOfSolvers && solvables.hasNext());
                 long timeout = Math.max(failAfterTime - System.currentTimeMillis(), 0);
                 if (timeout == 0) {
-                    solutionLog.log("Ran out of time. Took more than " + failAfterTime + "millis to compute a solution.");
+                    solutionLog.log("WARNING: Ran out of time. Took more than " + failAfterTime + "millis to compute a solution.");
                     break; // out of time
                 }
                 if (mayAddSolver) {
@@ -112,7 +112,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                         }
                     } catch (ExecutionException e) {
                         log.debug("Solver failed to execute", e.getCause());
-                        solutionLog.log("Solver failed to execute. cause:" + e.getMessage());
+                        solutionLog.log("WARNING: Solver failed to execute. cause:" + e.getMessage());
                         solversFailed++;
                     }
                 } else {

@@ -136,6 +136,7 @@ public class MiruService implements Miru {
         A answer = null;
         List<MiruSolution> solutions = Lists.newArrayList();
         final MiruSolutionLog solutionLog = new MiruSolutionLog(debug);
+        solutionLog.log("Solving: host:{} tenantId:{} question:{}", localhost, tenantId, solvableFactory.getQuestion());
         long totalElapsed;
 
         try {
@@ -168,7 +169,7 @@ public class MiruService implements Miru {
                 MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, solutionLog);
                 if (solved == null) {
                     solutionLog.log("No solution for partition:{}", orderedPartitions.partitionId);
-                    solutionLog.log("Warning result set is incomplete! elapse:{}", (System.currentTimeMillis() - start));
+                    solutionLog.log("WARNING result set is incomplete! elapse:{}", (System.currentTimeMillis() - start));
                     //TODO annotate answer to indicate partial failure
                     //break; //  TODO expose to query or config whether to break here or not. Or should we return nothing?
                 } else {

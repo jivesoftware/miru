@@ -6,6 +6,8 @@ import java.io.Serializable;
 
 /**
  * @author jonathan.colt
+ * @param <Q>
+ * @param <R>
  */
 public class MiruRequestAndReport<Q, R> implements Serializable {
 
@@ -14,9 +16,15 @@ public class MiruRequestAndReport<Q, R> implements Serializable {
 
     @JsonCreator
     public MiruRequestAndReport(
-            @JsonProperty("request") MiruRequest<Q> request,
-            @JsonProperty("report") R report) {
+        @JsonProperty("request") MiruRequest<Q> request,
+        @JsonProperty("report") R report) {
         this.request = request;
         this.report = report;
     }
+
+    @Override
+    public String toString() {
+        return "MiruRequestAndReport{" + "request=" + request + ", report=" + report + '}';
+    }
+
 }

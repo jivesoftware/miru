@@ -17,17 +17,16 @@ public class AnalyticsClientReader {
         this.clusterReader = clusterReader;
     }
 
-    public AnalyticsAnswer scoreTrending(MiruTenantId tenantId,
-            Optional<MiruActorId> actorId,
-            AnalyticsQuery query)
-            throws MiruQueryServiceException {
+    public AnalyticsAnswer buildWaveform(MiruTenantId tenantId,
+        Optional<MiruActorId> actorId,
+        AnalyticsQuery query) throws MiruQueryServiceException {
 
         try {
             return clusterReader.read(tenantId, actorId, query,
                     AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT,
                     AnalyticsAnswer.class, AnalyticsAnswer.EMPTY_RESULTS);
         } catch (RuntimeException e) {
-            throw new MiruQueryServiceException("Failed score trending stream", e);
+            throw new MiruQueryServiceException("Failed build analytics waveform", e);
         }
     }
 

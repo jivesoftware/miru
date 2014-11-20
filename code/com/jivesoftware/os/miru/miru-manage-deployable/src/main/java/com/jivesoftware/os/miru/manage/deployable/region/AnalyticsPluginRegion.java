@@ -136,8 +136,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
     }
 
     private String hitsToBase64PNGWaveform(long[] waveform) throws IOException {
-        int w = 800;
-        int h = 128;
+        int w = 1024;
+        int h = 200;
         BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 
         Graphics2D g = bi.createGraphics();
@@ -150,9 +150,12 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
             mmd.value(hits[i]);
         }
 
-        pw.paintGrid(Color.DARK_GRAY, hits, mmd, "", 0, 0, "", true, g, 0, 0, w - 1, h - 1);
-        pw.paintWaveform(Color.LIGHT_GRAY, hits, mmd, "", 0, 0, "", true, g, 0, 0, w - 1, h - 1);
-        pw.paintLabels(Color.black, hits, mmd, "", 0, 0, "", true, g, 0, 0, w - 1, h - 1);
+        int xo = 32;
+        int yo = 32;
+        int pad = 64;
+        pw.paintGrid(Color.DARK_GRAY, hits, mmd, "", 0, 0, "", true, g, xo, yo, w - pad, h - pad);
+        pw.paintWaveform(Color.LIGHT_GRAY, hits, mmd, "", 0, 0, "", true, g, xo, yo, w - pad, h - pad);
+        pw.paintLabels(Color.black, hits, mmd, "", 0, 0, "", true, g, xo, yo, w - pad, h - pad);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(bi, "PNG", baos);

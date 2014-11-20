@@ -16,6 +16,7 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Interners;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
@@ -124,6 +125,7 @@ public class MiruReaderMain {
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
         ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         mapper.registerModule(new GuavaModule());
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),

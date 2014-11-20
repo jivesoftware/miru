@@ -35,6 +35,10 @@ public class MiruSolvableFactory<A, P> {
         return new MiruSolvable<>(replica.getCoord(), callable);
     }
 
+    public Question<A, P> getQuestion() {
+        return question;
+    }
+
     public Optional<P> getReport(Optional<A> answer) {
         return question.createReport(answer);
     }

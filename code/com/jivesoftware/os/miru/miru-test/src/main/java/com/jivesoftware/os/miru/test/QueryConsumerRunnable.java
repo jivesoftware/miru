@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -33,6 +34,7 @@ public class QueryConsumerRunnable implements Runnable {
     public void run() {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             AtomicInteger count = new AtomicInteger();
             while (!done.get() || !queue.isEmpty()) {
                 List<Object> queries = Lists.newArrayList();

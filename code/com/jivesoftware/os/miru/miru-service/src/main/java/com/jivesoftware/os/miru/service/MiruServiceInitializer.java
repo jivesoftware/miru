@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -176,6 +177,7 @@ public class MiruServiceInitializer {
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
         ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.registerModule(new GuavaModule());
 
         MiruPartitionInfoProvider partitionInfoProvider = new CachedClusterPartitionInfoProvider();
