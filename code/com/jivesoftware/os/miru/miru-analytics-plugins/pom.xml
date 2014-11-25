@@ -58,11 +58,13 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
         </dependency>
+        <!--
         <dependency>
             <groupId>de.ruedigermoeller</groupId>
             <artifactId>fst</artifactId>
             <version>1.59</version>
             <type>jar</type>
         </dependency>
+        -->
     </dependencies>
 </project>

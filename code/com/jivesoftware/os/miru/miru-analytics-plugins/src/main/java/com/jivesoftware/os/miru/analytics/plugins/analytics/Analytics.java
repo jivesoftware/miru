@@ -37,11 +37,11 @@ public class Analytics {
         if (segmentDuration < 1) {
             throw new RuntimeException("Time range is insufficent to be divided into " + query.divideTimeRangeIntoNSegments + " segments");
         }
-        
+
         MiruTimeIndex timeIndex = requestContext.getTimeIndex();
         long timeIndexSmallest = timeIndex.getSmallestTimestamp();
         long timeIndexLargest = timeIndex.getLargestTimestamp();
-        
+
         long time = timeRange.smallestTimestamp;
         for (int i = 0; i < waveform.length; i++) {
             if (contains(timeIndexSmallest, timeIndexLargest, time) || contains(timeIndexSmallest, timeIndexLargest, time + segmentDuration)) {

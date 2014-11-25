@@ -61,7 +61,7 @@ public class MiruHostedPartitionComparisonTest {
         assertEquals(ordered.get(1).getCoord(), p1.getCoord());
 
         timestamper.set(1);
-        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p1.getCoord(), 0, 0, 
+        partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(p1.getCoord(), 0, 0,
             Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
 
         // p1 answered, so now it's on top

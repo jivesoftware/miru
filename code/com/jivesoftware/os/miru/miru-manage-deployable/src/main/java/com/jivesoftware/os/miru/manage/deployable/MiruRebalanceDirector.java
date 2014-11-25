@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
@@ -11,6 +12,7 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -45,6 +47,7 @@ public class MiruRebalanceDirector {
 
     private final MiruClusterRegistry clusterRegistry;
     private final OrderIdProvider orderIdProvider;
+    private final ReaderRequestHelpers readerRequestHelpers;
 
     private Function<MiruPartition, MiruHost> partitionToHost = new Function<MiruPartition, MiruHost>() {
         @Override
@@ -61,9 +64,10 @@ public class MiruRebalanceDirector {
 
     private final AtomicReference<List<MiruTopologyStatus>> topologies = new AtomicReference<>();
 
-    public MiruRebalanceDirector(MiruClusterRegistry clusterRegistry, OrderIdProvider orderIdProvider) {
+    public MiruRebalanceDirector(MiruClusterRegistry clusterRegistry, OrderIdProvider orderIdProvider, ReaderRequestHelpers readerRequestHelpers) {
         this.clusterRegistry = clusterRegistry;
         this.orderIdProvider = orderIdProvider;
+        this.readerRequestHelpers = readerRequestHelpers;
     }
 
     public void shiftTopologies(MiruHost fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
@@ -101,6 +105,11 @@ public class MiruRebalanceDirector {
         LOG.inc("rebalance>moved", moved);
         LOG.inc("rebalance>skipped", skipped);
         LOG.inc("rebalance>missed", missed);
+    }
+
+    public void removeHost(MiruHost miruHost) throws Exception {
+        RequestHelper requestHelper = readerRequestHelpers.get(Optional.of(miruHost));
+        requestHelper.executeDeleteRequest("/miru/config/hosts/" + miruHost.getLogicalName() + "/" + miruHost.getPort(), String.class, null);
     }
 
     private void electHosts(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruHost> fromHosts, List<MiruHost> hostsToElect) throws Exception {

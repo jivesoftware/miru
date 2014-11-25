@@ -52,6 +52,7 @@
                                 <td>
                                     <input type="button" value="Rebalance" onclick="miru.balancer.rebalance(this, '{$host.logicalName}', {$host.port}, 1)" /><br/>
                                     <input type="button" value="Evacuate" onclick="miru.balancer.rebalance(this, '{$host.logicalName}', {$host.port}, 0)" /><br/>
+                                    <input type="button" value="Remove" onclick="miru.balancer.remove(this, '{$host.logicalName}', {$host.port})" /><br/>
                                 </td>
                             {/foreach}
                         </tr>

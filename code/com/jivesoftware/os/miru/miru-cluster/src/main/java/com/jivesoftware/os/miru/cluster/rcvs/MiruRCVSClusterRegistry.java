@@ -225,6 +225,10 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         final int numberOfReplicas) throws Exception {
 
         final SetMultimap<MiruPartitionId, MiruHost> hostsWithReplicaPerPartition = HashMultimap.create();
+        final Set<MiruHost> availableHosts = Sets.newHashSet();
+        for (HostHeartbeat heartbeat : getAllHosts()) {
+            availableHosts.add(heartbeat.host);
+        }
         List<KeyedColumnValueCallbackStream<MiruPartitionId, Long, MiruHost, Long>> rowKeyCallbackStreamPair = new ArrayList<>();
         for (final MiruPartitionId miruPartitionId : requiredPartitionIds) {
             rowKeyCallbackStreamPair.add(new KeyedColumnValueCallbackStream<>(miruPartitionId,
@@ -233,10 +237,13 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                     @Override
                     public ColumnValueAndTimestamp<Long, MiruHost, Long> callback(ColumnValueAndTimestamp<Long, MiruHost, Long> v) throws Exception {
                         if (v != null) {
-                            hostsWithReplicaPerPartition.put(miruPartitionId, v.getValue());
-                            if (hostsWithReplicaPerPartition.get(miruPartitionId).size() < numberOfReplicas) {
-                                // keep going until we find as many replicas as we need
-                                return v;
+                            MiruHost host = v.getValue();
+                            if (availableHosts.contains(host)) {
+                                hostsWithReplicaPerPartition.put(miruPartitionId, host);
+                                if (hostsWithReplicaPerPartition.get(miruPartitionId).size() < numberOfReplicas) {
+                                    // keep going until we find as many replicas as we need
+                                    return v;
+                                }
                             }
                         }
                         return null;
@@ -305,8 +312,20 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public void removeHost(MiruHost host) throws Exception {
+    public void removeHost(final MiruHost host) throws Exception {
         hostsRegistry.removeRow(MiruVoidByte.INSTANCE, host, timestamper);
+        expectedTenantsRegistry.getEntrys(MiruVoidByte.INSTANCE, host, null, null, 1_000, false, null, null,
+            new CallbackStream<ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long>>() {
+                @Override
+                public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> v)
+                    throws Exception {
+                    if (v != null) {
+                        expectedTenantPartitionsRegistry.removeRow(v.getColumn(), host, timestamper);
+                    }
+                    return v;
+                }
+            });
+        expectedTenantsRegistry.removeRow(MiruVoidByte.INSTANCE, host, timestamper);
     }
 
     @Override

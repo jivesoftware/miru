@@ -31,6 +31,28 @@ miru.balancer = {
         });
     },
 
+    remove: function(ele, host, port) {
+        var $button = $(ele);
+        $button.attr('disabled', 'disabled');
+        $.ajax({
+            type: "DELETE",
+            url: "/miru/manage/hosts/" + host + "/" + port,
+            //contentType: "application/json",
+            success: function() {
+                $button.val('Success');
+                setTimeout(function() {
+                    miru.balancer.resetButton($button, value);
+                }, 2000);
+            },
+            error: function() {
+                $button.val('Failure');
+                setTimeout(function() {
+                    miru.balancer.resetButton($button, value);
+                }, 2000);
+            }
+        });
+    },
+
     resetButton: function($button, value) {
         $button.val(value);
         $button.removeAttr('disabled');

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -198,7 +199,7 @@ public class MiruManageEndpoints {
                 new CaterpillarSelectHostsStrategy(direction, false));
             return Response.ok("success").build();
         } catch (Throwable t) {
-            LOG.error("/topology/shift {} {} {}", new Object[] { host, port, direction }, t);
+            LOG.error("POST /topology/shift {} {} {}", new Object[] { host, port, direction }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -224,8 +225,23 @@ public class MiruManageEndpoints {
                 }
             }).build();
         } catch (Throwable t) {
-            LOG.error("/topology/visual {}", new Object[] { width }, t);
+            LOG.error("GET /topology/visual {}", new Object[] { width }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
+
+    @DELETE
+    @Path("/hosts/{logicalName}/{port}")
+    @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response removeHost(@PathParam("logicalName") String logicalName, @PathParam("port") int port) {
+        try {
+            rebalanceDirector.removeHost(new MiruHost(logicalName, port));
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("DELETE /hosts/{}/{}", new Object[] { logicalName, port }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
 }

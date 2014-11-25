@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
@@ -17,12 +16,14 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.manage.deployable.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.manage.deployable.analytics.MinMaxDouble;
 import com.jivesoftware.os.miru.manage.deployable.analytics.PaintWaveform;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -36,7 +37,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import org.apache.commons.net.util.Base64;
@@ -51,15 +51,14 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final RequestHelper[] requestHelpers;
+    private final ReaderRequestHelpers readerRequestHelpers;
 
     public AnalyticsPluginRegion(String template,
         MiruSoyRenderer renderer,
-        RequestHelper[] requestHelpers) {
-        Preconditions.checkArgument(requestHelpers.length > 0, "No request helpers provided");
+        ReaderRequestHelpers readerRequestHelpers) {
         this.template = template;
         this.renderer = renderer;
-        this.requestHelpers = requestHelpers;
+        this.readerRequestHelpers = readerRequestHelpers;
     }
 
     public static class AnalyticsPluginRegionInput {
@@ -105,7 +104,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                         )),
                     Optional.<List<MiruFilter>>absent());
 
-                RequestHelper requestHelper = requestHelpers[new Random().nextInt(requestHelpers.length)];
+                RequestHelper requestHelper = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 @SuppressWarnings("unchecked")
                 MiruResponse<AnalyticsAnswer> response = requestHelper.executeRequest(
                     new MiruRequest<>(i.tenant, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
