@@ -83,7 +83,7 @@ public class MiruClientEndpoints {
             log.error("Failed to add activities.", e);
             return Response.serverError().build();
         } finally {
-            ingressHealthTimer.stopTimer("Took too long to ingress " + activities.size() + " activities. ");
+            ingressHealthTimer.stopTimer("Activity Ingress Latency", " Add more capacity. Increase batching. Look for down stream issue.");
         }
     }
 
@@ -116,7 +116,7 @@ public class MiruClientEndpoints {
             log.error("Failed to remove activities.", e);
             return Response.serverError().build();
         } finally {
-            removeHealthTimer.stopTimer("Took too long to remove " + activities.size() + " activities. ");
+            removeHealthTimer.stopTimer("Activity Removal Latency", " Add more capacity. Increase batching. Look for down stream issue.");
         }
     }
 
@@ -151,7 +151,7 @@ public class MiruClientEndpoints {
             log.error("Failed to read activities.", e);
             return Response.serverError().build();
         } finally {
-            ingressReadAllTimer.stopTimer("Took too long to ingressReadAll " + events.size() + " events. ");
+            ingressReadAllTimer.stopTimer("Read All Latency", " Add more capacity. Increase batching. Look for down stream issue.");
         }
     }
 
@@ -186,7 +186,7 @@ public class MiruClientEndpoints {
             log.error("Failed to read activities.", e);
             return Response.serverError().build();
         } finally {
-            ingressReadTimer.stopTimer("Took too long to ingressRead " + events.size() + " events. ");
+            ingressReadTimer.stopTimer("Ingress Read Event Latency", " Add more capacity. Increase batching. Look for down stream issue.");
         }
     }
 
@@ -221,7 +221,7 @@ public class MiruClientEndpoints {
             log.error("Failed to unread activities.", e);
             return Response.serverError().build();
         } finally {
-            ingressUnreadTimer.stopTimer("Took too long to ingressUnread " + events.size() + " events. ");
+            ingressUnreadTimer.stopTimer("Ingress Unread Event Latency", " Add more capacity. Increase batching. Look for down stream issue.");
         }
     }
 

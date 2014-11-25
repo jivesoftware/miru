@@ -89,9 +89,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         @Override
         String getName();
 
-        @StringDefault("Too many pending rebuilds.")
+        @StringDefault("Number of partition that need  to be rebuilt before service is consider fully online.")
         @Override
-        String getUnhealthyMessage();
+        String getDescription();
 
         @LongDefault(0)
         @Override
@@ -467,9 +467,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             log.decAtomic("state>" + existing.info.state.name());
             log.incAtomic("state>" + update.info.state.name());
             if (existing.info.state != MiruPartitionState.bootstrap && update.info.state == MiruPartitionState.bootstrap) {
-                bootstrapCounter.inc("Too many pending rebuilds.");
+                bootstrapCounter.inc("Total number of partitions that need to be brought online.",
+                    "Be patient. Rebalance. Increase number of concurrent rebuilds.");
             } else if (existing.info.state == MiruPartitionState.bootstrap && update.info.state != MiruPartitionState.bootstrap) {
-                bootstrapCounter.dec("Too many pending rebuilds.");
+                bootstrapCounter.dec("Total number of partitions that need to be brought online.",
+                    "Be patient. Rebalance. Increase number of concurrent rebuilds.");
             }
 
             log.info("Partition is now {}/{} for {}", update.info.state, update.info.storage, coord);
