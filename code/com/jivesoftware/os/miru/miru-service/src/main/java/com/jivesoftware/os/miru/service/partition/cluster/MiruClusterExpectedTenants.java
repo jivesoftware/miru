@@ -5,7 +5,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
-import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -173,17 +172,16 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     private void alignTopology(MiruTenantTopology<?> tenantTopology) throws Exception {
         MiruTenantId tenantId = tenantTopology.getTenantId();
 
-        Collection<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId).values();
+        List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
         for (MiruPartition partition : partitionsForTenant) {
             partitionInfoProvider.put(partition.coord, partition.info);
         }
-        tenantTopology.checkForPartitionAlignment(Collections2.transform(partitionsForTenant,
-                new Function<MiruPartition, MiruPartitionCoord>() {
-                    @Nullable
-                    @Override
-                    public MiruPartitionCoord apply(@Nullable MiruPartition input) {
-                        return input != null ? input.coord : null;
-                    }
-                }));
+        tenantTopology.checkForPartitionAlignment(Lists.transform(partitionsForTenant,
+            new Function<MiruPartition, MiruPartitionCoord>() {
+                @Override
+                public MiruPartitionCoord apply(MiruPartition input) {
+                    return input.coord;
+                }
+            }));
     }
 }

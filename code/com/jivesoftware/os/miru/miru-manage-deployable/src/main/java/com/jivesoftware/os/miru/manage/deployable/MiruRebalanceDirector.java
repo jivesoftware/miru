@@ -6,7 +6,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
@@ -79,7 +78,7 @@ public class MiruRebalanceDirector {
         int missed = 0;
         for (MiruTenantId tenantId : clusterRegistry.getTenantsForHost(fromHost)) {
             int numberOfReplicas = clusterRegistry.getNumberOfReplicas(tenantId);
-            ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
+            List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
             MiruPartitionId currentPartitionId = findCurrentPartitionId(partitionsForTenant);
             Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> replicaTable = extractPartitions(
                 selectHostsStrategy.isCurrentPartitionOnly(), tenantId, partitionsForTenant, currentPartitionId);
@@ -123,11 +122,11 @@ public class MiruRebalanceDirector {
 
     private Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> extractPartitions(boolean currentPartitionOnly,
         MiruTenantId tenantId,
-        ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant,
+        List<MiruPartition> partitionsForTenant,
         MiruPartitionId currentPartitionId) {
 
         Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> replicaTable = HashBasedTable.create();
-        for (MiruPartition partition : partitionsForTenant.values()) {
+        for (MiruPartition partition : partitionsForTenant) {
             MiruPartitionId partitionId = partition.coord.partitionId;
             if (currentPartitionOnly && currentPartitionId != null && partitionId.compareTo(currentPartitionId) < 0) {
                 continue;
@@ -145,9 +144,9 @@ public class MiruRebalanceDirector {
         return replicaTable;
     }
 
-    private MiruPartitionId findCurrentPartitionId(ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant) {
+    private MiruPartitionId findCurrentPartitionId(List<MiruPartition> partitionsForTenant) {
         MiruPartitionId currentPartitionId = null;
-        for (MiruPartition partition : partitionsForTenant.values()) {
+        for (MiruPartition partition : partitionsForTenant) {
             MiruPartitionId partitionId = partition.coord.partitionId;
             if (currentPartitionId == null || partitionId.compareTo(currentPartitionId) > 0) {
                 currentPartitionId = partitionId;
@@ -196,20 +195,14 @@ public class MiruRebalanceDirector {
                 @Override
                 public VisualizeContext call() throws Exception {
                     LinkedHashSet<MiruClusterRegistry.HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
+                    List<MiruHost> allHosts = Lists.newArrayList();
                     Set<MiruHost> unhealthyHosts = Sets.newHashSet();
                     for (MiruClusterRegistry.HostHeartbeat heartbeat : heartbeats) {
+                        allHosts.add(heartbeat.host);
                         if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
                             unhealthyHosts.add(heartbeat.host);
                         }
                     }
-
-                    List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(heartbeats,
-                        new Function<MiruClusterRegistry.HostHeartbeat, MiruHost>() {
-                            @Override
-                            public MiruHost apply(MiruClusterRegistry.HostHeartbeat input) {
-                                return input.host;
-                            }
-                        }));
 
                     List<MiruTenantId> allTenantIds = clusterRegistry.allTenantIds();
                     List<List<MiruTenantId>> splitTenantIds = Lists.partition(allTenantIds, Math.max(1, (allTenantIds.size() + split - 1) / split));

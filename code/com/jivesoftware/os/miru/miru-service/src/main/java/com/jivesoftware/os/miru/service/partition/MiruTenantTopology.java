@@ -4,7 +4,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
@@ -102,26 +101,24 @@ public class MiruTenantTopology<BM> {
         }
     }
 
-    public void checkForPartitionAlignment(Collection<MiruPartitionCoord> coordsForTenantHost) throws Exception {
-        Set<PartitionAndHost> expected = Sets.newHashSet(Collections2.transform(coordsForTenantHost, new Function<MiruPartitionCoord, PartitionAndHost>() {
-            @Override
-            public PartitionAndHost apply(MiruPartitionCoord input) {
-                return new PartitionAndHost(input.partitionId, input.host);
-            }
-        }));
+    public void checkForPartitionAlignment(List<MiruPartitionCoord> coordsForTenantHost) throws Exception {
+        Set<PartitionAndHost> expected = Sets.newHashSet();
+        for (MiruPartitionCoord coord : coordsForTenantHost) {
+            expected.add(new PartitionAndHost(coord.partitionId, coord.host));
+        }
+
         Set<PartitionAndHost> adding;
         Set<PartitionAndHost> removing;
         synchronized (topology) {
             Set<PartitionAndHost> knownCoords = topology.keySet();
-            adding = Sets.newHashSet(expected);
-            adding.removeAll(knownCoords);
-
-            removing = Sets.newHashSet(knownCoords);
-            removing.removeAll(expected);
-            removing.removeAll(sticky.asMap().keySet());
+            adding = Sets.difference(expected, knownCoords);
+            removing = Sets.difference(knownCoords, Sets.union(expected, sticky.asMap().keySet()));
         }
 
-        for (PartitionAndHost add : adding) {
+        List<PartitionAndHost> addingRecentFirst = Lists.newArrayList(adding);
+        Collections.sort(addingRecentFirst);
+        Collections.reverse(addingRecentFirst);
+        for (PartitionAndHost add : addingRecentFirst) {
             ensureTopology(add);
         }
 

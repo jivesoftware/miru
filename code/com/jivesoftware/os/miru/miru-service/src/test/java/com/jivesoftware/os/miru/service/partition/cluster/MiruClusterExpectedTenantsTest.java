@@ -1,8 +1,7 @@
 package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.ListMultimap;
+import com.google.common.collect.ImmutableList;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -21,6 +20,7 @@ import com.jivesoftware.os.miru.service.partition.MiruRemoteHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopology;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
 import java.util.Arrays;
+import java.util.List;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.BeforeMethod;
@@ -58,13 +58,12 @@ public class MiruClusterExpectedTenantsTest {
         expectedTenants = new MiruClusterExpectedTenants(partitionInfoProvider, topologyFactory, clusterRegistry);
     }
 
-    private final Answer<ListMultimap<MiruPartitionState, MiruPartition>> clusterRegistryAnswer =
-        new Answer<ListMultimap<MiruPartitionState, MiruPartition>>() {
+    private final Answer<List<MiruPartition>> clusterRegistryAnswer =
+        new Answer<List<MiruPartition>>() {
             @Override
-            public ListMultimap<MiruPartitionState, MiruPartition> answer(InvocationOnMock invocation) throws Throwable {
+            public List<MiruPartition> answer(InvocationOnMock invocation) throws Throwable {
                 MiruTenantId tenantId = (MiruTenantId) invocation.getArguments()[0];
-                return ImmutableListMultimap.of(MiruPartitionState.online, new MiruPartition(
-                    new MiruPartitionCoord(tenantId, partitionId, host), coordInfo));
+                return ImmutableList.of(new MiruPartition(new MiruPartitionCoord(tenantId, partitionId, host), coordInfo));
             }
         };
 

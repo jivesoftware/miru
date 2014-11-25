@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -17,6 +16,7 @@ import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionBean;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionCoordBean;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
@@ -50,17 +50,16 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
             data.put("config", false);
         }
 
-        ListMultimap<MiruPartitionState, MiruTopologyStatus> statusForTenant;
+        List<MiruTopologyStatus> statusForTenant;
         try {
             statusForTenant = clusterRegistry.getTopologyStatusForTenant(tenant);
         } catch (Exception e) {
             log.error("Unable to get partitions for tenant: " + tenant);
-            statusForTenant = ArrayListMultimap.create();
+            statusForTenant = Lists.newArrayList();
         }
 
         SortedMap<MiruPartitionId, PartitionBean> partitionsMap = Maps.newTreeMap();
-        for (Map.Entry<MiruPartitionState, MiruTopologyStatus> entry : statusForTenant.entries()) {
-            MiruTopologyStatus status = entry.getValue();
+        for (MiruTopologyStatus status : statusForTenant) {
             MiruPartition partition = status.partition;
             MiruPartitionId partitionId = partition.coord.partitionId;
             PartitionBean partitionBean = partitionsMap.get(partitionId);
@@ -68,7 +67,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                 partitionBean = new PartitionBean(partitionId.getId());
                 partitionsMap.put(partitionId, partitionBean);
             }
-            MiruPartitionState state = entry.getKey();
+            MiruPartitionState state = partition.info.state;
             MiruPartitionCoordMetrics metrics = status.metrics;
             PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, metrics.sizeInMemory, metrics.sizeOnDisk);
             if (state == MiruPartitionState.online) {

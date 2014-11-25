@@ -34,6 +34,7 @@ miru.balancer = {
     remove: function(ele, host, port) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
+        var value = $button.val();
         $.ajax({
             type: "DELETE",
             url: "/miru/manage/hosts/" + host + "/" + port,

@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ListMultimap;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -17,6 +16,7 @@ import com.jivesoftware.os.miru.api.query.config.PartitionsForTenantResult;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.schema.RegistrySchemaProvider;
+import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -58,8 +58,8 @@ public class MiruReaderConfigEndpoints {
     public Response getPartitionsForTenant(@PathParam("tenantId") String tenantIdString) {
         try {
             MiruTenantId tenantId = new MiruTenantId(tenantIdString.getBytes(Charsets.UTF_8));
-            ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
-            PartitionsForTenantResult result = new PartitionsForTenantResult(partitionsForTenant.asMap());
+            List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
+            PartitionsForTenantResult result = new PartitionsForTenantResult(partitionsForTenant);
             return Response.ok(result).build();
         } catch (Exception e) {
             log.error("Failed to filter custom stream.", e);

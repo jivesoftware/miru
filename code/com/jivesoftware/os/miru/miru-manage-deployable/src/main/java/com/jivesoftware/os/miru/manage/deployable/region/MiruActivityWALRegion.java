@@ -3,15 +3,11 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -22,7 +18,6 @@ import com.jivesoftware.os.miru.manage.deployable.region.input.MiruActivityWALRe
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 
@@ -59,8 +54,8 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
             data.put("tenant", new String(tenantId.getBytes(), Charsets.UTF_8));
 
             try {
-                ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
-                Set<MiruPartitionId> partitions = Sets.newHashSet(Collections2.transform(partitionsForTenant.values(), partitionToId));
+                List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
+                List<MiruPartitionId> partitions = Lists.transform(partitionsForTenant, partitionToId);
                 data.put("partitions", partitions);
 
                 if (optionalPartitionId.isPresent()) {

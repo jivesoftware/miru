@@ -1,15 +1,11 @@
 package com.jivesoftware.os.miru.reader.cluster;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
@@ -35,13 +31,11 @@ import com.jivesoftware.os.miru.reader.MiruHttpClientReaderConfig;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 
 public class MiruClusterReader implements MiruReader {
 
@@ -55,20 +49,20 @@ public class MiruClusterReader implements MiruReader {
     private final Random r = new Random();
     private final boolean userNodeAffinity;
 
-    private final Cache<MiruTenantId, ListMultimap<MiruPartitionState, MiruPartition>> mostRecentCache;
+    private final Cache<MiruTenantId, List<MiruPartition>> mostRecentCache;
 
     public MiruClusterReader(
-            MiruHttpClientReaderConfig readerConfig,
-            MiruHttpClientConfigReaderConfig configReaderConfig,
-            ObjectMapper objectMapper,
-            ExecutorService warmOfflineHostExecutor) {
+        MiruHttpClientReaderConfig readerConfig,
+        MiruHttpClientConfigReaderConfig configReaderConfig,
+        ObjectMapper objectMapper,
+        ExecutorService warmOfflineHostExecutor) {
 
         // MiruConfigReader client configuration
         Collection<HttpClientConfiguration> configReaderConfigurations = Lists.newArrayList();
         HttpClientConfig configurationReaderConfig = HttpClientConfig.newBuilder()
-                .setSocketTimeoutInMillis(configReaderConfig.getSocketTimeoutInMillis())
-                .setMaxConnections(configReaderConfig.getMaxConnections())
-                .build();
+            .setSocketTimeoutInMillis(configReaderConfig.getSocketTimeoutInMillis())
+            .setMaxConnections(configReaderConfig.getMaxConnections())
+            .build();
         configReaderConfigurations.add(configurationReaderConfig);
 
         HttpClientFactory configReaderHttpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configReaderConfigurations);
@@ -79,25 +73,25 @@ public class MiruClusterReader implements MiruReader {
         // MiruReader client configuration
         Collection<HttpClientConfiguration> readerConfigurations = Lists.newArrayList();
         HttpClientConfig baseReaderConfig = HttpClientConfig.newBuilder()
-                .setSocketTimeoutInMillis(readerConfig.getSocketTimeoutInMillis())
-                .setMaxConnections(readerConfig.getMaxConnections())
-                .build();
+            .setSocketTimeoutInMillis(readerConfig.getSocketTimeoutInMillis())
+            .setMaxConnections(readerConfig.getMaxConnections())
+            .build();
         readerConfigurations.add(baseReaderConfig);
 
         this.httpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(readerConfigurations);
         this.warmOfflineHostExecutor = warmOfflineHostExecutor;
         this.objectMapper = objectMapper;
         this.mostRecentCache = CacheBuilder.newBuilder() //TODO config
-                .maximumSize(1_000)
-                .expireAfterWrite(1, TimeUnit.MINUTES)
-                .build();
+            .maximumSize(1_000)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build();
         this.userNodeAffinity = readerConfig.getUserNodeAffinity();
     }
 
     @Override
     public void warm(MiruTenantId tenantId) throws MiruQueryServiceException {
         try {
-            ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
+            List<MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
         } catch (Exception e) {
             mostRecentCache.invalidate(tenantId);
@@ -107,21 +101,21 @@ public class MiruClusterReader implements MiruReader {
 
     @Override
     public <P, R> R read(final MiruTenantId tenantId,
-            final Optional<MiruActorId> actorId,
-            final P params,
-            final String endpoint,
-            final Class<R> resultClass,
-            final R defaultResult)
-            throws MiruQueryServiceException {
+        final Optional<MiruActorId> actorId,
+        final P params,
+        final String endpoint,
+        final Class<R> resultClass,
+        final R defaultResult)
+        throws MiruQueryServiceException {
         try {
-            ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
+            List<MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             R result = callForRandomBestOnlineHost(tenantId, partitionsForTenant, defaultResult, randomAffinity(actorId),
-                    new RandomBestOnlineHostCallback<R>() {
-                        @Override
-                        public R call(MiruHost host) throws MiruQueryServiceException {
-                            return readerForHost(host).read(tenantId, actorId, params, endpoint, resultClass, defaultResult);
-                        }
-                    });
+                new RandomBestOnlineHostCallback<R>() {
+                    @Override
+                    public R call(MiruHost host) throws MiruQueryServiceException {
+                        return readerForHost(host).read(tenantId, actorId, params, endpoint, resultClass, defaultResult);
+                    }
+                });
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -138,8 +132,8 @@ public class MiruClusterReader implements MiruReader {
         }
     }
 
-    private <R> R callForRandomBestOnlineHost(MiruTenantId tenantId, ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant,
-            R defaultResult, Optional<Random> randomAffinity, RandomBestOnlineHostCallback<R> randomBestOnlineHostCallback) {
+    private <R> R callForRandomBestOnlineHost(MiruTenantId tenantId, List<MiruPartition> partitionsForTenant,
+        R defaultResult, Optional<Random> randomAffinity, RandomBestOnlineHostCallback<R> randomBestOnlineHostCallback) {
 
         for (MiruHost host : randomBestOnlineHost(partitionsForTenant, randomAffinity)) {
             try {
@@ -153,8 +147,8 @@ public class MiruClusterReader implements MiruReader {
         return defaultResult;
     }
 
-    private void submitWarmForOfflineHosts(final MiruTenantId tenantId, ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant) {
-        for (final MiruHost host : offlineHosts(partitionsForTenant)) {
+    private void submitWarmForOfflineHosts(final MiruTenantId tenantId, List<MiruPartition> partitions) {
+        for (final MiruHost host : offlineHosts(partitions)) {
             try {
                 warmOfflineHostExecutor.submit(new Runnable() {
                     @Override
@@ -172,11 +166,11 @@ public class MiruClusterReader implements MiruReader {
         }
     }
 
-    private List<MiruHost> randomBestOnlineHost(ListMultimap<MiruPartitionState, MiruPartition> partitionsByState, Optional<Random> randomAffinity) {
+    private List<MiruHost> randomBestOnlineHost(List<MiruPartition> partitions, Optional<Random> randomAffinity) {
         Set<MiruHost> hosts = Sets.newHashSet();
-        for (MiruPartitionState state : MiruPartitionState.values()) {
-            if (state.equals(MiruPartitionState.online)) {
-                hosts.addAll(Lists.transform(partitionsByState.get(state), partitionToHost));
+        for (MiruPartition partition : partitions) {
+            if (partition.info.state.equals(MiruPartitionState.online)) {
+                hosts.add(partition.coord.host);
             }
         }
         List<MiruHost> truffleShuffle = Lists.newArrayList(hosts);
@@ -184,11 +178,11 @@ public class MiruClusterReader implements MiruReader {
         return truffleShuffle;
     }
 
-    private Set<MiruHost> offlineHosts(ListMultimap<MiruPartitionState, MiruPartition> partitionsByState) {
+    private Set<MiruHost> offlineHosts(List<MiruPartition> partitions) {
         Set<MiruHost> hosts = Sets.newHashSet();
-        for (MiruPartitionState state : MiruPartitionState.values()) {
-            if (!state.equals(MiruPartitionState.online)) {
-                hosts.addAll(Lists.transform(partitionsByState.get(state), partitionToHost));
+        for (MiruPartition partition : partitions) {
+            if (!partition.info.state.equals(MiruPartitionState.online)) {
+                hosts.add(partition.coord.host);
             }
         }
         return hosts;
@@ -205,15 +199,23 @@ public class MiruClusterReader implements MiruReader {
         return reader;
     }
 
-    private ListMultimap<MiruPartitionState, MiruPartition> partitionsForTenant(MiruTenantId tenantId) throws Exception {
-        ListMultimap<MiruPartitionState, MiruPartition> mostRecentPartitions = mostRecentCache.getIfPresent(tenantId);
+    private List<MiruPartition> partitionsForTenant(MiruTenantId tenantId) throws Exception {
+        List<MiruPartition> mostRecentPartitions = mostRecentCache.getIfPresent(tenantId);
         if (mostRecentPartitions == null) {
-            Multimap<MiruPartitionState, MiruPartition> partitionsByState = miruConfigReader.getPartitionsForTenant(tenantId);
+            List<MiruPartition> partitions = miruConfigReader.getPartitionsForTenant(tenantId);
 
             // favor the most recent partitions (assume most work can be done locally)
-            mostRecentPartitions = extractMostRecentPartitions(partitionsByState);
+            mostRecentPartitions = extractMostRecentPartitions(partitions);
 
-            if (!mostRecentPartitions.get(MiruPartitionState.online).isEmpty()) {
+            boolean hasOneHostOnline = false;
+            for (MiruPartition partition : mostRecentPartitions) {
+                if (partition.info.state == MiruPartitionState.online) {
+                    hasOneHostOnline = true;
+                    break;
+                }
+            }
+
+            if (hasOneHostOnline) {
                 mostRecentCache.put(tenantId, mostRecentPartitions);
             }
         }
@@ -221,35 +223,23 @@ public class MiruClusterReader implements MiruReader {
         return mostRecentPartitions;
     }
 
-    private ListMultimap<MiruPartitionState, MiruPartition> extractMostRecentPartitions(Multimap<MiruPartitionState, MiruPartition> partitionsByState) {
-
-        ListMultimap<MiruPartitionState, MiruPartition> mostRecentPartitions = ArrayListMultimap.create();
-
+    private List<MiruPartition> extractMostRecentPartitions(List<MiruPartition> partitions) {
         MiruPartitionId mostRecentPartition = null;
-        for (MiruPartition partition : partitionsByState.values()) {
+        for (MiruPartition partition : partitions) {
             if (mostRecentPartition == null || mostRecentPartition.compareTo(partition.coord.partitionId) < 0) {
                 mostRecentPartition = partition.coord.partitionId;
             }
         }
 
-        for (Map.Entry<MiruPartitionState, MiruPartition> entry : partitionsByState.entries()) {
-            MiruPartitionState state = entry.getKey();
-            MiruPartition partition = entry.getValue();
+        List<MiruPartition> mostRecentPartitions = Lists.newArrayList();
+        for (MiruPartition partition : partitions) {
             if (partition.coord.partitionId.equals(mostRecentPartition)) {
-                mostRecentPartitions.put(state, partition);
+                mostRecentPartitions.add(partition);
             }
         }
 
         return mostRecentPartitions;
     }
-
-    private final Function<MiruPartition, MiruHost> partitionToHost = new Function<MiruPartition, MiruHost>() {
-        @Nullable
-        @Override
-        public MiruHost apply(@Nullable MiruPartition input) {
-            return input != null ? input.coord.host : null;
-        }
-    };
 
     private static interface RandomBestOnlineHostCallback<R> {
         R call(MiruHost host) throws MiruQueryServiceException;

@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.cluster.rcvs;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -73,10 +73,13 @@ public class MiruRCVSClusterRegistryTest {
         registry.updateTopology(coord, Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)), metrics,
             Optional.of(timestamper.get()));
 
-        ListMultimap<MiruPartitionState, MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
-        assertTrue(topologyStatusForTenantHost.containsKey(MiruPartitionState.online));
-
-        List<MiruTopologyStatus> onlineStatus = topologyStatusForTenantHost.get(MiruPartitionState.online);
+        List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
+        List<MiruTopologyStatus> onlineStatus = Lists.newArrayList();
+        for (MiruTopologyStatus status : topologyStatusForTenantHost) {
+            if (status.partition.info.state == MiruPartitionState.online) {
+                onlineStatus.add(status);
+            }
+        }
         assertEquals(onlineStatus.size(), 1);
 
         MiruTopologyStatus status = onlineStatus.get(0);
@@ -99,10 +102,14 @@ public class MiruRCVSClusterRegistryTest {
         MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(0, 0);
         registry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), metrics, Optional.of(timestamper.get()));
 
-        ListMultimap<MiruPartitionState, MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
-        assertTrue(topologyStatusForTenantHost.containsKey(MiruPartitionState.offline));
+        List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
+        List<MiruTopologyStatus> offlineStatus = Lists.newArrayList();
+        for (MiruTopologyStatus status : topologyStatusForTenantHost) {
+            if (status.partition.info.state == MiruPartitionState.offline) {
+                offlineStatus.add(status);
+            }
+        }
 
-        List<MiruTopologyStatus> offlineStatus = topologyStatusForTenantHost.get(MiruPartitionState.offline);
         assertEquals(offlineStatus.size(), 1);
 
         MiruTopologyStatus status = offlineStatus.get(0);

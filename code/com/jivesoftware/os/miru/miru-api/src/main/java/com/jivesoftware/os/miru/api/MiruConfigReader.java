@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.api;
 
-import com.google.common.collect.Multimap;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import java.util.List;
 
 /** This interface provides the method to read config from miru. */
 public interface MiruConfigReader {
@@ -10,5 +10,5 @@ public interface MiruConfigReader {
 
     public static final String PARTITIONS_ENDPOINT = "/partitions";
 
-    Multimap<MiruPartitionState, MiruPartition> getPartitionsForTenant(MiruTenantId tenantId);
+    List<MiruPartition> getPartitionsForTenant(MiruTenantId tenantId);
 }

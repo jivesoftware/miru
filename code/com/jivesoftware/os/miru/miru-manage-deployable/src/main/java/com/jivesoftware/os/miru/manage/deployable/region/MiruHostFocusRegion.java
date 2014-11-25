@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -51,24 +49,23 @@ public class MiruHostFocusRegion implements MiruRegion<MiruHost> {
 
         SortedMap<MiruTenantId, TenantBean> tenantsMap = Maps.newTreeMap();
         for (MiruTenantId tenantId : tenantsForHost) {
-            ListMultimap<MiruPartitionState, MiruTopologyStatus> statusForTenantHost;
+            List<MiruTopologyStatus> statusForTenantHost;
             try {
                 statusForTenantHost = clusterRegistry.getTopologyStatusForTenantHost(tenantId, host);
             } catch (Exception e) {
                 log.error("Unable to get partitions for tenant: " + new String(tenantId.getBytes(), Charsets.UTF_8) + " and host: " + host, e);
-                statusForTenantHost = ArrayListMultimap.create();
+                statusForTenantHost = Lists.newArrayList();
             }
 
-            for (Map.Entry<MiruPartitionState, MiruTopologyStatus> entry : statusForTenantHost.entries()) {
+            for (MiruTopologyStatus status : statusForTenantHost) {
                 TenantBean tenantBean = tenantsMap.get(tenantId);
                 if (tenantBean == null) {
                     tenantBean = new TenantBean(tenantId);
                     tenantsMap.put(tenantId, tenantBean);
                 }
-                MiruPartitionState state = entry.getKey();
-                MiruTopologyStatus status = entry.getValue();
                 MiruPartition partition = status.partition;
                 MiruPartitionCoordMetrics metrics = status.metrics;
+                MiruPartitionState state = (partition != null) ? partition.info.state : MiruPartitionState.offline;
                 MiruBackingStorage storage = (partition != null) ? partition.info.storage : MiruBackingStorage.unknown;
                 PartitionCoordBean partitionCoordBean = new PartitionCoordBean(
                         partition != null ? partition.coord : null,

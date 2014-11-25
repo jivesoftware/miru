@@ -89,7 +89,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         @Override
         String getName();
 
-        @StringDefault("Number of partition that need  to be rebuilt before service is consider fully online.")
+        @StringDefault("Number of partitions that need to be rebuilt before service is consider fully online.")
         @Override
         String getDescription();
 
