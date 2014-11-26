@@ -84,7 +84,7 @@ public class CollaborativeFiltering {
         MiruFilter constrainScorableFilter = request.query.constrainResults;
         if (!MiruFilter.NO_FILTER.equals(constrainScorableFilter)) {
             BM possible = bitmaps.create();
-            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getFieldIndex(), constrainScorableFilter, possible, -1);
+            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getFieldIndex(), constrainScorableFilter, solutionLog, possible, -1);
             if (solutionLog.isEnabled()) {
                 solutionLog.log("possible {}.", bitmaps.cardinality(possible));
             }

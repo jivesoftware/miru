@@ -32,14 +32,25 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
         }
 
         AnalyticsAnswer lastAnswer = last.get();
-        int l = currentAnswer.waveform.waveform.length;
-        long[] merged = new long[l];
-        for (int i = 0; i < l; i++) {
-            merged[i] += lastAnswer.waveform.waveform[i];
-        }
+        long[] merged;
+        if (currentAnswer.waveform == null) {
+            if (lastAnswer.waveform == null) {
+                solutionLog.log("merge: current and last waveform are null.");
+                merged = null;
+            } else {
+                solutionLog.log("merge: current waveform is null, using last answer.");
+                merged = lastAnswer.waveform.waveform;
+            }
+        } else {
+            int l = currentAnswer.waveform.waveform.length;
+            merged = new long[l];
+            for (int i = 0; i < l; i++) {
+                merged[i] += lastAnswer.waveform.waveform[i];
+            }
 
-        for (int i = 0; i < l; i++) {
-            merged[i] += currentAnswer.waveform.waveform[i];
+            for (int i = 0; i < l; i++) {
+                merged[i] += currentAnswer.waveform.waveform[i];
+            }
         }
 
         AnalyticsAnswer mergedAnswer = new AnalyticsAnswer(new AnalyticsAnswer.Waveform(merged), currentAnswer.resultsExhausted);

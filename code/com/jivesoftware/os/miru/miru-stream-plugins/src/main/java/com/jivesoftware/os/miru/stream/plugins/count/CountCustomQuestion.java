@@ -61,7 +61,7 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), combinedFilter, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), combinedFilter, solutionLog, filtered, -1);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it

@@ -39,7 +39,8 @@ public class AnalyticsInjectable {
                 new MiruSolvableFactory<>("scoreAnalytics", new AnalyticsQuestion(trending, request)),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(request.query.timeRange),
-                AnalyticsAnswer.EMPTY_RESULTS, request.debug);
+                AnalyticsAnswer.EMPTY_RESULTS,
+                request.debug);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -59,7 +60,8 @@ public class AnalyticsInjectable {
                 partitionId,
                 new MiruSolvableFactory<>("scoreTrending", new AnalyticsQuestion(trending, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
-                AnalyticsAnswer.EMPTY_RESULTS, false);
+                AnalyticsAnswer.EMPTY_RESULTS,
+                requestAndReport.request.debug);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

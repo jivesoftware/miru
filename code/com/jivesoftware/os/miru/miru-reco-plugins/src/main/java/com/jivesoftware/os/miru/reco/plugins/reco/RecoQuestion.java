@@ -48,7 +48,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, solutionLog, filtered, -1);
         if (solutionLog.isEnabled()) {
             solutionLog.log("constrained down to {} items.", bitmaps.cardinality(filtered));
         }

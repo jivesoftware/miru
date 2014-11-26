@@ -19,4 +19,9 @@ public class DistinctCountAnswerEvaluator implements MiruAnswerEvaluator<Distinc
         solutionLog.log("Evaluate {} >= {}", answer.collectedDistincts, query.desiredNumberOfDistincts);
         return answer.collectedDistincts >= query.desiredNumberOfDistincts;
     }
+
+    @Override
+    public boolean stopOnUnsolvablePartition() {
+        return true;
+    }
 }

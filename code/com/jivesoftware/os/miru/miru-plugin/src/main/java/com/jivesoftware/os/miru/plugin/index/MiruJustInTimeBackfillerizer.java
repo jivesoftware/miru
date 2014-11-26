@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruReadTracker;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader.StreamReadTrackingSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader.StreamReadTrackingWAL;
 import java.util.Arrays;
@@ -46,6 +47,7 @@ public class MiruJustInTimeBackfillerizer {
     public <BM> void backfill(final MiruBitmaps<BM> bitmaps,
         final MiruRequestContext<BM> requestContext,
         final MiruFilter streamFilter,
+        final MiruSolutionLog solutionLog,
         final MiruTenantId tenantId,
         final MiruPartitionId partitionId,
         final MiruStreamId streamId)
@@ -61,7 +63,8 @@ public class MiruJustInTimeBackfillerizer {
                         int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId);
                         int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId());
                         BM answer = bitmaps.create();
-                        aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getFieldIndex(), streamFilter, answer, lastActivityIndex);
+                        aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getFieldIndex(), streamFilter, solutionLog,
+                            answer, lastActivityIndex);
 
                         MiruInvertedIndexAppender inbox = requestContext.getInboxIndex().getAppender(streamId);
                         MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
@@ -115,7 +118,7 @@ public class MiruJustInTimeBackfillerizer {
                                 lastActivityIndex);
                         }
 
-                        sipAndApplyReadTracking(bitmaps, requestContext, tenantId, partitionId, streamId, lastId, oldestBackfilledEventId);
+                        sipAndApplyReadTracking(bitmaps, requestContext, tenantId, partitionId, streamId, solutionLog, lastId, oldestBackfilledEventId);
                     }
 
                 } catch (Exception e) {
@@ -135,6 +138,7 @@ public class MiruJustInTimeBackfillerizer {
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruStreamId streamId,
+        final MiruSolutionLog solutionLog,
         final int lastActivityIndex,
         long oldestBackfilledEventId) throws Exception {
 
@@ -171,9 +175,9 @@ public class MiruJustInTimeBackfillerizer {
                 MiruFilter filter = readEvent.filter;
 
                 if (partitionedActivity.type == MiruPartitionedActivity.Type.READ) {
-                    readTracker.read(bitmaps, requestContext, streamId, filter, lastActivityIndex, readEvent.time);
+                    readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time);
                 } else if (partitionedActivity.type == MiruPartitionedActivity.Type.UNREAD) {
-                    readTracker.unread(bitmaps, requestContext, streamId, filter, lastActivityIndex, readEvent.time);
+                    readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time);
                 } else if (partitionedActivity.type == MiruPartitionedActivity.Type.MARK_ALL_READ) {
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time);
                 }

@@ -20,4 +20,9 @@ public class AggregateCountsAnswerEvaluator implements MiruAnswerEvaluator<Aggre
         solutionLog.log("Evaluate {} >= {}", answer.collectedDistincts, requiredDistincts);
         return answer.collectedDistincts >= requiredDistincts;
     }
+
+    @Override
+    public boolean stopOnUnsolvablePartition() {
+        return true;
+    }
 }

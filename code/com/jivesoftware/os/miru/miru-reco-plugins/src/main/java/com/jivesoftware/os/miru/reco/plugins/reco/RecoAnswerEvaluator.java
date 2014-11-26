@@ -23,4 +23,9 @@ public class RecoAnswerEvaluator implements MiruAnswerEvaluator<RecoAnswer> {
         solutionLog.log("Evaluate results size {} >= {}", answer.results.size(), query.desiredNumberOfDistincts);
         return answer.results.size() >= query.desiredNumberOfDistincts;
     }
+
+    @Override
+    public boolean stopOnUnsolvablePartition() {
+        return false;
+    }
 }

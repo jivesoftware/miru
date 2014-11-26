@@ -58,7 +58,8 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
-            backfillerizer.backfill(bitmaps, stream, request.query.streamFilter, request.tenantId, handle.getCoord().partitionId, request.query.streamId);
+            backfillerizer.backfill(bitmaps, stream, request.query.streamFilter, solutionLog, request.tenantId,
+                handle.getCoord().partitionId, request.query.streamId);
         }
 
         List<BM> ands = new ArrayList<>();
@@ -85,7 +86,7 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, filtered, -1);
+            aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, solutionLog, filtered, -1);
             ands.add(filtered);
         }
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {

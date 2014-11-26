@@ -13,4 +13,9 @@ public class TrendingAnswerEvaluator implements MiruAnswerEvaluator<TrendingAnsw
         solutionLog.log("Results exhausted = {}", answer.resultsExhausted);
         return answer.resultsExhausted;
     }
+
+    @Override
+    public boolean stopOnUnsolvablePartition() {
+        return false;
+    }
 }

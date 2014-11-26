@@ -24,6 +24,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
+import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
@@ -40,7 +41,6 @@ import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.solver.MiruSolved;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -112,13 +112,15 @@ public class MiruService implements Miru {
         try {
             schemaProvider.getSchema(tenantId);
         } catch (MiruSchemaUnvailableException e) {
-            return new MiruResponse<>(null, null, 0, true, Collections.singletonList("Schema has not been registered for this tenantId"));
+            return new MiruResponse<>(null, null, 0, true, Collections.<Integer>emptyList(),
+                Collections.singletonList("Schema has not been registered for this tenantId"));
         }
 
         log.startTimer("askAndMerge");
 
         A answer = null;
         List<MiruSolution> solutions = Lists.newArrayList();
+        List<Integer> incompletePartitionIds = Lists.newArrayList();
         final MiruSolutionLog solutionLog = new MiruSolutionLog(debug);
         solutionLog.log("Solving: host:{} tenantId:{} question:{}", localhost, tenantId, solvableFactory.getQuestion());
         long totalElapsed;
@@ -154,8 +156,10 @@ public class MiruService implements Miru {
                 if (solved == null) {
                     solutionLog.log("No solution for partition:{}", orderedPartitions.partitionId);
                     solutionLog.log("WARNING result set is incomplete! elapse:{}", (System.currentTimeMillis() - start));
-                    //TODO annotate answer to indicate partial failure
-                    //break; //  TODO expose to query or config whether to break here or not. Or should we return nothing?
+                    incompletePartitionIds.add(orderedPartitions.partitionId.getId());
+                    if (evaluator.stopOnUnsolvablePartition()) {
+                        break;
+                    }
                 } else {
                     solutionLog.log("Solved partition:{}. elapse:{} millis", orderedPartitions.partitionId, (System.currentTimeMillis() - start));
                     solutions.add(solved.solution);
@@ -186,7 +190,7 @@ public class MiruService implements Miru {
         log.inc("askAndMerge>query>" + solvableFactory.getQueryKey());
         log.inc("askAndMerge>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
 
-        return new MiruResponse<>(answer, solutions, totalElapsed, false, solutionLog.asList());
+        return new MiruResponse<>(answer, solutions, totalElapsed, false, incompletePartitionIds, solutionLog.asList());
     }
 
     @Override
@@ -211,8 +215,7 @@ public class MiruService implements Miru {
 
             return answer;
         } else {
-            return new MiruPartitionResponse<>(defaultValue,
-                (debug) ? Arrays.asList("partition is NOT present. partitionId:" + partitionId) : null);
+            throw new MiruPartitionUnavailableException("partition is NOT present. partitionId:" + partitionId);
         }
     }
 
