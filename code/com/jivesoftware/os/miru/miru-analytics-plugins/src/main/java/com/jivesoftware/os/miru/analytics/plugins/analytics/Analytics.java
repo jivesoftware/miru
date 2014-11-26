@@ -28,6 +28,7 @@ public class Analytics {
         throws Exception {
 
         log.debug("Get analyticing for answer={} query={}", answer, request);
+        long start = System.currentTimeMillis();
 
         AnalyticsQuery query = request.query;
         long[] waveform = new long[query.divideTimeRangeIntoNSegments];
@@ -66,6 +67,7 @@ public class Analytics {
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= requestContext.getTimeIndex().getSmallestTimestamp();
         AnalyticsAnswer result = new AnalyticsAnswer(new Waveform(waveform), resultsExhausted);
         log.debug("result={}", result);
+        solutionLog.log("analytics took {}.", System.currentTimeMillis() - start);
         return result;
     }
 

@@ -51,11 +51,15 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
             return new MiruPartitionResponse<>(analytics.analyticing(bitmaps, stream, request, report, bitmaps.create(), solutionLog),
                 solutionLog.asList());
         }
+        long start = System.currentTimeMillis();
         ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+        solutionLog.log("timeRangeMask: {} millis.", System.currentTimeMillis() - start);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
+        start = System.currentTimeMillis();
         aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, filtered, -1);
+        solutionLog.log("filter: {} millis.", System.currentTimeMillis() - start);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
@@ -64,15 +68,19 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
+        start = System.currentTimeMillis();
         ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
+        solutionLog.log("indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
+        start = System.currentTimeMillis();
         bitmaps.and(answer, ands);
+        solutionLog.log("answer: {} millis.", System.currentTimeMillis() - start);
 
         if (solutionLog.isEnabled()) {
-            solutionLog.log("trending {} items.", bitmaps.cardinality(answer));
+            solutionLog.log("analyticed {} items.", bitmaps.cardinality(answer));
         }
         return new MiruPartitionResponse<>(analytics.analyticing(bitmaps, stream, request, report, answer, solutionLog), solutionLog.asList());
 
