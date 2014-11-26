@@ -28,6 +28,10 @@ public interface MiruActivityWALReader {
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 
+    long count(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    long countSip(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     MiruPartitionedActivity findExisting(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionedActivity activity) throws Exception;
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;

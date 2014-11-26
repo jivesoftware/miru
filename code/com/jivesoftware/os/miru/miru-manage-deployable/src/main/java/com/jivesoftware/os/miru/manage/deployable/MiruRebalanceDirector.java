@@ -107,8 +107,20 @@ public class MiruRebalanceDirector {
     }
 
     public void removeHost(MiruHost miruHost) throws Exception {
-        RequestHelper requestHelper = readerRequestHelpers.get(Optional.of(miruHost));
-        requestHelper.executeDeleteRequest("/miru/config/hosts/" + miruHost.getLogicalName() + "/" + miruHost.getPort(), String.class, null);
+        List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.of(miruHost));
+        for (RequestHelper requestHelper : requestHelpers) {
+            try {
+                String result = requestHelper.executeDeleteRequest("/miru/config/hosts/" + miruHost.getLogicalName() + "/" + miruHost.getPort(),
+                    String.class, null);
+                if (result != null) {
+                    break;
+                } else {
+                    LOG.warn("Empty removeHost response from {}, trying another", requestHelper);
+                }
+            } catch (Exception e) {
+                LOG.warn("Failed removeHost request to {}, trying another", new Object[] { requestHelper }, e);
+            }
+        }
     }
 
     private void electHosts(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruHost> fromHosts, List<MiruHost> hostsToElect) throws Exception {

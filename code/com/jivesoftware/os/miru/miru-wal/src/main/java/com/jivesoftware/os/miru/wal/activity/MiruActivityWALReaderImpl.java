@@ -154,6 +154,42 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
     }
 
     @Override
+    public long count(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        final MutableLong count = new MutableLong(0);
+        activityWAL.getValues(tenantId,
+            new MiruActivityWALRow(partitionId.getId()),
+            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), 0),
+            null, 1_000, false, null, null, new CallbackStream<MiruPartitionedActivity>() {
+                @Override
+                public MiruPartitionedActivity callback(MiruPartitionedActivity partitionedActivity) throws Exception {
+                    if (partitionedActivity != null && partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
+                        count.add(partitionedActivity.index);
+                    }
+                    return partitionedActivity;
+                }
+            });
+        return count.longValue();
+    }
+
+    @Override
+    public long countSip(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        final MutableLong count = new MutableLong(0);
+        activitySipWAL.getValues(tenantId,
+            new MiruActivityWALRow(partitionId.getId()),
+            new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), 0, 0),
+            null, 1_000, false, null, null, new CallbackStream<MiruPartitionedActivity>() {
+                @Override
+                public MiruPartitionedActivity callback(MiruPartitionedActivity partitionedActivity) throws Exception {
+                    if (partitionedActivity != null && partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
+                        count.add(partitionedActivity.index);
+                    }
+                    return partitionedActivity;
+                }
+            });
+        return count.longValue();
+    }
+
+    @Override
     public MiruPartitionedActivity findExisting(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionedActivity activity) throws Exception {
         return activityWAL.get(
             tenantId,

@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
+import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import java.util.concurrent.ExecutorService;
@@ -21,6 +22,7 @@ public class MiruLocalPartitionFactory {
     private final MiruContextFactory miruContextFactory;
     private final MiruActivityWALReader activityWALReader;
     private final MiruPartitionEventHandler partitionEventHandler;
+    private final MiruRebuildDirector rebuildDirector;
     private final ScheduledExecutorService scheduledBoostrapExecutor;
     private final ScheduledExecutorService scheduledRebuildExecutor;
     private final ScheduledExecutorService scheduledSipMigrateExecutor;
@@ -34,6 +36,7 @@ public class MiruLocalPartitionFactory {
         MiruContextFactory miruContextFactory,
         MiruActivityWALReader activityWALReader,
         MiruPartitionEventHandler partitionEventHandler,
+        MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBoostrapExecutor,
         ScheduledExecutorService scheduledRebuildExecutor,
         ScheduledExecutorService scheduledSipMigrateExecutor,
@@ -46,6 +49,7 @@ public class MiruLocalPartitionFactory {
         this.miruContextFactory = miruContextFactory;
         this.activityWALReader = activityWALReader;
         this.partitionEventHandler = partitionEventHandler;
+        this.rebuildDirector = rebuildDirector;
         this.scheduledBoostrapExecutor = scheduledBoostrapExecutor;
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
         this.scheduledSipMigrateExecutor = scheduledSipMigrateExecutor;
@@ -59,6 +63,7 @@ public class MiruLocalPartitionFactory {
         return new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, miruContextFactory,
             activityWALReader,
             partitionEventHandler,
+            rebuildDirector,
             scheduledBoostrapExecutor,
             scheduledRebuildExecutor,
             scheduledSipMigrateExecutor,

@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.service.NamedThreadFactory;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
+import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import java.util.Collection;
@@ -57,6 +58,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final MiruContextFactory streamFactory;
     private final MiruActivityWALReader activityWALReader;
     private final MiruPartitionEventHandler partitionEventHandler;
+    private final MiruRebuildDirector rebuildDirector;
     private final AtomicLong sizeInMemoryBytes = new AtomicLong();
     private final AtomicLong sizeOnDiskBytes = new AtomicLong();
     private final AtomicLong sizeInMemoryExpiresAfter = new AtomicLong();
@@ -111,6 +113,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         MiruContextFactory streamFactory,
         MiruActivityWALReader activityWALReader,
         MiruPartitionEventHandler partitionEventHandler,
+        MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBootstrapExecutor,
         ScheduledExecutorService scheduledRebuildExecutor,
         ScheduledExecutorService scheduledSipMigrateExecutor,
@@ -134,6 +137,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.streamFactory = streamFactory;
         this.activityWALReader = activityWALReader;
         this.partitionEventHandler = partitionEventHandler;
+        this.rebuildDirector = rebuildDirector;
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
         this.scheduledSipMigrateExecutor = scheduledSipMigrateExecutor;
         this.hbaseRebuildExecutors = hbaseRebuildExecutors;
@@ -547,17 +551,27 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 MiruPartitionAccessor<BM> accessor = accessorRef.get();
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
-                    MiruPartitionAccessor<BM> rebuilding = accessor.copyToState(MiruPartitionState.rebuilding);
-                    rebuilding = updatePartition(accessor, rebuilding);
-                    if (rebuilding != null) {
+                    long activityCount = activityWALReader.count(coord.tenantId, coord.partitionId);
+                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(activityCount);
+                    if (token.isPresent()) {
                         try {
-                            if (rebuild(rebuilding)) {
-                                MiruPartitionAccessor<BM> online = rebuilding.copyToState(MiruPartitionState.online);
-                                updatePartition(rebuilding, online);
+                            MiruPartitionAccessor<BM> rebuilding = accessor.copyToState(MiruPartitionState.rebuilding);
+                            rebuilding = updatePartition(accessor, rebuilding);
+                            if (rebuilding != null) {
+                                try {
+                                    if (rebuild(rebuilding)) {
+                                        MiruPartitionAccessor<BM> online = rebuilding.copyToState(MiruPartitionState.online);
+                                        updatePartition(rebuilding, online);
+                                    }
+                                } catch (Throwable t) {
+                                    log.error("Rebuild encountered a problem", t);
+                                }
                             }
-                        } catch (Throwable t) {
-                            log.error("Rebuild encountered a problem", t);
+                        } finally {
+                            rebuildDirector.release(token.get());
                         }
+                    } else {
+                        log.debug("Skipped rebuild because count={} available={}", activityCount, rebuildDirector.available());
                     }
                 }
             } catch (Throwable t) {

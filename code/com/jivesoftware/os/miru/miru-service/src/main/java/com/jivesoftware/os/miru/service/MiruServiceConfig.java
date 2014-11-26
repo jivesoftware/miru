@@ -133,4 +133,6 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(true)
     public boolean getUseOffHeapBuffers();
 
+    @LongDefault(10_000_000)
+    long getMaxRebuildActivityCount();
 }

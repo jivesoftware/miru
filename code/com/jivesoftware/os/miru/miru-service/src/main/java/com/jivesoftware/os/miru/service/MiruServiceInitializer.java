@@ -42,6 +42,7 @@ import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTen
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.service.stream.allocator.HybridMiruContextAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskMiruContextAllocator;
@@ -176,6 +177,7 @@ public class MiruServiceInitializer {
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
+        MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.registerModule(new GuavaModule());
@@ -206,6 +208,7 @@ public class MiruServiceInitializer {
             streamFactory,
             activityWALReader,
             partitionEventHandler,
+            rebuildDirector,
             scheduledBootstrapExecutor,
             scheduledRebuildExecutor,
             scheduledSipMigrateExecutor,

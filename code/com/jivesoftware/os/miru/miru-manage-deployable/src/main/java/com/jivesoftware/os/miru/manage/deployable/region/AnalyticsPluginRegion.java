@@ -104,28 +104,43 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                         )),
                     Optional.<List<MiruFilter>>absent());
 
-                RequestHelper requestHelper = readerRequestHelpers.get(Optional.<MiruHost>absent());
-                @SuppressWarnings("unchecked")
-                MiruResponse<AnalyticsAnswer> response = requestHelper.executeRequest(
-                    new MiruRequest<>(i.tenant, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
-                        new AnalyticsQuery(
-                            new MiruTimeRange(packCurrentTime - packNDays, packCurrentTime),
-                            i.buckets,
-                            constraintsFilter),
-                        true),
-                    AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                    new Class[]{AnalyticsAnswer.class},
-                    null);
+                List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
+                MiruResponse<AnalyticsAnswer> response = null;
+                for (RequestHelper requestHelper : requestHelpers) {
+                    try {
+                        @SuppressWarnings("unchecked")
+                        MiruResponse<AnalyticsAnswer> analyticsResponse = requestHelper.executeRequest(
+                            new MiruRequest<>(i.tenant, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                new AnalyticsQuery(
+                                    new MiruTimeRange(packCurrentTime - packNDays, packCurrentTime),
+                                    i.buckets,
+                                    constraintsFilter),
+                                true),
+                            AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
+                            new Class[] { AnalyticsAnswer.class },
+                            null);
+                        response = analyticsResponse;
+                        if (response != null && response.answer != null) {
+                            break;
+                        } else {
+                            log.warn("Empty analytics response from {}, trying another", requestHelper);
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed analytics request to {}, trying another", new Object[] { requestHelper }, e);
+                    }
+                }
 
-                AnalyticsAnswer.Waveform waveform = response.answer.waveform;
-                data.put("elapse", String.valueOf(response.totalElapsed));
-                //data.put("waveform", waveform == null ? "" : waveform.toString());
+                if (response != null && response.answer != null) {
+                    AnalyticsAnswer.Waveform waveform = response.answer.waveform;
+                    data.put("elapse", String.valueOf(response.totalElapsed));
+                    //data.put("waveform", waveform == null ? "" : waveform.toString());
 
-                data.put("waveform", "data:image/png;base64,"
-                    + hitsToBase64PNGWaveform(waveform == null ? new long[i.buckets] : waveform.waveform));
-                ObjectMapper mapper = new ObjectMapper();
-                mapper.enable(SerializationFeature.INDENT_OUTPUT);
-                data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
+                    data.put("waveform",
+                        "data:image/png;base64," + hitsToBase64PNGWaveform(waveform == null ? new long[i.buckets] : waveform.waveform));
+                    ObjectMapper mapper = new ObjectMapper();
+                    mapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
+                }
             }
         } catch (Exception e) {
             log.error("Unable to retrieve data", e);
