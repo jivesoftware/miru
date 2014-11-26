@@ -50,8 +50,8 @@ public class ReaderRequestHelpers {
         for (MiruHost host : hosts) {
             RequestHelper requestHelper = hostToHelper.get(host);
             if (requestHelper == null) {
-                RequestHelper existing = hostToHelper.putIfAbsent(host,
-                    new RequestHelper(httpClientFactory.createClient(host.getLogicalName(), host.getPort()), objectMapper));
+                requestHelper = new RequestHelper(httpClientFactory.createClient(host.getLogicalName(), host.getPort()), objectMapper);
+                RequestHelper existing = hostToHelper.putIfAbsent(host, requestHelper);
                 if (existing != null) {
                     requestHelper = existing;
                 }
