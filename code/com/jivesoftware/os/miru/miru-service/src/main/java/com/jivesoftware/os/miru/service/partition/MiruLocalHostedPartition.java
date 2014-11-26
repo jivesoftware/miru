@@ -513,7 +513,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
             Optional<Long> timestamp = accessor.refreshTimestamp.getAndSet(null);
             if (timestamp != null) {
-                MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(sizeInMemory(), sizeOnDisk());
+                MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(-1, -1); //TODO is checking sizes even worth it?
                 partitionEventHandler.updateTopology(coord, Optional.of(accessor.info), metrics, timestamp);
             }
         }

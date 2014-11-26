@@ -99,22 +99,6 @@ public class MiruService implements Miru {
         }
     }
 
-    public long sizeInMemory(MiruTenantId tenantId) throws Exception {
-        long size = 0;
-        for (MiruHostedPartition<?> partition : partitionDirector.allPartitions(tenantId)) {
-            size += partition.sizeInMemory();
-        }
-        return size;
-    }
-
-    public long sizeOnDisk(MiruTenantId tenantId) throws Exception {
-        long size = 0;
-        for (MiruHostedPartition<?> partition : partitionDirector.allPartitions(tenantId)) {
-            size += partition.sizeOnDisk();
-        }
-        return size;
-    }
-
     @Override
     public <A, P> MiruResponse<A> askAndMerge(
         MiruTenantId tenantId,
