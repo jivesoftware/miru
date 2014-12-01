@@ -46,7 +46,7 @@ public class TrendingEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<TrendingAnswer> response = injectable.scoreTrending(request);
 
-            log.info("scoreTrending: " + response.answer.results.size() + " / " + response.answer.collectedDistincts +
+            log.info("scoreTrending: " + response.answer.results.size() + " / " + request.query.desiredNumberOfDistincts +
                     " in " + (System.currentTimeMillis() - t) + " ms");
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException e) {
@@ -64,8 +64,8 @@ public class TrendingEndpoints {
     public Response scoreTrending(@PathParam("partitionId") int id, MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            MiruPartitionResponse<TrendingAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
-            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(TrendingAnswer.EMPTY_RESULTS, null));
+            MiruPartitionResponse<OldTrendingAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
+            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(OldTrendingAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {

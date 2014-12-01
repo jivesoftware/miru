@@ -37,6 +37,11 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-analytics-plugins</artifactId>
+            <version>0.158-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin-test</artifactId>
             <version>0.158-SNAPSHOT</version>
         </dependency>

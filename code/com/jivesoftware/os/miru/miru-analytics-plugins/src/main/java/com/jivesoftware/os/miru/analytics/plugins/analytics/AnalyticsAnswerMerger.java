@@ -2,9 +2,12 @@ package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import java.util.Map;
 
 /**
  *
@@ -31,30 +34,38 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
             return currentAnswer;
         }
 
+        Map<MiruIBA, AnalyticsAnswer.Waveform> mergedWaveforms;
         AnalyticsAnswer lastAnswer = last.get();
-        long[] merged;
-        if (currentAnswer.waveform == null) {
-            if (lastAnswer.waveform == null) {
-                solutionLog.log("merge: current and last waveform are null.");
-                merged = null;
+        if (currentAnswer.waveforms == null) {
+            if (lastAnswer.waveforms == null) {
+                solutionLog.log("merge: current and last waveforms are null.");
+                mergedWaveforms = null;
             } else {
-                solutionLog.log("merge: current waveform is null, using last answer.");
-                merged = lastAnswer.waveform.waveform;
+                solutionLog.log("merge: current waveforms are null, using last answer.");
+                mergedWaveforms = lastAnswer.waveforms;
             }
         } else {
-            int l = currentAnswer.waveform.waveform.length;
-            merged = new long[l];
-            for (int i = 0; i < l; i++) {
-                merged[i] += lastAnswer.waveform.waveform[i];
-            }
-
-            for (int i = 0; i < l; i++) {
-                merged[i] += currentAnswer.waveform.waveform[i];
-            }
+            mergedWaveforms = Maps.newHashMap();
+            mergeWaveform(mergedWaveforms, lastAnswer);
+            mergeWaveform(mergedWaveforms, currentAnswer);
         }
 
-        AnalyticsAnswer mergedAnswer = new AnalyticsAnswer(new AnalyticsAnswer.Waveform(merged), currentAnswer.resultsExhausted);
-        return mergedAnswer;
+        return new AnalyticsAnswer(mergedWaveforms, currentAnswer.resultsExhausted);
+    }
+
+    private void mergeWaveform(Map<MiruIBA, AnalyticsAnswer.Waveform> mergedWaveforms, AnalyticsAnswer addAnswer) {
+        for (Map.Entry<MiruIBA, AnalyticsAnswer.Waveform> addEntry : addAnswer.waveforms.entrySet()) {
+            MiruIBA key = addEntry.getKey();
+            AnalyticsAnswer.Waveform addWaveform = addEntry.getValue();
+            AnalyticsAnswer.Waveform mergedWaveform = mergedWaveforms.get(key);
+            if (mergedWaveform == null) {
+                mergedWaveform = new AnalyticsAnswer.Waveform(new long[addWaveform.waveform.length]);
+                mergedWaveforms.put(key, mergedWaveform);
+            }
+            for (int i = 0; i < mergedWaveform.waveform.length; i++) {
+                mergedWaveform.waveform[i] += addWaveform.waveform[i];
+            }
+        }
     }
 
     @Override
@@ -62,7 +73,7 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
         return last.transform(new Function<AnalyticsAnswer, AnalyticsAnswer>() {
             @Override
             public AnalyticsAnswer apply(AnalyticsAnswer result) {
-                return new AnalyticsAnswer(result.waveform, result.resultsExhausted);
+                return new AnalyticsAnswer(result.waveforms, result.resultsExhausted);
             }
         }).or(alternative);
     }

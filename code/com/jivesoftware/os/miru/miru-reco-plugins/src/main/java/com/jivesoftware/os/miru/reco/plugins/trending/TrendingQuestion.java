@@ -21,7 +21,7 @@ import java.util.List;
 /**
  *
  */
-public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport> {
+public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingReport> {
 
     private final Trending trending;
     private final MiruRequest<TrendingQuery> request;
@@ -35,7 +35,7 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
     }
 
     @Override
-    public <BM> MiruPartitionResponse<TrendingAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<OldTrendingAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
@@ -80,13 +80,13 @@ public class TrendingQuestion implements Question<TrendingAnswer, TrendingReport
     }
 
     @Override
-    public MiruPartitionResponse<TrendingAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<TrendingReport> report)
+    public MiruPartitionResponse<OldTrendingAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<TrendingReport> report)
             throws Exception {
         return new TrendingRemotePartitionReader(requestHelper).scoreTrending(partitionId, request, report);
     }
 
     @Override
-    public Optional<TrendingReport> createReport(Optional<TrendingAnswer> answer) {
+    public Optional<TrendingReport> createReport(Optional<OldTrendingAnswer> answer) {
         Optional<TrendingReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new TrendingReport(

@@ -9,6 +9,16 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
  */
 public class MiruIndexUtil {
 
+    // doc: 0^bob0
+    // doc: 1^bob1
+    // user: bob0|12
+
+    // doc^user: 0^bob0
+    // doc|user
+    // doc~
+    // user~
+
+
     public MiruTermId makeBloomComposite(MiruTermId fieldValue, String fieldName) {
         return makeComposite(fieldValue, "|", fieldName);
     }

@@ -94,6 +94,6 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
 
     @Override
     public String getTitle() {
-        return "Hosts";
+        return "Balancer";
     }
 }

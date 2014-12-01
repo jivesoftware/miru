@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.analytics.plugins.analytics;
+package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -18,19 +18,19 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import static com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants.ANALYTICS_PREFIX;
-import static com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants.CUSTOM_QUERY_ENDPOINT;
+import static com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants.CUSTOM_QUERY_ENDPOINT;
+import static com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants.DISTINCTS_PREFIX;
 
-@Path(ANALYTICS_PREFIX)
-public class AnalyticsEndpoints {
+@Path(DISTINCTS_PREFIX)
+public class DistinctsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final AnalyticsInjectable injectable;
+    private final DistinctsInjectable injectable;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public AnalyticsEndpoints(
-        @Context AnalyticsInjectable injectable) {
+    public DistinctsEndpoints(
+        @Context DistinctsInjectable injectable) {
         this.injectable = injectable;
     }
 
@@ -38,20 +38,18 @@ public class AnalyticsEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response scoreAnalyticing(MiruRequest<AnalyticsQuery> request) {
+    public Response gatherDistincts(MiruRequest<DistinctsQuery> request) {
         try {
             long t = System.currentTimeMillis();
-            MiruResponse<AnalyticsAnswer> response = injectable.score(request);
+            MiruResponse<DistinctsAnswer> response = injectable.gatherDistincts(request);
 
-            if (response.answer != null && response.answer.waveforms != null) {
-                log.info("scoreAnalyticing: " + response.answer.waveforms.size()
-                    + " in " + (System.currentTimeMillis() - t) + " ms");
-            }
+            log.info("gatherDistincts: " + response.answer.results.size() + " / " + response.answer.collectedDistincts +
+                    " in " + (System.currentTimeMillis() - t) + " ms");
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {
-            log.error("Failed to score trending.", e);
+            log.error("Failed to gather distincts.", e);
             return Response.serverError().build();
         }
     }
@@ -60,15 +58,15 @@ public class AnalyticsEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response scoreAnalyticing(@PathParam("partitionId") int id, MiruRequestAndReport<AnalyticsQuery, AnalyticsReport> requestAndReport) {
+    public Response gatherDistincts(@PathParam("partitionId") int id, MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            MiruPartitionResponse<AnalyticsAnswer> result = injectable.score(partitionId, requestAndReport);
-            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AnalyticsAnswer.EMPTY_RESULTS, null));
+            MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
+            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(DistinctsAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {
-            log.error("Failed to score trending for partition: " + partitionId.getId(), e);
+            log.error("Failed to gather distincts for partition: " + partitionId.getId(), e);
             return Response.serverError().build();
         }
     }

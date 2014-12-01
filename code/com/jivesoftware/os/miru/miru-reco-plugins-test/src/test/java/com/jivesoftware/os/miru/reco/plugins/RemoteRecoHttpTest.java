@@ -24,7 +24,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
-import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
+import com.jivesoftware.os.miru.reco.plugins.trending.OldTrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import java.util.Arrays;
@@ -215,9 +215,9 @@ public class RemoteRecoHttpTest {
                             100), true);
 
                     @SuppressWarnings("unchecked")
-                    MiruResponse<TrendingAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(query,
+                    MiruResponse<OldTrendingAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(query,
                         TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
-                        MiruResponse.class, new Class[] { TrendingAnswer.class }, null);
+                        MiruResponse.class, new Class[] { OldTrendingAnswer.class }, null);
                     /*
                     if (response.totalElapsed > 100) {
                         System.out.println("tenantId=" + tenantId);

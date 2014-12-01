@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  *
  */
-public class TrendingAnswerMerger implements MiruAnswerMerger<TrendingAnswer> {
+public class TrendingAnswerMerger implements MiruAnswerMerger<OldTrendingAnswer> {
 
     private final MiruTimeRange timeRange;
     private final int divideTimeRangeIntoNSegments;
@@ -37,24 +37,24 @@ public class TrendingAnswerMerger implements MiruAnswerMerger<TrendingAnswer> {
      * @return the merged result
      */
     @Override
-    public TrendingAnswer merge(Optional<TrendingAnswer> last, TrendingAnswer currentAnswer, MiruSolutionLog solutionLog) {
+    public OldTrendingAnswer merge(Optional<OldTrendingAnswer> last, OldTrendingAnswer currentAnswer, MiruSolutionLog solutionLog) {
         if (!last.isPresent()) {
             return currentAnswer;
         }
 
-        TrendingAnswer lastAnswer = last.get();
+        OldTrendingAnswer lastAnswer = last.get();
 
-        Map<MiruIBA, TrendingAnswer.Trendy> carryOverCounts = new HashMap<>();
-        for (TrendingAnswer.Trendy trendy : currentAnswer.results) {
+        Map<MiruIBA, OldTrendingAnswer.Trendy> carryOverCounts = new HashMap<>();
+        for (OldTrendingAnswer.Trendy trendy : currentAnswer.results) {
             carryOverCounts.put(new MiruIBA(trendy.distinctValue), trendy);
         }
 
         int size = currentAnswer.results.size() + (last.isPresent() ? last.get().results.size() : 0);
 
-        List<TrendingAnswer.Trendy> mergedResults = Lists.newArrayListWithCapacity(size);
+        List<OldTrendingAnswer.Trendy> mergedResults = Lists.newArrayListWithCapacity(size);
         final long trendInterval = timeRange.largestTimestamp - timeRange.smallestTimestamp;
-        for (TrendingAnswer.Trendy trendy : lastAnswer.results) {
-            TrendingAnswer.Trendy had = carryOverCounts.remove(new MiruIBA(trendy.distinctValue));
+        for (OldTrendingAnswer.Trendy trendy : lastAnswer.results) {
+            OldTrendingAnswer.Trendy had = carryOverCounts.remove(new MiruIBA(trendy.distinctValue));
             if (had == null) {
                 mergedResults.add(trendy);
             } else {
@@ -62,20 +62,20 @@ public class TrendingAnswerMerger implements MiruAnswerMerger<TrendingAnswer> {
                     SimpleRegressionTrend merged = new SimpleRegressionTrend(divideTimeRangeIntoNSegments, trendInterval);
                     merged.merge(trendy.trend);
                     merged.merge(had.trend);
-                    mergedResults.add(new TrendingAnswer.Trendy(trendy.distinctValue, merged, merged.getRank(timeRange.largestTimestamp)));
+                    mergedResults.add(new OldTrendingAnswer.Trendy(trendy.distinctValue, merged, merged.getRank(timeRange.largestTimestamp)));
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to merge", e);
                 }
             }
         }
-        for (TrendingAnswer.Trendy trendy : currentAnswer.results) {
+        for (OldTrendingAnswer.Trendy trendy : currentAnswer.results) {
             if (carryOverCounts.containsKey(new MiruIBA(trendy.distinctValue))) {
                 mergedResults.add(trendy);
             }
         }
 
-        TrendingAnswer mergedAnswer = new TrendingAnswer(ImmutableList.copyOf(mergedResults), currentAnswer.aggregateTerms, currentAnswer.collectedDistincts,
-                currentAnswer.resultsExhausted);
+        OldTrendingAnswer mergedAnswer = new OldTrendingAnswer(ImmutableList.copyOf(mergedResults), currentAnswer.aggregateTerms,
+            currentAnswer.collectedDistincts, currentAnswer.resultsExhausted);
 
         logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
@@ -83,27 +83,27 @@ public class TrendingAnswerMerger implements MiruAnswerMerger<TrendingAnswer> {
     }
 
     @Override
-    public TrendingAnswer done(Optional<TrendingAnswer> last, TrendingAnswer alternative, final MiruSolutionLog solutionLog) {
-        return last.transform(new Function<TrendingAnswer, TrendingAnswer>() {
+    public OldTrendingAnswer done(Optional<OldTrendingAnswer> last, OldTrendingAnswer alternative, final MiruSolutionLog solutionLog) {
+        return last.transform(new Function<OldTrendingAnswer, OldTrendingAnswer>() {
             @Override
-            public TrendingAnswer apply(TrendingAnswer result) {
-                List<TrendingAnswer.Trendy> results = Lists.newArrayList(result.results);
+            public OldTrendingAnswer apply(OldTrendingAnswer result) {
+                List<OldTrendingAnswer.Trendy> results = Lists.newArrayList(result.results);
                 long t = System.currentTimeMillis();
                 Collections.sort(results);
                 solutionLog.log("mergeTrendy: Sorted in {} ms", (System.currentTimeMillis() - t));
                 results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
-                return new TrendingAnswer(ImmutableList.copyOf(results), result.aggregateTerms, result.collectedDistincts, result.resultsExhausted);
+                return new OldTrendingAnswer(ImmutableList.copyOf(results), result.aggregateTerms, result.collectedDistincts, result.resultsExhausted);
             }
         }).or(alternative);
     }
 
-    private void logMergeResult(TrendingAnswer currentAnswer, TrendingAnswer lastAnswer, TrendingAnswer mergedAnswer, MiruSolutionLog solutionLog) {
+    private void logMergeResult(OldTrendingAnswer currentAnswer, OldTrendingAnswer lastAnswer, OldTrendingAnswer mergedAnswer, MiruSolutionLog solutionLog) {
         solutionLog.log("Merged:" +
-                        "\n  From: terms={} results={} collected={}" +
-                        "\n  With: terms={} results={} collected={}" +
-                        "\n  To:   terms={} results={} collected={}",
-                lastAnswer.aggregateTerms.size(), lastAnswer.results.size(), lastAnswer.collectedDistincts,
-                currentAnswer.aggregateTerms.size(), currentAnswer.results.size(), currentAnswer.collectedDistincts,
-                mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts);
+                "\n  From: terms={} results={} collected={}" +
+                "\n  With: terms={} results={} collected={}" +
+                "\n  To:   terms={} results={} collected={}",
+            lastAnswer.aggregateTerms.size(), lastAnswer.results.size(), lastAnswer.collectedDistincts,
+            currentAnswer.aggregateTerms.size(), currentAnswer.results.size(), currentAnswer.collectedDistincts,
+            mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts);
     }
 }

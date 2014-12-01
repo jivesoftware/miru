@@ -63,6 +63,16 @@ public class MiruHybridFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<
     }
 
     @Override
+    public Iterator<MiruTermId> getTermIdsForField(int fieldId) throws Exception {
+        return Iterators.transform(indexes[fieldId].keysIterator(), new Function<byte[], MiruTermId>() {
+            @Override
+            public MiruTermId apply(byte[] input) {
+                return new MiruTermId(input);
+            }
+        });
+    }
+
+    @Override
     public Optional<MiruInvertedIndex<BM>> get(int fieldId, MiruTermId termId) throws Exception {
         return Optional.fromNullable(indexes[fieldId].getUnsafe(termId.getBytes()));
     }

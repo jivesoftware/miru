@@ -30,19 +30,8 @@ public class MiruBitmapsDebug {
             if (i == 0) {
                 buf.append(" -0-");
             }
+            buf.append('\n');
             log.log(buf.toString());
         }
-//        if (log.isTraceEnabled()) {
-//            StringBuilder buf = new StringBuilder(message);
-//            int i = 0;
-//            for (BM bitmap : iter) {
-//                buf.append("\n  ").append(++i).append('.')
-//                        .append(" bits=").append(bitmap);
-//            }
-//            if (i == 0) {
-//                buf.append(" -0-");
-//            }
-//            log.trace(buf.toString());
-//        }
     }
 }

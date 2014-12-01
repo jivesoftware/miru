@@ -1,12 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.jivesoftware.os.miru.analytics.plugins;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
@@ -20,6 +16,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
@@ -124,8 +121,11 @@ public class MiruAnalyticsNGTest {
                 new AnalyticsQuery(
                     timeRange,
                     8,
-                    filter
-                   ), true);
+                    MiruFilter.NO_FILTER,
+                    ImmutableMap.<MiruIBA, MiruFilter>builder()
+                        .put(new MiruIBA(user.getBytes()), filter)
+                        .build()),
+                true);
             MiruResponse<AnalyticsAnswer> result = injectable.score(request);
 
             System.out.println("result:" + result);

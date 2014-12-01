@@ -84,6 +84,9 @@ public class MiruAggregateUtil {
 
             } else {
                 MiruTermId pivotTerm = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
+                //And by "for now" we mean IT DOESN'T FUCKING WORK.
+                //Because each andNot iteration can potentially mask/remove other distincts further along in the answer.
+                //Instead, you need to use write-time aggregation to record the latest occurrence of each distinct value, and traverse the aggregate bitmap.
 
                 Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(pivotFieldId, pivotTerm);
                 checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);

@@ -134,16 +134,10 @@ public class SimpleRegressionTrend implements Trender<Long, GotSimpleRegressionT
             throw new IllegalArgumentException("Time cannot be null"); // todo ?? use assert
         }
         hitsBuffer.push(time, 0d); // move cursor to present
-        SimpleRegression r = new SimpleRegression();
         double[] raw = hitsBuffer.rawSignal();
         // todo: have foregone smoothing altogether! re-eval if smoothing is needed / appropriate
         double[] smooth = raw; // with low hit counts this does more harm than good! MathFunctions.ema(raw, lookBack);
-        int l = smooth.length;
-        for (int i = 0; i < l; i++) {
-            double s = i / (l - 1);
-            r.addData(s, smooth[i]);
-        }
-        return r;
+        return WaveformRegression.getRegression(smooth);
     }
 
     @Override

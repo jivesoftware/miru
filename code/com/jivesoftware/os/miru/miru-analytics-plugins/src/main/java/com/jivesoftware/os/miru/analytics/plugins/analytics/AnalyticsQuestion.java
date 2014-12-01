@@ -1,9 +1,13 @@
 package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -16,7 +20,9 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -37,7 +43,7 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
     @Override
     public <BM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<AnalyticsReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
-        MiruRequestContext<BM> stream = handle.getRequestContext();
+        MiruRequestContext<BM> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run
@@ -46,44 +52,83 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
         MiruTimeRange timeRange = request.query.timeRange;
 
         // Short-circuit if the time range doesn't live here
-        if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
+        if (!timeIndexIntersectsTimeRange(context.getTimeIndex(), timeRange)) {
             solutionLog.log("No time index intersection");
-            return new MiruPartitionResponse<>(analytics.analyticing(bitmaps, stream, request, report, bitmaps.create(), solutionLog),
+            return new MiruPartitionResponse<>(
+                new AnalyticsAnswer(
+                    Maps.transformValues(
+                        request.query.analyticsFilters,
+                        new Function<MiruFilter, AnalyticsAnswer.Waveform>() {
+                            @Override
+                            public AnalyticsAnswer.Waveform apply(MiruFilter input) {
+                                return new AnalyticsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
+                            }
+                        }),
+                    true),
                 solutionLog.asList());
         }
+
         long start = System.currentTimeMillis();
-        ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
-        solutionLog.log("timeRangeMask: {} millis.", System.currentTimeMillis() - start);
+        ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+        solutionLog.log("analytics timeRangeMask: {} millis.", System.currentTimeMillis() - start);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = bitmaps.create();
-        start = System.currentTimeMillis();
-        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, solutionLog, filtered, -1);
-        solutionLog.log("filter: {} millis.", System.currentTimeMillis() - start);
-        ands.add(filtered);
+        if (MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
+            solutionLog.log("analytics filter: no constraints.");
+        } else {
+            BM filtered = bitmaps.create();
+            start = System.currentTimeMillis();
+            aggregateUtil.filter(bitmaps, context.getSchema(), context.getFieldIndex(), request.query.constraintsFilter, solutionLog, filtered, -1);
+            solutionLog.log("analytics filter: {} millis.", System.currentTimeMillis() - start);
+            ands.add(filtered);
+        }
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
-        solutionLog.log("indexMask: {} millis.", System.currentTimeMillis() - start);
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), Optional.of(context.getRemovalIndex().getIndex())));
+        solutionLog.log("analytics indexMask: {} millis.", System.currentTimeMillis() - start);
 
-        // AND it all together and return the results
-        BM answer = bitmaps.create();
+        // AND it all together to get the final constraints
+        BM constrained = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         start = System.currentTimeMillis();
-        bitmaps.and(answer, ands);
-        solutionLog.log("answer: {} millis.", System.currentTimeMillis() - start);
+        bitmaps.and(constrained, ands);
+        solutionLog.log("analytics constrained: {} millis.", System.currentTimeMillis() - start);
 
         if (solutionLog.isEnabled()) {
-            solutionLog.log("analyticed {} items.", bitmaps.cardinality(answer));
+            solutionLog.log("analytics constrained {} items.", bitmaps.cardinality(constrained));
         }
-        return new MiruPartitionResponse<>(analytics.analyticing(bitmaps, stream, request, report, answer, solutionLog), solutionLog.asList());
 
+        Map<MiruIBA, AnalyticsAnswer.Waveform> waveforms = Maps.newHashMap();
+        start = System.currentTimeMillis();
+        for (Map.Entry<MiruIBA, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
+            AnalyticsAnswer.Waveform waveform = null;
+            if (!bitmaps.isEmpty(constrained)) {
+                BM waveformFiltered = bitmaps.create();
+                aggregateUtil.filter(bitmaps, context.getSchema(), context.getFieldIndex(), entry.getValue(), solutionLog, waveformFiltered, -1);
+                BM answer = bitmaps.create();
+                bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
+                if (!bitmaps.isEmpty(answer)) {
+                    waveform = analytics.analyticing(bitmaps, context, request, report, answer, solutionLog);
+                }
+            }
+            if (waveform == null) {
+                waveform = new AnalyticsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
+            }
+            waveforms.put(entry.getKey(), waveform);
+        }
+        solutionLog.log("analytics answered: {} millis.", System.currentTimeMillis() - start);
+        solutionLog.log("analytics answered: {} iterations.", request.query.analyticsFilters.size());
+
+        boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= context.getTimeIndex().getSmallestTimestamp();
+        AnalyticsAnswer result = new AnalyticsAnswer(waveforms, resultsExhausted);
+
+        return new MiruPartitionResponse<>(result, solutionLog.asList());
     }
 
     @Override

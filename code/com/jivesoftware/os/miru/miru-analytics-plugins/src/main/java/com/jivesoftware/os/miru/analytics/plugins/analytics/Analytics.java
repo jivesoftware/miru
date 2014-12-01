@@ -19,7 +19,7 @@ public class Analytics {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM> AnalyticsAnswer analyticing(MiruBitmaps<BM> bitmaps,
+    public <BM> Waveform analyticing(MiruBitmaps<BM> bitmaps,
         MiruRequestContext<BM> requestContext,
         MiruRequest<AnalyticsQuery> request,
         Optional<AnalyticsReport> lastReport,
@@ -28,7 +28,6 @@ public class Analytics {
         throws Exception {
 
         log.debug("Get analyticing for answer={} query={}", answer, request);
-        long start = System.currentTimeMillis();
 
         AnalyticsQuery query = request.query;
         long[] waveform = new long[query.divideTimeRangeIntoNSegments];
@@ -36,7 +35,7 @@ public class Analytics {
         MiruTimeRange timeRange = query.timeRange;
         long segmentDuration = (timeRange.largestTimestamp - timeRange.smallestTimestamp) / query.divideTimeRangeIntoNSegments;
         if (segmentDuration < 1) {
-            throw new RuntimeException("Time range is insufficent to be divided into " + query.divideTimeRangeIntoNSegments + " segments");
+            throw new RuntimeException("Time range is insufficient to be divided into " + query.divideTimeRangeIntoNSegments + " segments");
         }
 
         MiruTimeIndex timeIndex = requestContext.getTimeIndex();
@@ -54,21 +53,7 @@ public class Analytics {
             time += segmentDuration;
         }
 
-//        MiruIntIterator iter = bitmaps.intIterator(answer);
-//        while (iter.hasNext()) {
-//            int index = iter.next();
-//            long timestamp = requestContext.getTimeIndex().getTimestamp(index);
-//            int ti = (int) ((waveform.length) * zeroToOne(request.query.timeRange.smallestTimestamp,
-//                request.query.timeRange.largestTimestamp, timestamp));
-//            if (ti > -1 && ti < waveform.length) {
-//                waveform[ti]++;
-//            }
-//        }
-        boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= requestContext.getTimeIndex().getSmallestTimestamp();
-        AnalyticsAnswer result = new AnalyticsAnswer(new Waveform(waveform), resultsExhausted);
-        log.debug("result={}", result);
-        solutionLog.log("analytics took {}.", System.currentTimeMillis() - start);
-        return result;
+        return new Waveform(waveform);
     }
 
     boolean contains(long min, long max, long value) {

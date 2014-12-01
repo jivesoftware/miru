@@ -16,7 +16,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
-import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer.Trendy;
+import com.jivesoftware.os.miru.reco.plugins.trending.OldTrendingAnswer.Trendy;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,7 +32,7 @@ public class Trending {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM> TrendingAnswer trending(MiruBitmaps<BM> bitmaps,
+    public <BM> OldTrendingAnswer trending(MiruBitmaps<BM> bitmaps,
         MiruRequestContext<BM> requestContext,
         MiruRequest<TrendingQuery> request,
         Optional<TrendingReport> lastReport,
@@ -144,7 +144,8 @@ public class Trending {
         }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= requestContext.getTimeIndex().getSmallestTimestamp();
-        TrendingAnswer result = new TrendingAnswer(ImmutableList.copyOf(trendies), ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
+        OldTrendingAnswer result = new OldTrendingAnswer(ImmutableList.copyOf(trendies),
+            ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
         log.debug("result={}", result);
         return result;
     }

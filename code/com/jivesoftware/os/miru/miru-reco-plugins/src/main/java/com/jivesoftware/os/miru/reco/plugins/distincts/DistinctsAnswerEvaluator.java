@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.reco.plugins.trending;
+package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -6,10 +6,10 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 /**
  *
  */
-public class TrendingAnswerEvaluator implements MiruAnswerEvaluator<OldTrendingAnswer> {
+public class DistinctsAnswerEvaluator implements MiruAnswerEvaluator<DistinctsAnswer> {
 
     @Override
-    public boolean isDone(OldTrendingAnswer answer, MiruSolutionLog solutionLog) {
+    public boolean isDone(DistinctsAnswer answer, MiruSolutionLog solutionLog) {
         solutionLog.log("Results exhausted = {}", answer.resultsExhausted);
         return answer.resultsExhausted;
     }

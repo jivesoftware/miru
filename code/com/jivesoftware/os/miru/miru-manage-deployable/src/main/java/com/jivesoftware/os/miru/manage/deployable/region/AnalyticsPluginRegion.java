@@ -2,9 +2,11 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.base.Charsets;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
@@ -17,6 +19,7 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
@@ -35,8 +38,10 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import org.apache.commons.net.util.Base64;
@@ -76,32 +81,26 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
     }
 
     @Override
-    public String render(Optional<AnalyticsPluginRegionInput> input) {
+    public String render(Optional<AnalyticsPluginRegionInput> optionalInput) {
         Map<String, Object> data = Maps.newHashMap();
         try {
-            if (input.isPresent()) {
-                AnalyticsPluginRegionInput i = input.get();
-                data.put("tenant", i.tenant.toString());
-                data.put("hours", String.valueOf(i.hours));
-                data.put("buckets", String.valueOf(i.buckets));
+            if (optionalInput.isPresent()) {
+                AnalyticsPluginRegionInput input = optionalInput.get();
+                data.put("tenant", input.tenant.toString());
+                data.put("hours", String.valueOf(input.hours));
+                data.put("buckets", String.valueOf(input.buckets));
 
-                final int numberOfHours = i.hours;
+                final int numberOfHours = input.hours;
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
                 final long packNDays = snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(numberOfHours), 0, 0);
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
                     Optional.of(Arrays.asList(
-                            new MiruFieldFilter("objectType", Lists.transform(
-                                    Arrays.asList(102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
-                                    Functions.toStringFunction())),
-                            new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
-                                        0, //viewed
-                                        11, //liked
-                                        1, //created
-                                        65 //outcome_set
-                                    ), Functions.toStringFunction()))
-                        )),
+                        new MiruFieldFilter("objectType", Lists.transform(
+                            Arrays.asList(102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
+                            Functions.toStringFunction()))
+                    )),
                     Optional.<List<MiruFilter>>absent());
 
                 List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
@@ -110,11 +109,56 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                     try {
                         @SuppressWarnings("unchecked")
                         MiruResponse<AnalyticsAnswer> analyticsResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(i.tenant, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                            new MiruRequest<>(input.tenant, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
                                 new AnalyticsQuery(
                                     new MiruTimeRange(packCurrentTime - packNDays, packCurrentTime),
-                                    i.buckets,
-                                    constraintsFilter),
+                                    input.buckets,
+                                    constraintsFilter,
+                                    ImmutableMap.<MiruIBA, MiruFilter>builder()
+                                        .put(new MiruIBA("all".getBytes(Charsets.UTF_8)),
+                                            new MiruFilter(MiruFilterOperation.and,
+                                                Optional.of(Collections.singletonList(
+                                                    new MiruFieldFilter("activityType",
+                                                        Lists.transform(Arrays.asList(
+                                                            0, //viewed
+                                                            11, //liked
+                                                            1, //created
+                                                            65 //outcome_set
+                                                        ), Functions.toStringFunction())))),
+                                                Optional.<List<MiruFilter>>absent()))
+                                        .put(new MiruIBA("viewed".getBytes()),
+                                            new MiruFilter(MiruFilterOperation.and,
+                                                Optional.of(Collections.singletonList(
+                                                    new MiruFieldFilter("activityType",
+                                                        Lists.transform(Arrays.asList(
+                                                            0 //viewed
+                                                        ), Functions.toStringFunction())))),
+                                                Optional.<List<MiruFilter>>absent()))
+                                        .put(new MiruIBA("liked".getBytes()),
+                                            new MiruFilter(MiruFilterOperation.and,
+                                                Optional.of(Collections.singletonList(
+                                                    new MiruFieldFilter("activityType",
+                                                        Lists.transform(Arrays.asList(
+                                                            11 //liked
+                                                        ), Functions.toStringFunction())))),
+                                                Optional.<List<MiruFilter>>absent()))
+                                        .put(new MiruIBA("created".getBytes()),
+                                            new MiruFilter(MiruFilterOperation.and,
+                                                Optional.of(Collections.singletonList(
+                                                    new MiruFieldFilter("activityType",
+                                                        Lists.transform(Arrays.asList(
+                                                            1 //created
+                                                        ), Functions.toStringFunction())))),
+                                                Optional.<List<MiruFilter>>absent()))
+                                        .put(new MiruIBA("outcome_set".getBytes()),
+                                            new MiruFilter(MiruFilterOperation.and,
+                                                Optional.of(Collections.singletonList(
+                                                    new MiruFieldFilter("activityType",
+                                                        Lists.transform(Arrays.asList(
+                                                            65 //outcome_set
+                                                        ), Functions.toStringFunction())))),
+                                                Optional.<List<MiruFilter>>absent()))
+                                        .build()),
                                 true),
                             AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
                             new Class[] { AnalyticsAnswer.class },
@@ -131,12 +175,14 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 }
 
                 if (response != null && response.answer != null) {
-                    AnalyticsAnswer.Waveform waveform = response.answer.waveform;
+                    Map<MiruIBA, AnalyticsAnswer.Waveform> waveforms = response.answer.waveforms;
+                    if (waveforms == null) {
+                        waveforms = Collections.emptyMap();
+                    }
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     //data.put("waveform", waveform == null ? "" : waveform.toString());
 
-                    data.put("waveform",
-                        "data:image/png;base64," + hitsToBase64PNGWaveform(waveform == null ? new long[i.buckets] : waveform.waveform));
+                    data.put("waveform", "data:image/png;base64," + hitsToBase64PNGWaveform(waveforms));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
@@ -149,7 +195,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         return renderer.render(template, data);
     }
 
-    private String hitsToBase64PNGWaveform(long[] waveform) throws IOException {
+    private String hitsToBase64PNGWaveform(Map<MiruIBA, AnalyticsAnswer.Waveform> waveforms) throws IOException {
         int w = 1024;
         int h = 200;
         BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
@@ -157,19 +203,36 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         Graphics2D g = bi.createGraphics();
         PaintWaveform pw = new PaintWaveform();
 
-        MinMaxDouble mmd = new MinMaxDouble();
-        double[] hits = new double[waveform.length];
-        for (int i = 0; i < hits.length; i++) {
-            hits[i] = waveform[i];
-            mmd.value(hits[i]);
-        }
-
         int xo = 32;
         int yo = 32;
         int pad = 64;
-        pw.paintGrid(Color.DARK_GRAY, hits, mmd, "", 0, 0, "", true, g, xo, yo, w - pad, h - pad);
-        pw.paintWaveform(Color.LIGHT_GRAY, hits, mmd, "", 0, 0, "", true, g, xo, yo, w - pad, h - pad);
-        pw.paintLabels(Color.black, hits, mmd, "", 0, 0, "", true, g, xo, yo, w - pad, h - pad);
+        pw.paintGrid(g, xo, yo, w - pad, h - pad);
+
+        for (Map.Entry<MiruIBA, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
+            long[] waveform = entry.getValue().waveform;
+            MinMaxDouble mmd = new MinMaxDouble();
+            double[] hits = new double[waveform.length];
+            for (int i = 0; i < hits.length; i++) {
+                hits[i] = waveform[i];
+                mmd.value(hits[i]);
+            }
+
+            pw.paintWaveform(getHashSolid(entry.getKey()), hits, mmd, false, g, xo, yo, w - pad, h - pad);
+        }
+
+        int labelYOffset = yo;
+        for (Map.Entry<MiruIBA, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
+            long[] waveform = entry.getValue().waveform;
+            MinMaxDouble mmd = new MinMaxDouble();
+            double[] hits = new double[waveform.length];
+            for (int i = 0; i < hits.length; i++) {
+                hits[i] = waveform[i];
+                mmd.value(hits[i]);
+            }
+            String prefix = new String(entry.getKey().getBytes(), Charsets.UTF_8);
+            pw.paintLabels(getHashSolid(entry.getKey()), hits, mmd, prefix, 0, 0, "", g, xo, labelYOffset);
+            labelYOffset += 32;
+        }
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(bi, "PNG", baos);
@@ -182,4 +245,28 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         return "Analytics";
     }
 
+    private static Color getHashColor(Object _instance) {
+        int h = new Random(_instance.hashCode()).nextInt();
+
+        int b = (h % 222) + 32;
+        h >>= 2;
+        int g = (h % 222) + 32;
+        h >>= 4;
+        int r = (h % 222) + 32;
+        h >>= 8;
+
+        return new Color(r, g, b);
+    }
+
+    private static Color getHashSolid(Object _instance) {
+        int h = new Random(_instance.hashCode()).nextInt();
+
+        int b = (h % 96) + 128;
+        h >>= 2;
+        int g = (h % 96) + 128;
+        h >>= 4;
+        int r = (h % 96) + 128;
+        h >>= 8;
+        return new Color(r, g, b);
+    }
 }

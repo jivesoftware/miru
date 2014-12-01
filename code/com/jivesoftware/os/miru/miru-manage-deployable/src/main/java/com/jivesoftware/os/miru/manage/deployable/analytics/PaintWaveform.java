@@ -9,8 +9,7 @@ public class PaintWaveform {
 
     static final DecimalFormat df = new DecimalFormat("0.0");
 
-    public void paintGrid(Color color, double[] hits, MinMaxDouble mmd,
-        String prefix, int xOffset, int yOffset, String suffix, boolean solid, Graphics g, int _x, int _y, int _w, int _h) {
+    public void paintGrid(Graphics g, int _x, int _y, int _w, int _h) {
         g.setColor(Color.gray.brighter());
         float hs = _h / 10f;
         for (int i = 0; i < 10; i++) {
@@ -30,7 +29,7 @@ public class PaintWaveform {
     }
 
     public void paintWaveform(Color color, double[] hits, MinMaxDouble mmd,
-        String prefix, int xOffset, int yOffset, String suffix, boolean solid, Graphics g, int _x, int _y, int _w, int _h) {
+        boolean solid, Graphics g, int _x, int _y, int _w, int _h) {
         if (hits == null) {
             return;
         }
@@ -64,7 +63,7 @@ public class PaintWaveform {
     }
 
     public void paintLabels(Color color, double[] hits, MinMaxDouble mmd,
-        String prefix, int xOffset, int yOffset, String suffix, boolean solid, Graphics g, int _x, int _y, int _w, int _h) {
+        String prefix, int xOffset, int yOffset, String suffix, Graphics g, int _x, int _y) {
         mmd.value(0d);
         for (double d : hits) {
             mmd.value(d);

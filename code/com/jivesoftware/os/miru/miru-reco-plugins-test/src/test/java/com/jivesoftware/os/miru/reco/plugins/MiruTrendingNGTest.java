@@ -9,6 +9,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -26,6 +27,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
+import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trending;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
@@ -73,7 +75,7 @@ public class MiruTrendingNGTest {
             miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new TrendingInjectable(miruProvider, new Trending());
+        this.injectable = new TrendingInjectable(miruProvider, new Trending(), new Distincts(), new Analytics());
     }
 
     @Test(enabled = true)

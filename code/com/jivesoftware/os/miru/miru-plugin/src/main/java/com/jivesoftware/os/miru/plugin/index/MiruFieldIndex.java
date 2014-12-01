@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.index;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import java.util.Iterator;
 
 /**
  *
@@ -18,6 +19,8 @@ public interface MiruFieldIndex<BM> {
     void index(int fieldId, MiruTermId termId, int... ids) throws Exception;
 
     void remove(int fieldId, MiruTermId termId, int id) throws Exception;
+
+    Iterator<MiruTermId> getTermIdsForField(int fieldId) throws Exception;
 
     long sizeInMemory() throws Exception;
 

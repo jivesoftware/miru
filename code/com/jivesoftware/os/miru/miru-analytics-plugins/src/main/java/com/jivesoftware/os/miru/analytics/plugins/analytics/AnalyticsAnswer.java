@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Map;
 
 /**
  *
@@ -15,27 +17,21 @@ public class AnalyticsAnswer implements Serializable {
     public static final AnalyticsAnswer EMPTY_RESULTS = new AnalyticsAnswer(null,
         true);
 
-    public final Waveform waveform;
+    public final Map<MiruIBA, Waveform> waveforms;
     public final boolean resultsExhausted;
 
-    public AnalyticsAnswer(
-        Waveform waveform,
-        boolean resultsExhausted) {
-        this.waveform = waveform;
-        this.resultsExhausted = resultsExhausted;
-    }
-
     @JsonCreator
-    public static AnalyticsAnswer fromJson(
-        @JsonProperty("waveform") Waveform waveform,
+    public AnalyticsAnswer(
+        @JsonProperty("waveforms") Map<MiruIBA, Waveform> waveforms,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
-        return new AnalyticsAnswer(waveform, resultsExhausted);
+        this.waveforms = waveforms;
+        this.resultsExhausted = resultsExhausted;
     }
 
     @Override
     public String toString() {
         return "AnalyticsAnswer{"
-            + "waveform=" + waveform
+            + "waveforms=" + waveforms
             + ", resultsExhausted=" + resultsExhausted
             + '}';
     }
