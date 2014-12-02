@@ -19,8 +19,10 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
@@ -110,24 +112,28 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             new PartitionedMapChunkBackedKeyedStore(activityMapChunkFactory, activitySwapChunkFactory, multiChunkStore, 24),
             new MiruInternalActivityMarshaller());
 
-        VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
-        for (int fieldId : schema.getFieldIds()) {
-            //TODO expose to config
-            VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+        @SuppressWarnings("unchecked")
+        MiruOnDiskFieldIndex<BM>[] fieldIndexes = new MiruOnDiskFieldIndex[MiruFieldType.values().length];
+        for (MiruFieldType fieldType : MiruFieldType.values()) {
+            VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
+            for (int fieldId : schema.getFieldIds()) {
+                //TODO expose to config
+                VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
 
-            for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
-                String key = "fieldId-" + fieldId + "-keySize-" + keySize;
-                builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
-                    new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-map", byteBufferFactory)),
-                    new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-swap", byteBufferFactory)),
-                    multiChunkStore,
-                    4)); //TODO expose number of partitions
+                for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
+                    String key = fieldType.name() + "-fieldId-" + fieldId + "-keySize-" + keySize;
+                    builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
+                        new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-map", byteBufferFactory)),
+                        new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-swap", byteBufferFactory)),
+                        multiChunkStore,
+                        4)); //TODO expose number of partitions
+                }
+
+                indexes[fieldId] = builder.build();
             }
-
-            indexes[fieldId] = builder.build();
+            fieldIndexes[fieldType.getIndex()] = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
         }
-
-        MiruOnDiskFieldIndex<BM> fieldIndex = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
+        MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -150,7 +156,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         return new MiruContext<>(schema,
             timeIndex,
             activityIndex,
-            fieldIndex,
+            fieldIndexProvider,
             authzIndex,
             removalIndex,
             unreadTrackingIndex,
@@ -193,66 +199,48 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             new MiruInternalActivityMarshaller());
         ((MiruHybridActivityIndex) from.activityIndex).copyTo(activityIndex);
 
-//        File[] partitionPaths = hybridResourceLocator.getPartitionPaths(identifier);
-//
-//        @SuppressWarnings("unchecked")
-//        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] indexes = new VariableKeySizeBytesObjectMapStore[schema.fieldCount()];
-//        for (int fieldId : schema.getFieldIds()) {
-//            @SuppressWarnings("unchecked")
-//            BytesObjectMapStore<byte[], MiruInvertedIndex<BM>>[] mapStores = new BytesObjectMapStore[IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS.length];
-//            for (int i = 0; i < IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS.length; i++) {
-//                int keySize = IN_MEMORY_FIELD_KEY_SIZE_THRESHOLDS[i];
-//
-//                File[] fieldIndexPaths = new File[partitionPaths.length];
-//                for (int j = 0; j < fieldIndexPaths.length; j++) {
-//                    fieldIndexPaths[j] = new File(partitionPaths[j], "field-" + fieldId + "-keySize-" + keySize);
-//                }
-//
-//                FileBackedMapChunkFactory fieldMapChunkFactory = new FileBackedMapChunkFactory(keySize, true, 0, false, 32, filesToPaths(fieldIndexPaths));
-//                mapStores[i] = new BytesObjectMapStore<>(String.valueOf(keySize), keySize, null, fieldMapChunkFactory, PassThroughKeyMarshaller.INSTANCE);
-//            }
-//
-//            indexes[fieldId] = new VariableKeySizeBytesObjectMapStore<>(mapStores, PassThroughKeyMarshaller.INSTANCE);
-//        }
-//
-//        MiruHybridFieldIndex<BM> fieldIndex = new MiruHybridFieldIndex<>(bitmaps, indexes);
-//        ((MiruHybridFieldIndex<BM>) from.fieldIndex).copyTo(fieldIndex);
         File[] baseIndexMapDirectories = hybridResourceLocator.getMapDirectories(identifier, "index");
         File[] baseIndexSwapDirectories = hybridResourceLocator.getSwapDirectories(identifier, "index");
 
-        VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
-        for (int fieldId : schema.getFieldIds()) {
-            //TODO expose to config
-            VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+        @SuppressWarnings("unchecked")
+        MiruOnDiskFieldIndex<BM>[] fieldIndexes = new MiruOnDiskFieldIndex[MiruFieldType.values().length];
+        for (MiruFieldType fieldType : MiruFieldType.values()) {
+            VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
+            for (int fieldId : schema.getFieldIds()) {
+                //TODO expose to config
+                VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
 
-            for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
-                String[] mapDirectories = new String[baseIndexMapDirectories.length];
-                for (int i = 0; i < mapDirectories.length; i++) {
-                    mapDirectories[i] = new File(new File(baseIndexMapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
+                for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
+                    String fieldTypeAndId = fieldType.name() + "-" + fieldId;
+                    String[] mapDirectories = new String[baseIndexMapDirectories.length];
+                    for (int i = 0; i < mapDirectories.length; i++) {
+                        mapDirectories[i] = new File(new File(baseIndexMapDirectories[i], fieldTypeAndId), String.valueOf(keySize)).getAbsolutePath();
+                    }
+                    String[] swapDirectories = new String[baseIndexSwapDirectories.length];
+                    for (int i = 0; i < swapDirectories.length; i++) {
+                        swapDirectories[i] = new File(new File(baseIndexSwapDirectories[i], fieldTypeAndId), String.valueOf(keySize)).getAbsolutePath();
+                    }
+                    builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
+                        new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
+                        new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
+                        multiChunkStore,
+                        4)); //TODO expose number of partitions
                 }
-                String[] swapDirectories = new String[baseIndexSwapDirectories.length];
-                for (int i = 0; i < swapDirectories.length; i++) {
-                    swapDirectories[i] = new File(new File(baseIndexSwapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
-                }
-                builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
-                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
-                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
-                    multiChunkStore,
-                    4)); //TODO expose number of partitions
+
+                indexes[fieldId] = builder.build();
             }
 
-            indexes[fieldId] = builder.build();
+            MiruOnDiskFieldIndex<BM> fieldIndex = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
+            ((MiruOnDiskFieldIndex<BM>) from.fieldIndexProvider.getFieldIndex(fieldType)).copyTo(fieldIndex);
+            fieldIndexes[fieldType.getIndex()] = fieldIndex;
         }
-
-        MiruOnDiskFieldIndex<BM> fieldIndex = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
-
-        ((MiruOnDiskFieldIndex<BM>) from.fieldIndex).copyTo(fieldIndex);
+        MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
         LOG.info("Updated context when hybrid state changed to {}", state);
         return new MiruContext<>(schema,
             from.timeIndex,
             activityIndex,
-            fieldIndex,
+            fieldIndexProvider,
             from.authzIndex,
             from.removalIndex,
             from.unreadTrackingIndex,

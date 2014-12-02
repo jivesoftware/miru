@@ -14,6 +14,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -179,10 +180,10 @@ public class RemoteRecoHttpTest {
 
         final MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
             Optional.of(Arrays.asList(
-                new MiruFieldFilter("objectType", Lists.transform(
+                new MiruFieldFilter(MiruFieldType.primary, "objectType", Lists.transform(
                     Arrays.asList(102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
                     Functions.toStringFunction())),
-                new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
+                new MiruFieldFilter(MiruFieldType.primary, "activityType", Lists.transform(Arrays.asList(
                     0, //viewed
                     11, //liked
                     1, //created
@@ -257,11 +258,11 @@ public class RemoteRecoHttpTest {
 
         MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
             Optional.of(Arrays.asList(
-                new MiruFieldFilter("user", Arrays.asList(String.valueOf(3_181))), //   3765  2902 3251 3816 3181 5723
+                new MiruFieldFilter(MiruFieldType.primary, "user", Arrays.asList(String.valueOf(3_181))), //   3765  2902 3251 3816 3181 5723
                     /*new MiruFieldFilter("objectType", Lists.transform(
                             Arrays.asList(102, 1, 18, 38, 801, 1464927464, -960826044),
                             Functions.toStringFunction())),*/
-                new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
+                new MiruFieldFilter(MiruFieldType.primary, "activityType", Lists.transform(Arrays.asList(
                         0 //viewed
                         //11, //liked
                         //1, //created
@@ -273,7 +274,7 @@ public class RemoteRecoHttpTest {
 
         MiruFilter resultConstraintFilter = new MiruFilter(MiruFilterOperation.and,
             Optional.of(Arrays.asList(
-                new MiruFieldFilter("objectType", Lists.transform(Arrays.asList(102), Functions.toStringFunction())))),
+                new MiruFieldFilter(MiruFieldType.primary, "objectType", Lists.transform(Arrays.asList(102), Functions.toStringFunction())))),
             Optional.<List<MiruFilter>>absent());
 
 

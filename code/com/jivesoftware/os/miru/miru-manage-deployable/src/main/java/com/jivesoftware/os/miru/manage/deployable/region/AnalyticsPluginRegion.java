@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -97,7 +98,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 final long packNDays = snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(numberOfHours), 0, 0);
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
                     Optional.of(Arrays.asList(
-                        new MiruFieldFilter("objectType", Lists.transform(
+                        new MiruFieldFilter(MiruFieldType.primary, "objectType", Lists.transform(
                             Arrays.asList(102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
                             Functions.toStringFunction()))
                     )),
@@ -118,7 +119,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         .put(new MiruIBA("all".getBytes(Charsets.UTF_8)),
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter("activityType",
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
                                                         Lists.transform(Arrays.asList(
                                                             0, //viewed
                                                             11, //liked
@@ -129,7 +131,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         .put(new MiruIBA("viewed".getBytes()),
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter("activityType",
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
                                                         Lists.transform(Arrays.asList(
                                                             0 //viewed
                                                         ), Functions.toStringFunction())))),
@@ -137,7 +140,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         .put(new MiruIBA("liked".getBytes()),
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter("activityType",
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
                                                         Lists.transform(Arrays.asList(
                                                             11 //liked
                                                         ), Functions.toStringFunction())))),
@@ -145,7 +149,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         .put(new MiruIBA("created".getBytes()),
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter("activityType",
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
                                                         Lists.transform(Arrays.asList(
                                                             1 //created
                                                         ), Functions.toStringFunction())))),
@@ -153,7 +158,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         .put(new MiruIBA("outcome_set".getBytes()),
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter("activityType",
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
                                                         Lists.transform(Arrays.asList(
                                                             65 //outcome_set
                                                         ), Functions.toStringFunction())))),

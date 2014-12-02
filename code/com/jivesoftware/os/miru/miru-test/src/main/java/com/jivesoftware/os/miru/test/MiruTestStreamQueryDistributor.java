@@ -9,6 +9,7 @@ import com.jivesoftware.os.jive.utils.id.ObjectId;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -134,7 +135,7 @@ public class MiruTestStreamQueryDistributor {
     }
 
     private MiruFieldFilter viewClassesFilter() {
-        return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.of(
+        return new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.of(
             "ContentVersionActivitySearchView",
             "CommentVersionActivitySearchView",
             "LikeActivitySearchView",
@@ -145,15 +146,15 @@ public class MiruTestStreamQueryDistributor {
 
     private List<MiruFieldFilter> buildFieldFilters(boolean inbox, Id userId) {
         if (inbox) {
-            return ImmutableList.of(new MiruFieldFilter(MiruFieldName.PARTICIPANT_IDS.getFieldName(),
+            return ImmutableList.of(new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.PARTICIPANT_IDS.getFieldName(),
                 ImmutableList.of(userId.toStringForm())));
         } else {
             int numUsers = random.nextInt(queryUsers);
             int numContainers = random.nextInt(queryContainers);
             return ImmutableList.of(
-                new MiruFieldFilter(MiruFieldName.CONTAINER_IDS.getFieldName(), ImmutableList.copyOf(
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.CONTAINER_IDS.getFieldName(), ImmutableList.copyOf(
                         Lists.transform(featureSupplier.oldContainers(numContainers), ID_TO_TERMID))),
-                new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), ImmutableList.copyOf(
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.AUTHOR_ID.getFieldName(), ImmutableList.copyOf(
                         Lists.transform(featureSupplier.oldUsers(numUsers), ID_TO_TERMID))));
         }
     }
@@ -175,7 +176,8 @@ public class MiruTestStreamQueryDistributor {
         if (inbox) {
             if (random.nextInt(100) < 1) {
                 // 1% filter for mentions
-                fieldFiltersBuilder.add(new MiruFieldFilter(MiruFieldName.MENTIONED_USER_IDS.getFieldName(), ImmutableList.of(ID_TO_TERMID.apply(userId))));
+                fieldFiltersBuilder.add(new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.MENTIONED_USER_IDS.getFieldName(),
+                    ImmutableList.of(ID_TO_TERMID.apply(userId))));
             }
         } else {
             // activity filters?

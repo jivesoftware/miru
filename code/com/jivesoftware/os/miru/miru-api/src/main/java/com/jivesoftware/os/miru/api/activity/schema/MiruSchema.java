@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.api.activity.schema;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -21,13 +20,13 @@ public class MiruSchema {
     private final Map<String, Integer> propNameToId;
     private final MiruFieldDefinition[] fieldDefinitions;
     private final MiruPropertyDefinition[] propertyDefinitions;
-    private final List<MiruFieldDefinition>[] fieldAggregateFieldDefinitions;
-    private final List<MiruFieldDefinition>[] fieldBloominFieldDefinitions;
+    private final List<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions;
+    private final List<MiruFieldDefinition>[] fieldToBloomFieldDefinitions;
 
     private ImmutableList<Integer> fieldIds; // lazy initialized
-    private ImmutableList<MiruFieldDefinition> writeTimeAggregateFields; // lazy initialized
-    private ImmutableList<MiruFieldDefinition> fieldsWithAggregates; // lazy initialized
-    private ImmutableList<MiruFieldDefinition> fieldsWithBlooms; // lazy initialized
+    private ImmutableList<MiruFieldDefinition> fieldsWithLatest; // lazy initialized
+    private ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest; // lazy initialized
+    private ImmutableList<MiruFieldDefinition> fieldsWithBloom; // lazy initialized
 
     public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
         this(fieldDefinitions, new MiruPropertyDefinition[0]);
@@ -40,7 +39,6 @@ public class MiruSchema {
         this.fieldDefinitions = fieldDefinitions;
         this.fieldNameToId = Maps.newHashMap();
         for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-            Preconditions.checkArgument(!RESERVED_AGGREGATE.equals(fieldDefinition.name), "Cannot use reserved aggregate field name");
             fieldNameToId.put(fieldDefinition.name, fieldDefinition.fieldId);
         }
 
@@ -50,8 +48,8 @@ public class MiruSchema {
             propNameToId.put(propertyDefinition.name, propertyDefinition.propId);
         }
 
-        this.fieldAggregateFieldDefinitions = new List[fieldDefinitions.length];
-        this.fieldBloominFieldDefinitions = new List[fieldDefinitions.length];
+        this.fieldToPairedLatestFieldDefinitions = new List[fieldDefinitions.length];
+        this.fieldToBloomFieldDefinitions = new List[fieldDefinitions.length];
     }
 
     public MiruFieldDefinition[] getFieldDefinitions() {
@@ -113,68 +111,68 @@ public class MiruSchema {
     }
 
     @JsonIgnore
-    public ImmutableList<MiruFieldDefinition> getWriteTimeAggregateFields() {
-        if (writeTimeAggregateFields == null) {
+    public ImmutableList<MiruFieldDefinition> getFieldsWithLatest() {
+        if (fieldsWithLatest == null) {
             ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
             for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-                if (fieldDefinition.writeTimeAggregate) {
+                if (fieldDefinition.indexLatest) {
                     builder.add(fieldDefinition);
                 }
             }
-            writeTimeAggregateFields = builder.build();
+            fieldsWithLatest = builder.build();
         }
-        return writeTimeAggregateFields;
+        return fieldsWithLatest;
     }
 
     @JsonIgnore
-    public ImmutableList<MiruFieldDefinition> getFieldsWithAggregates() {
-        if (fieldsWithAggregates == null) {
+    public ImmutableList<MiruFieldDefinition> getFieldsWithPairedLatest() {
+        if (fieldsWithPairedLatest == null) {
             ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
             for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-                if (!fieldDefinition.aggregateFieldNames.isEmpty()) {
+                if (!fieldDefinition.pairedLatestFieldNames.isEmpty()) {
                     builder.add(fieldDefinition);
                 }
             }
-            fieldsWithAggregates = builder.build();
+            fieldsWithPairedLatest = builder.build();
         }
-        return fieldsWithAggregates;
+        return fieldsWithPairedLatest;
     }
 
     @JsonIgnore
-    public ImmutableList<MiruFieldDefinition> getFieldsWithBlooms() {
-        if (fieldsWithBlooms == null) {
+    public ImmutableList<MiruFieldDefinition> getFieldsWithBloom() {
+        if (fieldsWithBloom == null) {
             ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
             for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
                 if (!fieldDefinition.bloomFieldNames.isEmpty()) {
                     builder.add(fieldDefinition);
                 }
             }
-            fieldsWithBlooms = builder.build();
+            fieldsWithBloom = builder.build();
         }
-        return fieldsWithBlooms;
+        return fieldsWithBloom;
     }
 
     @JsonIgnore
-    public List<MiruFieldDefinition> getAggregateFieldDefinitions(int fieldId) {
-        List<MiruFieldDefinition> aggregateFieldDefinitions = fieldAggregateFieldDefinitions[fieldId];
-        if (aggregateFieldDefinitions == null) {
-            aggregateFieldDefinitions = Lists.newArrayList();
-            List<String> aggregateFieldNames = fieldDefinitions[fieldId].aggregateFieldNames;
-            Lists.newArrayListWithCapacity(aggregateFieldNames.size());
-            for (String aggregateFieldName : aggregateFieldNames) {
-                int aggregateFieldId = getFieldId(aggregateFieldName);
-                if (aggregateFieldId >= 0) {
-                    aggregateFieldDefinitions.add(fieldDefinitions[aggregateFieldId]);
+    public List<MiruFieldDefinition> getPairedLatestFieldDefinitions(int fieldId) {
+        List<MiruFieldDefinition> pairedLatestFieldDefinitions = fieldToPairedLatestFieldDefinitions[fieldId];
+        if (pairedLatestFieldDefinitions == null) {
+            pairedLatestFieldDefinitions = Lists.newArrayList();
+            List<String> pairedLatestFieldNames = fieldDefinitions[fieldId].pairedLatestFieldNames;
+            Lists.newArrayListWithCapacity(pairedLatestFieldNames.size());
+            for (String pairedLatestFieldName : pairedLatestFieldNames) {
+                int pairedLatestFieldId = getFieldId(pairedLatestFieldName);
+                if (pairedLatestFieldId >= 0) {
+                    pairedLatestFieldDefinitions.add(fieldDefinitions[pairedLatestFieldId]);
                 }
             }
-            fieldAggregateFieldDefinitions[fieldId] = aggregateFieldDefinitions;
+            fieldToPairedLatestFieldDefinitions[fieldId] = pairedLatestFieldDefinitions;
         }
-        return aggregateFieldDefinitions;
+        return pairedLatestFieldDefinitions;
     }
 
     @JsonIgnore
-    public List<MiruFieldDefinition> getBloominFieldDefinitions(int fieldId) {
-        List<MiruFieldDefinition> bloomFieldDefinitions = fieldBloominFieldDefinitions[fieldId];
+    public List<MiruFieldDefinition> getBloomFieldDefinitions(int fieldId) {
+        List<MiruFieldDefinition> bloomFieldDefinitions = fieldToBloomFieldDefinitions[fieldId];
         if (bloomFieldDefinitions == null) {
             bloomFieldDefinitions = Lists.newArrayList();
             List<String> bloomFieldNames = fieldDefinitions[fieldId].bloomFieldNames;
@@ -185,7 +183,7 @@ public class MiruSchema {
                     bloomFieldDefinitions.add(fieldDefinitions[bloomFieldId]);
                 }
             }
-            fieldBloominFieldDefinitions[fieldId] = bloomFieldDefinitions;
+            fieldToBloomFieldDefinitions[fieldId] = bloomFieldDefinitions;
         }
         return bloomFieldDefinitions;
     }

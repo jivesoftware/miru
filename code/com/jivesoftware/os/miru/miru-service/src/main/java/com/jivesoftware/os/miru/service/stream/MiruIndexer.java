@@ -11,9 +11,11 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -39,7 +41,7 @@ public class MiruIndexer<BM> {
 
     private final BloomIndex<BM> bloomIndex;
     private final MiruIndexUtil indexUtil = new MiruIndexUtil();
-    private final MiruTermId fieldAggregateTermId = indexUtil.makeFieldAggregate();
+    private final MiruTermId fieldAggregateTermId = indexUtil.makeLatestTerm();
     private final StripingLocksProvider<Integer> stripingLocksProvider = new StripingLocksProvider<>(64); // TODO expose to config
 
     public MiruIndexer(MiruBitmaps<BM> bitmaps) {
@@ -75,7 +77,7 @@ public class MiruIndexer<BM> {
 
         List<Future<List<FieldValuesWork>>> fieldWorkFutures = composeFieldValuesWork(context, internalActivityAndIds, indexExecutor);
         final List<Future<List<BloomWork>>> bloominsWorkFutures = composeBloominsWork(context, internalActivityAndIds, indexExecutor);
-        final List<Future<List<AggregateFieldsWork>>> aggregateFieldsWorkFutures = composeAggregateFieldsWork(context, internalActivityAndIds, indexExecutor);
+        final List<Future<List<PairedLatestWork>>> aggregateFieldsWorkFutures = composePairedLatestWork(context, internalActivityAndIds, indexExecutor);
 
         List<FieldValuesWork>[] fieldsWork = awaitFieldWorkFutures(fieldWorkFutures);
 
@@ -93,22 +95,22 @@ public class MiruIndexer<BM> {
             }
         });
 
-        Future<List<AggregateFieldsWork>> aggregateFieldsSortFuture = indexExecutor.submit(new Callable<List<AggregateFieldsWork>>() {
+        Future<List<PairedLatestWork>> aggregateFieldsSortFuture = indexExecutor.submit(new Callable<List<PairedLatestWork>>() {
             @Override
-            public List<AggregateFieldsWork> call() throws Exception {
-                List<AggregateFieldsWork> aggregateFieldsWork = Lists.newArrayList();
-                for (Future<List<AggregateFieldsWork>> future : aggregateFieldsWorkFutures) {
-                    aggregateFieldsWork.addAll(future.get());
+            public List<PairedLatestWork> call() throws Exception {
+                List<PairedLatestWork> pairedLatestWork = Lists.newArrayList();
+                for (Future<List<PairedLatestWork>> future : aggregateFieldsWorkFutures) {
+                    pairedLatestWork.addAll(future.get());
                 }
-                Collections.sort(aggregateFieldsWork);
-                return aggregateFieldsWork;
+                Collections.sort(pairedLatestWork);
+                return pairedLatestWork;
             }
         });
 
         awaitFieldFutures(fieldFutures);
 
         List<BloomWork> bloominsWork = awaitBloominsSortFuture(bloominsSortFuture);
-        List<AggregateFieldsWork> aggregateFieldsWork = awaitAggregateFieldsSortFuture(aggregateFieldsSortFuture);
+        List<PairedLatestWork> pairedLatestWork = awaitAggregateFieldsSortFuture(aggregateFieldsSortFuture);
 
         final List<Future<?>> otherFutures = new ArrayList<>();
         otherFutures.add(indexExecutor.submit(new Callable<Void>() {
@@ -118,9 +120,9 @@ public class MiruIndexer<BM> {
                 return null;
             }
         }));
-        otherFutures.addAll(indexAggregateFields(context, aggregateFieldsWork, indexExecutor));
+        otherFutures.addAll(indexPairedLatest(context, pairedLatestWork, indexExecutor));
         otherFutures.addAll(indexBloomins(context, bloominsWork, indexExecutor));
-        otherFutures.addAll(indexWriteTimeAggregates(context, internalActivityAndIds, indexExecutor));
+        otherFutures.addAll(indexLatest(context, internalActivityAndIds, indexExecutor));
         for (final List<MiruActivityAndId<MiruInternalActivity>> partition : Lists.partition(internalActivityAndIds, partitionSize)) {
             otherFutures.add(indexExecutor.submit(new Callable<Void>() {
                 @Override
@@ -238,7 +240,7 @@ public class MiruIndexer<BM> {
         return bloominsSortFuture.get();
     }
 
-    private List<AggregateFieldsWork> awaitAggregateFieldsSortFuture(Future<List<AggregateFieldsWork>> aggregateFieldsSortFuture) throws
+    private List<PairedLatestWork> awaitAggregateFieldsSortFuture(Future<List<PairedLatestWork>> aggregateFieldsSortFuture) throws
         InterruptedException, ExecutionException {
         return aggregateFieldsSortFuture.get();
     }
@@ -295,6 +297,7 @@ public class MiruIndexer<BM> {
 
     private List<Future<?>> indexFieldValues(final MiruContext<BM> context, final List<FieldValuesWork>[] work, ExecutorService indexExecutor)
         throws Exception {
+        final MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         List<Integer> fieldIds = context.schema.getFieldIds();
         List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (int fieldId = 0; fieldId < work.length; fieldId++) {
@@ -304,7 +307,8 @@ public class MiruIndexer<BM> {
                 futures.add(indexExecutor.submit(new Callable<Void>() {
                     @Override
                     public Void call() throws Exception {
-                        context.fieldIndex.index(finalFieldId, fieldValuesWork.fieldValue, fieldValuesWork.ids.toArray());
+                        fieldIndex.index(finalFieldId, fieldValuesWork.fieldValue, fieldValuesWork.ids
+                            .toArray());
                         return null;
                     }
                 }));
@@ -334,10 +338,10 @@ public class MiruIndexer<BM> {
         ExecutorService indexExecutor)
         throws Exception {
 
-        List<MiruFieldDefinition> fieldsWithBlooms = context.schema.getFieldsWithBlooms();
+        List<MiruFieldDefinition> fieldsWithBlooms = context.schema.getFieldsWithBloom();
         List<Future<List<BloomWork>>> workFutures = Lists.newArrayList();
         for (final MiruFieldDefinition fieldDefinition : fieldsWithBlooms) {
-            List<MiruFieldDefinition> bloominFieldDefinitions = context.schema.getBloominFieldDefinitions(fieldDefinition.fieldId);
+            List<MiruFieldDefinition> bloominFieldDefinitions = context.schema.getBloomFieldDefinitions(fieldDefinition.fieldId);
             for (final MiruFieldDefinition bloominFieldDefinition : bloominFieldDefinitions) {
                 workFutures.add(indexExecutor.submit(new Callable<List<BloomWork>>() {
                     @Override
@@ -373,6 +377,7 @@ public class MiruIndexer<BM> {
     }
 
     private List<Future<?>> indexBloomins(final MiruContext<BM> context, List<BloomWork> bloomWorks, ExecutorService indexExecutor) {
+        final MiruFieldIndex<BM> bloomFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
         int callableCount = 0;
         List<Future<?>> futures = Lists.newArrayList();
         for (final BloomWork bloomWork : bloomWorks) {
@@ -380,8 +385,8 @@ public class MiruIndexer<BM> {
                 @Override
                 public Void call() throws Exception {
                     MiruFieldDefinition bloomFieldDefinition = context.schema.getFieldDefinition(bloomWork.bloomFieldId);
-                    MiruTermId compositeBloomId = indexUtil.makeBloomComposite(bloomWork.fieldValue, bloomFieldDefinition.name);
-                    MiruInvertedIndex<BM> invertedIndex = context.fieldIndex.getOrCreateInvertedIndex(bloomWork.fieldId, compositeBloomId);
+                    MiruTermId compositeBloomId = indexUtil.makeBloomTerm(bloomWork.fieldValue, bloomFieldDefinition.name);
+                    MiruInvertedIndex<BM> invertedIndex = bloomFieldIndex.getOrCreateInvertedIndex(bloomWork.fieldId, compositeBloomId);
                     bloomIndex.put(invertedIndex, bloomWork.bloomFieldValues);
                     return null;
                 }
@@ -393,12 +398,14 @@ public class MiruIndexer<BM> {
         return futures;
     }
 
-    private List<Future<?>> indexWriteTimeAggregates(final MiruContext<BM> context,
+    private List<Future<?>> indexLatest(final MiruContext<BM> context,
         List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
 
-        List<MiruFieldDefinition> writeTimeAggregateFields = context.schema.getWriteTimeAggregateFields();
+        final MiruFieldIndex<BM> allFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
+        final MiruFieldIndex<BM> latestFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.latest);
+        List<MiruFieldDefinition> writeTimeAggregateFields = context.schema.getFieldsWithLatest();
         // rough estimate of necessary capacity
         List<Future<?>> futures = Lists.newArrayListWithCapacity(internalActivityAndIds.size() * writeTimeAggregateFields.size());
         for (final MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
@@ -410,17 +417,18 @@ public class MiruIndexer<BM> {
                         public Void call() throws Exception {
                             // Answers the question,
                             // "What is the latest activity against each distinct value of this field?"
-                            MiruInvertedIndex<BM> aggregateIndex = context.fieldIndex.getOrCreateInvertedIndex(fieldDefinition.fieldId, fieldAggregateTermId);
+                            MiruInvertedIndex<BM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex(
+                                fieldDefinition.fieldId, fieldAggregateTermId);
 
                             // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
                             for (MiruTermId fieldValue : fieldValues) {
-                                Optional<MiruInvertedIndex<BM>> optionalFieldValueIndex = context.fieldIndex.get(fieldDefinition.fieldId, fieldValue);
+                                Optional<MiruInvertedIndex<BM>> optionalFieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
                                 if (optionalFieldValueIndex.isPresent()) {
                                     MiruInvertedIndex<BM> fieldValueIndex = optionalFieldValueIndex.get();
                                     aggregateIndex.andNotToSourceSize(Collections.singletonList(fieldValueIndex.getIndexUnsafe()));
                                 }
                             }
-                            context.fieldIndex.index(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
+                            latestFieldIndex.index(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
                             return null;
                         }
                     }));
@@ -432,19 +440,19 @@ public class MiruIndexer<BM> {
 
     // Answers the question,
     // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
-    private List<Future<List<AggregateFieldsWork>>> composeAggregateFieldsWork(MiruContext<BM> context,
+    private List<Future<List<PairedLatestWork>>> composePairedLatestWork(MiruContext<BM> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
 
-        List<MiruFieldDefinition> fieldsWithAggregates = context.schema.getFieldsWithAggregates();
-        List<Future<List<AggregateFieldsWork>>> workFutures = Lists.newArrayList();
+        List<MiruFieldDefinition> fieldsWithAggregates = context.schema.getFieldsWithPairedLatest();
+        List<Future<List<PairedLatestWork>>> workFutures = Lists.newArrayList();
         for (final MiruFieldDefinition fieldDefinition : fieldsWithAggregates) {
-            List<MiruFieldDefinition> aggregateFieldDefinitions = context.schema.getAggregateFieldDefinitions(fieldDefinition.fieldId);
+            List<MiruFieldDefinition> aggregateFieldDefinitions = context.schema.getPairedLatestFieldDefinitions(fieldDefinition.fieldId);
             for (final MiruFieldDefinition aggregateFieldDefinition : aggregateFieldDefinitions) {
-                workFutures.add(indexExecutor.submit(new Callable<List<AggregateFieldsWork>>() {
+                workFutures.add(indexExecutor.submit(new Callable<List<PairedLatestWork>>() {
                     @Override
-                    public List<AggregateFieldsWork> call() throws Exception {
+                    public List<PairedLatestWork> call() throws Exception {
                         Map<MiruTermId, List<IdAndTerm>> fieldWork = Maps.newHashMap();
                         Set<WriteAggregateKey> visited = Sets.newHashSet();
 
@@ -472,9 +480,9 @@ public class MiruIndexer<BM> {
                                 }
                             }
                         }
-                        List<AggregateFieldsWork> workList = Lists.newArrayListWithCapacity(fieldWork.size());
+                        List<PairedLatestWork> workList = Lists.newArrayListWithCapacity(fieldWork.size());
                         for (Map.Entry<MiruTermId, List<IdAndTerm>> entry : fieldWork.entrySet()) {
-                            workList.add(new AggregateFieldsWork(fieldDefinition.fieldId, aggregateFieldDefinition.fieldId, entry.getKey(), entry.getValue()));
+                            workList.add(new PairedLatestWork(fieldDefinition.fieldId, aggregateFieldDefinition.fieldId, entry.getKey(), entry.getValue()));
                         }
                         return workList;
                     }
@@ -484,30 +492,33 @@ public class MiruIndexer<BM> {
         return workFutures;
     }
 
-    private List<Future<?>> indexAggregateFields(final MiruContext<BM> context,
-        List<AggregateFieldsWork> aggregateFieldsWorks,
+    private List<Future<?>> indexPairedLatest(final MiruContext<BM> context,
+        List<PairedLatestWork> pairedLatestWorks,
         ExecutorService indexExecutor)
         throws Exception {
 
+        final MiruFieldIndex<BM> allFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
+        final MiruFieldIndex<BM> pairedLatestFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.pairedLatest);
         int callableCount = 0;
-        List<Future<?>> futures = Lists.newArrayListWithCapacity(aggregateFieldsWorks.size());
-        for (final AggregateFieldsWork aggregateFieldsWork : aggregateFieldsWorks) {
+        List<Future<?>> futures = Lists.newArrayListWithCapacity(pairedLatestWorks.size());
+        for (final PairedLatestWork pairedLatestWork : pairedLatestWorks) {
             futures.add(indexExecutor.submit(new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
-                    MiruTermId fieldValue = aggregateFieldsWork.fieldValue;
-                    List<IdAndTerm> idAndTerms = aggregateFieldsWork.work;
+                    MiruTermId fieldValue = pairedLatestWork.fieldValue;
+                    List<IdAndTerm> idAndTerms = pairedLatestWork.work;
 
-                    MiruFieldDefinition aggregateFieldDefinition = context.schema.getFieldDefinition(aggregateFieldsWork.aggregateFieldId);
-                    MiruTermId compositeAggregateId = indexUtil.makeFieldValueAggregate(fieldValue, aggregateFieldDefinition.name);
-                    MiruInvertedIndex<BM> invertedIndex = context.fieldIndex.getOrCreateInvertedIndex(aggregateFieldsWork.fieldId, compositeAggregateId);
+                    MiruFieldDefinition aggregateFieldDefinition = context.schema.getFieldDefinition(pairedLatestWork.aggregateFieldId);
+                    MiruTermId pairedLatestTerm = indexUtil.makePairedLatestTerm(fieldValue, aggregateFieldDefinition.name);
+                    MiruInvertedIndex<BM> invertedIndex = pairedLatestFieldIndex
+                        .getOrCreateInvertedIndex(pairedLatestWork.fieldId, pairedLatestTerm);
 
                     List<BM> aggregateBitmaps = Lists.newArrayListWithCapacity(idAndTerms.size());
                     TIntList ids = new TIntArrayList(idAndTerms.size());
                     for (IdAndTerm idAndTerm : idAndTerms) {
                         MiruTermId aggregateFieldValue = idAndTerm.term;
-                        MiruInvertedIndex<BM> aggregateInvertedIndex = context.fieldIndex.getOrCreateInvertedIndex(
-                            aggregateFieldsWork.aggregateFieldId, aggregateFieldValue);
+                        MiruInvertedIndex<BM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
+                            pairedLatestWork.aggregateFieldId, aggregateFieldValue);
                         BM aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe();
                         aggregateBitmaps.add(aggregateBitmap);
                         ids.add(idAndTerm.id);
@@ -516,7 +527,7 @@ public class MiruIndexer<BM> {
                     invertedIndex.andNotToSourceSize(aggregateBitmaps);
 
                     ids.reverse(); // we built in reverse order, so flip back to ascending
-                    context.fieldIndex.index(aggregateFieldsWork.fieldId, compositeAggregateId, ids.toArray());
+                    pairedLatestFieldIndex.index(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray());
 
                     return null;
                 }

@@ -7,6 +7,7 @@ import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -84,7 +85,8 @@ public class CollaborativeFiltering {
         MiruFilter constrainScorableFilter = request.query.constrainResults;
         if (!MiruFilter.NO_FILTER.equals(constrainScorableFilter)) {
             BM possible = bitmaps.create();
-            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getFieldIndex(), constrainScorableFilter, solutionLog, possible, -1);
+            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getFieldIndexProvider(),
+                constrainScorableFilter, solutionLog, possible, -1);
             if (solutionLog.isEnabled()) {
                 solutionLog.log("possible {}.", bitmaps.cardinality(possible));
             }
@@ -104,13 +106,13 @@ public class CollaborativeFiltering {
         throws Exception {
 
         int fieldId = requestContext.getSchema().getFieldId(query.lookupFieldNamed2);
-        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndex();
+        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.pairedLatest);
 
         List<BM> toBeORed = new ArrayList<>();
         for (MiruTermCount tc : userHeap) {
             Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(
                 fieldId,
-                indexUtil.makeFieldValueAggregate(tc.termId, query.aggregateFieldName3));
+                indexUtil.makePairedLatestTerm(tc.termId, query.aggregateFieldName3));
             if (invertedIndex.isPresent()) {
                 toBeORed.add(invertedIndex.get().getIndex());
             }
@@ -154,7 +156,7 @@ public class CollaborativeFiltering {
         throws Exception {
 
         int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName1);
-        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndex();
+        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.pairedLatest);
         List<BM> toBeORed = new ArrayList<>();
         MiruIntIterator answerIterator = bitmaps.intIterator(answer);
         log.debug("possibleContributors: fieldId={}", fieldId);
@@ -166,7 +168,7 @@ public class CollaborativeFiltering {
             if (fieldValues != null && fieldValues.length > 0) {
                 Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(
                     fieldId,
-                    indexUtil.makeFieldValueAggregate(fieldValues[0], request.query.aggregateFieldName2));
+                    indexUtil.makePairedLatestTerm(fieldValues[0], request.query.aggregateFieldName2));
                 if (invertedIndex.isPresent()) {
                     toBeORed.add(invertedIndex.get().getIndex());
                 }
@@ -185,7 +187,7 @@ public class CollaborativeFiltering {
         final int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName3);
         log.debug("score: fieldId={}", fieldId);
 
-        final MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndex();
+        final MiruFieldIndex<BM> bloomFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
         final MinMaxPriorityQueue<MiruTermCount> heap = MinMaxPriorityQueue.orderedBy(new Comparator<MiruTermCount>() {
 
             @Override
@@ -202,9 +204,9 @@ public class CollaborativeFiltering {
                         MiruTermId[] fieldValues = v.mostRecent;
                         log.trace("score.fieldValues={}", (Object) fieldValues);
                         if (fieldValues != null && fieldValues.length > 0) {
-                            Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(
+                            Optional<MiruInvertedIndex<BM>> invertedIndex = bloomFieldIndex.get(
                                 fieldId,
-                                indexUtil.makeBloomComposite(fieldValues[0], request.query.retrieveFieldName2));
+                                indexUtil.makeBloomTerm(fieldValues[0], request.query.retrieveFieldName2));
                             if (invertedIndex.isPresent()) {
                                 MiruInvertedIndex<BM> index = invertedIndex.get();
                                 final MutableInt count = new MutableInt(0);

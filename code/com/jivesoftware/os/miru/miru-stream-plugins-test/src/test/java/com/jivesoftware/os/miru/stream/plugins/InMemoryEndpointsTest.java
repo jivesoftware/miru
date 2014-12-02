@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -120,7 +121,7 @@ public class InMemoryEndpointsTest {
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
                     Optional.of(Arrays.asList(
-                            new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")))),
+                            new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2")))),
                     Optional.<List<MiruFilter>>absent()),
                 MiruFilter.NO_FILTER,
                 OBJECT_ID.getFieldName(),
@@ -140,8 +141,8 @@ public class InMemoryEndpointsTest {
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
                     Optional.of(Arrays.asList(
-                            new MiruFieldFilter(OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
-                            new MiruFieldFilter(AUTHOR_ID.getFieldName(), ImmutableList.of("value2")))),
+                            new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
+                            new MiruFieldFilter(MiruFieldType.primary, AUTHOR_ID.getFieldName(), ImmutableList.of("value2")))),
                     Optional.<List<MiruFilter>>absent()),
                 MiruFilter.NO_FILTER,
                 OBJECT_ID.getFieldName(),

@@ -9,6 +9,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampProvider;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -66,7 +67,7 @@ public class MiruTestRecoQueryDistributor {
     public MiruRequest<RecoQuery> collaborativeFiltering() {
         Id userId = featureSupplier.oldUsers(1).get(0);
         MiruFieldFilter miruFieldFilter = new MiruFieldFilter(
-            MiruFieldName.AUTHOR_ID.getFieldName(), Arrays.asList(userId.toStringForm()));
+            MiruFieldType.primary, MiruFieldName.AUTHOR_ID.getFieldName(), Arrays.asList(userId.toStringForm()));
         MiruFilter filter = new MiruFilter(MiruFilterOperation.or, Optional.of(Arrays.asList(miruFieldFilter)),
             Optional.<List<MiruFilter>>absent());
         return new MiruRequest<>(featureSupplier.miruTenantId(),
@@ -88,7 +89,7 @@ public class MiruTestRecoQueryDistributor {
     }
 
     private MiruFieldFilter viewClassesFilter() {
-        return new MiruFieldFilter(MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.of(
+        return new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.VIEW_CLASS_NAME.getFieldName(), ImmutableList.of(
             "ContentVersionActivitySearchView",
             "CommentVersionActivitySearchView",
             "LikeActivitySearchView",

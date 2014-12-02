@@ -6,13 +6,13 @@ import java.util.List;
 /**
  *
  */
-class AggregateFieldsWork implements Comparable<AggregateFieldsWork> {
+class PairedLatestWork implements Comparable<PairedLatestWork> {
     final int fieldId;
     final int aggregateFieldId;
     final MiruTermId fieldValue;
     final List<IdAndTerm> work;
 
-    AggregateFieldsWork(int fieldId, int aggregateFieldId, MiruTermId fieldValue, List<IdAndTerm> work) {
+    PairedLatestWork(int fieldId, int aggregateFieldId, MiruTermId fieldValue, List<IdAndTerm> work) {
         this.fieldId = fieldId;
         this.aggregateFieldId = aggregateFieldId;
         this.fieldValue = fieldValue;
@@ -20,7 +20,7 @@ class AggregateFieldsWork implements Comparable<AggregateFieldsWork> {
     }
 
     @Override
-    public int compareTo(AggregateFieldsWork o) {
+    public int compareTo(PairedLatestWork o) {
         // flipped so that natural ordering is "largest first"
         return Integer.compare(o.work.size(), work.size());
     }

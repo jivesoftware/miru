@@ -78,7 +78,7 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
         } else {
             BM filtered = bitmaps.create();
             start = System.currentTimeMillis();
-            aggregateUtil.filter(bitmaps, context.getSchema(), context.getFieldIndex(), request.query.constraintsFilter, solutionLog, filtered, -1);
+            aggregateUtil.filter(bitmaps, context.getSchema(), context.getFieldIndexProvider(), request.query.constraintsFilter, solutionLog, filtered, -1);
             solutionLog.log("analytics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -110,7 +110,7 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
             AnalyticsAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
-                aggregateUtil.filter(bitmaps, context.getSchema(), context.getFieldIndex(), entry.getValue(), solutionLog, waveformFiltered, -1);
+                aggregateUtil.filter(bitmaps, context.getSchema(), context.getFieldIndexProvider(), entry.getValue(), solutionLog, waveformFiltered, -1);
                 BM answer = bitmaps.create();
                 bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {

@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -168,8 +169,8 @@ public class MiruCollaborativeFilterNGTest {
 
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(
-                indexUtil.makeFieldValueAggregate(new MiruTermId(user.getBytes(Charsets.UTF_8)), "doc").toString()));
+            MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.pairedLatest, "user", ImmutableList.of(
+                indexUtil.makePairedLatestTerm(new MiruTermId(user.getBytes(Charsets.UTF_8)), "doc").toString()));
             MiruFilter filter = new MiruFilter(
                 MiruFilterOperation.or,
                 Optional.of(Arrays.asList(miruFieldFilter)),

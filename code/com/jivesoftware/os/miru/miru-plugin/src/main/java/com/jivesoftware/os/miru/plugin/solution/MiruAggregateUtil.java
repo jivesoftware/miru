@@ -7,6 +7,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
@@ -15,6 +16,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +51,7 @@ public class MiruAggregateUtil {
         }
         CardinalityAndLastSetBit answerCollector = null;
         ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
-        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndex();
+        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int fieldId = requestContext.getSchema().getFieldId(streamField);
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
         LOG.debug("stream: field={} fieldId={} beforeCount={}", streamField, fieldId, beforeCount);
@@ -124,7 +126,7 @@ public class MiruAggregateUtil {
 
     public <BM> void filter(MiruBitmaps<BM> bitmaps,
         MiruSchema schema,
-        MiruFieldIndex<BM> fieldIndex,
+        MiruFieldIndexProvider<BM> fieldIndexProvider,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
         BM bitmapStorage,
@@ -139,7 +141,7 @@ public class MiruAggregateUtil {
                     List<BM> fieldBitmaps = new ArrayList<>();
                     long start = System.currentTimeMillis();
                     for (String term : fieldFilter.values) {
-                        Optional<MiruInvertedIndex<BM>> got = fieldIndex.get(
+                        Optional<MiruInvertedIndex<BM>> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
                             fieldId,
                             new MiruTermId(term.getBytes(Charsets.UTF_8)),
                             considerIfIndexIdGreaterThanN);
@@ -166,7 +168,7 @@ public class MiruAggregateUtil {
         if (filter.subFilter.isPresent()) {
             for (MiruFilter subFilter : filter.subFilter.get()) {
                 BM subStorage = bitmaps.create();
-                filter(bitmaps, schema, fieldIndex, subFilter, solutionLog, subStorage, considerIfIndexIdGreaterThanN);
+                filter(bitmaps, schema, fieldIndexProvider, subFilter, solutionLog, subStorage, considerIfIndexIdGreaterThanN);
                 filterBitmaps.add(subStorage);
             }
         }

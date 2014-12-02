@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -33,7 +34,7 @@ public class Distincts {
 
         int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
 
-        List<MiruTermId> results = Lists.newArrayList(requestContext.getFieldIndex().getTermIdsForField(fieldId));
+        List<MiruTermId> results = Lists.newArrayList(requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).getTermIdsForField(fieldId));
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= requestContext.getTimeIndex().getSmallestTimestamp();
         int collectedDistincts = results.size();

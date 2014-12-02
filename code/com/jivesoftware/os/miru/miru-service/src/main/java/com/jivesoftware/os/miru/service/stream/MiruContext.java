@@ -9,7 +9,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
@@ -27,7 +27,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     public final MiruSchema schema;
     public final MiruTimeIndex timeIndex;
     public final MiruActivityIndex activityIndex;
-    public final MiruFieldIndex<BM> fieldIndex;
+    public final MiruFieldIndexProvider<BM> fieldIndexProvider;
     public final MiruAuthzIndex<BM> authzIndex;
     public final MiruRemovalIndex<BM> removalIndex;
     public final MiruUnreadTrackingIndex<BM> unreadTrackingIndex;
@@ -41,7 +41,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     public MiruContext(MiruSchema schema,
         MiruTimeIndex timeIndex,
         MiruActivityIndex activityIndex,
-        MiruFieldIndex<BM> fieldIndex,
+        MiruFieldIndexProvider<BM> fieldIndexProvider,
         MiruAuthzIndex<BM> authzIndex,
         MiruRemovalIndex<BM> removalIndex,
         MiruUnreadTrackingIndex<BM> unreadTrackingIndex,
@@ -54,7 +54,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         this.schema = schema;
         this.timeIndex = timeIndex;
         this.activityIndex = activityIndex;
-        this.fieldIndex = fieldIndex;
+        this.fieldIndexProvider = fieldIndexProvider;
         this.authzIndex = authzIndex;
         this.removalIndex = removalIndex;
         this.unreadTrackingIndex = unreadTrackingIndex;
@@ -81,9 +81,8 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         return activityIndex;
     }
 
-    @Override
-    public MiruFieldIndex<BM> getFieldIndex() {
-        return fieldIndex;
+    public MiruFieldIndexProvider<BM> getFieldIndexProvider() {
+        return fieldIndexProvider;
     }
 
     @Override
@@ -117,6 +116,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     }
 
     public long sizeInMemory() throws Exception {
+        /*
         long sizeInBytes = 0;
         sizeInBytes += activityIndex.sizeInMemory();
         sizeInBytes += authzIndex.sizeInMemory();
@@ -125,10 +125,12 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         sizeInBytes += removalIndex.sizeInMemory();
         sizeInBytes += timeIndex.sizeInMemory();
         sizeInBytes += unreadTrackingIndex.sizeInMemory();
-        return sizeInBytes;
+        */
+        return -1;
     }
 
     public long sizeOnDisk() throws Exception {
+        /*
         long sizeInBytes = 0;
         sizeInBytes += activityIndex.sizeOnDisk();
         sizeInBytes += authzIndex.sizeOnDisk();
@@ -140,6 +142,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         if (chunkStore.isPresent()) {
             sizeInBytes += chunkStore.get().sizeInBytes();
         }
-        return sizeInBytes;
+        */
+        return -1;
     }
 }

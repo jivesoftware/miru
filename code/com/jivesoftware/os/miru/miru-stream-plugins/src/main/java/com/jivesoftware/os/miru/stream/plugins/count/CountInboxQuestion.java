@@ -86,7 +86,7 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndex(), request.query.constraintsFilter, solutionLog, filtered, -1);
+            aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndexProvider(), request.query.constraintsFilter, solutionLog, filtered, -1);
             ands.add(filtered);
         }
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {

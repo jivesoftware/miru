@@ -4,7 +4,6 @@ import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.filer.io.Filer;
@@ -17,10 +16,11 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
@@ -42,7 +42,6 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -50,7 +49,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
-    private static final String DISK_FORMAT_VERSION = "version-7";
+    private static final String DISK_FORMAT_VERSION = "version-8";
 
     //TODO push to schema
     private static final int[] ON_DISK_FIELD_KEY_SIZE_THRESHOLDS = new int[] { 4, 16, 64, 256, 1_024 };
@@ -113,7 +112,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
-        Map<String, BulkImport<?>> importHandles = Maps.newHashMap();
 
         File versionFile = resourceLocator.getFilerFile(identifier, DISK_FORMAT_VERSION);
         versionFile.createNewFile();
@@ -133,7 +131,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
             filerProviderFactory.getFilerProvider(identifier, "timeIndex"),
             filesToPaths(resourceLocator.getMapDirectories(identifier, "timestampToIndex")));
-        importHandles.put("timeIndex", timeIndex);
 
         MiruOnDiskActivityIndex activityIndex = new MiruOnDiskActivityIndex(
             new PartitionedMapChunkBackedKeyedStore(
@@ -145,37 +142,41 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 24),
             new MiruInternalActivityMarshaller(),
             resourceLocator.getRandomAccessFiler(identifier, "activity", "rw"));
-        importHandles.put("activityIndex", activityIndex);
 
         File[] baseIndexMapDirectories = resourceLocator.getMapDirectories(identifier, "index");
         File[] baseIndexSwapDirectories = resourceLocator.getSwapDirectories(identifier, "index");
 
-        VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
-        for (int fieldId : schema.getFieldIds()) {
-            //TODO expose to config
-            VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+        @SuppressWarnings("unchecked")
+        MiruOnDiskFieldIndex<BM>[] fieldIndexes = new MiruOnDiskFieldIndex[MiruFieldType.values().length];
+        for (MiruFieldType fieldType : MiruFieldType.values()) {
+            VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
+            for (int fieldId : schema.getFieldIds()) {
+                //TODO expose to config
+                VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
 
-            for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
-                String[] mapDirectories = new String[baseIndexMapDirectories.length];
-                for (int i = 0; i < mapDirectories.length; i++) {
-                    mapDirectories[i] = new File(new File(baseIndexMapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
+                for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
+                    String fieldTypeAndId = fieldType.name() + "-" + fieldId;
+                    String[] mapDirectories = new String[baseIndexMapDirectories.length];
+                    for (int i = 0; i < mapDirectories.length; i++) {
+                        mapDirectories[i] = new File(new File(baseIndexMapDirectories[i], fieldTypeAndId), String.valueOf(keySize)).getAbsolutePath();
+                    }
+                    String[] swapDirectories = new String[baseIndexSwapDirectories.length];
+                    for (int i = 0; i < swapDirectories.length; i++) {
+                        swapDirectories[i] = new File(new File(baseIndexSwapDirectories[i], fieldTypeAndId), String.valueOf(keySize)).getAbsolutePath();
+                    }
+                    builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
+                        new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
+                        new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
+                        multiChunkStore,
+                        4)); //TODO expose number of partitions
                 }
-                String[] swapDirectories = new String[baseIndexSwapDirectories.length];
-                for (int i = 0; i < swapDirectories.length; i++) {
-                    swapDirectories[i] = new File(new File(baseIndexSwapDirectories[i], String.valueOf(fieldId)), String.valueOf(keySize)).getAbsolutePath();
-                }
-                builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
-                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
-                    new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
-                    multiChunkStore,
-                    4)); //TODO expose number of partitions
+
+                indexes[fieldId] = builder.build();
             }
 
-            indexes[fieldId] = builder.build();
+            fieldIndexes[fieldType.getIndex()] = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
         }
-
-        MiruOnDiskFieldIndex<BM> fieldIndex = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
-        importHandles.put("fieldIndex", fieldIndex);
+        MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -189,30 +190,26 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             filesToPaths(resourceLocator.getSwapDirectories(identifier, "authz")),
             multiChunkStore,
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
-        importHandles.put("authzIndex", authzIndex);
 
         MiruOnDiskRemovalIndex<BM> removalIndex = new MiruOnDiskRemovalIndex<>(bitmaps, new RandomAccessSwappableFiler(
             resourceLocator.getFilerFile(identifier, "removal")), new Object());
-        importHandles.put("removalIndex", removalIndex);
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
             filesToPaths(resourceLocator.getMapDirectories(identifier, "unread")),
             filesToPaths(resourceLocator.getSwapDirectories(identifier, "unread")),
             multiChunkStore);
-        importHandles.put("unreadTrackingIndex", unreadTrackingIndex);
 
         MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
             filesToPaths(resourceLocator.getMapDirectories(identifier, "inbox")),
             filesToPaths(resourceLocator.getSwapDirectories(identifier, "inbox")),
             multiChunkStore);
-        importHandles.put("inboxIndex", inboxIndex);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
         return new MiruContext<>(schema,
             timeIndex,
             activityIndex,
-            fieldIndex,
+            fieldIndexProvider,
             authzIndex,
             removalIndex,
             unreadTrackingIndex,

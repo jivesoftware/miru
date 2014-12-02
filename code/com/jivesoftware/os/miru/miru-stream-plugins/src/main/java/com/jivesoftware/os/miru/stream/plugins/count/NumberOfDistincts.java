@@ -6,6 +6,7 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
@@ -46,7 +47,7 @@ public class NumberOfDistincts {
         int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndex();
+            MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
 
             for (MiruTermId aggregateTermId : aggregateTerms) {

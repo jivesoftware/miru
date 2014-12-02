@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -108,7 +109,7 @@ public class MiruAnalyticsNGTest {
         final MiruTimeRange timeRange = new MiruTimeRange(smallestTime, lastTime);
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = new MiruFieldFilter("user", ImmutableList.of(user));
+            MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.primary, "user", ImmutableList.of(user));
             MiruFilter filter = new MiruFilter(
                 MiruFilterOperation.or,
                 Optional.of(Arrays.asList(miruFieldFilter)),

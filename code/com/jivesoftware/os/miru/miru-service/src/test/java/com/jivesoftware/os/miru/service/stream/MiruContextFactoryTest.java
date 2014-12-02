@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -178,8 +179,8 @@ public class MiruContextFactoryTest {
             int fieldId = schema.getFieldId(MiruFieldName.OBJECT_ID.getFieldName());
             if (fieldId >= 0) {
                 MiruTermId termId = new MiruTermId(String.valueOf(i).getBytes());
-                assertEquals(onDiskContext.getFieldIndex().get(fieldId, termId).get().getIndex(),
-                    inMemContext.getFieldIndex().get(fieldId, termId).get().getIndex());
+                assertEquals(onDiskContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(fieldId, termId).get().getIndex(),
+                    inMemContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(fieldId, termId).get().getIndex());
             }
         }
     }

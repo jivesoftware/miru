@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.benchmark;
 
 import com.google.common.collect.ImmutableList;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import java.util.Map;
 import java.util.Random;
@@ -21,10 +22,10 @@ public enum MiruFollowables {
             ImmutableList<String> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.01, MiruFieldName.TAG_IDS);
 
             return ImmutableList.of(
-                new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
-                new MiruFieldFilter(MiruFieldName.CONTAINER_ID.getFieldName(), containerValues),
-                new MiruFieldFilter(MiruFieldName.ACTIVITY_PARENT.getFieldName(), activityParentValues),
-                new MiruFieldFilter(MiruFieldName.TAG_IDS.getFieldName(), tagValues)
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.CONTAINER_ID.getFieldName(), containerValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.ACTIVITY_PARENT.getFieldName(), activityParentValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.TAG_IDS.getFieldName(), tagValues)
             );
         }
     },
@@ -39,10 +40,10 @@ public enum MiruFollowables {
             ImmutableList<String> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.05, MiruFieldName.TAG_IDS);
 
             return ImmutableList.of(
-                new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
-                new MiruFieldFilter(MiruFieldName.CONTAINER_ID.getFieldName(), containerValues),
-                new MiruFieldFilter(MiruFieldName.ACTIVITY_PARENT.getFieldName(), activityParentValues),
-                new MiruFieldFilter(MiruFieldName.TAG_IDS.getFieldName(), tagValues)
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.CONTAINER_ID.getFieldName(), containerValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.ACTIVITY_PARENT.getFieldName(), activityParentValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.TAG_IDS.getFieldName(), tagValues)
             );
         }
     },
@@ -57,10 +58,10 @@ public enum MiruFollowables {
             ImmutableList<String> tagValues = getFilterValues(fieldNameToTotalCount, random, 0.1, MiruFieldName.TAG_IDS);
 
             return ImmutableList.of(
-                new MiruFieldFilter(MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
-                new MiruFieldFilter(MiruFieldName.CONTAINER_ID.getFieldName(), containerValues),
-                new MiruFieldFilter(MiruFieldName.ACTIVITY_PARENT.getFieldName(), activityParentValues),
-                new MiruFieldFilter(MiruFieldName.TAG_IDS.getFieldName(), tagValues)
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.AUTHOR_ID.getFieldName(), authorValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.CONTAINER_ID.getFieldName(), containerValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.ACTIVITY_PARENT.getFieldName(), activityParentValues),
+                new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.TAG_IDS.getFieldName(), tagValues)
             );
         }
     };

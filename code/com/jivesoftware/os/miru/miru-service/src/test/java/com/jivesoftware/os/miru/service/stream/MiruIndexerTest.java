@@ -25,10 +25,12 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
@@ -117,7 +119,9 @@ public class MiruIndexerTest {
 
         MiruTermId[] fieldValues = miruActivity.fieldsValues[fieldId];
         for (MiruIBA fieldValue : fieldValues) {
-            Optional<MiruInvertedIndex<EWAHCompressedBitmap>> invertedIndex = context.getFieldIndex().get(fieldId, new MiruTermId(fieldValue.getBytes()));
+            Optional<MiruInvertedIndex<EWAHCompressedBitmap>> invertedIndex = context.getFieldIndexProvider()
+                .getFieldIndex(MiruFieldType.primary)
+                .get(fieldId, new MiruTermId(fieldValue.getBytes()));
             assertNotNull(invertedIndex);
             assertTrue(invertedIndex.isPresent());
             EWAHCompressedBitmap bitmap = invertedIndex.get().getIndex();
@@ -156,16 +160,21 @@ public class MiruIndexerTest {
 
         // Miru in-memory fields
         @SuppressWarnings("unchecked")
-        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>[] indexes = new VariableKeySizeBytesObjectMapStore[] {
-            new VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>(
-                new BytesObjectMapStore[] {
-                    new BytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>("16", 16, null,
-                        new ByteBufferProviderBackedMapChunkFactory(16, true, 0, false, 10, new ByteBufferProvider("field-0", new HeapByteBufferFactory())),
-                        PassThroughKeyMarshaller.INSTANCE)
-                },
-                PassThroughKeyMarshaller.INSTANCE)
-        };
-        MiruHybridFieldIndex<EWAHCompressedBitmap> miruInMemoryFieldIndex = new MiruHybridFieldIndex<>(new MiruBitmapsEWAH(4), indexes);
+        MiruHybridFieldIndex<EWAHCompressedBitmap>[] inMemoryFieldIndexes = new MiruHybridFieldIndex[MiruFieldType.values().length];
+        for (MiruFieldType fieldType : MiruFieldType.values()) {
+            @SuppressWarnings("unchecked")
+            VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>[] indexes = new VariableKeySizeBytesObjectMapStore[] {
+                new VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>(
+                    new BytesObjectMapStore[] {
+                        new BytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>("16", 16, null,
+                            new ByteBufferProviderBackedMapChunkFactory(16, true, 0, false, 10, new ByteBufferProvider("field-0", new HeapByteBufferFactory())),
+                            PassThroughKeyMarshaller.INSTANCE)
+                    },
+                    PassThroughKeyMarshaller.INSTANCE)
+            };
+            inMemoryFieldIndexes[fieldType.getIndex()] = new MiruHybridFieldIndex<>(new MiruBitmapsEWAH(4), indexes);
+        }
+        MiruFieldIndexProvider<EWAHCompressedBitmap> inMemoryFieldIndexProvider = new MiruFieldIndexProvider<>(inMemoryFieldIndexes);
 
         // Miru in-memory authz index
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(new MiruBitmapsEWAH(4));
@@ -181,7 +190,7 @@ public class MiruIndexerTest {
         MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[] { "fghij" }, ImmutableMap.of("field2", "field2Value1"));
         MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "klmno" }, ImmutableMap.of("field3", "field3Value1"));
 
-        MiruContext<EWAHCompressedBitmap> miruInMemoryContext = new MiruContext<>(miruSchema, null, miruInMemoryActivityIndex, miruInMemoryFieldIndex,
+        MiruContext<EWAHCompressedBitmap> miruInMemoryContext = new MiruContext<>(miruSchema, null, miruInMemoryActivityIndex, inMemoryFieldIndexProvider,
             miruInMemoryAuthzIndex, miruInMemoryRemovalIndex, null, null, null, activityInterner, null, Optional.<MultiChunkStore>absent(),
             Optional.<MiruResourcePartitionIdentifier>absent());
 
@@ -205,9 +214,14 @@ public class MiruIndexerTest {
         miruOnDiskActivityIndex.bulkImport(tenantId, miruInMemoryActivityIndex);
 
         // Miru on-disk fields
-        MiruOnDiskFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = buildOnDiskMiruFieldIndex();
-        miruOnDiskFieldIndex.bulkImport(tenantId, miruInMemoryFieldIndex);
-
+        @SuppressWarnings("unchecked")
+        MiruOnDiskFieldIndex<EWAHCompressedBitmap>[] onDiskFieldIndexes = new MiruOnDiskFieldIndex[MiruFieldType.values().length];
+        for (MiruFieldType fieldType : MiruFieldType.values()) {
+            MiruOnDiskFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = buildOnDiskMiruFieldIndex(fieldType);
+            miruOnDiskFieldIndex.bulkImport(tenantId, inMemoryFieldIndexes[fieldType.getIndex()]);
+            onDiskFieldIndexes[fieldType.getIndex()] = miruOnDiskFieldIndex;
+        }
+        MiruFieldIndexProvider<EWAHCompressedBitmap> onDiskFieldIndexProvider = new MiruFieldIndexProvider<>(inMemoryFieldIndexes);
 
         String[] authzMapDirs = {
             Files.createTempDirectory("authz").toFile().getAbsolutePath(),
@@ -243,7 +257,7 @@ public class MiruIndexerTest {
             removalStore.get(new byte[] { 0 }, 32),
             new Object());
 
-        MiruContext<EWAHCompressedBitmap> miruOnDiskContext = new MiruContext<>(miruSchema, null, miruOnDiskActivityIndex, miruOnDiskFieldIndex,
+        MiruContext<EWAHCompressedBitmap> miruOnDiskContext = new MiruContext<>(miruSchema, null, miruOnDiskActivityIndex, onDiskFieldIndexProvider,
             miruOnDiskAuthzIndex, miruOnDiskRemovalIndex, null, null, null, activityInterner, null, Optional.<MultiChunkStore>absent(),
             Optional.<MiruResourcePartitionIdentifier>absent());
 
@@ -274,19 +288,19 @@ public class MiruIndexerTest {
         return builder.build();
     }
 
-    private MiruOnDiskFieldIndex<EWAHCompressedBitmap> buildOnDiskMiruFieldIndex() throws Exception {
+    private MiruOnDiskFieldIndex<EWAHCompressedBitmap> buildOnDiskMiruFieldIndex(MiruFieldType fieldType) throws Exception {
 
         String[] mapDirs = new String[] {
-            Files.createTempDirectory("mapFields").toFile().getAbsolutePath(),
-            Files.createTempDirectory("mapFields").toFile().getAbsolutePath()
+            Files.createTempDirectory(fieldType.name() + "-mapFields").toFile().getAbsolutePath(),
+            Files.createTempDirectory(fieldType.name() + "-mapFields").toFile().getAbsolutePath()
         };
         String[] swapDirs = new String[] {
-            Files.createTempDirectory("swapFields").toFile().getAbsolutePath(),
-            Files.createTempDirectory("swapFields").toFile().getAbsolutePath()
+            Files.createTempDirectory(fieldType.name() + "-swapFields").toFile().getAbsolutePath(),
+            Files.createTempDirectory(fieldType.name() + "-swapFields").toFile().getAbsolutePath()
         };
         String[] chunksDirs = new String[] {
-            Files.createTempDirectory("chunksFields").toFile().getAbsolutePath(),
-            Files.createTempDirectory("chunksFields").toFile().getAbsolutePath()
+            Files.createTempDirectory(fieldType.name() + "-chunksFields").toFile().getAbsolutePath(),
+            Files.createTempDirectory(fieldType.name() + "-chunksFields").toFile().getAbsolutePath()
         };
         MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(
             chunksDirs, "data", 4, initialChunkStoreSizeInBytes, false, 8, 64);

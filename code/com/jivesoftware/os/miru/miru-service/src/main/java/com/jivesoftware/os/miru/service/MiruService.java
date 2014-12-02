@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
@@ -242,8 +243,9 @@ public class MiruService implements Miru {
         try (MiruRequestHandle<BM> handle = partition.getQueryHandle()) {
             MiruRequestContext<BM> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
-            Optional<? extends MiruInvertedIndex<BM>> invertedIndex = requestContext.getFieldIndex().get(
-                fieldId, new MiruTermId(termValue.getBytes(Charsets.UTF_8)));
+            Optional<? extends MiruInvertedIndex<BM>> invertedIndex = requestContext.getFieldIndexProvider()
+                .getFieldIndex(MiruFieldType.primary)
+                .get(fieldId, new MiruTermId(termValue.getBytes(Charsets.UTF_8)));
             if (invertedIndex.isPresent()) {
                 return bitmapsDebug.toString(handle.getBitmaps(), invertedIndex.get().getIndex());
             } else {

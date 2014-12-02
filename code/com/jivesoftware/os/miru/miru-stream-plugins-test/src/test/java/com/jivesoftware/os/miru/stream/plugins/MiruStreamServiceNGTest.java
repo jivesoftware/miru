@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -153,7 +154,7 @@ public class MiruStreamServiceNGTest {
                 //fieldFilters.add(new MiruFieldFilter("author", ImmutableList.of(FilerIO.intBytes(rand.nextInt(1000)))));
                 List<String> following = generateDisticts(rand, 10_000, 1_000_000);
                 //System.out.println("Following:"+new MiruFieldFilter("target", ImmutableList.copyOf(following)));
-                fieldFilters.add(new MiruFieldFilter("target", ImmutableList.copyOf(following)));
+                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "target", ImmutableList.copyOf(following)));
 
                 MiruFilter filter = new MiruFilter(MiruFilterOperation.or,
                     Optional.of(fieldFilters),
@@ -251,7 +252,7 @@ public class MiruStreamServiceNGTest {
         List<MiruFieldFilter> fieldFilters = new ArrayList<>();
         List<String> following = new ArrayList<>();
         following.add(String.valueOf(container1));
-        fieldFilters.add(new MiruFieldFilter("container", ImmutableList.copyOf(following)));
+        fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "container", ImmutableList.copyOf(following)));
         MiruFilter followingFilter = new MiruFilter(MiruFilterOperation.or,
             Optional.of(fieldFilters),
             Optional.<List<MiruFilter>>absent());
@@ -259,7 +260,7 @@ public class MiruStreamServiceNGTest {
         fieldFilters = new ArrayList<>();
         List<String> authors = new ArrayList<>();
         authors.add(String.valueOf(author1));
-        fieldFilters.add(new MiruFieldFilter("author", ImmutableList.copyOf(authors)));
+        fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "author", ImmutableList.copyOf(authors)));
         MiruFilter authoredByFilter = new MiruFilter(MiruFilterOperation.or,
             Optional.of(fieldFilters),
             Optional.<List<MiruFilter>>absent());

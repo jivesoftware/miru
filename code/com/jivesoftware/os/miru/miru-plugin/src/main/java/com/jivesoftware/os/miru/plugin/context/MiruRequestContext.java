@@ -5,7 +5,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
@@ -23,7 +23,7 @@ public interface MiruRequestContext<BM> {
 
     MiruActivityIndex getActivityIndex();
 
-    MiruFieldIndex<BM> getFieldIndex();
+    MiruFieldIndexProvider<BM> getFieldIndexProvider();
 
     MiruAuthzIndex<BM> getAuthzIndex();
 

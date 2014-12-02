@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.service.index.BulkExport;
@@ -87,7 +88,9 @@ public class MiruContextFactory {
     private <BM> MiruContext<BM> copy(MiruTenantId tenantId, MiruContext<BM> from, MiruContext<BM> to) throws Exception {
         ((BulkImport) to.timeIndex).bulkImport(tenantId, (BulkExport) from.timeIndex);
         ((BulkImport) to.activityIndex).bulkImport(tenantId, (BulkExport) from.activityIndex);
-        ((BulkImport) to.fieldIndex).bulkImport(tenantId, (BulkExport) from.fieldIndex);
+        for (MiruFieldType fieldType : MiruFieldType.values()) {
+            ((BulkImport) to.fieldIndexProvider.getFieldIndex(fieldType)).bulkImport(tenantId, (BulkExport) from.fieldIndexProvider.getFieldIndex(fieldType));
+        }
         ((BulkImport) to.authzIndex).bulkImport(tenantId, (BulkExport) from.authzIndex);
         ((BulkImport) to.removalIndex).bulkImport(tenantId, (BulkExport) from.removalIndex);
         ((BulkImport) to.unreadTrackingIndex).bulkImport(tenantId, (BulkExport) from.unreadTrackingIndex);

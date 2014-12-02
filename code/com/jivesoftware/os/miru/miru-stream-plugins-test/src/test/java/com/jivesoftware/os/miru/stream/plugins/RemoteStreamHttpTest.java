@@ -14,6 +14,7 @@ import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -38,7 +39,7 @@ public class RemoteStreamHttpTest {
     private static final String REMOTE_HOST = "";
     private static final int REMOTE_PORT = -1;
 
-    @Test (enabled = false, description = "Needs REMOTE constants")
+    @Test(enabled = false, description = "Needs REMOTE constants")
     public void testAggregateCounts() throws Exception {
 
         String tenant = "999";
@@ -67,10 +68,10 @@ public class RemoteStreamHttpTest {
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
                     Optional.of(ImmutableList.of(
-                            new MiruFieldFilter("activityType", Lists.transform(Arrays.asList(
-                                        0 //viewed
-                                    ), Functions.toStringFunction()))
-                        )),
+                        new MiruFieldFilter(MiruFieldType.primary, "activityType", Lists.transform(Arrays.asList(
+                            0 //viewed
+                        ), Functions.toStringFunction()))
+                    )),
                     Optional.<ImmutableList<MiruFilter>>absent()),
                 MiruFilter.NO_FILTER,
                 "parent",

@@ -9,25 +9,15 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
  */
 public class MiruIndexUtil {
 
-    // doc: 0^bob0
-    // doc: 1^bob1
-    // user: bob0|12
-
-    // doc^user: 0^bob0
-    // doc|user
-    // doc~
-    // user~
-
-
-    public MiruTermId makeBloomComposite(MiruTermId fieldValue, String fieldName) {
+    public MiruTermId makeBloomTerm(MiruTermId fieldValue, String fieldName) {
         return makeComposite(fieldValue, "|", fieldName);
     }
 
-    public MiruTermId makeFieldAggregate() {
+    public MiruTermId makeLatestTerm() {
         return makeComposite(new MiruTermId(MiruSchema.RESERVED_AGGREGATE.getBytes()), "~", MiruSchema.RESERVED_AGGREGATE);
     }
 
-    public MiruTermId makeFieldValueAggregate(MiruTermId fieldValue, String fieldName) {
+    public MiruTermId makePairedLatestTerm(MiruTermId fieldValue, String fieldName) {
         return makeComposite(fieldValue, "^", fieldName);
     }
 

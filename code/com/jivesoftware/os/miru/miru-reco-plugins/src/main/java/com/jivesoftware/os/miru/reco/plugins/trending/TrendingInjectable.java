@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
@@ -83,7 +84,7 @@ public class TrendingInjectable {
             for (MiruTermId termId : distinctTerms) {
                 constraintsFilters.put(termId, new MiruFilter(MiruFilterOperation.and,
                     Optional.of(Collections.singletonList(new MiruFieldFilter(
-                        request.query.aggregateCountAroundField,
+                        MiruFieldType.primary, request.query.aggregateCountAroundField,
                         Collections.singletonList(new String(termId.getBytes(), Charsets.UTF_8))))),
                     Optional.of(Collections.singletonList(request.query.constraintsFilter))));
             }
