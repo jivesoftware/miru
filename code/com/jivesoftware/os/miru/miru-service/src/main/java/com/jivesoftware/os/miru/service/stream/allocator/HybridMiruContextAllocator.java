@@ -5,18 +5,20 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.ByteBufferProvider;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
 import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
 import com.jivesoftware.os.filer.map.store.MapChunkFactory;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -63,7 +65,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
     private final int partitionAuthzCacheSize;
     private final boolean partitionDeleteChunkStoreOnClose;
     private final int partitionChunkStoreConcurrencyLevel;
-    private final int partitionChunkStoreStripingLevel;
+    private final StripingLocksProvider<String> keyedStoreStripingLocksProvider;
+    private final ByteArrayStripingLocksProvider chunkStoreStripingLocksProvider;
 
     public HybridMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -74,7 +77,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         int partitionAuthzCacheSize,
         boolean partitionDeleteChunkStoreOnClose,
         int partitionChunkStoreConcurrencyLevel,
-        int partitionChunkStoreStripingLevel) {
+        StripingLocksProvider<String> keyedStoreStripingLocksProvider,
+        ByteArrayStripingLocksProvider chunkStoreStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -84,7 +88,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.partitionDeleteChunkStoreOnClose = partitionDeleteChunkStoreOnClose;
         this.partitionChunkStoreConcurrencyLevel = partitionChunkStoreConcurrencyLevel;
-        this.partitionChunkStoreStripingLevel = partitionChunkStoreStripingLevel;
+        this.keyedStoreStripingLocksProvider = keyedStoreStripingLocksProvider;
+        this.chunkStoreStripingLocksProvider = chunkStoreStripingLocksProvider;
     }
 
     @Override
@@ -102,34 +107,42 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
         MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiByteBufferBacked(
             "chunks", byteBufferFactory, numberOfChunkStores, hybridResourceLocator.getInitialChunkSize(), true,
-            partitionChunkStoreConcurrencyLevel, partitionChunkStoreStripingLevel);
+            partitionChunkStoreConcurrencyLevel, chunkStoreStripingLocksProvider);
 
         MapChunkFactory activityMapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(4, false, 8, false, 100,
             new ByteBufferProvider("activityIndex-map", byteBufferFactory));
         MapChunkFactory activitySwapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(4, false, 8, false, 100,
             new ByteBufferProvider("activityIndex-swap", byteBufferFactory));
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
-            new PartitionedMapChunkBackedKeyedStore(activityMapChunkFactory, activitySwapChunkFactory, multiChunkStore, 24),
+            new PartitionedMapChunkBackedKeyedStore(activityMapChunkFactory, activitySwapChunkFactory, multiChunkStore, keyedStoreStripingLocksProvider, 24),
             new MiruInternalActivityMarshaller());
 
         @SuppressWarnings("unchecked")
         MiruOnDiskFieldIndex<BM>[] fieldIndexes = new MiruOnDiskFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
             VariableKeySizeMapChunkBackedKeyedStore[] indexes = new VariableKeySizeMapChunkBackedKeyedStore[schema.fieldCount()];
-            for (int fieldId : schema.getFieldIds()) {
-                //TODO expose to config
-                VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
+            for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
+                int fieldId = fieldDefinition.fieldId;
+                if (fieldType == MiruFieldType.latest && !fieldDefinition.indexLatest ||
+                    fieldType == MiruFieldType.pairedLatest && fieldDefinition.pairedLatestFieldNames.isEmpty() ||
+                    fieldType == MiruFieldType.bloom && fieldDefinition.bloomFieldNames.isEmpty()) {
+                    indexes[fieldId] = null;
+                } else {
+                    //TODO expose to config
+                    VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
 
-                for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
-                    String key = fieldType.name() + "-fieldId-" + fieldId + "-keySize-" + keySize;
-                    builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
-                        new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-map", byteBufferFactory)),
-                        new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-swap", byteBufferFactory)),
-                        multiChunkStore,
-                        4)); //TODO expose number of partitions
+                    for (int keySize : ON_DISK_FIELD_KEY_SIZE_THRESHOLDS) {
+                        String key = fieldType.name() + "-fieldId-" + fieldId + "-keySize-" + keySize;
+                        builder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
+                            new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-map", byteBufferFactory)),
+                            new ByteBufferProviderBackedMapChunkFactory(keySize, true, 8, false, 100, new ByteBufferProvider(key + "-swap", byteBufferFactory)),
+                            multiChunkStore,
+                            keyedStoreStripingLocksProvider,
+                            4)); //TODO expose number of partitions
+                    }
+
+                    indexes[fieldId] = builder.build();
                 }
-
-                indexes[fieldId] = builder.build();
             }
             fieldIndexes[fieldType.getIndex()] = new MiruOnDiskFieldIndex<>(bitmaps, indexes);
         }
@@ -187,7 +200,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             "stream",
             true,
             partitionChunkStoreConcurrencyLevel,
-            partitionChunkStoreStripingLevel);
+            chunkStoreStripingLocksProvider);
 
         MiruHybridActivityIndex activityIndex = new MiruHybridActivityIndex(
             new PartitionedMapChunkBackedKeyedStore(
@@ -195,7 +208,9 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
                     filesToPaths(hybridResourceLocator.getMapDirectories(identifier, "activity"))),
                 new FileBackedMapChunkFactory(4, false, 8, false, 100,
                     filesToPaths(hybridResourceLocator.getSwapDirectories(identifier, "activity"))),
-                multiChunkStore, 24),
+                multiChunkStore,
+                keyedStoreStripingLocksProvider,
+                24),
             new MiruInternalActivityMarshaller());
         ((MiruHybridActivityIndex) from.activityIndex).copyTo(activityIndex);
 
@@ -224,6 +239,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
                         new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
                         new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
                         multiChunkStore,
+                        keyedStoreStripingLocksProvider,
                         4)); //TODO expose number of partitions
                 }
 

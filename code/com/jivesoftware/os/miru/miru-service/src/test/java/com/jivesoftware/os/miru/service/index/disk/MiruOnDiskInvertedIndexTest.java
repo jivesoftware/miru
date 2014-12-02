@@ -2,12 +2,14 @@ package com.jivesoftware.os.miru.service.index.disk;
 
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.KeyPartitioner;
 import com.jivesoftware.os.filer.io.KeyValueMarshaller;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.AutoResizingChunkFiler;
 import com.jivesoftware.os.filer.keyed.store.AutoResizingChunkSwappableFiler;
 import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
@@ -29,7 +31,8 @@ public class MiruOnDiskInvertedIndexTest {
     @Test(enabled = false)
     public void testSetGetIndex() throws Exception {
         HeapByteBufferFactory byteBufferFactory = new HeapByteBufferFactory();
-        final MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiByteBufferBacked("test", byteBufferFactory, 1, 512, true, 1, 1);
+        final MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiByteBufferBacked("test", byteBufferFactory, 1, 512, true, 1,
+            new ByteArrayStripingLocksProvider(1));
         ByteBufferProviderBackedMapChunkFactory mapChunkFactory = new ByteBufferProviderBackedMapChunkFactory(4, false, 8, false, 512,
             new ByteBufferProvider("test-bbp", byteBufferFactory));
         KeyPartitioner<IBA> keyPartitioner = new KeyPartitioner<IBA>() {
@@ -65,9 +68,9 @@ public class MiruOnDiskInvertedIndexTest {
             }
         };
         final PartitionedMapChunkBackedMapStore<IBA, IBA> mapStore = new PartitionedMapChunkBackedMapStore<>(
-            mapChunkFactory, 8, null, keyPartitioner, keyValueMarshaller);
+            mapChunkFactory, new StripingLocksProvider<String>(8), null, keyPartitioner, keyValueMarshaller);
         final PartitionedMapChunkBackedMapStore<IBA, IBA> swapStore = new PartitionedMapChunkBackedMapStore<>(
-            mapChunkFactory, 8, null, keyPartitioner, keyValueMarshaller);
+            mapChunkFactory, new StripingLocksProvider<String>(8), null, keyPartitioner, keyValueMarshaller);
 
         IBA key = new IBA(FilerIO.intBytes(1));
         AutoResizingChunkFiler autoResizingChunkFiler = new AutoResizingChunkFiler(mapStore, key, multiChunkStore);

@@ -88,10 +88,11 @@ public interface MiruServiceConfig extends Config {
 
     void setPartitionChunkStoreConcurrencyLevel(int partitionChunkStoreConcurrencyLevel);
 
-    @IntDefault(1024)
-    int getPartitionChunkStoreStripingLevel();
+    @IntDefault(65_536)
+    int getKeyedStoreNumberOfLocks();
 
-    void setPartitionChunkStoreStripingLevel(int partitionChunkStoreStripingLevel);
+    @IntDefault(65_536)
+    int getChunkStoreNumberOfLocks();
 
     @StringDefault("hybrid")
     String getDefaultStorage();

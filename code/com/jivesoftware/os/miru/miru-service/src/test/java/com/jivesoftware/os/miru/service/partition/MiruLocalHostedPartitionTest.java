@@ -6,7 +6,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -143,7 +145,6 @@ public class MiruLocalHostedPartitionTest {
         when(config.getPartitionNumberOfChunkStores()).thenReturn(1);
         when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
         when(config.getPartitionChunkStoreConcurrencyLevel()).thenReturn(8);
-        when(config.getPartitionChunkStoreStripingLevel()).thenReturn(64);
 
         RowColumnValueStoreImpl<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity> activityWAL =
             new RowColumnValueStoreImpl<>();
@@ -179,7 +180,8 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            config.getPartitionChunkStoreStripingLevel());
+            new StripingLocksProvider<String>(8),
+            new ByteArrayStripingLocksProvider(8));
 
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
             schemaProvider,
@@ -195,7 +197,8 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            config.getPartitionChunkStoreStripingLevel());
+            new StripingLocksProvider<String>(8),
+            new ByteArrayStripingLocksProvider(8));
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
             schemaProvider,
             activityInternExtern,
@@ -210,7 +213,8 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            config.getPartitionChunkStoreStripingLevel());
+            new StripingLocksProvider<String>(8),
+            new ByteArrayStripingLocksProvider(8));
 
         contextFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

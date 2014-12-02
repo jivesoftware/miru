@@ -6,6 +6,7 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.KeyPartitioner;
 import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
 import com.jivesoftware.os.filer.map.store.PartitionedMapChunkBackedMapStore;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -42,11 +43,14 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     private final MiruFilerProvider filerProvider;
     private final PartitionedMapChunkBackedMapStore<Long, Integer> timestampToIndex;
 
-    public MiruOnDiskTimeIndex(MiruFilerProvider filerProvider, String[] mapDirectories) throws IOException {
+    public MiruOnDiskTimeIndex(MiruFilerProvider filerProvider,
+        String[] mapDirectories,
+        StripingLocksProvider<String> keyedStoreStripingLocksProvider)
+        throws IOException {
         this.filerProvider = filerProvider;
 
         FileBackedMapChunkFactory chunkFactory = new FileBackedMapChunkFactory(8, false, 4, false, 32, mapDirectories);
-        this.timestampToIndex = new PartitionedMapChunkBackedMapStore<>(chunkFactory, 64, null,
+        this.timestampToIndex = new PartitionedMapChunkBackedMapStore<>(chunkFactory, keyedStoreStripingLocksProvider, null,
             new KeyPartitioner<Long>() {
                 private final int numPartitions = 4;
 

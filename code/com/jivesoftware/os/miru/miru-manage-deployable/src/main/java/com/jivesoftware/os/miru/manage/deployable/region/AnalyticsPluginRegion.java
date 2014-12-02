@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
-import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -37,7 +36,6 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -68,16 +66,21 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
     public static class AnalyticsPluginRegionInput {
 
-        final MiruTenantId tenant;
-        final int hours;
+        final String tenant;
+        final int fromHoursAgo;
+        final int toHoursAgo;
         final int buckets;
+        final String activityTypes;
+        final String user;
 
-        public AnalyticsPluginRegionInput(MiruTenantId tenant, int hours, int buckets) {
+        public AnalyticsPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String user) {
             this.tenant = tenant;
-            this.hours = hours;
+            this.fromHoursAgo = fromHoursAgo;
+            this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
+            this.activityTypes = activityTypes;
+            this.user = user;
         }
-
     }
 
     @Override
@@ -86,96 +89,84 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         try {
             if (optionalInput.isPresent()) {
                 AnalyticsPluginRegionInput input = optionalInput.get();
-                data.put("tenant", input.tenant.toString());
-                data.put("hours", String.valueOf(input.hours));
-                data.put("buckets", String.valueOf(input.buckets));
+                int fromHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.fromHoursAgo : input.toHoursAgo;
+                int toHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.toHoursAgo : input.fromHoursAgo;
 
-                final int numberOfHours = input.hours;
+                data.put("tenant", input.tenant);
+                data.put("fromHoursAgo", String.valueOf(fromHoursAgo));
+                data.put("toHoursAgo", String.valueOf(toHoursAgo));
+                data.put("buckets", String.valueOf(input.buckets));
+                data.put("activityTypes", input.activityTypes);
+                data.put("user", input.user);
+
+                List<String> activityTypes = Lists.newArrayList();
+                for (String activityType : input.activityTypes.split(",")) {
+                    activityTypes.add(activityType.trim());
+                }
+
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
-                final long packNDays = snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(numberOfHours), 0, 0);
+                final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
+                final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
+                List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
+                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "locale", Collections.singletonList("en")));
+                if (!input.user.trim().isEmpty()) {
+                    fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "user", Collections.singletonList("3 " + input.user.trim())));
+                }
+
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
-                    Optional.of(Arrays.asList(
-                        new MiruFieldFilter(MiruFieldType.primary, "objectType", Lists.transform(
-                            Arrays.asList(102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
-                            Functions.toStringFunction()))
-                    )),
+                    Optional.of(fieldFilters),
                     Optional.<List<MiruFilter>>absent());
 
                 List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<AnalyticsAnswer> response = null;
-                for (RequestHelper requestHelper : requestHelpers) {
-                    try {
-                        @SuppressWarnings("unchecked")
-                        MiruResponse<AnalyticsAnswer> analyticsResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(input.tenant, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
-                                new AnalyticsQuery(
-                                    new MiruTimeRange(packCurrentTime - packNDays, packCurrentTime),
-                                    input.buckets,
-                                    constraintsFilter,
-                                    ImmutableMap.<String, MiruFilter>builder()
-                                        .put("all",
-                                            new MiruFilter(MiruFilterOperation.and,
-                                                Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Lists.transform(Arrays.asList(
-                                                            0, //viewed
-                                                            11, //liked
-                                                            1, //created
-                                                            65 //outcome_set
-                                                        ), Functions.toStringFunction())))),
-                                                Optional.<List<MiruFilter>>absent()))
-                                        .put("viewed",
-                                            new MiruFilter(MiruFilterOperation.and,
-                                                Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Lists.transform(Arrays.asList(
-                                                            0 //viewed
-                                                        ), Functions.toStringFunction())))),
-                                                Optional.<List<MiruFilter>>absent()))
-                                        .put("liked",
-                                            new MiruFilter(MiruFilterOperation.and,
-                                                Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Lists.transform(Arrays.asList(
-                                                            11 //liked
-                                                        ), Functions.toStringFunction())))),
-                                                Optional.<List<MiruFilter>>absent()))
-                                        .put("created",
-                                            new MiruFilter(MiruFilterOperation.and,
-                                                Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Lists.transform(Arrays.asList(
-                                                            1 //created
-                                                        ), Functions.toStringFunction())))),
-                                                Optional.<List<MiruFilter>>absent()))
-                                        .put("outcome_set",
-                                            new MiruFilter(MiruFilterOperation.and,
-                                                Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Lists.transform(Arrays.asList(
-                                                            65 //outcome_set
-                                                        ), Functions.toStringFunction())))),
-                                                Optional.<List<MiruFilter>>absent()))
-                                        .build()),
-                                true),
-                            AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                            new Class[] { AnalyticsAnswer.class },
-                            null);
-                        response = analyticsResponse;
-                        if (response != null && response.answer != null) {
-                            break;
-                        } else {
-                            log.warn("Empty analytics response from {}, trying another", requestHelper);
+                if (!input.tenant.trim().isEmpty()) {
+                    MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
+                    for (RequestHelper requestHelper : requestHelpers) {
+                        try {
+                            ImmutableMap.Builder<String, MiruFilter> analyticsFiltersBuilder = ImmutableMap.builder();
+                            analyticsFiltersBuilder.put(
+                                "all",
+                                new MiruFilter(MiruFilterOperation.and,
+                                    Optional.of(Collections.singletonList(
+                                        new MiruFieldFilter(MiruFieldType.primary,
+                                            "activityType",
+                                            activityTypes))),
+                                    Optional.<List<MiruFilter>>absent()));
+                            for (String activityType : activityTypes) {
+                                analyticsFiltersBuilder.put(
+                                    String.valueOf(activityType),
+                                    new MiruFilter(MiruFilterOperation.and,
+                                        Optional.of(Collections.singletonList(
+                                            new MiruFieldFilter(MiruFieldType.primary,
+                                                "activityType",
+                                                Collections.singletonList(activityType)))),
+                                        Optional.<List<MiruFilter>>absent()));
+                            }
+                            ImmutableMap<String, MiruFilter> analyticsFilters = analyticsFiltersBuilder.build();
+
+                            @SuppressWarnings("unchecked")
+                            MiruResponse<AnalyticsAnswer> analyticsResponse = requestHelper.executeRequest(
+                                new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                    new AnalyticsQuery(
+                                        new MiruTimeRange(fromTime, toTime),
+                                        input.buckets,
+                                        constraintsFilter,
+                                        analyticsFilters),
+                                    true),
+                                AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
+                                new Class[] { AnalyticsAnswer.class },
+                                null);
+                            response = analyticsResponse;
+                            if (response != null && response.answer != null) {
+                                break;
+                            } else {
+                                log.warn("Empty analytics response from {}, trying another", requestHelper);
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed analytics request to {}, trying another", new Object[] { requestHelper }, e);
                         }
-                    } catch (Exception e) {
-                        log.warn("Failed analytics request to {}, trying another", new Object[] { requestHelper }, e);
                     }
                 }
 
@@ -201,17 +192,18 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
     }
 
     private String hitsToBase64PNGWaveform(Map<String, AnalyticsAnswer.Waveform> waveforms) throws IOException {
+        int headerHeight = waveforms.size() * 16;
         int w = 1024;
-        int h = 200;
+        int h = 600 + headerHeight;
         BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 
         Graphics2D g = bi.createGraphics();
         PaintWaveform pw = new PaintWaveform();
 
         int xo = 32;
-        int yo = 32;
+        int yo = 32 + headerHeight;
         int pad = 64;
-        pw.paintGrid(g, xo, yo, w - pad, h - pad);
+        pw.paintGrid(g, xo, yo, w - pad, h - headerHeight - pad);
 
         for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
             long[] waveform = entry.getValue().waveform;
@@ -222,10 +214,10 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 mmd.value(hits[i]);
             }
 
-            pw.paintWaveform(getHashSolid(entry.getKey()), hits, mmd, false, g, xo, yo, w - pad, h - pad);
+            pw.paintWaveform(getHashSolid(entry.getKey()), hits, mmd, false, g, xo, yo, w - pad, h - headerHeight - pad);
         }
 
-        int labelYOffset = yo;
+        int labelYOffset = 32;
         for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
             long[] waveform = entry.getValue().waveform;
             MinMaxDouble mmd = new MinMaxDouble();
@@ -236,7 +228,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
             }
             String prefix = new String(entry.getKey().getBytes(), Charsets.UTF_8);
             pw.paintLabels(getHashSolid(entry.getKey()), hits, mmd, prefix, 0, 0, "", g, xo, labelYOffset);
-            labelYOffset += 32;
+            labelYOffset += 16;
         }
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

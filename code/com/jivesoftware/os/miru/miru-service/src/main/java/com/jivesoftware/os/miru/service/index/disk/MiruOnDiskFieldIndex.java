@@ -133,22 +133,26 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<
     public Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>> bulkExport(MiruTenantId tenantId) throws Exception {
         List<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>> iterators = Lists.newArrayListWithCapacity(indexes.length);
         for (VariableKeySizeMapChunkBackedKeyedStore index : indexes) {
-            iterators.add(Iterators.transform(index.iterator(),
-                new Function<KeyValueStore.Entry<IBA, SwappableFiler>, BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
-                    @Override
-                    public BulkEntry<byte[], MiruInvertedIndex<BM>> apply(KeyValueStore.Entry<IBA, SwappableFiler> input) {
-                        byte[] termBytes = input.getKey().getBytes();
-                        return new BulkEntry<byte[], MiruInvertedIndex<BM>>(termBytes,
-                            new MiruOnDiskInvertedIndex<>(bitmaps, input.getValue(), stripingLocksProvider.lock(new MiruTermId(termBytes))));
-                    }
-                }));
+            if (index != null) {
+                iterators.add(Iterators.transform(index.iterator(),
+                    new Function<KeyValueStore.Entry<IBA, SwappableFiler>, BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
+                        @Override
+                        public BulkEntry<byte[], MiruInvertedIndex<BM>> apply(KeyValueStore.Entry<IBA, SwappableFiler> input) {
+                            byte[] termBytes = input.getKey().getBytes();
+                            return new BulkEntry<byte[], MiruInvertedIndex<BM>>(termBytes,
+                                new MiruOnDiskInvertedIndex<>(bitmaps, input.getValue(), stripingLocksProvider.lock(new MiruTermId(termBytes))));
+                        }
+                    }));
+            }
         }
         return iterators.iterator();
     }
 
     public void copyTo(MiruOnDiskFieldIndex<BM> to) throws Exception {
         for (int i = 0; i < indexes.length; i++) {
-            indexes[i].copyTo(to.indexes[i]);
+            if (indexes[i] != null) {
+                indexes[i].copyTo(to.indexes[i]);
+            }
         }
     }
 }

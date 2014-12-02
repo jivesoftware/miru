@@ -8,9 +8,11 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
@@ -114,7 +116,7 @@ public class MiruFieldIndexTest {
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", initialChunkStoreSizeInBytes, false, 8);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(64, chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(new ByteArrayStripingLocksProvider(64), chunkStore);
 
         VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];
         VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
@@ -122,6 +124,7 @@ public class MiruFieldIndexTest {
             new FileBackedMapChunkFactory(16, true, 8, false, 100, mapDirs),
             new FileBackedMapChunkFactory(16, true, 8, false, 100, swapDirs),
             multiChunkStore,
+            new StripingLocksProvider<String>(8),
             4)); //TODO expose number of partitions
         onDiskIndexes[0] = builder.build();
         MiruOnDiskFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = new MiruOnDiskFieldIndex<>(new MiruBitmapsEWAH(4), onDiskIndexes);
@@ -181,7 +184,7 @@ public class MiruFieldIndexTest {
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", initialChunkStoreSizeInBytes, false, 8);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(64, chunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(new ByteArrayStripingLocksProvider(64), chunkStore);
 
         VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];
         VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
@@ -189,6 +192,7 @@ public class MiruFieldIndexTest {
             new FileBackedMapChunkFactory(16, true, 8, false, 100, mapDirs),
             new FileBackedMapChunkFactory(16, true, 8, false, 100, swapDirs),
             multiChunkStore,
+            new StripingLocksProvider<String>(8),
             4)); //TODO expose number of partitions
         onDiskIndexes[0] = builder.build();
 

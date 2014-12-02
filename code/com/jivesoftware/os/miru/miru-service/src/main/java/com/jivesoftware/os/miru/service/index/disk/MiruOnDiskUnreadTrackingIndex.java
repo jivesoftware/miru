@@ -26,7 +26,11 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider = new StripingLocksProvider<>(64);
     private final long newFilerInitialCapacity = 512;
 
-    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore)
+    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
+        String[] mapDirectories,
+        String[] swapDirectories,
+        MultiChunkStore chunkStore,
+        StripingLocksProvider<String> keyedStoreStripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
@@ -34,6 +38,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
             new FileBackedMapChunkFactory(8, false, 8, false, 100, mapDirectories),
             new FileBackedMapChunkFactory(8, false, 8, false, 100, swapDirectories),
             chunkStore,
+            keyedStoreStripingLocksProvider,
             4); //TODO expose number of partitions
     }
 

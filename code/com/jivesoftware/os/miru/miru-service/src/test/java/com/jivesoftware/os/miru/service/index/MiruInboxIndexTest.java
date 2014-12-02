@@ -7,6 +7,8 @@ import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -127,8 +129,9 @@ public class MiruInboxIndexTest {
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "chunk", 4_096, false, 8);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(64, chunkStore);
-        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(new ByteArrayStripingLocksProvider(64), chunkStore);
+        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore,
+            new StripingLocksProvider<String>(8));
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 
         return new Object[][] {
@@ -177,8 +180,9 @@ public class MiruInboxIndexTest {
         };
         String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
         ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "chunk", 4_096, false, 8);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(64, chunkStore);
-        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore);
+        MultiChunkStore multiChunkStore = new MultiChunkStore(new ByteArrayStripingLocksProvider(64), chunkStore);
+        MiruOnDiskInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = new MiruOnDiskInboxIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore,
+            new StripingLocksProvider<String>(8));
         miruOnDiskInboxIndex.bulkImport(tenantId, miruInMemoryInboxIndex);
 
         return new Object[][] {

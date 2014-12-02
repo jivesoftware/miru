@@ -6,6 +6,7 @@ import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.RandomAccessFiler;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -172,7 +173,7 @@ public class MiruBitmapsTimeRangeTest {
             Files.createTempDirectory("timestampToIndex").toFile().getAbsolutePath(),
             Files.createTempDirectory("timestampToIndex").toFile().getAbsolutePath()
         };
-        MiruOnDiskTimeIndex miruOnDiskTimeIndex = new MiruOnDiskTimeIndex(filerProvider, mapDirectories);
+        MiruOnDiskTimeIndex miruOnDiskTimeIndex = new MiruOnDiskTimeIndex(filerProvider, mapDirectories, new StripingLocksProvider<String>(8));
         miruOnDiskTimeIndex.bulkImport(tenantId, miruInMemoryTimeIndex);
 
         return miruOnDiskTimeIndex;

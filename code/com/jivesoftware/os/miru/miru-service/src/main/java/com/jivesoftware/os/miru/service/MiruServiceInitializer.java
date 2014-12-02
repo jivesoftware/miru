@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -118,6 +120,9 @@ public class MiruServiceInitializer {
             byteBufferFactory = new HeapByteBufferFactory();
         }
 
+        StripingLocksProvider<String> keyedStoreStripingLocksProvider = new StripingLocksProvider<>(config.getKeyedStoreNumberOfLocks());
+        ByteArrayStripingLocksProvider chunkStoreStripingLocksProvider = new ByteArrayStripingLocksProvider(config.getChunkStoreNumberOfLocks());
+
         MiruHybridResourceLocator transientResourceLocator = resourceLocatorProvider.getTransientResourceLocator();
         MiruContextAllocator hybridContextAllocator = new HybridMiruContextAllocator(schemaProvider,
             internExtern,
@@ -128,7 +133,8 @@ public class MiruServiceInitializer {
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            config.getPartitionChunkStoreStripingLevel());
+            keyedStoreStripingLocksProvider,
+            chunkStoreStripingLocksProvider);
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
@@ -145,7 +151,8 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            config.getPartitionChunkStoreStripingLevel());
+            keyedStoreStripingLocksProvider,
+            chunkStoreStripingLocksProvider);
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
             schemaProvider,
             internExtern,
@@ -160,7 +167,8 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            config.getPartitionChunkStoreStripingLevel());
+            keyedStoreStripingLocksProvider,
+            chunkStoreStripingLocksProvider);
 
         MiruContextFactory streamFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

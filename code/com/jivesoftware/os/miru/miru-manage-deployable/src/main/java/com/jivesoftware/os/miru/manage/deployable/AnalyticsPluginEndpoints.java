@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion.AnalyticsPluginRegionInput;
 import javax.inject.Singleton;
@@ -35,13 +33,19 @@ public class AnalyticsPluginEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getTenantsForTenant(@QueryParam("tenantId") @DefaultValue("") String tenantId,
-        @QueryParam("hours") @DefaultValue("720") int hours,
-        @QueryParam("buckets") @DefaultValue("30") int buckets) {
+        @QueryParam("fromHoursAgo") @DefaultValue("720") int fromHoursAgo,
+        @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
+        @QueryParam("buckets") @DefaultValue("30") int buckets,
+        @QueryParam("activityTypes") @DefaultValue("0, 1, 11, 65") String activityTypes,
+        @QueryParam("user") @DefaultValue("") String user) {
         String rendered = miruManageService.renderPlugin(analyticsPluginRegion,
             Optional.of(new AnalyticsPluginRegionInput(
-                    new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                    hours,
-                    buckets)));
+                tenantId,
+                fromHoursAgo,
+                toHoursAgo,
+                buckets,
+                activityTypes,
+                user)));
         return Response.ok(rendered).build();
     }
 }

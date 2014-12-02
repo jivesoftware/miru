@@ -28,13 +28,19 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider = new StripingLocksProvider<>(64);
     private final long newFilerInitialCapacity = 512;
 
-    public MiruOnDiskInboxIndex(MiruBitmaps<BM> bitmaps, String[] mapDirectories, String[] swapDirectories, MultiChunkStore chunkStore) throws Exception {
+    public MiruOnDiskInboxIndex(MiruBitmaps<BM> bitmaps,
+        String[] mapDirectories,
+        String[] swapDirectories,
+        MultiChunkStore chunkStore,
+        StripingLocksProvider<String> keyedStoreStripingLocksProvider)
+        throws Exception {
         this.bitmaps = bitmaps;
         //TODO actual capacity? should this be shared with a key prefix?
         this.index = new PartitionedMapChunkBackedKeyedStore(
             new FileBackedMapChunkFactory(8, false, 8, false, 100, mapDirectories),
             new FileBackedMapChunkFactory(8, false, 8, false, 100, swapDirectories),
             chunkStore,
+            keyedStoreStripingLocksProvider,
             4); //TODO expose number of partitions
     }
 

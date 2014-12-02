@@ -4,8 +4,11 @@
  * Analytics plugin page
  *
  * @param? tenant
- * @param? hours
+ * @param? fromHoursAgo
+ * @param? toHoursAgo
  * @param? buckets
+ * @param? activityTypes
+ * @param? user
  * @param? waveform
  * @param? summary
  * @param? elapse
@@ -26,11 +29,19 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Hours</td>
+                        <td>From Hours Ago</td>
                         <td>
                         <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="Hours" value="{$hours?:''}"
-                            name="hours" id="hoursPicker" data-original-title="" title="">
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromHoursAgo?:''}"
+                            name="fromHoursAgo" id="fromHoursPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>To Hours Ago</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toHoursAgo?:''}"
+                            name="toHoursAgo" id="toHoursPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
@@ -39,6 +50,22 @@
                         <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                             class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
                             name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Activity Types</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Activity Types" value="{$activityTypes?:''}"
+                            name="activityTypes" id="activityTypesPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>User ID</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="User ID" value="{$user?:''}"
+                            name="user" id="userPicker" data-original-title="" title="">
                         </td>
                     </tr>
                 </table>

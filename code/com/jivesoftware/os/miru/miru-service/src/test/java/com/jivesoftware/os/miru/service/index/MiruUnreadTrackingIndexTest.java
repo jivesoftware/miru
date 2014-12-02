@@ -5,6 +5,8 @@ import com.google.common.collect.ImmutableMap;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -29,9 +31,9 @@ public class MiruUnreadTrackingIndexTest {
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")
     public void testDefaultData(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
-            MiruStreamId streamId,
-            MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
-            throws Exception {
+        MiruStreamId streamId,
+        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
+        throws Exception {
         Optional<EWAHCompressedBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId);
         assertNotNull(unread);
         assertTrue(unread.isPresent());
@@ -40,9 +42,9 @@ public class MiruUnreadTrackingIndexTest {
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithoutData")
     public void testIndex(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
-            MiruStreamId streamId,
-            MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
-            throws Exception {
+        MiruStreamId streamId,
+        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
+        throws Exception {
         Optional<EWAHCompressedBitmap> unreadIndex = miruUnreadTrackingIndex.getUnread(streamId);
         assertNotNull(unreadIndex);
         assertFalse(unreadIndex.isPresent());
@@ -64,9 +66,9 @@ public class MiruUnreadTrackingIndexTest {
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProvider")
     public void testUnread(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
-            MiruStreamId streamId,
-            MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
-            throws Exception {
+        MiruStreamId streamId,
+        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
+        throws Exception {
         EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).get();
         assertEquals(unread.cardinality(), 0);
 
@@ -95,9 +97,9 @@ public class MiruUnreadTrackingIndexTest {
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")
     public void testRead(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
-            MiruStreamId streamId,
-            MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
-            throws Exception {
+        MiruStreamId streamId,
+        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
+        throws Exception {
         EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).get();
         assertEquals(unread.cardinality(), 3);
 
@@ -146,7 +148,7 @@ public class MiruUnreadTrackingIndexTest {
                 @Override
                 public Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
                     return ImmutableMap.of(
-                            streamId, tempMiruInvertedIndex
+                        streamId, tempMiruInvertedIndex
                     );
                 }
             });
@@ -165,14 +167,15 @@ public class MiruUnreadTrackingIndexTest {
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath(),
             Files.createTempDirectory("chunksFields").toFile().getAbsolutePath()
         };
-        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunksDirs, "data", 4, 4_096, false, 8, 64);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunksDirs, "data", 4, 4_096, false, 8,
+            new ByteArrayStripingLocksProvider(64));
         MiruOnDiskUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(
-                bitmaps, mapDirs, swapDirs, multiChunkStore);
+            bitmaps, mapDirs, swapDirs, multiChunkStore, new StripingLocksProvider<String>(8));
         miruOnDiskUnreadTrackingIndex.bulkImport(tenantId, miruInMemoryUnreadTrackingIndex);
 
         return new Object[][] {
-                { miruInMemoryUnreadTrackingIndex, streamId, miruInvertedIndex },
-                { miruOnDiskUnreadTrackingIndex, streamId, miruInvertedIndex }
+            { miruInMemoryUnreadTrackingIndex, streamId, miruInvertedIndex },
+            { miruOnDiskUnreadTrackingIndex, streamId, miruInvertedIndex }
         };
     }
 }

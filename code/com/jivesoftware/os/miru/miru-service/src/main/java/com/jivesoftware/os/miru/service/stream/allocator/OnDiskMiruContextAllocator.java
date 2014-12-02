@@ -6,12 +6,13 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.RandomAccessSwappableFiler;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -64,7 +65,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
     private final int partitionAuthzCacheSize;
     private final MiruDiskResourceAnalyzer diskResourceAnalyzer = new MiruDiskResourceAnalyzer();
     private final int partitionChunkStoreConcurrencyLevel;
-    private final int partitionChunkStoreStripingLevel;
+    private final StripingLocksProvider<String> keyedStoreStripingLocksProvider;
+    private final ByteArrayStripingLocksProvider chunkStoreStripingLocksProvider;
 
     public OnDiskMiruContextAllocator(String contextName,
         MiruSchemaProvider schemaProvider,
@@ -75,7 +77,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         int numberOfChunkStores,
         int partitionAuthzCacheSize,
         int partitionChunkStoreConcurrencyLevel,
-        int partitionChunkStoreStripingLevel) {
+        StripingLocksProvider<String> keyedStoreStripingLocksProvider,
+        ByteArrayStripingLocksProvider chunkStoreStripingLocksProvider) {
         this.contextName = contextName;
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
@@ -85,7 +88,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.partitionChunkStoreConcurrencyLevel = partitionChunkStoreConcurrencyLevel;
-        this.partitionChunkStoreStripingLevel = partitionChunkStoreStripingLevel;
+        this.keyedStoreStripingLocksProvider = keyedStoreStripingLocksProvider;
+        this.chunkStoreStripingLocksProvider = chunkStoreStripingLocksProvider;
     }
 
     @Override
@@ -126,11 +130,12 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             resourceLocator.getInitialChunkSize(),
             true,
             partitionChunkStoreConcurrencyLevel,
-            partitionChunkStoreStripingLevel);
+            chunkStoreStripingLocksProvider);
 
         MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
             filerProviderFactory.getFilerProvider(identifier, "timeIndex"),
-            filesToPaths(resourceLocator.getMapDirectories(identifier, "timestampToIndex")));
+            filesToPaths(resourceLocator.getMapDirectories(identifier, "timestampToIndex")),
+            keyedStoreStripingLocksProvider);
 
         MiruOnDiskActivityIndex activityIndex = new MiruOnDiskActivityIndex(
             new PartitionedMapChunkBackedKeyedStore(
@@ -139,6 +144,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 new FileBackedMapChunkFactory(4, false, 8, false, 100,
                     filesToPaths(resourceLocator.getSwapDirectories(identifier, "activity"))),
                 multiChunkStore,
+                keyedStoreStripingLocksProvider,
                 24),
             new MiruInternalActivityMarshaller(),
             resourceLocator.getRandomAccessFiler(identifier, "activity", "rw"));
@@ -168,6 +174,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                         new FileBackedMapChunkFactory(keySize, true, 8, false, 100, mapDirectories),
                         new FileBackedMapChunkFactory(keySize, true, 8, false, 100, swapDirectories),
                         multiChunkStore,
+                        keyedStoreStripingLocksProvider,
                         4)); //TODO expose number of partitions
                 }
 
@@ -189,7 +196,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             filesToPaths(resourceLocator.getMapDirectories(identifier, "authz")),
             filesToPaths(resourceLocator.getSwapDirectories(identifier, "authz")),
             multiChunkStore,
-            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils),
+            keyedStoreStripingLocksProvider);
 
         MiruOnDiskRemovalIndex<BM> removalIndex = new MiruOnDiskRemovalIndex<>(bitmaps, new RandomAccessSwappableFiler(
             resourceLocator.getFilerFile(identifier, "removal")), new Object());
@@ -197,12 +205,14 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
             filesToPaths(resourceLocator.getMapDirectories(identifier, "unread")),
             filesToPaths(resourceLocator.getSwapDirectories(identifier, "unread")),
-            multiChunkStore);
+            multiChunkStore,
+            keyedStoreStripingLocksProvider);
 
         MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
             filesToPaths(resourceLocator.getMapDirectories(identifier, "inbox")),
             filesToPaths(resourceLocator.getSwapDirectories(identifier, "inbox")),
-            multiChunkStore);
+            multiChunkStore,
+            keyedStoreStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 

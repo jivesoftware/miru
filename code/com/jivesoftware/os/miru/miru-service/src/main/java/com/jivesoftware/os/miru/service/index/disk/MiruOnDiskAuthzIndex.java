@@ -32,16 +32,18 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     private final MiruBitmaps<BM> bitmaps;
     private final VariableKeySizeMapChunkBackedKeyedStore keyedStore;
     private final MiruAuthzCache<BM> cache;
-    private final StripingLocksProvider<String> stripingLocksProvider = new StripingLocksProvider<>(32);
+    private final StripingLocksProvider<String> stripingLocksProvider;
     private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskAuthzIndex(MiruBitmaps<BM> bitmaps,
         String[] baseMapDirectories,
         String[] baseSwapDirectories,
         MultiChunkStore chunkStore,
-        MiruAuthzCache<BM> cache)
+        MiruAuthzCache<BM> cache,
+        StripingLocksProvider<String> stripingLocksProvider)
         throws Exception {
 
+        this.stripingLocksProvider = stripingLocksProvider;
         this.bitmaps = bitmaps;
 
         int[] keySizeThresholds = { 4, 16, 64, 256, 1_024 };
@@ -61,6 +63,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
                 new FileBackedMapChunkFactory(keySize, false, 8, false, 100, mapDirectories),
                 new FileBackedMapChunkFactory(keySize, false, 8, false, 100, swapDirectories),
                 chunkStore,
+                stripingLocksProvider,
                 4)); //TODO expose num partitions to config
         }
 

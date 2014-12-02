@@ -5,9 +5,11 @@ import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
 import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
@@ -99,7 +101,8 @@ public class MiruFieldTest {
         };
 
         // 512 min size, times 10 field indexes
-        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunkDirectories, "data", 4, 5_120, false, 8, 64);
+        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunkDirectories, "data", 4, 5_120, false, 8,
+            new ByteArrayStripingLocksProvider(64));
 
         VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];
         VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
@@ -107,6 +110,7 @@ public class MiruFieldTest {
             new FileBackedMapChunkFactory(16, true, 8, false, 100, indexMapDirectories),
             new FileBackedMapChunkFactory(16, true, 8, false, 100, indexSwapDirectories),
             multiChunkStore,
+            new StripingLocksProvider<String>(8),
             4)); //TODO expose number of partitions
         onDiskIndexes[0] = builder.build();
 
