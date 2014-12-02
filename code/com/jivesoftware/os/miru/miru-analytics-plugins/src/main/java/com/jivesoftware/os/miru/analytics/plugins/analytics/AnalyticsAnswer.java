@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
@@ -17,12 +16,12 @@ public class AnalyticsAnswer implements Serializable {
     public static final AnalyticsAnswer EMPTY_RESULTS = new AnalyticsAnswer(null,
         true);
 
-    public final Map<MiruIBA, Waveform> waveforms;
+    public final Map<String, Waveform> waveforms;
     public final boolean resultsExhausted;
 
     @JsonCreator
     public AnalyticsAnswer(
-        @JsonProperty("waveforms") Map<MiruIBA, Waveform> waveforms,
+        @JsonProperty("waveforms") Map<String, Waveform> waveforms,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
         this.waveforms = waveforms;
         this.resultsExhausted = resultsExhausted;

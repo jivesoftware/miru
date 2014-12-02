@@ -5,7 +5,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -104,9 +103,9 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
             solutionLog.log("analytics constrained {} items.", bitmaps.cardinality(constrained));
         }
 
-        Map<MiruIBA, AnalyticsAnswer.Waveform> waveforms = Maps.newHashMap();
+        Map<String, AnalyticsAnswer.Waveform> waveforms = Maps.newHashMap();
         start = System.currentTimeMillis();
-        for (Map.Entry<MiruIBA, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
+        for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
             AnalyticsAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();

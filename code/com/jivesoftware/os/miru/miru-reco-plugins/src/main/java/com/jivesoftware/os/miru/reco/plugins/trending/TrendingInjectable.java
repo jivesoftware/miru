@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuestion;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -80,13 +79,14 @@ public class TrendingInjectable {
                 request.debug);
             List<MiruTermId> distinctTerms = distinctsResponse.answer.results;
 
-            Map<MiruIBA, MiruFilter> constraintsFilters = Maps.newHashMap();
+            Map<String, MiruFilter> constraintsFilters = Maps.newHashMap();
             for (MiruTermId termId : distinctTerms) {
-                constraintsFilters.put(termId, new MiruFilter(MiruFilterOperation.and,
-                    Optional.of(Collections.singletonList(new MiruFieldFilter(
-                        MiruFieldType.primary, request.query.aggregateCountAroundField,
-                        Collections.singletonList(new String(termId.getBytes(), Charsets.UTF_8))))),
-                    Optional.of(Collections.singletonList(request.query.constraintsFilter))));
+                constraintsFilters.put(new String(termId.getBytes(), Charsets.UTF_8),
+                    new MiruFilter(MiruFilterOperation.and,
+                        Optional.of(Collections.singletonList(new MiruFieldFilter(
+                            MiruFieldType.primary, request.query.aggregateCountAroundField,
+                            Collections.singletonList(new String(termId.getBytes(), Charsets.UTF_8))))),
+                        Optional.of(Collections.singletonList(request.query.constraintsFilter))));
             }
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
@@ -104,13 +104,13 @@ public class TrendingInjectable {
                 AnalyticsAnswer.EMPTY_RESULTS,
                 request.debug);
 
-            Map<MiruIBA, AnalyticsAnswer.Waveform> waveforms = analyticsResponse.answer.waveforms;
+            Map<String, AnalyticsAnswer.Waveform> waveforms = analyticsResponse.answer.waveforms;
             MinMaxPriorityQueue<Trendy> trendies = MinMaxPriorityQueue
                 .maximumSize(request.query.desiredNumberOfDistincts)
                 .create();
-            for (Map.Entry<MiruIBA, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
+            for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
                 SimpleRegression regression = WaveformRegression.getRegression(entry.getValue().waveform);
-                trendies.add(new Trendy(entry.getKey().getBytes(), regression.getSlope()));
+                trendies.add(new Trendy(entry.getKey().getBytes(Charsets.UTF_8), regression.getSlope()));
             }
 
             return new MiruResponse<>(new TrendingAnswer(ImmutableList.copyOf(trendies)),

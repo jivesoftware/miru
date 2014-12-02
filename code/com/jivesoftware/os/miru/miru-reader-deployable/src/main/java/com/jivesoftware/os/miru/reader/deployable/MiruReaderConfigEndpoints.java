@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.config.PartitionsForTenantResult;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.schema.RegistrySchemaProvider;
 import java.util.List;
@@ -94,6 +95,8 @@ public class MiruReaderConfigEndpoints {
         try {
             MiruSchema schema = registrySchemaProvider.getSchema(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
             return Response.ok(schema).build();
+        } catch (MiruSchemaUnvailableException e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
         } catch (Throwable t) {
             log.error("Failed to get schema for tenant {}", new Object[] { tenantId }, t);
             return Response.serverError().entity(t.getMessage()).build();

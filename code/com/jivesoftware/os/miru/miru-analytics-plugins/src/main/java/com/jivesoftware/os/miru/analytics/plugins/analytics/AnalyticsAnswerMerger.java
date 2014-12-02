@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.analytics.plugins.analytics;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
@@ -34,7 +33,7 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
             return currentAnswer;
         }
 
-        Map<MiruIBA, AnalyticsAnswer.Waveform> mergedWaveforms;
+        Map<String, AnalyticsAnswer.Waveform> mergedWaveforms;
         AnalyticsAnswer lastAnswer = last.get();
         if (currentAnswer.waveforms == null) {
             if (lastAnswer.waveforms == null) {
@@ -53,9 +52,9 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
         return new AnalyticsAnswer(mergedWaveforms, currentAnswer.resultsExhausted);
     }
 
-    private void mergeWaveform(Map<MiruIBA, AnalyticsAnswer.Waveform> mergedWaveforms, AnalyticsAnswer addAnswer) {
-        for (Map.Entry<MiruIBA, AnalyticsAnswer.Waveform> addEntry : addAnswer.waveforms.entrySet()) {
-            MiruIBA key = addEntry.getKey();
+    private void mergeWaveform(Map<String, AnalyticsAnswer.Waveform> mergedWaveforms, AnalyticsAnswer addAnswer) {
+        for (Map.Entry<String, AnalyticsAnswer.Waveform> addEntry : addAnswer.waveforms.entrySet()) {
+            String key = addEntry.getKey();
             AnalyticsAnswer.Waveform addWaveform = addEntry.getValue();
             AnalyticsAnswer.Waveform mergedWaveform = mergedWaveforms.get(key);
             if (mergedWaveform == null) {

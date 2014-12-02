@@ -19,7 +19,6 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -115,8 +114,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                     new MiruTimeRange(packCurrentTime - packNDays, packCurrentTime),
                                     input.buckets,
                                     constraintsFilter,
-                                    ImmutableMap.<MiruIBA, MiruFilter>builder()
-                                        .put(new MiruIBA("all".getBytes(Charsets.UTF_8)),
+                                    ImmutableMap.<String, MiruFilter>builder()
+                                        .put("all",
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
                                                     new MiruFieldFilter(MiruFieldType.primary,
@@ -128,7 +127,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                                             65 //outcome_set
                                                         ), Functions.toStringFunction())))),
                                                 Optional.<List<MiruFilter>>absent()))
-                                        .put(new MiruIBA("viewed".getBytes()),
+                                        .put("viewed",
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
                                                     new MiruFieldFilter(MiruFieldType.primary,
@@ -137,7 +136,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                                             0 //viewed
                                                         ), Functions.toStringFunction())))),
                                                 Optional.<List<MiruFilter>>absent()))
-                                        .put(new MiruIBA("liked".getBytes()),
+                                        .put("liked",
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
                                                     new MiruFieldFilter(MiruFieldType.primary,
@@ -146,7 +145,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                                             11 //liked
                                                         ), Functions.toStringFunction())))),
                                                 Optional.<List<MiruFilter>>absent()))
-                                        .put(new MiruIBA("created".getBytes()),
+                                        .put("created",
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
                                                     new MiruFieldFilter(MiruFieldType.primary,
@@ -155,7 +154,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                                             1 //created
                                                         ), Functions.toStringFunction())))),
                                                 Optional.<List<MiruFilter>>absent()))
-                                        .put(new MiruIBA("outcome_set".getBytes()),
+                                        .put("outcome_set",
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Collections.singletonList(
                                                     new MiruFieldFilter(MiruFieldType.primary,
@@ -181,7 +180,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 }
 
                 if (response != null && response.answer != null) {
-                    Map<MiruIBA, AnalyticsAnswer.Waveform> waveforms = response.answer.waveforms;
+                    Map<String, AnalyticsAnswer.Waveform> waveforms = response.answer.waveforms;
                     if (waveforms == null) {
                         waveforms = Collections.emptyMap();
                     }
@@ -201,7 +200,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         return renderer.render(template, data);
     }
 
-    private String hitsToBase64PNGWaveform(Map<MiruIBA, AnalyticsAnswer.Waveform> waveforms) throws IOException {
+    private String hitsToBase64PNGWaveform(Map<String, AnalyticsAnswer.Waveform> waveforms) throws IOException {
         int w = 1024;
         int h = 200;
         BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
@@ -214,7 +213,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         int pad = 64;
         pw.paintGrid(g, xo, yo, w - pad, h - pad);
 
-        for (Map.Entry<MiruIBA, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
+        for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
             long[] waveform = entry.getValue().waveform;
             MinMaxDouble mmd = new MinMaxDouble();
             double[] hits = new double[waveform.length];
@@ -227,7 +226,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         }
 
         int labelYOffset = yo;
-        for (Map.Entry<MiruIBA, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
+        for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
             long[] waveform = entry.getValue().waveform;
             MinMaxDouble mmd = new MinMaxDouble();
             double[] hits = new double[waveform.length];

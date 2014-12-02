@@ -17,7 +17,7 @@ public class Trendy implements Comparable<Trendy>, Serializable {
     @JsonCreator
     public Trendy(
         @JsonProperty("distinctValue") byte[] distinctValue,
-        @JsonProperty ("rank") double rank) {
+        @JsonProperty("rank") double rank) {
         this.distinctValue = distinctValue;
         this.rank = rank;
     }
