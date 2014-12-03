@@ -47,12 +47,12 @@ public class PaintWaveform {
         for (double d : hits) {
             mmd.value(d);
         }
-        
+
         if (hits.length == 1) {
-            hits = new double[]{hits[0], hits[0]};
+            hits = new double[] { hits[0], hits[0] };
         }
         float ws = (float) _w / (float) (hits.length - 1);
-        
+
         g.setColor(color);
         for (int i = 1; i < hits.length; i++) {
             int fy = _y + _h - (int) (clamp(mmd.zeroToOne(hits[i - 1]), 0, 1) * _h);
@@ -60,7 +60,7 @@ public class PaintWaveform {
             int fx = _x + (int) (ws * (i - 1));
             int tx = _x + (int) (ws * i);
             if (solid) {
-                g.fillPolygon(new int[]{fx, fx, tx, tx}, new int[]{_y + _h, fy, ty, _y + _h}, 4);
+                g.fillPolygon(new int[] { fx, fx, tx, tx }, new int[] { _y + _h, fy, ty, _y + _h }, 4);
             } else {
                 g.drawLine(fx, fy, tx, ty);
             }
