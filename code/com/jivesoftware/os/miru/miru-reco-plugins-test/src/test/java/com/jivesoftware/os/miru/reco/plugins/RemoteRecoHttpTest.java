@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants;
@@ -213,7 +214,8 @@ public class RemoteRecoHttpTest {
                             32,
                             constraintsFilter,
                             "parent",
-                            100), true);
+                            100),
+                        MiruSolutionLogLevel.INFO);
 
                     @SuppressWarnings("unchecked")
                     MiruResponse<OldTrendingAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(query,
@@ -286,7 +288,8 @@ public class RemoteRecoHttpTest {
                 "user", "user", "user",
                 "parent", "parent",
                 resultConstraintFilter,
-                100), true);
+                100),
+            MiruSolutionLogLevel.INFO);
 
         Random rand = new Random();
         @SuppressWarnings("unchecked")

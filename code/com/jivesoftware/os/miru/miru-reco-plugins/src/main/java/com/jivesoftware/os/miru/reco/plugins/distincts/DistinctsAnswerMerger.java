@@ -6,6 +6,7 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.LinkedHashSet;
 
@@ -50,7 +51,7 @@ public class DistinctsAnswerMerger implements MiruAnswerMerger<DistinctsAnswer> 
     }
 
     private void logMergeResult(DistinctsAnswer currentAnswer, DistinctsAnswer lastAnswer, DistinctsAnswer mergedAnswer, MiruSolutionLog solutionLog) {
-        solutionLog.log("Merged:" +
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Merged:" +
                         "\n  From: results={} collected={}" +
                         "\n  With: results={} collected={}" +
                         "\n  To:   results={} collected={}",

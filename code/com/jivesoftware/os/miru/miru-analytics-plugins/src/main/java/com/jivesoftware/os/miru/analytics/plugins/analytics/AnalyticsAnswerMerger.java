@@ -5,6 +5,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.Map;
 
@@ -37,10 +38,10 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
         AnalyticsAnswer lastAnswer = last.get();
         if (currentAnswer.waveforms == null) {
             if (lastAnswer.waveforms == null) {
-                solutionLog.log("merge: current and last waveforms are null.");
+                solutionLog.log(MiruSolutionLogLevel.WARN, "merge: current and last waveforms are null.");
                 mergedWaveforms = null;
             } else {
-                solutionLog.log("merge: current waveforms are null, using last answer.");
+                solutionLog.log(MiruSolutionLogLevel.WARN, "merge: current waveforms are null, using last answer.");
                 mergedWaveforms = lastAnswer.waveforms;
             }
         } else {

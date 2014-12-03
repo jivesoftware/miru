@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvable;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolved;
@@ -63,7 +64,7 @@ public class MiruLowestLatencySolverTest {
 
         Collections.shuffle(solvables, new Random(1_234)); // randomize the solvers
 
-        MiruSolutionLog solutionLog = new MiruSolutionLog(false);
+        MiruSolutionLog solutionLog = new MiruSolutionLog(MiruSolutionLogLevel.ERROR);
         MiruSolved<Integer> solved = solver.solve(solvables.iterator(), Optional.<Long>absent(), solutionLog);
         assertNotNull(solved.answer, "The answer was null, this probably means that the solver timed out when it shouldn't have.");
         assertEquals((int) solved.answer, 0);

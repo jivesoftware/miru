@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.bitmap;
 
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 
 /**
  *
@@ -18,7 +19,7 @@ public class MiruBitmapsDebug {
     }
 
     public <BM> void debug(MiruSolutionLog log, MiruBitmaps<BM> bitmaps, String message, Iterable<BM> iter) {
-        if (log.isEnabled()) {
+        if (log.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             StringBuilder buf = new StringBuilder(message);
             int i = 0;
             for (BM bitmap : iter) {
@@ -31,7 +32,7 @@ public class MiruBitmapsDebug {
                 buf.append(" -0-");
             }
             buf.append('\n');
-            log.log(buf.toString());
+            log.log(MiruSolutionLogLevel.INFO, buf.toString());
         }
     }
 }

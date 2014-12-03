@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 
 /**
@@ -31,10 +32,11 @@ public class DistinctCountInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>("countCustomStream", new CountCustomQuestion(numberOfDistincts, request)),
-                    new DistinctCountAnswerEvaluator(request.query),
-                    new DistinctCounterAnswerMerger(),
-                    DistinctCountAnswer.EMPTY_RESULTS, request.debug);
+                new MiruSolvableFactory<>("countCustomStream", new CountCustomQuestion(numberOfDistincts, request)),
+                new DistinctCountAnswerEvaluator(request.query),
+                new DistinctCounterAnswerMerger(),
+                DistinctCountAnswer.EMPTY_RESULTS,
+                request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -48,11 +50,12 @@ public class DistinctCountInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>("countInboxStreamAll", new CountInboxQuestion(numberOfDistincts,
-                            miruProvider.getBackfillerizer(tenantId), request, false)),
-                    new DistinctCountAnswerEvaluator(request.query),
-                    new DistinctCounterAnswerMerger(),
-                    DistinctCountAnswer.EMPTY_RESULTS, request.debug);
+                new MiruSolvableFactory<>("countInboxStreamAll", new CountInboxQuestion(numberOfDistincts,
+                    miruProvider.getBackfillerizer(tenantId), request, false)),
+                new DistinctCountAnswerEvaluator(request.query),
+                new DistinctCounterAnswerMerger(),
+                DistinctCountAnswer.EMPTY_RESULTS,
+                request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -66,11 +69,12 @@ public class DistinctCountInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>("countInboxStreamUnread", new CountInboxQuestion(numberOfDistincts,
-                            miruProvider.getBackfillerizer(tenantId), request, true)),
-                    new DistinctCountAnswerEvaluator(request.query),
-                    new DistinctCounterAnswerMerger(),
-                    DistinctCountAnswer.EMPTY_RESULTS, request.debug);
+                new MiruSolvableFactory<>("countInboxStreamUnread", new CountInboxQuestion(numberOfDistincts,
+                    miruProvider.getBackfillerizer(tenantId), request, true)),
+                new DistinctCountAnswerEvaluator(request.query),
+                new DistinctCounterAnswerMerger(),
+                DistinctCountAnswer.EMPTY_RESULTS,
+                request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -80,16 +84,17 @@ public class DistinctCountInjectable {
     }
 
     public MiruPartitionResponse<DistinctCountAnswer> countCustomStream(MiruPartitionId partitionId,
-            MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
-            throws MiruQueryServiceException {
+        MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
+        throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
-                    partitionId,
-                    new MiruSolvableFactory<>("countCustomStream", new CountCustomQuestion(numberOfDistincts, requestAndReport.request)),
-                    Optional.fromNullable(requestAndReport.report),
-                    DistinctCountAnswer.EMPTY_RESULTS, false);
+                partitionId,
+                new MiruSolvableFactory<>("countCustomStream", new CountCustomQuestion(numberOfDistincts, requestAndReport.request)),
+                Optional.fromNullable(requestAndReport.report),
+                DistinctCountAnswer.EMPTY_RESULTS,
+                MiruSolutionLogLevel.NONE);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -99,17 +104,18 @@ public class DistinctCountInjectable {
     }
 
     public MiruPartitionResponse<DistinctCountAnswer> countInboxStreamAll(MiruPartitionId partitionId,
-            MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
-            throws MiruQueryServiceException {
+        MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
+        throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
-                    partitionId,
-                    new MiruSolvableFactory<>("countInboxStreamAll", new CountInboxQuestion(numberOfDistincts,
-                            miruProvider.getBackfillerizer(tenantId), requestAndReport.request, false)),
-                    Optional.fromNullable(requestAndReport.report),
-                    DistinctCountAnswer.EMPTY_RESULTS, false);
+                partitionId,
+                new MiruSolvableFactory<>("countInboxStreamAll", new CountInboxQuestion(numberOfDistincts,
+                    miruProvider.getBackfillerizer(tenantId), requestAndReport.request, false)),
+                Optional.fromNullable(requestAndReport.report),
+                DistinctCountAnswer.EMPTY_RESULTS,
+                MiruSolutionLogLevel.NONE);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -119,17 +125,18 @@ public class DistinctCountInjectable {
     }
 
     public MiruPartitionResponse<DistinctCountAnswer> countInboxStreamUnread(MiruPartitionId partitionId,
-            MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
-            throws MiruQueryServiceException {
+        MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
+        throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
-                    partitionId,
-                    new MiruSolvableFactory<>("countInboxStreamUnread", new CountInboxQuestion(numberOfDistincts,
-                            miruProvider.getBackfillerizer(tenantId), requestAndReport.request, true)),
-                    Optional.fromNullable(requestAndReport.report),
-                    DistinctCountAnswer.EMPTY_RESULTS, false);
+                partitionId,
+                new MiruSolvableFactory<>("countInboxStreamUnread", new CountInboxQuestion(numberOfDistincts,
+                    miruProvider.getBackfillerizer(tenantId), requestAndReport.request, true)),
+                Optional.fromNullable(requestAndReport.report),
+                DistinctCountAnswer.EMPTY_RESULTS,
+                MiruSolutionLogLevel.NONE);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

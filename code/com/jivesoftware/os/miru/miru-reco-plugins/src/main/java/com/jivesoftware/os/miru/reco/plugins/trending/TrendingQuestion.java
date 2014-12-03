@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import java.util.ArrayList;
@@ -36,7 +37,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
 
     @Override
     public <BM> MiruPartitionResponse<OldTrendingAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
-        MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
@@ -47,7 +48,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
 
         // Short-circuit if the time range doesn't live here
         if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
-            solutionLog.log("No time index intersection");
+            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
             return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, bitmaps.create(), solutionLog),
                     solutionLog.asList());
         }
@@ -72,8 +73,9 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        if (solutionLog.isEnabled()) {
-            solutionLog.log("trending {} items.", bitmaps.cardinality(answer));
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "trending {} items.", bitmaps.cardinality(answer));
+            solutionLog.log(MiruSolutionLogLevel.DEBUG, "trending bitmap {}", answer);
         }
         return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, answer, solutionLog), solutionLog.asList());
 

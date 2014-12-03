@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTermCount;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer.Recommendation;
 import java.util.ArrayList;
@@ -57,44 +58,53 @@ public class CollaborativeFiltering {
         log.debug("Get collaborative filtering for answer={} query={}", answer, request);
 
         BM contributors = possibleContributors(bitmaps, requestContext, request, answer);
-        if (solutionLog.isEnabled()) {
-            solutionLog.log("contributors {}.", bitmaps.cardinality(contributors));
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "contributors {}.", bitmaps.cardinality(contributors));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "contributors bitmap {}", contributors);
         }
+
         BM otherContributors = bitmaps.create();
         bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
         // at this point we have all activity for all my viewed documents in 'contributors', and all activity not my own in 'otherContributors'.
         MinMaxPriorityQueue<MiruTermCount> contributorHeap = rankContributors(bitmaps, request, requestContext, otherContributors);
-        if (solutionLog.isEnabled()) {
-            solutionLog.log("not my self {}.", bitmaps.cardinality(otherContributors));
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "not my self {}.", bitmaps.cardinality(otherContributors));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "not my self bitmap {}", otherContributors);
         }
 
         BM contributions = contributions(bitmaps, contributorHeap, requestContext, request.query);
-        if (solutionLog.isEnabled()) {
-            solutionLog.log("contributions {}.", bitmaps.cardinality(contributions));
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "contributions {}.", bitmaps.cardinality(contributions));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "contributions bitmap {}", contributions);
         }
+
         final List<MiruTermCount> mostLike = new ArrayList<>(contributorHeap);
         final BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
         final List<BloomIndex.Mights<MiruTermCount>> wantBits = bloomIndex.wantBits(mostLike);
         // TODO handle authz
         BM othersContributions = bitmaps.create();
         bitmaps.andNot(othersContributions, contributions, Collections.singletonList(contributors)); // remove activity for my viewed documents
-        if (solutionLog.isEnabled()) {
-            solutionLog.log("othersContributions {}.", bitmaps.cardinality(othersContributions));
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "othersContributions {}.", bitmaps.cardinality(othersContributions));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "othersContributions bitmap {}", othersContributions);
         }
+
         BM scorable = othersContributions;
         MiruFilter constrainScorableFilter = request.query.constrainResults;
         if (!MiruFilter.NO_FILTER.equals(constrainScorableFilter)) {
             BM possible = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getFieldIndexProvider(),
                 constrainScorableFilter, solutionLog, possible, -1);
-            if (solutionLog.isEnabled()) {
-                solutionLog.log("possible {}.", bitmaps.cardinality(possible));
+            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+                solutionLog.log(MiruSolutionLogLevel.INFO, "possible {}.", bitmaps.cardinality(possible));
+                solutionLog.log(MiruSolutionLogLevel.TRACE, "possible bitmap {}", possible);
             }
 
             scorable = bitmaps.create();
             bitmaps.and(scorable, Arrays.asList(possible, othersContributions));
-            if (solutionLog.isEnabled()) {
-                solutionLog.log("scorable {}.", bitmaps.cardinality(othersContributions));
+            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+                solutionLog.log(MiruSolutionLogLevel.INFO, "scorable {}.", bitmaps.cardinality(scorable));
+                solutionLog.log(MiruSolutionLogLevel.TRACE, "scorable bitmap {}", scorable);
             }
         }
 

@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
@@ -90,7 +91,7 @@ public class MiruStreamServiceNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
 
-        this.fieldDefinitions = new MiruFieldDefinition[]{
+        this.fieldDefinitions = new MiruFieldDefinition[] {
             new MiruFieldDefinition(0, "verb"),
             new MiruFieldDefinition(1, "container"),
             new MiruFieldDefinition(2, "target"),
@@ -106,7 +107,7 @@ public class MiruStreamServiceNGTest {
         this.distinctCountInjectable = new DistinctCountInjectable(miruProvider, new NumberOfDistincts());
     }
 
-    @Test (enabled = false, description = "This test is disabled because it is very slow")
+    @Test(enabled = false, description = "This test is disabled because it is very slow")
     public void basicTest() throws Exception {
         final int capacity = 1_000_000;
         final int numQueries = 1_000;
@@ -170,7 +171,8 @@ public class MiruStreamServiceNGTest {
                         filter,
                         MiruFilter.NO_FILTER,
                         "container",
-                        0, 51), false);
+                        0, 51),
+                    MiruSolutionLogLevel.NONE);
 
                 long start = System.currentTimeMillis();
                 MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
@@ -205,8 +207,8 @@ public class MiruStreamServiceNGTest {
      * schema.put("tag", 3); <br>
      * schema.put("author", 4); <br>
      */
-    private final int[] fieldCardinality = new int[]{ 10, 10_000, 1_000_000, 10_000, 1_000 };
-    private final int[] fieldFrequency = new int[]{ 1, 1, 1, 10, 1 };
+    private final int[] fieldCardinality = new int[] { 10, 10_000, 1_000_000, 10_000, 1_000 };
+    private final int[] fieldFrequency = new int[] { 1, 1, 1, 10, 1 };
 
     private MiruPartitionedActivity generateActivity(int time, Random rand) {
         Map<String, List<String>> fieldsValues = Maps.newHashMap();
@@ -232,7 +234,7 @@ public class MiruStreamServiceNGTest {
         return distincts;
     }
 
-    @Test (groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
+    @Test(groups = "slow", enabled = false, description = "This test is disabled because it is very slow, enable it when you want to run it (duh)")
     public void filterTest() throws Exception {
         List<MiruPartitionedActivity> activities = new ArrayList<>();
 
@@ -275,12 +277,13 @@ public class MiruStreamServiceNGTest {
                 tenant1,
                 new MiruActorId(Id.NULL),
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
-                    streamId,
-                    new MiruTimeRange(0, 1_000),
-                    new MiruTimeRange(0, 1_000),
-                    filter,
-                    MiruFilter.NO_FILTER,
-                    "container", 0, 10), false);
+                streamId,
+                new MiruTimeRange(0, 1_000),
+                new MiruTimeRange(0, 1_000),
+                filter,
+                MiruFilter.NO_FILTER,
+                "container", 0, 10),
+                MiruSolutionLogLevel.NONE);
             MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
             for (AggregateCount a : results.answer.results) {
                 System.out.println(a);
@@ -301,7 +304,8 @@ public class MiruStreamServiceNGTest {
                     filter,
                     MiruFilter.NO_FILTER,
                     "container",
-                    50), false);
+                    50),
+                MiruSolutionLogLevel.NONE);
             MiruResponse<DistinctCountAnswer> count = distinctCountInjectable.countInboxStreamAll(query);
             System.out.println(count);
         }
@@ -316,12 +320,13 @@ public class MiruStreamServiceNGTest {
                 tenant1,
                 new MiruActorId(Id.NULL),
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
-                    streamId,
-                    new MiruTimeRange(0, 1_000),
-                    new MiruTimeRange(0, 1_000),
-                    filter,
-                    MiruFilter.NO_FILTER,
-                    "container", 0, 10), false);
+                streamId,
+                new MiruTimeRange(0, 1_000),
+                new MiruTimeRange(0, 1_000),
+                filter,
+                MiruFilter.NO_FILTER,
+                "container", 0, 10),
+                MiruSolutionLogLevel.NONE);
             MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
             for (AggregateCount a : results.answer.results) {
                 System.out.println(a);
@@ -342,7 +347,8 @@ public class MiruStreamServiceNGTest {
                     filter,
                     MiruFilter.NO_FILTER,
                     "container",
-                    50), false);
+                    50),
+                MiruSolutionLogLevel.NONE);
             MiruResponse<DistinctCountAnswer> count = distinctCountInjectable.countInboxStreamAll(query);
             System.out.println(count);
         }
@@ -360,7 +366,7 @@ public class MiruStreamServiceNGTest {
             fieldsValues.put("tag", Arrays.asList(String.valueOf(tag)));
         }
         fieldsValues.put("author", Arrays.asList(String.valueOf(author)));
-        String[] authz = new String[]{ "aaabbbcccddd" };
+        String[] authz = new String[] { "aaabbbcccddd" };
         MiruActivity activity = new MiruActivity(tenant1, time, authz, 0, fieldsValues, Collections.<String, List<String>>emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }

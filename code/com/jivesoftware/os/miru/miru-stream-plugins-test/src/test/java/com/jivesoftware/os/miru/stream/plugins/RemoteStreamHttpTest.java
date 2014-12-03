@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
@@ -76,7 +77,8 @@ public class RemoteStreamHttpTest {
                 MiruFilter.NO_FILTER,
                 "parent",
                 0,
-                100), false);
+                100),
+            MiruSolutionLogLevel.NONE);
         AggregateCountsAnswer result = requestHelper.executeRequest(query,
             AggregateCountsConstants.FILTER_PREFIX + AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT,
             AggregateCountsAnswer.class, AggregateCountsAnswer.EMPTY_RESULTS);

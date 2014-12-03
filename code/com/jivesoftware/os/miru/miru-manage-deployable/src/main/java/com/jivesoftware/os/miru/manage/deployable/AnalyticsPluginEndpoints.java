@@ -37,7 +37,8 @@ public class AnalyticsPluginEndpoints {
         @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("activityTypes") @DefaultValue("0, 1, 11, 65") String activityTypes,
-        @QueryParam("users") @DefaultValue("") String users) {
+        @QueryParam("users") @DefaultValue("") String users,
+        @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
         String rendered = miruManageService.renderPlugin(analyticsPluginRegion,
             Optional.of(new AnalyticsPluginRegionInput(
                 tenantId,
@@ -45,7 +46,8 @@ public class AnalyticsPluginEndpoints {
                 toHoursAgo,
                 buckets,
                 activityTypes,
-                users)));
+                users,
+                logLevel)));
         return Response.ok(rendered).build();
     }
 }

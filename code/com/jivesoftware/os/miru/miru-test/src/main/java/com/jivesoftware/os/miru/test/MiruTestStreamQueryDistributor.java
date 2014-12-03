@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountQuery;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
@@ -85,14 +86,15 @@ public class MiruTestStreamQueryDistributor {
                     MiruFilterOperation.and,
                     Optional.of(Arrays.asList(viewClassesFilter())),
                     Optional.of(Arrays.asList(
-                            new MiruFilter(
-                                MiruFilterOperation.or,
-                                Optional.of(buildFieldFilters(inbox, userId)),
-                                Optional.<List<MiruFilter>>absent())))),
+                        new MiruFilter(
+                            MiruFilterOperation.or,
+                            Optional.of(buildFieldFilters(inbox, userId)),
+                            Optional.<List<MiruFilter>>absent())))),
                 constraintsFilter.orNull(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 startFromDistinctN,
-                numResultsAggregateCounts + 1), false); // we usually add 1 for "hasMore"
+                numResultsAggregateCounts + 1), // we usually add 1 for "hasMore"
+            MiruSolutionLogLevel.NONE);
     }
 
     public MiruRequest<DistinctCountQuery> distinctCountQuery(boolean inbox) {
@@ -117,13 +119,14 @@ public class MiruTestStreamQueryDistributor {
                     MiruFilterOperation.and,
                     Optional.of(Arrays.asList(viewClassesFilter())),
                     Optional.of(Arrays.asList(
-                            new MiruFilter(
-                                MiruFilterOperation.or,
-                                Optional.of(buildFieldFilters(inbox, userId)),
-                                Optional.<List<MiruFilter>>absent())))),
+                        new MiruFilter(
+                            MiruFilterOperation.or,
+                            Optional.of(buildFieldFilters(inbox, userId)),
+                            Optional.<List<MiruFilter>>absent())))),
                 constraintsFilter.or(MiruFilter.NO_FILTER),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
-                numResultsDistinctCount + 1), false); // we usually add 1 for "hasMore"
+                numResultsDistinctCount + 1), // we usually add 1 for "hasMore"
+            MiruSolutionLogLevel.NONE);
     }
 
     private MiruStreamId streamId(boolean inbox, ObjectId user) {
@@ -153,9 +156,9 @@ public class MiruTestStreamQueryDistributor {
             int numContainers = random.nextInt(queryContainers);
             return ImmutableList.of(
                 new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.CONTAINER_IDS.getFieldName(), ImmutableList.copyOf(
-                        Lists.transform(featureSupplier.oldContainers(numContainers), ID_TO_TERMID))),
+                    Lists.transform(featureSupplier.oldContainers(numContainers), ID_TO_TERMID))),
                 new MiruFieldFilter(MiruFieldType.primary, MiruFieldName.AUTHOR_ID.getFieldName(), ImmutableList.copyOf(
-                        Lists.transform(featureSupplier.oldUsers(numUsers), ID_TO_TERMID))));
+                    Lists.transform(featureSupplier.oldUsers(numUsers), ID_TO_TERMID))));
         }
     }
 

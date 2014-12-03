@@ -40,7 +40,7 @@ public class AnalyticsInjectable {
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(request.query.timeRange),
                 AnalyticsAnswer.EMPTY_RESULTS,
-                request.debug);
+                request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -61,7 +61,7 @@ public class AnalyticsInjectable {
                 new MiruSolvableFactory<>("scoreTrending", new AnalyticsQuestion(trending, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
                 AnalyticsAnswer.EMPTY_RESULTS,
-                requestAndReport.request.debug);
+                requestAndReport.request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

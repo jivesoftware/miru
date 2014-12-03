@@ -36,6 +36,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvable;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
@@ -107,7 +108,7 @@ public class MiruService implements Miru {
         MiruAnswerEvaluator<A> evaluator,
         MiruAnswerMerger<A> merger,
         A defaultValue,
-        boolean debug)
+        MiruSolutionLogLevel logLevel)
         throws Exception {
 
         try {
@@ -122,8 +123,8 @@ public class MiruService implements Miru {
         A answer = null;
         List<MiruSolution> solutions = Lists.newArrayList();
         List<Integer> incompletePartitionIds = Lists.newArrayList();
-        final MiruSolutionLog solutionLog = new MiruSolutionLog(debug);
-        solutionLog.log("Solving: host:{} tenantId:{} question:{}", localhost, tenantId, solvableFactory.getQuestion());
+        final MiruSolutionLog solutionLog = new MiruSolutionLog(logLevel);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Solving: host:{} tenantId:{} question:{}", localhost, tenantId, solvableFactory.getQuestion());
         long totalElapsed;
 
         try {
@@ -140,7 +141,7 @@ public class MiruService implements Miru {
                         @Override
                         public MiruSolvable<A> apply(final MiruHostedPartition<?> replica) {
                             if (replica.isLocal()) {
-                                solutionLog.log("Created {} solvable for coord={}.", (replica.isLocal() ? "local" : "remote"), replica.getCoord());
+                                solutionLog.log(MiruSolutionLogLevel.INFO, "Created local solvable for coord={}.", replica.getCoord());
                             }
                             return solvableFactory.create(replica, solvableFactory.getReport(optionalAnswer));
                         }
@@ -148,28 +149,30 @@ public class MiruService implements Miru {
 
                 Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
                     solvableFactory.getQueryKey());
-                solutionLog.log("Solving partition:{}", orderedPartitions.partitionId.getId()
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Solving partition:{}", orderedPartitions.partitionId.getId()
                     + " for tenant:" + orderedPartitions.tenantId
                     + " timeout:" + suggestedTimeoutInMillis.or(-1L));
 
                 long start = System.currentTimeMillis();
                 MiruSolved<A> solved = solver.solve(solvables.iterator(), suggestedTimeoutInMillis, solutionLog);
                 if (solved == null) {
-                    solutionLog.log("No solution for partition:{}", orderedPartitions.partitionId);
-                    solutionLog.log("WARNING result set is incomplete! elapse:{}", (System.currentTimeMillis() - start));
+                    solutionLog.log(MiruSolutionLogLevel.WARN, "No solution for partition:{}", orderedPartitions.partitionId);
+                    solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING result set is incomplete! elapse:{}", (System.currentTimeMillis() - start));
                     incompletePartitionIds.add(orderedPartitions.partitionId.getId());
                     if (evaluator.stopOnUnsolvablePartition()) {
+                        solutionLog.log(MiruSolutionLogLevel.ERROR, "ERROR result set is unsolvable!");
                         break;
                     }
                 } else {
-                    solutionLog.log("Solved partition:{}. elapse:{} millis", orderedPartitions.partitionId, (System.currentTimeMillis() - start));
+                    solutionLog.log(MiruSolutionLogLevel.INFO, "Solved partition:{}. elapse:{} millis",
+                        orderedPartitions.partitionId, (System.currentTimeMillis() - start));
                     solutions.add(solved.solution);
 
                     A currentAnswer = solved.answer;
-                    solutionLog.log("Mergining solution set from partition:{}", orderedPartitions.partitionId);
+                    solutionLog.log(MiruSolutionLogLevel.INFO, "Merging solution set from partition:{}", orderedPartitions.partitionId);
                     start = System.currentTimeMillis();
                     A merged = merger.merge(lastAnswer, currentAnswer, solutionLog);
-                    solutionLog.log("Merged. elapse:{} millis", (System.currentTimeMillis() - start));
+                    solutionLog.log(MiruSolutionLogLevel.INFO, "Merged. elapse:{} millis", (System.currentTimeMillis() - start));
 
                     lastAnswer = Optional.of(merged);
                     if (evaluator.isDone(merged, solutionLog)) {
@@ -201,7 +204,7 @@ public class MiruService implements Miru {
         MiruSolvableFactory<A, P> factory,
         Optional<P> report,
         A defaultValue,
-        boolean debug)
+        MiruSolutionLogLevel logLevel)
         throws Exception {
         Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
 

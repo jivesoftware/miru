@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 
 /**
 *
@@ -16,7 +17,7 @@ public class DistinctCountAnswerEvaluator implements MiruAnswerEvaluator<Distinc
 
     @Override
     public boolean isDone(DistinctCountAnswer answer, MiruSolutionLog solutionLog) {
-        solutionLog.log("Evaluate {} >= {}", answer.collectedDistincts, query.desiredNumberOfDistincts);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Evaluate {} >= {}", answer.collectedDistincts, query.desiredNumberOfDistincts);
         return answer.collectedDistincts >= query.desiredNumberOfDistincts;
     }
 

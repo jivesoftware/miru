@@ -29,7 +29,6 @@ public class TrendingPluginEndpoints {
         this.trendingPluginRegion = trendingPluginRegion;
     }
 
-
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
@@ -37,14 +36,16 @@ public class TrendingPluginEndpoints {
         @QueryParam("fromHoursAgo") @DefaultValue("72") int fromHoursAgo,
         @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("field") @DefaultValue("authors") String field) {
+        @QueryParam("field") @DefaultValue("authors") String field,
+        @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
         String rendered = miruManageService.renderPlugin(trendingPluginRegion,
             Optional.of(new TrendingPluginRegionInput(
                 tenantId,
                 fromHoursAgo,
                 toHoursAgo,
                 buckets,
-                field)));
+                field,
+                logLevel)));
         return Response.ok(rendered).build();
     }
 }

@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
@@ -125,7 +126,7 @@ public class MiruAnalyticsNGTest {
                     ImmutableMap.<String, MiruFilter>builder()
                         .put(user, filter)
                         .build()),
-                true);
+                MiruSolutionLogLevel.INFO);
             MiruResponse<AnalyticsAnswer> result = injectable.score(request);
 
             System.out.println("result:" + result);

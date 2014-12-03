@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 
 /**
@@ -19,13 +20,13 @@ public interface Miru {
         MiruAnswerEvaluator<R> evaluator,
         MiruAnswerMerger<R> merger,
         R defaultValue,
-        boolean debug) throws Exception;
+        MiruSolutionLogLevel logLevel) throws Exception;
 
     <R, P> MiruPartitionResponse<R> askImmediate(
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruSolvableFactory<R, P> factory, Optional<P> report,
         R defaultValue,
-        boolean debug) throws Exception;
+        MiruSolutionLogLevel logLevel) throws Exception;
 
 }

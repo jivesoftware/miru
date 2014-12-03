@@ -31,10 +31,11 @@ public class RecoInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, request)),
-                    new RecoAnswerEvaluator(request.query),
-                    new RecoAnswerMerger(request.query.desiredNumberOfDistincts),
-                    RecoAnswer.EMPTY_RESULTS, request.debug);
+                new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, request)),
+                new RecoAnswerEvaluator(request.query),
+                new RecoAnswerMerger(request.query.desiredNumberOfDistincts),
+                RecoAnswer.EMPTY_RESULTS,
+                request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -44,16 +45,17 @@ public class RecoInjectable {
     }
 
     public MiruPartitionResponse<RecoAnswer> collaborativeFilteringRecommendations(MiruPartitionId partitionId,
-            MiruRequestAndReport<RecoQuery, RecoReport> requestAndReport)
-            throws MiruQueryServiceException {
+        MiruRequestAndReport<RecoQuery, RecoReport> requestAndReport)
+        throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
-                    partitionId,
-                    new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, requestAndReport.request)),
-                    Optional.fromNullable(requestAndReport.report),
-                    RecoAnswer.EMPTY_RESULTS, requestAndReport.request.debug);
+                partitionId,
+                new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering, requestAndReport.request)),
+                Optional.fromNullable(requestAndReport.report),
+                RecoAnswer.EMPTY_RESULTS,
+                requestAndReport.request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

@@ -17,25 +17,30 @@ public class MiruRequest<Q> implements Serializable {
     public final MiruActorId actorId;
     public final MiruAuthzExpression authzExpression;
     public final Q query;
-    public final boolean debug;
+    public final MiruSolutionLogLevel logLevel;
 
     @JsonCreator
     public MiruRequest(@JsonProperty("tenantId") MiruTenantId tenantId,
-            @JsonProperty("actorId") MiruActorId actorId,
-            @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
-            @JsonProperty("query") Q query,
-            @JsonProperty("debug") boolean debug) {
+        @JsonProperty("actorId") MiruActorId actorId,
+        @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
+        @JsonProperty("query") Q query,
+        @JsonProperty("logLevel") MiruSolutionLogLevel logLevel) {
         this.tenantId = tenantId;
         this.actorId = actorId;
         this.query = query;
         this.authzExpression = authzExpression;
-        this.debug = debug;
+        this.logLevel = logLevel;
     }
 
     @Override
     public String toString() {
-        return "MiruRequest{" + "tenantId=" + tenantId + ", actorId=" + actorId + ", authzExpression=" + authzExpression + ", query=" + query + ", " +
-                "debug=" + debug + '}';
+        return "MiruRequest{" +
+            "tenantId=" + tenantId +
+            ", actorId=" + actorId +
+            ", authzExpression=" + authzExpression +
+            ", query=" + query +
+            ", logLevel=" + logLevel +
+            '}';
     }
 
 

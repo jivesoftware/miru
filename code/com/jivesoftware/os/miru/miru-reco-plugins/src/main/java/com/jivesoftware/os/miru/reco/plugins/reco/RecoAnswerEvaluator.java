@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 
 /**
 *
@@ -16,11 +17,11 @@ public class RecoAnswerEvaluator implements MiruAnswerEvaluator<RecoAnswer> {
 
     @Override
     public boolean isDone(RecoAnswer answer, MiruSolutionLog solutionLog) {
-        solutionLog.log("Evaluate partitionsVisited {} < {}", answer.partitionsVisited, 2);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Evaluate partitionsVisited {} < {}", answer.partitionsVisited, 2);
         if (answer.partitionsVisited < 2) { // TODO expose to query or config?
             return false;
         }
-        solutionLog.log("Evaluate results size {} >= {}", answer.results.size(), query.desiredNumberOfDistincts);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Evaluate results size {} >= {}", answer.results.size(), query.desiredNumberOfDistincts);
         return answer.results.size() >= query.desiredNumberOfDistincts;
     }
 

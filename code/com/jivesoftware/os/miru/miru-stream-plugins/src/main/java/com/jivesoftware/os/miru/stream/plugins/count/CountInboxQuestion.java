@@ -53,7 +53,7 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
 
     @Override
     public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
-        MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 

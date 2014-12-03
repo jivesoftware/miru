@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 import java.util.HashMap;
 import java.util.List;
@@ -43,7 +44,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                 mergedResults.add(aggregateCount);
             } else {
                 mergedResults.add(new AggregateCount(aggregateCount.mostRecentActivity, aggregateCount.distinctValue, aggregateCount.count + had.count,
-                        aggregateCount.unread || had.unread));
+                    aggregateCount.unread || had.unread));
             }
         }
         for (AggregateCount aggregateCount : currentAnswer.results) {
@@ -53,7 +54,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
         }
 
         AggregateCountsAnswer mergedAnswer = new AggregateCountsAnswer(ImmutableList.copyOf(mergedResults), currentAnswer.aggregateTerms,
-                currentAnswer.skippedDistincts, currentAnswer.collectedDistincts);
+            currentAnswer.skippedDistincts, currentAnswer.collectedDistincts);
 
         logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
@@ -66,15 +67,16 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
     }
 
     private void logMergeResult(AggregateCountsAnswer currentAnswer,
-            AggregateCountsAnswer lastAnswer,
-            AggregateCountsAnswer mergedAnswer,
-            MiruSolutionLog solutionLog) {
-        solutionLog.log("Merged:" +
-                        "\n  From: terms={} results={} collected={} skipped={}" +
-                        "\n  With: terms={} results={} collected={} skipped={}" +
-                        "\n  To:   terms={} results={} collected={} skipped={}",
-                lastAnswer.aggregateTerms.size(), lastAnswer.results.size(), lastAnswer.collectedDistincts, lastAnswer.skippedDistincts,
-                currentAnswer.aggregateTerms.size(), currentAnswer.results.size(), currentAnswer.collectedDistincts, currentAnswer.skippedDistincts,
-                mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts, mergedAnswer.skippedDistincts);
+        AggregateCountsAnswer lastAnswer,
+        AggregateCountsAnswer mergedAnswer,
+        MiruSolutionLog solutionLog) {
+
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Merged:" +
+                "\n  From: terms={} results={} collected={} skipped={}" +
+                "\n  With: terms={} results={} collected={} skipped={}" +
+                "\n  To:   terms={} results={} collected={} skipped={}",
+            lastAnswer.aggregateTerms.size(), lastAnswer.results.size(), lastAnswer.collectedDistincts, lastAnswer.skippedDistincts,
+            currentAnswer.aggregateTerms.size(), currentAnswer.results.size(), currentAnswer.collectedDistincts, currentAnswer.skippedDistincts,
+            mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts, mergedAnswer.skippedDistincts);
     }
 }

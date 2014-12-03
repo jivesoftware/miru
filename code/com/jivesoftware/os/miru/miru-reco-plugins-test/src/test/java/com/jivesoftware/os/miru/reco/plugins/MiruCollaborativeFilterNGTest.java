@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
@@ -188,7 +189,7 @@ public class MiruCollaborativeFilterNGTest {
                     "doc", "doc",
                     MiruFilter.NO_FILTER,
                     10),
-                true));
+                MiruSolutionLogLevel.INFO));
 
             System.out.println("recoResult:" + response.answer.results);
             System.out.println("Took:" + (System.currentTimeMillis() - s));

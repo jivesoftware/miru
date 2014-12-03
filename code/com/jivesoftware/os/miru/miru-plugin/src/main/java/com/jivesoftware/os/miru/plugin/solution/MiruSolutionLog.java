@@ -14,28 +14,32 @@ public class MiruSolutionLog {
 
     private static final MetricLogger METRIC_LOGGER = MetricLoggerFactory.getLogger();
 
-    private final boolean enabled;
+    private final MiruSolutionLogLevel level;
     private final List<String> log = new ArrayList<>();
 
-    public MiruSolutionLog(boolean enabled) {
-        this.enabled = enabled;
+    public MiruSolutionLog(MiruSolutionLogLevel level) {
+        this.level = level;
     }
 
-    public boolean isEnabled() {
-        return enabled;
+    public boolean isLogLevelEnabled(MiruSolutionLogLevel checkLevel) {
+        return level.ordinal() <= checkLevel.ordinal();
     }
 
-    public void log(String message) {
-        METRIC_LOGGER.debug(message);
-        if (enabled) {
+    public void log(MiruSolutionLogLevel atLevel, String message) {
+        if (isLogLevelEnabled(atLevel)) {
             log.add(message);
+            METRIC_LOGGER.debug(message);
+        } else {
+            METRIC_LOGGER.trace(message);
         }
     }
 
-    public void log(String message, Object... args) {
-        METRIC_LOGGER.debug(message, args);
-        if (enabled) {
+    public void log(MiruSolutionLogLevel atLevel, String message, Object... args) {
+        if (isLogLevelEnabled(atLevel)) {
             log.add(MessageFormatter.format(message, args));
+            METRIC_LOGGER.debug(message, args);
+        } else {
+            METRIC_LOGGER.trace(message, args);
         }
     }
 
@@ -46,4 +50,5 @@ public class MiruSolutionLog {
     public void clear() {
         log.clear();
     }
+
 }

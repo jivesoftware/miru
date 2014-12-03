@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -76,7 +77,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
                 List<RecoAnswer.Recommendation> results = Lists.newArrayList(answer.results);
                 long t = System.currentTimeMillis();
                 Collections.sort(results);
-                solutionLog.log("mergeReco: sorted in {} ms", (System.currentTimeMillis() - t));
+                solutionLog.log(MiruSolutionLogLevel.INFO, "mergeReco: sorted in {} ms", (System.currentTimeMillis() - t));
                 results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
                 return new RecoAnswer(ImmutableList.copyOf(results), answer.partitionsVisited);
             }
@@ -84,12 +85,12 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
     }
 
     private void logMergeResult(RecoAnswer currentAnswer, RecoAnswer lastAnswer, RecoAnswer mergedAnswer, MiruSolutionLog solutionLog) {
-        solutionLog.log("Merged:"
-                        + "\n  From: results={}"
-                        + "\n  With: results={}"
-                        + "\n  To:   results={}",
-                lastAnswer.results.size(),
-                currentAnswer.results.size(),
-                mergedAnswer.results.size());
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Merged:"
+                + "\n  From: results={}"
+                + "\n  With: results={}"
+                + "\n  To:   results={}",
+            lastAnswer.results.size(),
+            currentAnswer.results.size(),
+            mergedAnswer.results.size());
     }
 }

@@ -31,7 +31,7 @@ public class DistinctsQuestion implements Question<DistinctsAnswer, DistinctsRep
 
     @Override
     public <BM> MiruPartitionResponse<DistinctsAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<DistinctsReport> report) throws Exception {
-        MiruSolutionLog solutionLog = new MiruSolutionLog(request.debug);
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 

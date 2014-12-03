@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.manage.deployable.analytics.MinMaxDouble;
 import com.jivesoftware.os.miru.manage.deployable.analytics.PaintWaveform;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -75,14 +76,16 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         final int buckets;
         final String activityTypes;
         final String users;
+        final String logLevel;
 
-        public AnalyticsPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String users) {
+        public AnalyticsPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String users, String logLevel) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
             this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
             this.activityTypes = activityTypes;
             this.users = users;
+            this.logLevel = logLevel;
         }
     }
 
@@ -95,6 +98,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 int fromHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.fromHoursAgo : input.toHoursAgo;
                 int toHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.toHoursAgo : input.fromHoursAgo;
 
+                data.put("logLevel", input.logLevel);
                 data.put("tenant", input.tenant);
                 data.put("fromHoursAgo", String.valueOf(fromHoursAgo));
                 data.put("toHoursAgo", String.valueOf(toHoursAgo));
@@ -174,7 +178,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         input.buckets,
                                         constraintsFilter,
                                         analyticsFilters),
-                                    true),
+                                    MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
                                 new Class[]{AnalyticsAnswer.class},
                                 null);

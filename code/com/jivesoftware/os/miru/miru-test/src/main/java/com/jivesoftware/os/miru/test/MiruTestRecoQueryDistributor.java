@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -61,7 +62,8 @@ public class MiruTestRecoQueryDistributor {
                     Optional.of(Arrays.asList(viewClassesFilter())),
                     Optional.<List<MiruFilter>>absent()),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
-                numResultsGlobalTrendy), false);
+                numResultsGlobalTrendy),
+            MiruSolutionLogLevel.NONE);
     }
 
     public MiruRequest<RecoQuery> collaborativeFiltering() {
@@ -85,7 +87,7 @@ public class MiruTestRecoQueryDistributor {
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 MiruFilter.NO_FILTER,
                 numResultsCollaborativeFiltering),
-            false);
+            MiruSolutionLogLevel.NONE);
     }
 
     private MiruFieldFilter viewClassesFilter() {

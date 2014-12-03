@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
@@ -172,7 +173,8 @@ public class MiruTrendingNGTest {
                     32,
                     filter,
                     "doc",
-                    10), true);
+                    10),
+                MiruSolutionLogLevel.INFO);
             MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);
 
             System.out.println("trendingResult:" + trendingResult);

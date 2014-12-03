@@ -27,6 +27,7 @@ import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
@@ -65,13 +66,15 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
         final int toHoursAgo;
         final int buckets;
         final String field;
+        final String logLevel;
 
-        public TrendingPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String field) {
+        public TrendingPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String field, String logLevel) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
             this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
             this.field = field;
+            this.logLevel = logLevel;
         }
     }
 
@@ -84,6 +87,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 int fromHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.fromHoursAgo : input.toHoursAgo;
                 int toHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.toHoursAgo : input.fromHoursAgo;
 
+                data.put("logLevel", input.logLevel);
                 data.put("tenant", input.tenant);
                 data.put("fromHoursAgo", String.valueOf(fromHoursAgo));
                 data.put("toHoursAgo", String.valueOf(toHoursAgo));
@@ -120,7 +124,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                         constraintsFilter,
                                         input.field,
                                         100),
-                                    true),
+                                    MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
                                 new Class[] { TrendingAnswer.class },
                                 null);

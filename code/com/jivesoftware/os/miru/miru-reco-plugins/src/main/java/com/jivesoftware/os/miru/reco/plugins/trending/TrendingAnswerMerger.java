@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.trending.SimpleRegressionTrend;
 import java.util.Collections;
@@ -90,7 +91,7 @@ public class TrendingAnswerMerger implements MiruAnswerMerger<OldTrendingAnswer>
                 List<OldTrendingAnswer.Trendy> results = Lists.newArrayList(result.results);
                 long t = System.currentTimeMillis();
                 Collections.sort(results);
-                solutionLog.log("mergeTrendy: Sorted in {} ms", (System.currentTimeMillis() - t));
+                solutionLog.log(MiruSolutionLogLevel.INFO, "mergeTrendy: Sorted in {} ms", (System.currentTimeMillis() - t));
                 results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
                 return new OldTrendingAnswer(ImmutableList.copyOf(results), result.aggregateTerms, result.collectedDistincts, result.resultsExhausted);
             }
@@ -98,7 +99,7 @@ public class TrendingAnswerMerger implements MiruAnswerMerger<OldTrendingAnswer>
     }
 
     private void logMergeResult(OldTrendingAnswer currentAnswer, OldTrendingAnswer lastAnswer, OldTrendingAnswer mergedAnswer, MiruSolutionLog solutionLog) {
-        solutionLog.log("Merged:" +
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Merged:" +
                 "\n  From: terms={} results={} collected={}" +
                 "\n  With: terms={} results={} collected={}" +
                 "\n  To:   terms={} results={} collected={}",

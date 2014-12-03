@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
@@ -73,11 +74,11 @@ public class TrendingInjectable {
                     request.actorId,
                     request.authzExpression,
                     new DistinctsQuery(request.query.timeRange, request.query.aggregateCountAroundField),
-                    request.debug))),
+                    request.logLevel))),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(request.query.timeRange),
                 DistinctsAnswer.EMPTY_RESULTS,
-                request.debug);
+                request.logLevel);
             List<MiruTermId> distinctTerms = distinctsResponse.answer.results;
 
             Map<String, MiruFilter> constraintsFilters = Maps.newHashMap();
@@ -87,7 +88,7 @@ public class TrendingInjectable {
                         Optional.of(Collections.singletonList(new MiruFieldFilter(
                             MiruFieldType.primary, request.query.aggregateCountAroundField,
                             Collections.singletonList(new String(termId.getBytes(), Charsets.UTF_8))))),
-                        Optional.of(Collections.singletonList(request.query.constraintsFilter))));
+                        Optional.<List<MiruFilter>>absent()));
             }
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
@@ -99,11 +100,11 @@ public class TrendingInjectable {
                         request.query.divideTimeRangeIntoNSegments,
                         request.query.constraintsFilter,
                         constraintsFilters),
-                    request.debug))),
+                    request.logLevel))),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(request.query.timeRange),
                 AnalyticsAnswer.EMPTY_RESULTS,
-                request.debug);
+                request.logLevel);
 
             Map<String, AnalyticsAnswer.Waveform> waveforms = analyticsResponse.answer.waveforms;
             MinMaxPriorityQueue<Trendy> trendies = MinMaxPriorityQueue
@@ -152,7 +153,7 @@ public class TrendingInjectable {
                 new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, request)),
                 new TrendingAnswerEvaluator(),
                 new TrendingAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments, request.query.desiredNumberOfDistincts),
-                OldTrendingAnswer.EMPTY_RESULTS, request.debug);
+                OldTrendingAnswer.EMPTY_RESULTS, request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
@@ -173,7 +174,8 @@ public class TrendingInjectable {
                 partitionId,
                 new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
-                OldTrendingAnswer.EMPTY_RESULTS, false);
+                OldTrendingAnswer.EMPTY_RESULTS,
+                MiruSolutionLogLevel.NONE);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {

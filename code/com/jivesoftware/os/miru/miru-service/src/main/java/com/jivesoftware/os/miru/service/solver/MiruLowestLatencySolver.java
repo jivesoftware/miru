@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -63,7 +64,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
         try {
             while (solvables.hasNext() && solversAdded < initialSolvers) {
                 MiruSolvable<R> solvable = solvables.next();
-                solutionLog.log("Initial solver index={} coord={}", solversAdded, solvable.getCoord());
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Initial solver index={} coord={}", solversAdded, solvable.getCoord());
                 triedPartitions.add(solvable.getCoord());
                 futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                 solversAdded++;
@@ -72,7 +73,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 boolean mayAddSolver = (solversAdded < maxNumberOfSolvers && solvables.hasNext());
                 long timeout = Math.max(failAfterTime - System.currentTimeMillis(), 0);
                 if (timeout == 0) {
-                    solutionLog.log("WARNING: Ran out of time. Took more than " + failAfterTime + "millis to compute a solution.");
+                    solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING: Ran out of time. Took more than {} millis to compute a solution.", failAfterTime);
                     break; // out of time
                 }
                 if (mayAddSolver) {
@@ -86,7 +87,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                             // should be few enough of these that we prefer a linear lookup
                             for (SolvableFuture<R> f : futures) {
                                 if (f.future == future) {
-                                    solutionLog.log("Got a solution coord={}.", f.solvable.getCoord());
+                                    solutionLog.log(MiruSolutionLogLevel.INFO, "Got a solution coord={}.", f.solvable.getCoord());
                                     long usedResultElapsed = System.currentTimeMillis() - f.startTime;
                                     long totalElapsed = System.currentTimeMillis() - startTime;
                                     solved = new MiruSolved<>(
@@ -98,7 +99,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                         response.answer);
                                     if (response.log != null) {
                                         for (String l : response.log) {
-                                            solutionLog.log(l + " coord={}.", f.solvable.getCoord());
+                                            solutionLog.log(MiruSolutionLogLevel.INFO, "{} coord={}.", l, f.solvable.getCoord());
                                         }
                                     }
                                     break;
@@ -106,26 +107,26 @@ public class MiruLowestLatencySolver implements MiruSolver {
                             }
                             if (solved == null) {
                                 log.error("Unmatched future");
-                                solutionLog.log("Unmatched future.");
+                                solutionLog.log(MiruSolutionLogLevel.ERROR, "Unmatched future.");
                             }
                             break;
                         }
                     } catch (ExecutionException e) {
                         log.debug("Solver failed to execute", e.getCause());
-                        solutionLog.log("WARNING: Solver failed to execute. cause:" + e.getMessage());
+                        solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING: Solver failed to execute. cause: {}", e.getMessage());
                         solversFailed++;
                     }
                 } else {
-                    solutionLog.log("No solution completed within " + timeout + "millis. Will add addition solver if possible.");
+                    solutionLog.log(MiruSolutionLogLevel.WARN, "No solution completed within {} millis. Will add addition solver if possible.", timeout);
                 }
                 if (mayAddSolver) {
                     MiruSolvable<R> solvable = solvables.next();
-                    solutionLog.log("Added a solver coord={}", solvable.getCoord());
+                    solutionLog.log(MiruSolutionLogLevel.INFO, "Added a solver coord={}", solvable.getCoord());
                     triedPartitions.add(solvable.getCoord());
                     futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                     solversAdded++;
                 } else if (solversFailed == solversAdded) {
-                    solutionLog.log("All solvers failed to execute.");
+                    solutionLog.log(MiruSolutionLogLevel.ERROR, "All solvers failed to execute.");
                     break;
                 }
             }

@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
@@ -149,7 +150,7 @@ public class MiruDistinctsNGTest {
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctsQuery(timeRange, fieldDefinition.name),
-                true);
+                MiruSolutionLogLevel.INFO);
             MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
 
             System.out.println("distinctsResult:" + distinctsResult);
