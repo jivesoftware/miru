@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -113,7 +114,16 @@ public class TrendingInjectable {
                 trendies.add(new Trendy(entry.getKey().getBytes(Charsets.UTF_8), regression.getSlope()));
             }
 
-            return new MiruResponse<>(new TrendingAnswer(ImmutableList.copyOf(trendies)),
+            List<Trendy> sortedTrendies = Lists.newArrayList(trendies);
+            Collections.sort(sortedTrendies);
+
+            ImmutableList<String> solutionLog = ImmutableList.<String>builder()
+                .addAll(distinctsResponse.log)
+                .addAll(analyticsResponse.log)
+                .build();
+            LOG.debug("Solution:\n{}", solutionLog);
+
+            return new MiruResponse<>(new TrendingAnswer(sortedTrendies),
                 ImmutableList.<MiruSolution>builder()
                     .addAll(distinctsResponse.solutions)
                     .addAll(analyticsResponse.solutions)
@@ -124,10 +134,7 @@ public class TrendingInjectable {
                     .addAll(distinctsResponse.incompletePartitionIds)
                     .addAll(analyticsResponse.incompletePartitionIds)
                     .build(),
-                ImmutableList.<String>builder()
-                    .addAll(distinctsResponse.log)
-                    .addAll(analyticsResponse.log)
-                    .build());
+                solutionLog);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
         } catch (Exception e) {
