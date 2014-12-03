@@ -144,7 +144,7 @@ public class Trending {
             }
         }
 
-        boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= requestContext.getTimeIndex().getSmallestTimestamp();
+        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         OldTrendingAnswer result = new OldTrendingAnswer(ImmutableList.copyOf(trendies),
             ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
         log.debug("result={}", result);

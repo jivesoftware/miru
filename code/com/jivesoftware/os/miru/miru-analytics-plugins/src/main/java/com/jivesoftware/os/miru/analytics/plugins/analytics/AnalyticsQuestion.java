@@ -51,6 +51,7 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
         MiruTimeRange timeRange = request.query.timeRange;
 
         // Short-circuit if the time range doesn't live here
+        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > context.getTimeIndex().getLargestTimestamp();
         if (!timeIndexIntersectsTimeRange(context.getTimeIndex(), timeRange)) {
             solutionLog.log("No time index intersection");
             return new MiruPartitionResponse<>(
@@ -63,7 +64,7 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
                                 return new AnalyticsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
                             }
                         }),
-                    true),
+                    resultsExhausted),
                 solutionLog.asList());
         }
 
@@ -124,7 +125,6 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
         solutionLog.log("analytics answered: {} millis.", System.currentTimeMillis() - start);
         solutionLog.log("analytics answered: {} iterations.", request.query.analyticsFilters.size());
 
-        boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= context.getTimeIndex().getSmallestTimestamp();
         AnalyticsAnswer result = new AnalyticsAnswer(waveforms, resultsExhausted);
 
         return new MiruPartitionResponse<>(result, solutionLog.asList());

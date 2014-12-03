@@ -36,7 +36,7 @@ public class Distincts {
 
         List<MiruTermId> results = Lists.newArrayList(requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).getTermIdsForField(fieldId));
 
-        boolean resultsExhausted = request.query.timeRange.smallestTimestamp >= requestContext.getTimeIndex().getSmallestTimestamp();
+        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         int collectedDistincts = results.size();
         DistinctsAnswer result = new DistinctsAnswer(ImmutableList.copyOf(results), collectedDistincts, resultsExhausted);
         log.debug("result={}", result);

@@ -9,10 +9,11 @@ public class PaintWaveform {
 
     static final DecimalFormat df = new DecimalFormat("0.0");
 
-    public void paintGrid(Graphics g, int _x, int _y, int _w, int _h) {
+    public void paintGrid(Graphics g, MinMaxDouble mmd, int _x, int _y, int _w, int _h) {
         g.setColor(Color.gray.brighter());
         float hs = _h / 10f;
-        for (int i = 0; i < 10; i++) {
+
+        for (int i = 0; i < 11; i++) {
             int y = _y + (int) (hs * i);
             g.drawLine(_x, y, _x + _w, y);
         }
@@ -21,6 +22,14 @@ public class PaintWaveform {
         for (int i = 0; i < 100; i++) {
             int x = _x + (int) (ws * i);
             g.drawLine(x, _y, x, _y + _h);
+        }
+
+        g.setFont(new Font("system", 0, 10));
+        g.setColor(Color.black);
+
+        for (int i = 0; i < 11; i++) {
+            int y = _y + (int) (hs * i);
+            g.drawString(String.valueOf(Math.round(mmd.unzeroToOne(1.0 - i * 0.1))), _x + _w + 8, y + 4);
         }
 
         g.setColor(Color.gray);
@@ -62,8 +71,8 @@ public class PaintWaveform {
         return v;
     }
 
-    public void paintLabels(Color color, double[] hits, MinMaxDouble mmd,
-        String prefix, int xOffset, int yOffset, String suffix, Graphics g, int _x, int _y) {
+    public void paintLabels(Color color, double[] hits, String prefix, int xOffset, int yOffset, String suffix, Graphics g, int _x, int _y) {
+        MinMaxDouble mmd = new MinMaxDouble();
         mmd.value(0d);
         for (double d : hits) {
             mmd.value(d);

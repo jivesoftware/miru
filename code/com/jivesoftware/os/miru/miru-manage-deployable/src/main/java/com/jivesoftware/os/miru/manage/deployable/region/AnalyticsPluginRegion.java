@@ -36,10 +36,12 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
 import org.apache.commons.net.util.Base64;
@@ -71,15 +73,15 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         final int toHoursAgo;
         final int buckets;
         final String activityTypes;
-        final String user;
+        final String users;
 
-        public AnalyticsPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String user) {
+        public AnalyticsPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String users) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
             this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
             this.activityTypes = activityTypes;
-            this.user = user;
+            this.users = users;
         }
     }
 
@@ -97,11 +99,22 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 data.put("toHoursAgo", String.valueOf(toHoursAgo));
                 data.put("buckets", String.valueOf(input.buckets));
                 data.put("activityTypes", input.activityTypes);
-                data.put("user", input.user);
+                data.put("users", input.users);
 
                 List<String> activityTypes = Lists.newArrayList();
                 for (String activityType : input.activityTypes.split(",")) {
-                    activityTypes.add(activityType.trim());
+                    String trimmed = activityType.trim();
+                    if (!trimmed.isEmpty()) {
+                        activityTypes.add(trimmed);
+                    }
+                }
+
+                List<String> users = Lists.newArrayList();
+                for (String user : input.users.split(",")) {
+                    String trimmed = user.trim();
+                    if (!trimmed.isEmpty()) {
+                        users.add(trimmed);
+                    }
                 }
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
@@ -111,9 +124,6 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "locale", Collections.singletonList("en")));
-                if (!input.user.trim().isEmpty()) {
-                    fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "user", Collections.singletonList("3 " + input.user.trim())));
-                }
 
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
                     Optional.of(fieldFilters),
@@ -126,23 +136,32 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                     for (RequestHelper requestHelper : requestHelpers) {
                         try {
                             ImmutableMap.Builder<String, MiruFilter> analyticsFiltersBuilder = ImmutableMap.builder();
-                            analyticsFiltersBuilder.put(
-                                "all",
-                                new MiruFilter(MiruFilterOperation.and,
-                                    Optional.of(Collections.singletonList(
-                                        new MiruFieldFilter(MiruFieldType.primary,
-                                            "activityType",
-                                            activityTypes))),
-                                    Optional.<List<MiruFilter>>absent()));
                             for (String activityType : activityTypes) {
-                                analyticsFiltersBuilder.put(
-                                    String.valueOf(activityType),
-                                    new MiruFilter(MiruFilterOperation.and,
-                                        Optional.of(Collections.singletonList(
-                                            new MiruFieldFilter(MiruFieldType.primary,
-                                                "activityType",
-                                                Collections.singletonList(activityType)))),
-                                        Optional.<List<MiruFilter>>absent()));
+                                if (users.isEmpty()) {
+                                    analyticsFiltersBuilder.put(
+                                        activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name(),
+                                        new MiruFilter(MiruFilterOperation.and,
+                                            Optional.of(Collections.singletonList(
+                                                new MiruFieldFilter(MiruFieldType.primary,
+                                                    "activityType",
+                                                    Collections.singletonList(activityType)))),
+                                            Optional.<List<MiruFilter>>absent()));
+                                } else {
+                                    for (String user : users) {
+                                        analyticsFiltersBuilder.put(
+                                            activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name() + ", user=" + user,
+                                            new MiruFilter(MiruFilterOperation.and,
+                                                Optional.of(Arrays.asList(
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
+                                                        Collections.singletonList(activityType)),
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "user",
+                                                        Collections.singletonList("3 " + user))
+                                                )),
+                                                Optional.<List<MiruFilter>>absent()));
+                                    }
+                                }
                             }
                             ImmutableMap<String, MiruFilter> analyticsFilters = analyticsFiltersBuilder.build();
 
@@ -200,35 +219,50 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         Graphics2D g = bi.createGraphics();
         PaintWaveform pw = new PaintWaveform();
 
-        int xo = 32;
-        int yo = 32 + headerHeight;
-        int pad = 64;
-        pw.paintGrid(g, xo, yo, w - pad, h - headerHeight - pad);
+        int padLeft = 32;
+        int padRight = 128;
+        int padTop = 32 + headerHeight;
+        int padBottom = 32;
 
-        for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
-            long[] waveform = entry.getValue().waveform;
-            MinMaxDouble mmd = new MinMaxDouble();
-            double[] hits = new double[waveform.length];
-            for (int i = 0; i < hits.length; i++) {
-                hits[i] = waveform[i];
-                mmd.value(hits[i]);
-            }
-
-            pw.paintWaveform(getHashSolid(entry.getKey()), hits, mmd, false, g, xo, yo, w - pad, h - headerHeight - pad);
-        }
+        List<Map.Entry<String, AnalyticsAnswer.Waveform>> entries = Lists.newArrayList(waveforms.entrySet());
 
         int labelYOffset = 32;
-        for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
+        for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : entries) {
             long[] waveform = entry.getValue().waveform;
-            MinMaxDouble mmd = new MinMaxDouble();
             double[] hits = new double[waveform.length];
             for (int i = 0; i < hits.length; i++) {
                 hits[i] = waveform[i];
-                mmd.value(hits[i]);
             }
             String prefix = new String(entry.getKey().getBytes(), Charsets.UTF_8);
-            pw.paintLabels(getHashSolid(entry.getKey()), hits, mmd, prefix, 0, 0, "", g, xo, labelYOffset);
+            pw.paintLabels(getHashColor(entry.getKey()), hits, prefix, 0, 0, "", g, padLeft, labelYOffset);
             labelYOffset += 16;
+        }
+
+        MinMaxDouble mmd = new MinMaxDouble();
+        mmd.value(0d);
+        for (int i = 0; i < entries.size(); i++) {
+            Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
+            long[] waveform = entry.getValue().waveform;
+            for (int j = 0; j < waveform.length; j++) {
+                if (i > 0) {
+                    Map.Entry<String, AnalyticsAnswer.Waveform> prevEntry = entries.get(i - 1);
+                    waveform[j] += prevEntry.getValue().waveform[j];
+                }
+                mmd.value(waveform[j]);
+            }
+        }
+
+        pw.paintGrid(g, mmd, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
+
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
+            long[] waveform = entry.getValue().waveform;
+            double[] hits = new double[waveform.length];
+            for (int j = 0; j < hits.length; j++) {
+                hits[j] = waveform[j];
+            }
+
+            pw.paintWaveform(getHashColor(entry.getKey()), hits, mmd, true, g, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
         }
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -243,20 +277,20 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
     }
 
     private static Color getHashColor(Object _instance) {
-        int h = new Random(_instance.hashCode()).nextInt();
+        Random random = new Random(_instance.hashCode());
+        return Color.getHSBColor(random.nextFloat(), 0.7f, 0.8f);
+    }
 
-        int b = (h % 222) + 32;
-        h >>= 2;
-        int g = (h % 222) + 32;
-        h >>= 4;
-        int r = (h % 222) + 32;
-        h >>= 8;
-
-        return new Color(r, g, b);
+    public static Color randomPastel(Object _instance, float min, float max) {
+        Random random = new Random(_instance.hashCode());
+        float r = min + ((255f - max) * (random.nextInt(255) / 255f));
+        float g = min + ((255f - max) * (random.nextInt(255) / 255f));
+        float b = min + ((255f - max) * (random.nextInt(255) / 255f));
+        return new Color((int) r, (int) g, (int) b);
     }
 
     private static Color getHashSolid(Object _instance) {
-        int h = new Random(_instance.hashCode()).nextInt();
+        int h = Math.abs(new Random(_instance.hashCode()).nextInt());
 
         int b = (h % 96) + 128;
         h >>= 2;
@@ -265,5 +299,104 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         int r = (h % 96) + 128;
         h >>= 8;
         return new Color(r, g, b);
+    }
+
+
+    public static enum Type {
+
+        viewed(0),
+        created(1),
+        modified(2),
+        commented(3),
+        replied(4),
+        voted(5),
+        completed(6),
+        updatedStatus(7),
+        bookmarked(8),
+        rated(9),
+        blank(10),
+        liked(11),
+        joined(12),
+        connected(13),
+        followed(14),
+        unfollowed(15),
+        read(16),
+        shared(17),
+        NOTFOUND(18),
+        UNAUTHORIZED(19),
+        mentioned(20),
+        promoted(21),
+        clicked(22),
+        logged_in(23),
+        logged_out(24),
+        applied(25),
+        removed(26),
+        repost(27),
+        object_exclusion_added(28),
+        object_exclusion_removed(29),
+        context_exclusion_added(30),
+        context_exclusion_removed(31),
+        user_deleted(32),
+        unread(33),
+        register_database(34),
+        manage(35),
+        unmanage(36),
+        tracked(37),
+        untracked(38),
+        allread(39),
+        inUserStream(40),
+        inUserInBox(41),
+        inUserActivityQueue(42),
+        unliked(43),
+        projectCompleted(44),
+        disinterest(45),
+        notification(46),
+        watch(47),
+        unwatch(48),
+        dismiss(49),
+        unconnected(50),
+        reshred_complete(51),
+        unjoined(52),
+        trace(53),
+        heartbeat(54),
+        moved(55),
+        repairFollowHint(56),
+        search(57),
+        user_search(58),
+        object_untrack_added(59),
+        object_untrack_removed(60),
+        digest(61),
+        correct_answer_set(62),
+        correct_answer_removed(63),
+        tagged(64),
+        outcome_set(65),
+        outcome_removed(66),
+        object_deleted(67),
+        outcomes_modified(68),
+        acclaim_added(69),
+        acclaim_removed(70),
+        acclaim_modified(71);
+
+        private static Map<Integer, Type> typeMap = new ConcurrentHashMap<>();
+
+        static {
+            for (Type type : values()) {
+                typeMap.put(type.getID(), type);
+            }
+        }
+
+        private int id;
+
+        Type(int id) {
+            this.id = id;
+        }
+
+        public int getID() {
+            return id;
+        }
+
+        public static Type valueOf(int id) {
+            return typeMap.get(id);
+        }
     }
 }

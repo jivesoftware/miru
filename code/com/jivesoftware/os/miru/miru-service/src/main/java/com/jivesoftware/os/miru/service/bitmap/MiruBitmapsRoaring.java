@@ -201,19 +201,15 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
 
     @Override
     public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp) {
-        int smallestId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp);
-        int largestId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp);
+        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp);
+        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp) + 1;
 
         RoaringBitmap mask = new RoaringBitmap();
 
-        if (largestId < 0 || smallestId > largestId) {
+        if (largestExclusiveId < 0 || smallestInclusiveId > largestExclusiveId) {
             return mask;
         }
-        if (smallestId == largestId) {
-            mask.add(smallestId);
-        } else {
-            mask.flip(smallestId, largestId);
-        }
+        mask.flip(smallestInclusiveId, largestExclusiveId);
         return mask;
     }
 
