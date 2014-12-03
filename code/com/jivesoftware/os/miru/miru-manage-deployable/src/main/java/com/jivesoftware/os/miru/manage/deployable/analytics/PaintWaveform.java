@@ -9,17 +9,17 @@ public class PaintWaveform {
 
     static final DecimalFormat df = new DecimalFormat("0.0");
 
-    public void paintGrid(Graphics g, MinMaxDouble mmd, int _x, int _y, int _w, int _h) {
+    public void paintGrid(Graphics g, int verticalLineCount, int horizontalLineCount, MinMaxDouble mmd, int _x, int _y, int _w, int _h) {
         g.setColor(Color.gray.brighter());
-        float hs = _h / 10f;
+        float hs = _h / horizontalLineCount;
 
         for (int i = 0; i < 11; i++) {
             int y = _y + (int) (hs * i);
             g.drawLine(_x, y, _x + _w, y);
         }
 
-        float ws = _w / 100f;
-        for (int i = 0; i < 100; i++) {
+        float ws = _w / (float) verticalLineCount;
+        for (int i = 0; i < verticalLineCount; i++) {
             int x = _x + (int) (ws * i);
             g.drawLine(x, _y, x, _y + _h);
         }
@@ -27,9 +27,10 @@ public class PaintWaveform {
         g.setFont(new Font("system", 0, 10));
         g.setColor(Color.black);
 
-        for (int i = 0; i < 11; i++) {
+        double step = 1d / horizontalLineCount;
+        for (int i = 0; i < (horizontalLineCount) + 1; i++) {
             int y = _y + (int) (hs * i);
-            g.drawString(String.valueOf(Math.round(mmd.unzeroToOne(1.0 - i * 0.1))), _x + _w + 8, y + 4);
+            g.drawString(String.valueOf(Math.round(mmd.unzeroToOne(1.0 - i * step))), _x + _w + 8, y + 4);
         }
 
         g.setColor(Color.gray);
@@ -46,13 +47,18 @@ public class PaintWaveform {
         for (double d : hits) {
             mmd.value(d);
         }
-
+        
+        if (hits.length == 1) {
+            hits = new double[]{hits[0], hits[0]};
+        }
+        float ws = (float) _w / (float) (hits.length - 1);
+        
         g.setColor(color);
         for (int i = 1; i < hits.length; i++) {
             int fy = _y + _h - (int) (clamp(mmd.zeroToOne(hits[i - 1]), 0, 1) * _h);
             int ty = _y + _h - (int) (clamp(mmd.zeroToOne(hits[i - 0]), 0, 1) * _h);
-            int fx = _x + (int) (((double) (i - 1) / (double) hits.length) * _w);
-            int tx = _x + (int) (((double) (i - 0) / (double) hits.length) * _w);
+            int fx = _x + (int) (ws * (i - 1));
+            int tx = _x + (int) (ws * i);
             if (solid) {
                 g.fillPolygon(new int[]{fx, fx, tx, tx}, new int[]{_y + _h, fy, ty, _y + _h}, 4);
             } else {

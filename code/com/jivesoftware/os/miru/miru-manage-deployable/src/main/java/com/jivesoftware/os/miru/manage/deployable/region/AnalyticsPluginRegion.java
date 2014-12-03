@@ -38,6 +38,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -142,9 +143,9 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name(),
                                         new MiruFilter(MiruFilterOperation.and,
                                             Optional.of(Collections.singletonList(
-                                                new MiruFieldFilter(MiruFieldType.primary,
-                                                    "activityType",
-                                                    Collections.singletonList(activityType)))),
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
+                                                        Collections.singletonList(activityType)))),
                                             Optional.<List<MiruFilter>>absent()));
                                 } else {
                                     for (String user : users) {
@@ -152,13 +153,13 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                             activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name() + ", user=" + user,
                                             new MiruFilter(MiruFilterOperation.and,
                                                 Optional.of(Arrays.asList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Collections.singletonList(activityType)),
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "user",
-                                                        Collections.singletonList("3 " + user))
-                                                )),
+                                                        new MiruFieldFilter(MiruFieldType.primary,
+                                                            "activityType",
+                                                            Collections.singletonList(activityType)),
+                                                        new MiruFieldFilter(MiruFieldType.primary,
+                                                            "user",
+                                                            Collections.singletonList("3 " + user))
+                                                    )),
                                                 Optional.<List<MiruFilter>>absent()));
                                     }
                                 }
@@ -175,7 +176,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         analyticsFilters),
                                     true),
                                 AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                                new Class[] { AnalyticsAnswer.class },
+                                new Class[]{AnalyticsAnswer.class},
                                 null);
                             response = analyticsResponse;
                             if (response != null && response.answer != null) {
@@ -184,7 +185,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                 log.warn("Empty analytics response from {}, trying another", requestHelper);
                             }
                         } catch (Exception e) {
-                            log.warn("Failed analytics request to {}, trying another", new Object[] { requestHelper }, e);
+                            log.warn("Failed analytics request to {}, trying another", new Object[]{requestHelper}, e);
                         }
                     }
                 }
@@ -210,10 +211,18 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         return renderer.render(template, data);
     }
 
+    private long rank(long[] waveform) {
+        long rank = 0;
+        for (int i = 0; i < waveform.length; i++) {
+            rank += waveform[i];
+        }
+        return rank;
+    }
+
     private String hitsToBase64PNGWaveform(Map<String, AnalyticsAnswer.Waveform> waveforms) throws IOException {
         int headerHeight = waveforms.size() * 16;
         int w = 1024;
-        int h = 600 + headerHeight;
+        int h = 400 + headerHeight;
         BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 
         Graphics2D g = bi.createGraphics();
@@ -225,13 +234,21 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         int padBottom = 32;
 
         List<Map.Entry<String, AnalyticsAnswer.Waveform>> entries = Lists.newArrayList(waveforms.entrySet());
+        Collections.sort(entries, new Comparator<Map.Entry<String, AnalyticsAnswer.Waveform>>() {
+
+            @Override
+            public int compare(Map.Entry<String, AnalyticsAnswer.Waveform> o1, Map.Entry<String, AnalyticsAnswer.Waveform> o2) {
+                return Long.compare(rank(o2.getValue().waveform), rank(o1.getValue().waveform)); // reverse
+            }
+        });
 
         int labelYOffset = 32;
-        for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : entries) {
+        for (int i = entries.size() - 1; i >= 0; i--) {
+            Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
             long[] waveform = entry.getValue().waveform;
             double[] hits = new double[waveform.length];
-            for (int i = 0; i < hits.length; i++) {
-                hits[i] = waveform[i];
+            for (int j = 0; j < hits.length; j++) {
+                hits[j] = waveform[j];
             }
             String prefix = new String(entry.getKey().getBytes(), Charsets.UTF_8);
             pw.paintLabels(getHashColor(entry.getKey()), hits, prefix, 0, 0, "", g, padLeft, labelYOffset);
@@ -240,9 +257,11 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
         MinMaxDouble mmd = new MinMaxDouble();
         mmd.value(0d);
+        int maxWaveformLength = 0;
         for (int i = 0; i < entries.size(); i++) {
             Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
             long[] waveform = entry.getValue().waveform;
+            maxWaveformLength = Math.max(maxWaveformLength, waveform.length);
             for (int j = 0; j < waveform.length; j++) {
                 if (i > 0) {
                     Map.Entry<String, AnalyticsAnswer.Waveform> prevEntry = entries.get(i - 1);
@@ -251,8 +270,12 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 mmd.value(waveform[j]);
             }
         }
+        int paintedWaveformWidth = w - padLeft - padRight;
+        if (maxWaveformLength >= paintedWaveformWidth / 2) {
+            maxWaveformLength = paintedWaveformWidth / 2;
+        }
 
-        pw.paintGrid(g, mmd, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
+        pw.paintGrid(g, maxWaveformLength, 10, mmd, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
 
         for (int i = entries.size() - 1; i >= 0; i--) {
             Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
@@ -262,7 +285,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 hits[j] = waveform[j];
             }
 
-            pw.paintWaveform(getHashColor(entry.getKey()), hits, mmd, true, g, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
+            pw.paintWaveform(getHashColor(entry.getKey()), hits, mmd, true, g, padLeft, padTop, paintedWaveformWidth, h - padTop - padBottom);
         }
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -300,7 +323,6 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         h >>= 8;
         return new Color(r, g, b);
     }
-
 
     public static enum Type {
 
