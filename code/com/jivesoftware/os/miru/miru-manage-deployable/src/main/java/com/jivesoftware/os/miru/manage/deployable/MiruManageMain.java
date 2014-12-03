@@ -28,6 +28,8 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginEndpoints;
+import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.rcvs.api.SetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
@@ -97,7 +99,11 @@ public class MiruManageMain {
             new MiruManagePlugin("Analytics",
                 "/miru/manage/analytics",
                 AnalyticsPluginEndpoints.class,
-                new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)));
+                new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
+            new MiruManagePlugin("Trending",
+                "/miru/manage/trending",
+                TrendingPluginEndpoints.class,
+                new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)));
 
         MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
             new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);

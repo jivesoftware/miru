@@ -104,6 +104,19 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
             solutionLog.log("analytics constrained {} items.", bitmaps.cardinality(constrained));
         }
 
+        MiruTimeIndex timeIndex = context.getTimeIndex();
+        long currentTime = timeRange.smallestTimestamp;
+        long segmentDuration = (timeRange.largestTimestamp - timeRange.smallestTimestamp) / request.query.divideTimeRangeIntoNSegments;
+        if (segmentDuration < 1) {
+            throw new RuntimeException("Time range is insufficient to be divided into " + request.query.divideTimeRangeIntoNSegments + " segments");
+        }
+
+        int[] indexes = new int[request.query.divideTimeRangeIntoNSegments + 1];
+        for (int i = 0; i < indexes.length; i++) {
+            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime)); // handle negative "theoretical insertion" index
+            currentTime += segmentDuration;
+        }
+
         Map<String, AnalyticsAnswer.Waveform> waveforms = Maps.newHashMap();
         start = System.currentTimeMillis();
         for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
@@ -114,7 +127,7 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
                 BM answer = bitmaps.create();
                 bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
-                    waveform = analytics.analyticing(bitmaps, context, request, report, answer, solutionLog);
+                    waveform = analytics.analyticing(bitmaps, answer, indexes);
                 }
             }
             if (waveform == null) {

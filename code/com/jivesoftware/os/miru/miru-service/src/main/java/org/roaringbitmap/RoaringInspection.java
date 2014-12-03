@@ -58,4 +58,82 @@ public class RoaringInspection {
             return 0;
         }
     }
+
+    public static long[] cardinalityInBuckets(RoaringBitmap bitmap, int[] indexes) {
+        // indexes = { 10, 20, 30, 40, 50 } length=5
+        // buckets = { 10-19, 20-29, 30-39, 40-49 } length=4
+        long[] buckets = new long[indexes.length - 1];
+        int numContainers = bitmap.highLowContainer.size();
+        //System.out.println("NumContainers=" + numContainers);
+        int currentBucket = 0;
+        int currentBucketStart = indexes[currentBucket];
+        int currentBucketEnd = indexes[currentBucket + 1];
+        done:
+        for (int pos = 0; pos < numContainers; pos++) {
+            //System.out.println("pos=" + pos);
+            int min = containerMin(bitmap, pos);
+            while (min >= currentBucketEnd) {
+                //System.out.println("Advance1 min:" + min + " >= currentBucketEnd:" + currentBucketEnd);
+                currentBucket++;
+                if (currentBucket == buckets.length) {
+                    break done;
+                }
+                currentBucketStart = indexes[currentBucket];
+                currentBucketEnd = indexes[currentBucket + 1];
+            }
+
+            if (min < currentBucketEnd) {
+                Container container = bitmap.highLowContainer.array[pos].value;
+                int max = min + (1 << 16);
+                boolean bucketContainsPos = (currentBucketStart <= min && max <= currentBucketEnd);
+                if (bucketContainsPos) {
+                    //System.out.println("BucketContainsPos");
+                    buckets[currentBucket] += container.getCardinality();
+                } else {
+                    if (container instanceof ArrayContainer) {
+                        //System.out.println("ArrayContainer");
+                        ArrayContainer arrayContainer = (ArrayContainer) container;
+                        for (int i = 0; i < arrayContainer.cardinality; i++) {
+                            int index = Util.toIntUnsigned(arrayContainer.content[i]) | min;
+                            while (index >= currentBucketEnd) {
+                                //System.out.println("Advance2 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                                currentBucket++;
+                                if (currentBucket == buckets.length) {
+                                    break done;
+                                }
+                                currentBucketStart = indexes[currentBucket];
+                                currentBucketEnd = indexes[currentBucket + 1];
+                            }
+                            if (index >= currentBucketStart) {
+                                buckets[currentBucket]++;
+                            }
+                        }
+                    } else {
+                        //System.out.println("BitmapContainer");
+                        BitmapContainer bitmapContainer = (BitmapContainer) container;
+                        for (int i = bitmapContainer.nextSetBit(0); i >= 0; i = bitmapContainer.nextSetBit(i + 1)) {
+                            int index = Util.toIntUnsigned((short) i) | min;
+                            while (index >= currentBucketEnd) {
+                                //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                                currentBucket++;
+                                if (currentBucket == buckets.length) {
+                                    break done;
+                                }
+                                currentBucketStart = indexes[currentBucket];
+                                currentBucketEnd = indexes[currentBucket + 1];
+                            }
+                            if (index >= currentBucketStart) {
+                                buckets[currentBucket]++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return buckets;
+    }
+
+    private static int containerMin(RoaringBitmap bitmap, int pos) {
+        return Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
+    }
 }

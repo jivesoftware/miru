@@ -43,6 +43,16 @@ public interface MiruBitmaps<BM> {
 
     long cardinality(BM bitmap);
 
+    /**
+     * Returns cardinalities for the bitmap bounded by the given indexes. The number of cardinalities returned will be 1 less than
+     * the number of boundaries, e.g. indexBoundaries { 0, 10, 20, 30 } returns cardinalities for buckets [ 0-9, 10-19, 20-29 ].
+     *
+     * @param container the bitmap
+     * @param indexBoundaries lower boundary is inclusive, upper boundary is exclusive
+     * @return the cardinalities
+     */
+    long[] boundedCardinalities(BM container, int[] indexBoundaries);
+
     boolean isEmpty(BM bitmap);
 
     long sizeInBytes(BM bitmap);

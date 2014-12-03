@@ -1,0 +1,94 @@
+{namespace soy.miru.page}
+
+/**
+ * Trending plugin page
+ *
+ * @param? tenant
+ * @param? fromHoursAgo
+ * @param? toHoursAgo
+ * @param? buckets
+ * @param? field
+ * @param? results
+ * @param? summary
+ * @param? elapse
+ */
+{template .trendingPluginRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Trending</div>
+        <div class="panel-body">
+            <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td>Tenant</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                                name="tenantId" id="tenantPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>From Hours Ago</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromHoursAgo?:''}"
+                            name="fromHoursAgo" id="fromHoursPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>To Hours Ago</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toHoursAgo?:''}"
+                            name="toHoursAgo" id="toHoursPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Buckets</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
+                            name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Field</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field" value="{$field?:''}"
+                            name="field" id="fieldPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <input type="submit" value="Run"/>
+            </form>
+        </div>
+    </div>
+    {if $results}
+        <div class="panel panel-default">
+            <div class="panel-heading">Results</div>
+            <div class="panel-body">
+                <table>
+                    <tr>
+                        <td>Name</td>
+                        <td>Rank</td>
+                    </tr>
+                    {foreach $result in $results}
+                        <tr>
+                            <td>{$result.name}</td>
+                            <td>{$result.rank}</td>
+                        </tr>
+                    {/foreach}
+                </table>
+            </div>
+        </div>
+    {/if}
+    {if $summary}
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Summary {$elapse}</div>
+            <div class="panel-body">
+                <pre>{$summary}</pre>
+            </div>
+        </div>
+    {/if}
+{/template}

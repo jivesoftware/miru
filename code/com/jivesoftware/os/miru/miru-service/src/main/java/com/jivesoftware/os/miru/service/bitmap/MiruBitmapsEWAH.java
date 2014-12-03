@@ -74,9 +74,9 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
         for (int index : indexes) {
             if (!bitmap.set(index)) {
                 throw new RuntimeException("id must be in increasing order"
-                        + ", index = " + index
-                        + ", cardinality = " + bitmap.cardinality()
-                        + ", size in bits = " + bitmap.sizeInBits());
+                    + ", index = " + index
+                    + ", cardinality = " + bitmap.cardinality()
+                    + ", size in bits = " + bitmap.sizeInBits());
             }
         }
         bitmap.setSizeInBits(extendToIndex, false);
@@ -90,6 +90,12 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     @Override
     public long cardinality(EWAHCompressedBitmap bitmap) {
         return bitmap.cardinality();
+    }
+
+    @Override
+    public long[] boundedCardinalities(EWAHCompressedBitmap container, int[] indexBoundaries) {
+        //TODO naive implementation can just walk IntIterator iter = container.intIterator();
+        throw new UnsupportedOperationException("Not yet!");
     }
 
     @Override
@@ -133,17 +139,17 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
 
     // TODO eval if this is better than FastAgg OR?
     private void or(final BitmapStorage container,
-            final List<EWAHCompressedBitmap> bitmaps) {
+        final List<EWAHCompressedBitmap> bitmaps) {
         if (bitmaps.size() < 2) {
             throw new IllegalArgumentException("We need at least two bitmaps");
         }
         PriorityQueue<EWAHCompressedBitmap> pq = new PriorityQueue<>(bitmaps.size(),
-                new Comparator<EWAHCompressedBitmap>() {
-                    @Override
-                    public int compare(EWAHCompressedBitmap a, EWAHCompressedBitmap b) {
-                        return a.sizeInBytes() - b.sizeInBytes();
-                    }
-                });
+            new Comparator<EWAHCompressedBitmap>() {
+                @Override
+                public int compare(EWAHCompressedBitmap a, EWAHCompressedBitmap b) {
+                    return a.sizeInBytes() - b.sizeInBytes();
+                }
+            });
         for (EWAHCompressedBitmap x : bitmaps) {
             pq.add(x);
         }
@@ -157,7 +163,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
 
     @Override
     public CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(EWAHCompressedBitmap container, EWAHCompressedBitmap original,
-            EWAHCompressedBitmap not) {
+        EWAHCompressedBitmap not) {
         AnswerCardinalityLastSetBitmapStorage storage = new AnswerCardinalityLastSetBitmapStorage(container);
         original.andNotToContainer(not, storage);
         return new CardinalityAndLastSetBit(storage.getCount(), storage.getLastSetBit());
