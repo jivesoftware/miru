@@ -15,6 +15,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -126,7 +127,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                         100),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                                new Class[] { TrendingAnswer.class },
+                                new Class[]{TrendingAnswer.class},
                                 null);
                             response = trendingResponse;
                             if (response != null && response.answer != null) {
@@ -135,12 +136,14 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                 log.warn("Empty trending response from {}, trying another", requestHelper);
                             }
                         } catch (Exception e) {
-                            log.warn("Failed trending request to {}, trying another", new Object[] { requestHelper }, e);
+                            log.warn("Failed trending request to {}, trying another", new Object[]{requestHelper}, e);
                         }
                     }
                 }
 
                 if (response != null && response.answer != null) {
+                    data.put("elapse", String.valueOf(response.totalElapsed));
+
                     List<Trendy> results = response.answer.results;
                     if (results == null) {
                         results = Collections.emptyList();
@@ -153,7 +156,9 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         public Map<String, String> apply(Trendy input) {
                             return ImmutableMap.of(
                                 "name", new String(input.distinctValue, Charsets.UTF_8),
-                                "rank", String.valueOf(input.rank));
+                                "rank", String.valueOf(input.rank),
+                                "waveform", new PNGWaveforms()
+                                .hitsToBase64PNGWaveform(300, 64, ImmutableMap.of("", new AnalyticsAnswer.Waveform(input.waveform))));
                         }
                     }));
                     ObjectMapper mapper = new ObjectMapper();

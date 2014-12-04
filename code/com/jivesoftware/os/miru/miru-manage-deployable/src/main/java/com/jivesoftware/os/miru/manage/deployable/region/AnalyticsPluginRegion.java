@@ -26,27 +26,16 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.ReaderRequestHelpers;
-import com.jivesoftware.os.miru.manage.deployable.analytics.MinMaxDouble;
-import com.jivesoftware.os.miru.manage.deployable.analytics.PaintWaveform;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import javax.imageio.ImageIO;
-import org.apache.commons.net.util.Base64;
 
 /**
  *
@@ -202,7 +191,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     //data.put("waveform", waveform == null ? "" : waveform.toString());
 
-                    data.put("waveform", "data:image/png;base64," + hitsToBase64PNGWaveform(waveforms));
+                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 400, waveforms));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
@@ -215,117 +204,12 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         return renderer.render(template, data);
     }
 
-    private long rank(long[] waveform) {
-        long rank = 0;
-        for (int i = 0; i < waveform.length; i++) {
-            rank += waveform[i];
-        }
-        return rank;
-    }
 
-    private String hitsToBase64PNGWaveform(Map<String, AnalyticsAnswer.Waveform> waveforms) throws IOException {
-        int headerHeight = waveforms.size() * 16;
-        int w = 1024;
-        int h = 400 + headerHeight;
-        BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-
-        Graphics2D g = bi.createGraphics();
-        PaintWaveform pw = new PaintWaveform();
-
-        int padLeft = 32;
-        int padRight = 128;
-        int padTop = 32 + headerHeight;
-        int padBottom = 32;
-
-        List<Map.Entry<String, AnalyticsAnswer.Waveform>> entries = Lists.newArrayList(waveforms.entrySet());
-        Collections.sort(entries, new Comparator<Map.Entry<String, AnalyticsAnswer.Waveform>>() {
-
-            @Override
-            public int compare(Map.Entry<String, AnalyticsAnswer.Waveform> o1, Map.Entry<String, AnalyticsAnswer.Waveform> o2) {
-                return Long.compare(rank(o2.getValue().waveform), rank(o1.getValue().waveform)); // reverse
-            }
-        });
-
-        int labelYOffset = 32;
-        for (int i = entries.size() - 1; i >= 0; i--) {
-            Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
-            long[] waveform = entry.getValue().waveform;
-            double[] hits = new double[waveform.length];
-            for (int j = 0; j < hits.length; j++) {
-                hits[j] = waveform[j];
-            }
-            String prefix = new String(entry.getKey().getBytes(), Charsets.UTF_8);
-            pw.paintLabels(getHashColor(entry.getKey()), hits, prefix, 0, 0, "", g, padLeft, labelYOffset);
-            labelYOffset += 16;
-        }
-
-        MinMaxDouble mmd = new MinMaxDouble();
-        mmd.value(0d);
-        int maxWaveformLength = 0;
-        for (int i = 0; i < entries.size(); i++) {
-            Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
-            long[] waveform = entry.getValue().waveform;
-            maxWaveformLength = Math.max(maxWaveformLength, waveform.length);
-            for (int j = 0; j < waveform.length; j++) {
-                if (i > 0) {
-                    Map.Entry<String, AnalyticsAnswer.Waveform> prevEntry = entries.get(i - 1);
-                    waveform[j] += prevEntry.getValue().waveform[j];
-                }
-                mmd.value(waveform[j]);
-            }
-        }
-        int paintedWaveformWidth = w - padLeft - padRight;
-        if (maxWaveformLength >= paintedWaveformWidth / 2) {
-            maxWaveformLength = paintedWaveformWidth / 2;
-        }
-
-        pw.paintGrid(g, maxWaveformLength, 10, mmd, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
-
-        for (int i = entries.size() - 1; i >= 0; i--) {
-            Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
-            long[] waveform = entry.getValue().waveform;
-            double[] hits = new double[waveform.length];
-            for (int j = 0; j < hits.length; j++) {
-                hits[j] = waveform[j];
-            }
-
-            pw.paintWaveform(getHashColor(entry.getKey()), hits, mmd, true, g, padLeft, padTop, paintedWaveformWidth, h - padTop - padBottom);
-        }
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(bi, "PNG", baos);
-
-        return Base64.encodeBase64String(baos.toByteArray());
-    }
+    
 
     @Override
     public String getTitle() {
         return "Analytics";
-    }
-
-    private static Color getHashColor(Object _instance) {
-        Random random = new Random(_instance.hashCode());
-        return Color.getHSBColor(random.nextFloat(), 0.7f, 0.8f);
-    }
-
-    public static Color randomPastel(Object _instance, float min, float max) {
-        Random random = new Random(_instance.hashCode());
-        float r = min + ((255f - max) * (random.nextInt(255) / 255f));
-        float g = min + ((255f - max) * (random.nextInt(255) / 255f));
-        float b = min + ((255f - max) * (random.nextInt(255) / 255f));
-        return new Color((int) r, (int) g, (int) b);
-    }
-
-    private static Color getHashSolid(Object _instance) {
-        int h = Math.abs(new Random(_instance.hashCode()).nextInt());
-
-        int b = (h % 96) + 128;
-        h >>= 2;
-        int g = (h % 96) + 128;
-        h >>= 4;
-        int r = (h % 96) + 128;
-        h >>= 8;
-        return new Color(r, g, b);
     }
 
     public static enum Type {

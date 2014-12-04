@@ -88,11 +88,13 @@
                     <tr>
                         <td>Name</td>
                         <td>Rank</td>
+                        <td>Waveform</td>
                     </tr>
                     {foreach $result in $results}
                         <tr>
                             <td>{$result.name}</td>
                             <td>{$result.rank}</td>
+                            <td><img alt="waveform" src="{$result.waveform}"></td>
                         </tr>
                     {/foreach}
                 </table>

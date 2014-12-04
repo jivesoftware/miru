@@ -111,8 +111,9 @@ public class TrendingInjectable {
                 .maximumSize(request.query.desiredNumberOfDistincts)
                 .create();
             for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
-                SimpleRegression regression = WaveformRegression.getRegression(entry.getValue().waveform);
-                trendies.add(new Trendy(entry.getKey().getBytes(Charsets.UTF_8), regression.getSlope()));
+                long[] waveform = entry.getValue().waveform;
+                SimpleRegression regression = WaveformRegression.getRegression(waveform);
+                trendies.add(new Trendy(entry.getKey().getBytes(Charsets.UTF_8), regression.getSlope(), waveform));
             }
 
             List<Trendy> sortedTrendies = Lists.newArrayList(trendies);
