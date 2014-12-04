@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.ReaderRequestHelpers;
+import com.jivesoftware.os.miru.manage.deployable.analytics.MinMaxDouble;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -191,7 +192,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     //data.put("waveform", waveform == null ? "" : waveform.toString());
 
-                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 400, waveforms));
+                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 400, 32, waveforms,
+                        Optional.<MinMaxDouble>absent()));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
@@ -203,9 +205,6 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
         return renderer.render(template, data);
     }
-
-
-    
 
     @Override
     public String getTitle() {

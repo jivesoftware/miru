@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.ReaderRequestHelpers;
+import com.jivesoftware.os.miru.manage.deployable.analytics.MinMaxDouble;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -151,14 +152,25 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     //data.put("waveform", waveform == null ? "" : waveform.toString());
 
+                    final MinMaxDouble mmd = new MinMaxDouble();
+                    mmd.value(0);
+                    for (Trendy t : results) {
+                        for (long w : t.waveform) {
+                            mmd.value(w);
+                        }
+                    }
+
                     data.put("results", Lists.transform(results, new Function<Trendy, Map<String, String>>() {
                         @Override
                         public Map<String, String> apply(Trendy input) {
+                            String name = new String(input.distinctValue, Charsets.UTF_8);
                             return ImmutableMap.of(
-                                "name", new String(input.distinctValue, Charsets.UTF_8),
+                                "name", name,
                                 "rank", String.valueOf(input.rank),
-                                "waveform", new PNGWaveforms()
-                                .hitsToBase64PNGWaveform(300, 64, ImmutableMap.of("", new AnalyticsAnswer.Waveform(input.waveform))));
+                                "waveform", "data:image/png;base64," + new PNGWaveforms()
+                                .hitsToBase64PNGWaveform(600, 128, 10,
+                                    ImmutableMap.of(name, new AnalyticsAnswer.Waveform(input.waveform)),
+                                    Optional.of(mmd)));
                         }
                     }));
                     ObjectMapper mapper = new ObjectMapper();
