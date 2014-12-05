@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -23,14 +24,15 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
     /**
      * Merges the last and current results, returning the merged result.
      *
-     * @param last the last merge result
+     * @param last          the last merge result
      * @param currentAnswer the next result to merge
-     * @param solutionLog
+     * @param solutionLog   the solution log
      * @return the merged result
      */
     @Override
     public AnalyticsAnswer merge(Optional<AnalyticsAnswer> last, AnalyticsAnswer currentAnswer, MiruSolutionLog solutionLog) {
         if (!last.isPresent()) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "merge: no last answer, using current answer.");
             return currentAnswer;
         }
 
@@ -46,14 +48,16 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
             }
         } else {
             mergedWaveforms = Maps.newHashMap();
-            mergeWaveform(mergedWaveforms, lastAnswer);
-            mergeWaveform(mergedWaveforms, currentAnswer);
+            mergeWaveform(mergedWaveforms, lastAnswer, solutionLog);
+            mergeWaveform(mergedWaveforms, currentAnswer, solutionLog);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "merge: merged last answer size={}, with current answer size={}.",
+                lastAnswer.waveforms.size(), currentAnswer.waveforms.size());
         }
 
         return new AnalyticsAnswer(mergedWaveforms, currentAnswer.resultsExhausted);
     }
 
-    private void mergeWaveform(Map<String, AnalyticsAnswer.Waveform> mergedWaveforms, AnalyticsAnswer addAnswer) {
+    private void mergeWaveform(Map<String, AnalyticsAnswer.Waveform> mergedWaveforms, AnalyticsAnswer addAnswer, MiruSolutionLog solutionLog) {
         for (Map.Entry<String, AnalyticsAnswer.Waveform> addEntry : addAnswer.waveforms.entrySet()) {
             String key = addEntry.getKey();
             AnalyticsAnswer.Waveform addWaveform = addEntry.getValue();
@@ -64,6 +68,10 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
             }
             for (int i = 0; i < mergedWaveform.waveform.length; i++) {
                 mergedWaveform.waveform[i] += addWaveform.waveform[i];
+            }
+            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
+                solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merged {} into {}",
+                    key, Arrays.asList(addWaveform.waveform), Arrays.asList(mergedWaveform.waveform));
             }
         }
     }
