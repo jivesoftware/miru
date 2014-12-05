@@ -99,7 +99,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                         response.answer);
                                     if (response.log != null) {
                                         for (String l : response.log) {
-                                            solutionLog.log(MiruSolutionLogLevel.INFO, "{} coord={}.", l, f.solvable.getCoord());
+                                            solutionLog.log(MiruSolutionLogLevel.INFO, "[{}] {}", f.solvable.getCoord(), l);
                                         }
                                     }
                                     break;

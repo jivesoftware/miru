@@ -75,7 +75,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
 
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "trending {} items.", bitmaps.cardinality(answer));
-            solutionLog.log(MiruSolutionLogLevel.DEBUG, "trending bitmap {}", answer);
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "trending bitmap {}", answer);
         }
         return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, answer, solutionLog), solutionLog.asList());
 

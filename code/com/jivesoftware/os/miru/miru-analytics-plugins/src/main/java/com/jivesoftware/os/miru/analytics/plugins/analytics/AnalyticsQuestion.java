@@ -129,6 +129,11 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
                 bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
                     waveform = analytics.analyticing(bitmaps, answer, indexes);
+                    if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics answer: {} items.", bitmaps.cardinality(answer));
+                    }
+                } else {
+                    solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics empty answer.");
                 }
             }
             if (waveform == null) {

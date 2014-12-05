@@ -149,7 +149,7 @@ public class MiruAggregateUtil {
                             fieldBitmaps.add(got.get().getIndex());
                         }
                     }
-                    solutionLog.log(MiruSolutionLogLevel.INFO, "filter: fieldId={} values={} lookup took {} millis.",
+                    solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} values={} lookup took {} millis.",
                         fieldId, fieldFilter.values.size(), System.currentTimeMillis() - start);
                     if (fieldBitmaps.isEmpty() && filter.operation == MiruFilterOperation.and) {
                         // implicitly empty results, "and" operation would also be empty
@@ -159,7 +159,7 @@ public class MiruAggregateUtil {
                         BM r = bitmaps.create();
                         bitmaps.or(r, fieldBitmaps);
                         filterBitmaps.add(r);
-                        solutionLog.log(MiruSolutionLogLevel.INFO, "filter: fieldId={} bitmaps={} aggregate took {} millis.",
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} bitmaps={} aggregate took {} millis.",
                             fieldId, fieldBitmaps.size(), System.currentTimeMillis() - start);
                     }
                 }
@@ -191,7 +191,7 @@ public class MiruAggregateUtil {
         } else {
             throw new UnsupportedOperationException(filter.operation + " isn't currently supported.");
         }
-        solutionLog.log(MiruSolutionLogLevel.INFO, "executeFilter: aggregate took {} millis.", System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.DEBUG, "executeFilter: aggregate took {} millis.", System.currentTimeMillis() - start);
     }
 
 }
