@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
@@ -13,9 +14,12 @@ import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
+import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopology;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
@@ -167,6 +171,20 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 }
             }
         }
+    }
+
+    @Override
+    public boolean prioritizeRebuild(MiruPartitionCoord coord) {
+        MiruTenantTopology<?> topology = expectedTopologies.get(coord.tenantId);
+        Optional<MiruHostedPartition<?>> optionalPartition = topology.getPartition(coord);
+        if (optionalPartition.isPresent()) {
+            MiruHostedPartition<?> partition = optionalPartition.get();
+            if (partition.isLocal() && partition.getState() == MiruPartitionState.bootstrap) {
+                tenantTopologyFactory.prioritizeRebuild((MiruLocalHostedPartition<?>) partition);
+                return true;
+            }
+        }
+        return false;
     }
 
     private void alignTopology(MiruTenantTopology<?> tenantTopology) throws Exception {

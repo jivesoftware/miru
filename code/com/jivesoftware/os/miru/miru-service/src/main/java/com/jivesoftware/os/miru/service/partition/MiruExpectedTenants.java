@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.util.Collection;
 import java.util.List;
@@ -20,4 +21,6 @@ public interface MiruExpectedTenants {
     boolean isExpected(MiruTenantId tenantId);
 
     void expect(List<MiruTenantId> expectedTenantsForHost) throws Exception;
+
+    boolean prioritizeRebuild(MiruPartitionCoord coord);
 }

@@ -132,6 +132,12 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         return false;
     }
 
+    /** If the given coordinate is expected on this host, prioritizes the partition's rebuild. */
+    @Override
+    public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) {
+        return expectedTenants.prioritizeRebuild(new MiruPartitionCoord(tenantId, partitionId, host));
+    }
+
     /** MiruService calls this on a periodic interval */
     public void heartbeat() {
         try {

@@ -181,4 +181,23 @@ public class MiruReaderConfigEndpoints {
             return Response.serverError().build();
         }
     }
+
+    @POST
+    @Path("/rebuild/prioritize/{tenantId}/{partitionId}")
+    public Response check(
+        @PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") Integer partitionId) {
+        try {
+            MiruTenantId tenant = new MiruTenantId(tenantId.getBytes(Charsets.UTF_8));
+            MiruPartitionId partition = MiruPartitionId.of(partitionId);
+            if (miruService.prioritizeRebuild(tenant, partition)) {
+                return Response.noContent().build();
+            } else {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+        } catch (Throwable t) {
+            log.error("Failed to check state for tenant {} partition {}", new Object[] { tenantId, partitionId });
+            return Response.serverError().build();
+        }
+    }
 }

@@ -33,4 +33,6 @@ public interface MiruPartitionDirector {
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
 
     boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;
+
+    boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId);
 }

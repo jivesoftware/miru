@@ -80,4 +80,8 @@ public class MiruLocalPartitionFactory {
             config.getPartitionRunnableIntervalInMillis(),
             config.getPartitionBanUnregisteredSchemaMillis());
     }
+
+    public void prioritizeRebuild(MiruLocalHostedPartition<?> partition) {
+        rebuildDirector.prioritize(partition);
+    }
 }

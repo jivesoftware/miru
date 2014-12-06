@@ -552,7 +552,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
                     long activityCount = activityWALReader.count(coord.tenantId, coord.partitionId);
-                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(activityCount);
+                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, activityCount);
                     if (token.isPresent()) {
                         try {
                             MiruPartitionAccessor<BM> rebuilding = accessor.copyToState(MiruPartitionState.rebuilding);

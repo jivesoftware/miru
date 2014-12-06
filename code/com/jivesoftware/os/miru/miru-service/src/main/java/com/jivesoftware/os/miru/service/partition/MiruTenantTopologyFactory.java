@@ -32,4 +32,8 @@ public class MiruTenantTopologyFactory {
         return new MiruTenantTopology<>(config, bitmapsProvider.getBitmaps(tenantId), localHost, tenantId, localPartitionFactory, remotePartitionFactory,
                 partitionComparison);
     }
+
+    public void prioritizeRebuild(MiruLocalHostedPartition<?> partition) {
+        localPartitionFactory.prioritizeRebuild(partition);
+    }
 }

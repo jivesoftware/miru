@@ -71,7 +71,7 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
             }
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                 solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merged {} into {}",
-                    key, Arrays.asList(addWaveform.waveform), Arrays.asList(mergedWaveform.waveform));
+                    key, Arrays.toString(addWaveform.waveform), Arrays.toString(mergedWaveform.waveform));
             }
         }
     }

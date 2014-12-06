@@ -276,6 +276,10 @@ public class MiruService implements Miru {
         return partitionDirector.checkInfo(tenantId, partitionId, info);
     }
 
+    public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) {
+        return partitionDirector.prioritizeRebuild(tenantId, partitionId);
+    }
+
     private Optional<MiruHostedPartition<?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         MiruPartitionCoord localPartitionCoord = new MiruPartitionCoord(tenantId, partitionId, localhost);
         return partitionDirector.getQueryablePartition(localPartitionCoord);
