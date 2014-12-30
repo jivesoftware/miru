@@ -1,205 +1,264 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
+import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.map.store.api.KeyValueContext;
+import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
+import com.jivesoftware.os.filer.map.store.api.KeyValueTransaction;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 /** @author jonathan */
-public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, BulkImport<BitmapAndLastId<BM>>, BulkExport<BitmapAndLastId<BM>> {
+public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>,
+    BulkImport<MiruInvertedIndex<BM>, Void>,
+    BulkExport<MiruInvertedIndex<BM>, Void> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final ReusableBuffers<BM> reusable;
-    private final AtomicReference<BM> read;
-    private final AtomicReference<BM> write;
-    private volatile int lastId = -1;
-    private volatile boolean needsMerge;
+    private final KeyValueStore<byte[], ReadWrite<BM>> store;
+    private final byte[] keyBytes;
+    private final int considerIfIndexIdGreaterThanN;
 
-    public MiruInMemoryInvertedIndex(MiruBitmaps<BM> bitmaps) {
+    public MiruInMemoryInvertedIndex(MiruBitmaps<BM> bitmaps,
+        KeyValueStore<byte[], ReadWrite<BM>> store,
+        byte[] keyBytes,
+        int considerIfIndexIdGreaterThanN) {
+
         this.bitmaps = bitmaps;
-        this.reusable = new ReusableBuffers<>(bitmaps, 3); // screw you not exposing to config!
-        this.read = new AtomicReference<>(bitmaps.create());
-        this.write = new AtomicReference<>();
-        this.needsMerge = false;
+        this.store = store;
+        this.keyBytes = keyBytes;
+        this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
     }
 
     @Override
-    public BM getIndex() throws Exception {
-        if (needsMerge) {
-            synchronized (write) {
-                merge();
+    public Optional<BM> getIndex() throws Exception {
+        ReadWrite<BM> readWrite = store.execute(keyBytes, false, new KeyValueTransaction<ReadWrite<BM>, ReadWrite<BM>>() {
+            @Override
+            public ReadWrite<BM> commit(KeyValueContext<ReadWrite<BM>> keyValueContext) throws IOException {
+                return keyValueContext.get();
             }
+        });
+        if (readWrite != null && (considerIfIndexIdGreaterThanN < 0 || readWrite.lastId > considerIfIndexIdGreaterThanN)) {
+            if (readWrite.needsMerge) {
+                synchronized (readWrite.write) {
+                    merge(readWrite);
+                }
+            }
+            return Optional.fromNullable(readWrite.read.get());
         }
-        return read.get();
+        return Optional.absent();
     }
 
     @Override
-    public BM getIndexUnsafe() throws Exception {
-        BM index = write.get();
-        if (index == null) {
-            index = read.get();
+    public Optional<BM> getIndexUnsafe() throws Exception {
+        ReadWrite<BM> readWrite = store.execute(keyBytes, false, new KeyValueTransaction<ReadWrite<BM>, ReadWrite<BM>>() {
+            @Override
+            public ReadWrite<BM> commit(KeyValueContext<ReadWrite<BM>> keyValueContext) throws IOException {
+                return keyValueContext.get();
+            }
+        });
+        if (readWrite != null) {
+            BM index = readWrite.write.get();
+            if (index == null) {
+                index = readWrite.read.get();
+            }
+            return Optional.fromNullable(index);
         }
-        return index;
+        return Optional.absent();
     }
 
-    private void markForMerge() {
-        needsMerge = true;
+    private void markForMerge(ReadWrite<BM> readWrite) {
+        readWrite.needsMerge = true;
     }
 
     /* Synchronize externally */
-    private void merge() {
-        BM writer = write.get();
+    private void merge(ReadWrite<BM> readWrite) {
+        BM writer = readWrite.write.get();
         if (writer != null) {
-            reusable.retain(writer, read.get());
-            read.set(writer);
-            write.set(null);
+            readWrite.read.set(writer);
+            readWrite.write.set(null);
         }
         // flip the flag last, since we don't want getIndex() calls to slip through before the merge is finished
-        needsMerge = false;
+        readWrite.needsMerge = false;
     }
 
     /* Synchronize externally */
-    private BM writer() {
-        BM bitmap = write.get();
+    private BM writer(ReadWrite<BM> readWrite) {
+        BM bitmap = readWrite.write.get();
         if (bitmap == null) {
-            bitmap = copy(read.get());
-            write.set(bitmap);
+            bitmap = copy(readWrite.read.get());
+            readWrite.write.set(bitmap);
         }
         return bitmap;
     }
 
     @Override
-    public void append(int... ids) {
+    public void append(int... ids) throws Exception {
         if (ids.length == 0) {
             return;
         }
-        synchronized (write) {
-            BM bitmap = writer();
+        ReadWrite<BM> readWrite = getOrCreate();
+        synchronized (readWrite.write) {
+            BM bitmap = writer(readWrite);
             if (!bitmaps.set(bitmap, ids)) {
                 throw new RuntimeException("id must be in increasing order"
                     + ", ids = " + Arrays.toString(ids)
                     + ", cardinality = " + bitmaps.cardinality(bitmap)
                     + ", size in bits = " + bitmaps.sizeInBits(bitmap));
             }
-            markForMerge();
+            markForMerge(readWrite);
 
             int appendLastId = ids[ids.length - 1];
-            if (appendLastId > lastId) {
-                lastId = appendLastId;
+            if (appendLastId > readWrite.lastId) {
+                readWrite.lastId = appendLastId;
             }
         }
     }
 
+    private ReadWrite<BM> getOrCreate() throws IOException {
+        return store.execute(keyBytes, true, new KeyValueTransaction<ReadWrite<BM>, ReadWrite<BM>>() {
+            @Override
+            public ReadWrite<BM> commit(KeyValueContext<ReadWrite<BM>> keyValueContext) throws IOException {
+                ReadWrite<BM> readWrite = keyValueContext.get();
+                if (readWrite == null) {
+                    readWrite = new ReadWrite<>(bitmaps.create(), -1);
+                    keyValueContext.set(readWrite);
+                }
+                return readWrite;
+            }
+        });
+    }
+
     @Override
     public void appendAndExtend(List<Integer> ids, int extendToId) throws Exception {
-        synchronized (write) {
-            BM bitmap = writer();
+        ReadWrite<BM> readWrite = getOrCreate();
+        synchronized (readWrite.write) {
+            BM bitmap = writer(readWrite);
             bitmaps.extend(bitmap, ids, extendToId + 1);
-            markForMerge();
+            markForMerge(readWrite);
 
             if (!ids.isEmpty()) {
                 int appendLastId = ids.get(ids.size() - 1);
-                if (appendLastId > lastId) {
-                    lastId = appendLastId;
+                if (appendLastId > readWrite.lastId) {
+                    readWrite.lastId = appendLastId;
                 }
             }
         }
     }
 
     @Override
-    public void remove(int id) {
-        BM r = bitmaps.create();
-        synchronized (write) {
-            BM remove = reusable.next();
-            bitmaps.set(remove, id);
-            BM bitmap = writer();
-            bitmaps.andNotToSourceSize(r, bitmap, Collections.singletonList(remove));
-            write.set(r);
-            markForMerge();
+    public void remove(int id) throws Exception {
+        ReadWrite<BM> readWrite = store.execute(keyBytes, false, new KeyValueTransaction<ReadWrite<BM>, ReadWrite<BM>>() {
+            @Override
+            public ReadWrite<BM> commit(KeyValueContext<ReadWrite<BM>> keyValueContext) throws IOException {
+                return keyValueContext.get();
+            }
+        });
+        if (readWrite != null) {
+            BM r = bitmaps.create();
+            synchronized (readWrite.write) {
+                BM remove = bitmaps.create();
+                bitmaps.set(remove, id);
+                BM bitmap = writer(readWrite);
+                bitmaps.andNotToSourceSize(r, bitmap, Collections.singletonList(remove));
+                readWrite.write.set(r);
+                markForMerge(readWrite);
+            }
         }
     }
 
     @Override
-    public void set(int... ids) {
+    public void set(int... ids) throws Exception {
         if (ids.length == 0) {
             return;
         }
-        synchronized (write) {
-            BM set = reusable.next();
+        ReadWrite<BM> readWrite = getOrCreate();
+        synchronized (readWrite.write) {
+            BM set = bitmaps.create();
             bitmaps.set(set, ids);
-            BM bitmap = writer();
-            BM r = reusable.next();
+            BM bitmap = writer(readWrite);
+            BM r = bitmaps.create();
             bitmaps.or(r, Arrays.asList(bitmap, set));
-            write.set(r);
-            markForMerge();
+            readWrite.write.set(r);
+            markForMerge(readWrite);
 
             int setLastId = ids[ids.length - 1];
-            if (setLastId > lastId) {
-                lastId = setLastId;
+            if (setLastId > readWrite.lastId) {
+                readWrite.lastId = setLastId;
             }
         }
     }
 
     @Override
-    public void setIntermediate(int... ids) {
+    public void setIntermediate(int... ids) throws Exception {
         if (ids.length == 0) {
             return;
         }
-        synchronized (write) {
-            BM bitmap = writer();
+        ReadWrite<BM> readWrite = getOrCreate();
+        synchronized (readWrite.write) {
+            BM bitmap = writer(readWrite);
             BM r = bitmaps.setIntermediate(bitmap, ids);
-            write.set(r);
-            markForMerge();
+            readWrite.write.set(r);
+            markForMerge(readWrite);
 
             int setLastId = ids[ids.length - 1];
-            if (setLastId > lastId) {
-                lastId = setLastId;
+            if (setLastId > readWrite.lastId) {
+                readWrite.lastId = setLastId;
             }
         }
     }
 
     @Override
-    public int lastId() {
-        return lastId;
+    public int lastId() throws Exception {
+        ReadWrite<BM> readWrite = store.execute(keyBytes, false, new KeyValueTransaction<ReadWrite<BM>, ReadWrite<BM>>() {
+            @Override
+            public ReadWrite<BM> commit(KeyValueContext<ReadWrite<BM>> keyValueContext) throws IOException {
+                return keyValueContext.get();
+            }
+        });
+        if (readWrite != null) {
+            return readWrite.lastId;
+        }
+        return -1;
     }
 
     @Override
-    public void andNot(BM mask) {
+    public void andNot(BM mask) throws Exception {
         if (bitmaps.isEmpty(mask)) {
             return;
         }
-        synchronized (write) {
-            BM bitmap = writer();
-            BM r = reusable.next();
+        ReadWrite<BM> readWrite = getOrCreate();
+        synchronized (readWrite.write) {
+            BM bitmap = writer(readWrite);
+            BM r = bitmaps.create();
             bitmaps.andNot(r, bitmap, Collections.singletonList(mask));
-            write.set(r);
-            markForMerge();
+            readWrite.write.set(r);
+            markForMerge(readWrite);
         }
     }
 
     @Override
-    public void or(BM mask) {
+    public void or(BM mask) throws Exception {
         if (bitmaps.isEmpty(mask)) {
             return;
         }
-        synchronized (write) {
-            BM bitmap = writer();
-            BM r = reusable.next();
+        ReadWrite<BM> readWrite = getOrCreate();
+        synchronized (readWrite.write) {
+            BM bitmap = writer(readWrite);
+            BM r = bitmaps.create();
             bitmaps.or(r, Arrays.asList(bitmap, mask));
-            write.set(r);
-            markForMerge();
+            readWrite.write.set(r);
+            markForMerge(readWrite);
         }
     }
 
     @Override
-    public void andNotToSourceSize(List<BM> masks) {
+    public void andNotToSourceSize(List<BM> masks) throws Exception {
         if (masks.isEmpty()) {
             return;
         }
@@ -208,38 +267,45 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
                 return;
             }
         }
+        ReadWrite<BM> readWrite = getOrCreate();
         BM andNot = bitmaps.create();
-        synchronized (write) {
-            BM bitmap = writer();
+        synchronized (readWrite.write) {
+            BM bitmap = writer(readWrite);
             bitmaps.andNotToSourceSize(andNot, bitmap, masks);
-            write.set(andNot);
-            markForMerge();
+            readWrite.write.set(andNot);
+            markForMerge(readWrite);
         }
     }
 
     @Override
-    public void orToSourceSize(BM mask) {
+    public void orToSourceSize(BM mask) throws Exception {
         if (bitmaps.isEmpty(mask)) {
             return;
         }
+        ReadWrite<BM> readWrite = getOrCreate();
         BM or = bitmaps.create();
-        synchronized (write) {
-            BM bitmap = writer();
+        synchronized (readWrite.write) {
+            BM bitmap = writer(readWrite);
             bitmaps.orToSourceSize(or, bitmap, mask);
-            write.set(or);
-            markForMerge();
+            readWrite.write.set(or);
+            markForMerge(readWrite);
+        }
+    }
+
+    private BM copy(BM original) {
+        //TODO fix BM.clone()
+        if (bitmaps.isEmpty(original)) {
+            return bitmaps.create();
+        } else {
+            BM next = bitmaps.create();
+            bitmaps.copy(next, original);
+            return next;
         }
     }
 
     @Override
     public long sizeInMemory() {
-        long sizeInBytes = bitmaps.sizeInBytes(read.get());
-        // deliberately not getting a lock, should be safe just to peek at the size
-        BM writer = write.get();
-        if (writer != null) {
-            sizeInBytes += bitmaps.sizeInBytes(writer);
-        }
-        return sizeInBytes;
+        return 0;
     }
 
     @Override
@@ -248,31 +314,18 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>, Bul
     }
 
     @Override
-    public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
-        synchronized (write) {
-            merge();
-            return new BitmapAndLastId<>(read.get(), lastId);
-        }
+    public MiruInvertedIndex<BM> bulkExport(MiruTenantId tenantId, Void callback) throws Exception {
+        return this;
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<BitmapAndLastId<BM>> importItems) throws Exception {
-        synchronized (write) {
-            BitmapAndLastId<BM> bitmapAndLastId = importItems.bulkExport(tenantId);
-            write.set(bitmapAndLastId.bitmap);
-            merge();
-            lastId = bitmapAndLastId.lastId;
-        }
-    }
-
-    private BM copy(BM original) {
-        //TODO fix BM.clone()
-        if (bitmaps.isEmpty(original)) {
-            return reusable.next();
-        } else {
-            BM next = reusable.next();
-            bitmaps.copy(next, original);
-            return next;
+    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInvertedIndex<BM>, Void> export) throws Exception {
+        ReadWrite<BM> readWrite = getOrCreate();
+        synchronized (readWrite.write) {
+            MiruInvertedIndex<BM> invertedIndex = export.bulkExport(tenantId, null);
+            readWrite.write.set(invertedIndex.getIndex().get());
+            merge(readWrite);
+            readWrite.lastId = invertedIndex.lastId();
         }
     }
 

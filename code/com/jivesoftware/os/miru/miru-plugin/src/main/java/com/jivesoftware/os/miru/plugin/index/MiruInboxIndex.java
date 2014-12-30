@@ -49,14 +49,6 @@ public interface MiruInboxIndex<BM> {
     void index(MiruStreamId streamId, int id) throws Exception;
 
     /**
-     * Set the index of the last activity id in the inbox matching the provided streamId
-     *
-     * @param streamId the inbox where this activity lives
-     * @param activityIndex the activity id to record
-     */
-    void setLastActivityIndex(MiruStreamId streamId, int activityIndex) throws Exception;
-
-    /**
      * Returns the index size in bytes in memory.
      *
      * @return the size in bytes

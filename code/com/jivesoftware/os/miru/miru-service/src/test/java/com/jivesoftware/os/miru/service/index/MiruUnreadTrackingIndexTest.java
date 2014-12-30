@@ -1,27 +1,26 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
-import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryUnreadTrackingIndex;
-import java.nio.file.Files;
-import java.util.Map;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContextAllocator;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContextAllocator;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -30,20 +29,28 @@ import static org.testng.Assert.assertTrue;
 public class MiruUnreadTrackingIndexTest {
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")
-    public void testDefaultData(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
+    public void testDefaultData(MiruBitmaps<EWAHCompressedBitmap> bitmaps,
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
         MiruStreamId streamId,
-        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
+        List<Integer> expected)
         throws Exception {
         Optional<EWAHCompressedBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId);
         assertNotNull(unread);
         assertTrue(unread.isPresent());
-        assertEquals(unread.get(), invertedIndex.getIndex());
+
+        List<Integer> actual = Lists.newArrayList();
+        MiruIntIterator iter = bitmaps.intIterator(unread.get());
+        while (iter.hasNext()) {
+            actual.add(iter.next());
+        }
+        assertEquals(actual, expected);
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithoutData")
-    public void testIndex(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
+    public void testIndex(MiruBitmaps<EWAHCompressedBitmap> bitmaps,
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
         MiruStreamId streamId,
-        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
+        List<Integer> expected)
         throws Exception {
         Optional<EWAHCompressedBitmap> unreadIndex = miruUnreadTrackingIndex.getUnread(streamId);
         assertNotNull(unreadIndex);
@@ -65,9 +72,10 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProvider")
-    public void testUnread(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
+    public void testUnread(MiruBitmaps<EWAHCompressedBitmap> bitmaps,
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
         MiruStreamId streamId,
-        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
+        List<Integer> expected)
         throws Exception {
         EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).get();
         assertEquals(unread.cardinality(), 0);
@@ -96,9 +104,10 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")
-    public void testRead(MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
+    public void testRead(MiruBitmaps<EWAHCompressedBitmap> bitmaps,
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruUnreadTrackingIndex,
         MiruStreamId streamId,
-        MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex)
+        List<Integer> expected)
         throws Exception {
         EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).get();
         assertEquals(unread.cardinality(), 3);
@@ -116,66 +125,42 @@ public class MiruUnreadTrackingIndexTest {
 
     @DataProvider(name = "miruUnreadTrackingIndexDataProvider")
     public Object[][] miruUnreadTrackingIndexDataProvider() throws Exception {
-        EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
-        return generateUnreadIndexes(new MiruTenantId(new byte[] { 1 }), bitmap, true);
+        return generateUnreadIndexes(new MiruTenantId(new byte[] { 1 }), Collections.<Integer>emptyList(), true);
     }
 
     @DataProvider(name = "miruUnreadTrackingIndexDataProviderWithoutData")
     public Object[][] miruUnreadTrackingIndexDataProviderWithoutData() throws Exception {
-        EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
-        return generateUnreadIndexes(new MiruTenantId(new byte[] { 1 }), bitmap, false);
+        return generateUnreadIndexes(new MiruTenantId(new byte[] { 1 }), Collections.<Integer>emptyList(), false);
     }
 
     @DataProvider(name = "miruUnreadTrackingIndexDataProviderWithData")
     public Object[][] miruUnreadTrackingIndexDataProviderWithData() throws Exception {
-        EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
-        bitmap.set(1);
-        bitmap.set(2);
-        bitmap.set(3);
-        return generateUnreadIndexes(new MiruTenantId(new byte[] { 1 }), bitmap, true);
+        return generateUnreadIndexes(new MiruTenantId(new byte[] { 1 }), Arrays.asList(1, 2, 3), true);
     }
 
-    private Object[][] generateUnreadIndexes(MiruTenantId tenantId, EWAHCompressedBitmap bitmap, boolean autoCreate) throws Exception {
+    private Object[][] generateUnreadIndexes(MiruTenantId tenantId, List<Integer> data, boolean autoCreate) throws Exception {
         final MiruStreamId streamId = new MiruStreamId(new Id(12_345).toBytes());
-        MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
-        MiruInMemoryUnreadTrackingIndex<EWAHCompressedBitmap> miruInMemoryUnreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex<>(bitmaps);
 
-        MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex = null;
+        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruInMemoryUnreadTrackingIndex = buildHybridContextAllocator(4, 10, true, 64)
+            .allocate(bitmaps, coord).unreadTrackingIndex;
+
         if (autoCreate) {
-            final MiruInvertedIndex<EWAHCompressedBitmap> tempMiruInvertedIndex = new MiruInMemoryInvertedIndex<>(bitmaps);
-            tempMiruInvertedIndex.or(bitmap);
-            miruInMemoryUnreadTrackingIndex.bulkImport(tenantId, new BulkExport<Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
-                @Override
-                public Map<MiruStreamId, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
-                    return ImmutableMap.of(
-                        streamId, tempMiruInvertedIndex
-                    );
-                }
-            });
-            miruInvertedIndex = tempMiruInvertedIndex;
+            for (int index : data) {
+                miruInMemoryUnreadTrackingIndex.index(streamId, index);
+            }
         }
 
-        String[] mapDirs = new String[] {
-            Files.createTempDirectory("mapFields").toFile().getAbsolutePath(),
-            Files.createTempDirectory("mapFields").toFile().getAbsolutePath()
-        };
-        String[] swapDirs = new String[] {
-            Files.createTempDirectory("swapFields").toFile().getAbsolutePath(),
-            Files.createTempDirectory("swapFields").toFile().getAbsolutePath()
-        };
-        String[] chunksDirs = new String[] {
-            Files.createTempDirectory("chunksFields").toFile().getAbsolutePath(),
-            Files.createTempDirectory("chunksFields").toFile().getAbsolutePath()
-        };
-        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunksDirs, "data", 4, 4_096, false, 8,
-            new ByteArrayStripingLocksProvider(64));
-        MiruOnDiskUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(
-            bitmaps, mapDirs, swapDirs, multiChunkStore, new StripingLocksProvider<String>(8));
-        miruOnDiskUnreadTrackingIndex.bulkImport(tenantId, miruInMemoryUnreadTrackingIndex);
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = buildOnDiskContextAllocator(4, 10, 64)
+            .allocate(bitmaps, coord).unreadTrackingIndex;
+
+        ((BulkImport) miruOnDiskUnreadTrackingIndex).bulkImport(tenantId, (BulkExport) miruInMemoryUnreadTrackingIndex);
 
         return new Object[][] {
-            { miruInMemoryUnreadTrackingIndex, streamId, miruInvertedIndex },
-            { miruOnDiskUnreadTrackingIndex, streamId, miruInvertedIndex }
+            { bitmaps, miruInMemoryUnreadTrackingIndex, streamId, data },
+            { bitmaps, miruOnDiskUnreadTrackingIndex, streamId, data }
         };
     }
 }

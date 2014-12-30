@@ -40,7 +40,6 @@ import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
 import java.util.List;
-import org.merlin.config.defaults.StringDefault;
 
 public class MiruManageMain {
 
@@ -48,12 +47,13 @@ public class MiruManageMain {
         new MiruManageMain().run(args);
     }
 
+    /*
     private interface DevInstanceConfig extends InstanceConfig {
 
         @StringDefault("dev")
         String getClusterName();
     }
-
+    */
 
     public void run(String[] args) throws Exception {
 
@@ -61,10 +61,10 @@ public class MiruManageMain {
         deployable.buildStatusReporter(null).start();
         deployable.buildManageServer().start();
 
-        InstanceConfig instanceConfig = deployable.config(DevInstanceConfig.class);
+        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class); //config(DevInstanceConfig.class);
 
         HBaseSetOfSortedMapsConfig hbaseConfig = deployable.config(HBaseSetOfSortedMapsConfig.class);
-        hbaseConfig.setHBaseZookeeperQuorum("soa-prime-data1.phx1.jivehosted.com");
+        //hbaseConfig.setHBaseZookeeperQuorum("soa-prime-data1.phx1.jivehosted.com");
         SetOfSortedMapsImplInitializer<Exception> setOfSortedMapsInitializer = new HBaseSetOfSortedMapsImplInitializer(hbaseConfig);
 
         ObjectMapper mapper = new ObjectMapper();
@@ -81,6 +81,7 @@ public class MiruManageMain {
             registryStore.getReplicaRegistry(),
             registryStore.getTopologyRegistry(),
             registryStore.getConfigRegistry(),
+            registryStore.getWriterPartitionRegistry(),
             registryConfig.getDefaultNumberOfReplicas(),
             registryConfig.getDefaultTopologyIsStaleAfterMillis());
 

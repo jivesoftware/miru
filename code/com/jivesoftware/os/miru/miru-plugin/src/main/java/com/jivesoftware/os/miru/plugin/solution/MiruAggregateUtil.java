@@ -90,10 +90,11 @@ public class MiruAggregateUtil {
                 //Because each andNot iteration can potentially mask/remove other distincts further along in the answer.
                 //Instead, you need to use write-time aggregation to record the latest occurrence of each distinct value, and traverse the aggregate bitmap.
 
-                Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(pivotFieldId, pivotTerm);
-                checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
+                MiruInvertedIndex<BM> invertedIndex = fieldIndex.get(pivotFieldId, pivotTerm);
+                Optional<BM> optionalTermIndex = invertedIndex.getIndex();
+                checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
+                BM termIndex = optionalTermIndex.get();
 
-                BM termIndex = invertedIndex.get().getIndex();
                 if (debugEnabled) {
                     bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(termIndex)));
                 }
@@ -141,12 +142,13 @@ public class MiruAggregateUtil {
                     List<BM> fieldBitmaps = new ArrayList<>();
                     long start = System.currentTimeMillis();
                     for (String term : fieldFilter.values) {
-                        Optional<MiruInvertedIndex<BM>> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
+                        MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
                             fieldId,
                             new MiruTermId(term.getBytes(Charsets.UTF_8)),
                             considerIfIndexIdGreaterThanN);
-                        if (got.isPresent()) {
-                            fieldBitmaps.add(got.get().getIndex());
+                        Optional<BM> index = got.getIndex();
+                        if (index.isPresent()) {
+                            fieldBitmaps.add(index.get());
                         }
                     }
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} values={} lookup took {} millis.",

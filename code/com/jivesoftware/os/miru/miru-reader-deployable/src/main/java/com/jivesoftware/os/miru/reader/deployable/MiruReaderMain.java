@@ -137,6 +137,7 @@ public class MiruReaderMain {
             registryStore.getReplicaRegistry(),
             registryStore.getTopologyRegistry(),
             registryStore.getConfigRegistry(),
+            registryStore.getWriterPartitionRegistry(),
             registryConfig.getDefaultNumberOfReplicas(),
             registryConfig.getDefaultTopologyIsStaleAfterMillis());
 

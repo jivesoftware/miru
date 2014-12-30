@@ -1,41 +1,31 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Interners;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.filer.chunk.store.ChunkStore;
-import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
-import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskAuthzIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryAuthzIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
-import java.nio.file.Files;
+import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContextAllocator;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContextAllocator;
 import static org.testng.Assert.assertEquals;
 
 public class MiruAuthzIndexTest {
 
-    @Test (dataProvider = "miruAuthzIndexDataProviderWithData")
+    @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
     public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<Integer, EWAHCompressedBitmap> bitsIn)
         throws Exception {
 
@@ -49,106 +39,50 @@ public class MiruAuthzIndexTest {
         }
     }
 
-    @DataProvider (name = "miruAuthzIndexDataProviderWithData")
+    @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8_192);
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{ 1 });
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("localhost", 10000));
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
-        final Map<Integer, EWAHCompressedBitmap> smallBitsIn = Maps.newHashMap();
-        final Map<Integer, EWAHCompressedBitmap> largeBitsIn = Maps.newHashMap();
-        final InvertedIndexData<EWAHCompressedBitmap> smallInvertedIndexData = buildInMemoryInvertedIndexes(bitmaps, smallBitsIn, miruAuthzUtils, 10);
-        final InvertedIndexData<EWAHCompressedBitmap> largeInvertedIndexData = buildInMemoryInvertedIndexes(bitmaps, largeBitsIn, miruAuthzUtils, 100);
-
         // Create in-memory authz index
-        MiruInMemoryAuthzIndex<EWAHCompressedBitmap> smallMiruInMemoryAuthzIndex = new MiruInMemoryAuthzIndex<>(bitmaps, cache(bitmaps, miruAuthzUtils, 10));
-        MiruInMemoryAuthzIndex<EWAHCompressedBitmap> largeMiruInMemoryAuthzIndex = new MiruInMemoryAuthzIndex<>(bitmaps, cache(bitmaps, miruAuthzUtils, 10));
+        MiruContextAllocator hybridAllocator = buildHybridContextAllocator(4, 10, true, 64);
+        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruInMemoryAuthzIndex = hybridAllocator.allocate(bitmaps, coord).authzIndex;
+        Map<String, List<Integer>> largeBitsIn = populateAuthzIndex(largeMiruInMemoryAuthzIndex, miruAuthzUtils, 100);
 
-        // Import items for test
-        smallMiruInMemoryAuthzIndex.bulkImport(tenantId, new BulkExport<Map<String, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
-            @Override
-            public Map<String, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
-                return smallInvertedIndexData.getImportItems();
-            }
-        });
-        largeMiruInMemoryAuthzIndex.bulkImport(tenantId, new BulkExport<Map<String, MiruInvertedIndex<EWAHCompressedBitmap>>>() {
-            @Override
-            public Map<String, MiruInvertedIndex<EWAHCompressedBitmap>> bulkExport(MiruTenantId tenantId) throws Exception {
-                return largeInvertedIndexData.getImportItems();
-            }
-        });
+        MiruContextAllocator onDiskAllocator = buildOnDiskContextAllocator(4, 10, 64);
+        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruOnDiskAuthzIndex = onDiskAllocator.allocate(bitmaps, coord).authzIndex;
+        ((BulkImport) largeMiruOnDiskAuthzIndex).bulkImport(tenantId, (BulkExport) largeMiruInMemoryAuthzIndex);
 
-        String[] mapDirs = new String[]{
-            Files.createTempDirectory("map").toFile().getAbsolutePath(),
-            Files.createTempDirectory("map").toFile().getAbsolutePath()
-        };
-        String[] swapDirs = new String[]{
-            Files.createTempDirectory("swap").toFile().getAbsolutePath(),
-            Files.createTempDirectory("swap").toFile().getAbsolutePath()
-        };
-        String chunksDir = Files.createTempDirectory("chunk").toFile().getAbsolutePath();
-        ChunkStore chunkStore = new ChunkStoreInitializer().initialize(chunksDir, "data", 16_384, false, 8);
-        MultiChunkStore multiChunkStore = new MultiChunkStore(new ByteArrayStripingLocksProvider(64), chunkStore);
-        MiruOnDiskAuthzIndex<EWAHCompressedBitmap> smallMiruOnDiskAuthzIndex =
-             new MiruOnDiskAuthzIndex<>(bitmaps, mapDirs, swapDirs, multiChunkStore, cache(bitmaps, miruAuthzUtils, 10), new StripingLocksProvider<String>(8));
-        smallMiruOnDiskAuthzIndex.bulkImport(tenantId, smallMiruInMemoryAuthzIndex);
-
-        return new Object[][]{
-            { smallMiruInMemoryAuthzIndex, miruAuthzUtils, smallBitsIn },
+        return new Object[][] {
             { largeMiruInMemoryAuthzIndex, miruAuthzUtils, largeBitsIn },
-            { smallMiruOnDiskAuthzIndex, miruAuthzUtils, smallBitsIn }
+            { largeMiruOnDiskAuthzIndex, miruAuthzUtils, largeBitsIn }
         };
     }
 
-    private <BM> MiruAuthzCache<BM> cache(MiruBitmaps<BM> bitmaps, MiruAuthzUtils<BM> miruAuthzUtils, int maximumSize) {
-        Cache<VersionedAuthzExpression, BM> cache = CacheBuilder.newBuilder()
-            .maximumSize(maximumSize)
-            .expireAfterAccess(1, TimeUnit.MINUTES)
-            .build();
-        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(null, null, null, Interners.<String>newWeakInterner());
-        return new MiruAuthzCache<>(bitmaps, cache, activityInternExtern, miruAuthzUtils);
-    }
+    private <BM> Map<String, List<Integer>> populateAuthzIndex(MiruAuthzIndex<EWAHCompressedBitmap> authzIndex,
+        MiruAuthzUtils<BM> miruAuthzUtils,
+        int size)
+        throws Exception {
 
-    private <BM> InvertedIndexData<BM> buildInMemoryInvertedIndexes(MiruBitmaps<BM> bitmaps, Map<Integer, BM> bitsIn, MiruAuthzUtils<BM> miruAuthzUtils,
-        int size) throws Exception {
-        Map<String, MiruInvertedIndex<BM>> importItems = Maps.newHashMap();
+        Map<String, List<Integer>> bitsIn = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {
+            List<Integer> bits = Lists.newArrayList();
+            bits.add(i);
+            bits.add(10 * i);
+            bits.add(100 * i);
+            bits.add(1_000 * i);
+            bits.add(10_000 * i);
+            bits.add(100_000 * i);
+            bits.add(1_000_000 * i);
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
-            BM bits = bitmaps.create();
-            bitmaps.set(bits, i);
-            bitmaps.set(bits, 10 * i);
-            bitmaps.set(bits, 100 * i);
-            bitmaps.set(bits, 1_000 * i);
-            bitmaps.set(bits, 10_000 * i);
-            bitmaps.set(bits, 100_000 * i);
-            bitmaps.set(bits, 1_000_000 * i);
-            bitsIn.put(i, bits);
-
-            MiruInvertedIndex<BM> index = new MiruInMemoryInvertedIndex<>(bitmaps);
-            index.or(bits);
-            importItems.put(authz, index);
+            for (Integer bit : bits) {
+                authzIndex.index(authz, bit);
+            }
+            bitsIn.put(authz, bits);
         }
-
-        return new InvertedIndexData<>(bitsIn, importItems);
-    }
-
-    private static class InvertedIndexData<BM2> {
-
-        private final Map<Integer, BM2> bitsIn;
-        private final Map<String, MiruInvertedIndex<BM2>> importItems;
-
-        private InvertedIndexData(Map<Integer, BM2> bitsIn, Map<String, MiruInvertedIndex<BM2>> importItems) {
-            this.bitsIn = bitsIn;
-            this.importItems = importItems;
-        }
-
-        public Map<Integer, BM2> getBitsIn() {
-            return bitsIn;
-        }
-
-        public Map<String, MiruInvertedIndex<BM2>> getImportItems() {
-            return importItems;
-        }
+        return bitsIn;
     }
 }

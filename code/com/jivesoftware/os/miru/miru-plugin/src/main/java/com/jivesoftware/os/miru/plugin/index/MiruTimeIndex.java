@@ -51,8 +51,6 @@ public interface MiruTimeIndex {
 
     int nextId(long timestamp) throws Exception;
 
-    Iterable<Entry> getEntries();
-
     long sizeInMemory() throws Exception;
 
     long sizeOnDisk() throws Exception;

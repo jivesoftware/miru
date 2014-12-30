@@ -42,7 +42,7 @@ public class MiruManageInitializer {
                 new MiruHostFocusRegion("soy.miru.section.hostFocusRegion", renderer, clusterRegistry)),
             new MiruBalancerRegion("soy.miru.page.balancerRegion", renderer, clusterRegistry),
             new MiruTenantsRegion("soy.miru.page.tenantsRegion", renderer,
-                new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry)),
+                new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry, activityWALReader)),
             new MiruLookupRegion("soy.miru.page.lookupRegion", renderer, activityLookupTable),
             new MiruActivityWALRegion("soy.miru.page.activityWalRegion", renderer, clusterRegistry, activityWALReader),
             new MiruReadWALRegion("soy.miru.page.readWalRegion", renderer, readTrackingWALReader));

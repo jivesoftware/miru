@@ -91,7 +91,7 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), Optional.of(context.getRemovalIndex().getIndex())));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints

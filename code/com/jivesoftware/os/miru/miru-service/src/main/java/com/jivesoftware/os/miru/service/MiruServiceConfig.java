@@ -89,10 +89,16 @@ public interface MiruServiceConfig extends Config {
     void setPartitionChunkStoreConcurrencyLevel(int partitionChunkStoreConcurrencyLevel);
 
     @IntDefault(65_536)
-    int getKeyedStoreNumberOfLocks();
+    int getFieldIndexNumberOfLocks();
 
     @IntDefault(65_536)
-    int getChunkStoreNumberOfLocks();
+    int getStreamNumberOfLocks();
+
+    @IntDefault(1_024)
+    int getAuthzNumberOfLocks();
+
+    @IntDefault(65_536)
+    int getKeyedStoreNumberOfLocks();
 
     @StringDefault("hybrid")
     String getDefaultStorage();

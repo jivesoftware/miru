@@ -14,19 +14,6 @@ public class MiruHybridIndexTest {
     @Test(enabled = false)
     public void testKeyHash() {
         List<Strategy> strategies = Lists.newArrayList(
-            /*
-            new Strategy() {
-                @Override
-                public String name() {
-                    return "original";
-                }
-
-                @Override
-                public long getKey(int fieldId, int termId) {
-                    return FilerIO.bytesLong(FilerIO.intArrayToByteArray(new int[] { fieldId, termId }));
-                }
-            },
-            */
             new Strategy() {
                 @Override
                 public String name() {
@@ -38,23 +25,6 @@ public class MiruHybridIndexTest {
                     return Long.reverse((((long) termId) << 32) | fieldId);
                 }
             },
-            /*
-            new Strategy() {
-                @Override
-                public String name() {
-                    return "balls12345";
-                }
-
-                @Override
-                public long getKey(int fieldId, int termId) {
-                    byte[] array = FilerIO.intArrayToByteArray(new int[] { fieldId, termId });
-                    TByteArrayList arrayList = new TByteArrayList(array);
-                    Random rgen = new Random(12345);
-                    arrayList.shuffle(rgen);
-                    return FilerIO.bytesLong(arrayList.toArray());
-                }
-            },
-            */
             new Strategy() {
                 @Override
                 public String name() {

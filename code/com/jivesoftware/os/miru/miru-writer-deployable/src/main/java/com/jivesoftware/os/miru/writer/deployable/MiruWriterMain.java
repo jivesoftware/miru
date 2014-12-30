@@ -87,27 +87,28 @@ public class MiruWriterMain {
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-                registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                registryConfig.getDefaultNumberOfReplicas(),
-                registryConfig.getDefaultTopologyIsStaleAfterMillis());
+            registryStore.getHostsRegistry(),
+            registryStore.getExpectedTenantsRegistry(),
+            registryStore.getExpectedTenantPartitionsRegistry(),
+            registryStore.getReplicaRegistry(),
+            registryStore.getTopologyRegistry(),
+            registryStore.getConfigRegistry(),
+            registryStore.getWriterPartitionRegistry(),
+            registryConfig.getDefaultNumberOfReplicas(),
+            registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
-                new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
-                clusterRegistry);
+            new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
+            clusterRegistry);
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
 
         MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig,
-                clusterRegistry,
-                replicaSetDirector,
-                registryStore,
-                wal,
-                instanceConfig.getInstanceName());
+            clusterRegistry,
+            replicaSetDirector,
+            registryStore,
+            wal,
+            instanceConfig.getInstanceName());
 
         deployable.addEndpoints(MiruClientEndpoints.class);
         deployable.addInjectables(MiruClient.class, miruClient);

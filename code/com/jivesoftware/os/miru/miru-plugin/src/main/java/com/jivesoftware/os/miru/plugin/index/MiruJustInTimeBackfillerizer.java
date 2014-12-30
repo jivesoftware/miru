@@ -107,8 +107,6 @@ public class MiruJustInTimeBackfillerizer {
                         inbox.appendAndExtend(inboxIds, lastId);
                         unread.appendAndExtend(unreadIds, lastId);
 
-                        requestContext.getInboxIndex().setLastActivityIndex(streamId, lastId);
-
                         if (log.isDebugEnabled()) {
                             log.debug("after:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                                 localHost,

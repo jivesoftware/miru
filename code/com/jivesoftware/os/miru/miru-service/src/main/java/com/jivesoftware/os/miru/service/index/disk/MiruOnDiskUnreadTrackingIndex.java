@@ -1,45 +1,44 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
-import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
-import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
+import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import com.jivesoftware.os.miru.service.index.SimpleBulkExport;
+import com.jivesoftware.os.miru.service.index.memory.KeyedInvertedIndexStream;
+import java.io.IOException;
 import java.util.Collections;
-import java.util.Map;
 
 /** @author jonathan */
-public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM>, BulkImport<Map<MiruStreamId, MiruInvertedIndex<BM>>> {
+public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM>,
+    BulkImport<Void, KeyedInvertedIndexStream<BM>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final PartitionedMapChunkBackedKeyedStore index;
-    private final StripingLocksProvider<MiruStreamId> stripingLocksProvider = new StripingLocksProvider<>(64);
+    private final KeyedFilerStore store;
+    private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
     private final long newFilerInitialCapacity = 512;
 
-    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
-        String[] mapDirectories,
-        String[] swapDirectories,
-        MultiChunkStore chunkStore,
-        StripingLocksProvider<String> keyedStoreStripingLocksProvider)
+    public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, KeyedFilerStore store, StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
+        this.store = store;
+        this.stripingLocksProvider = stripingLocksProvider;
+        /*
         //TODO actual capacity? should this be shared with a key prefix?
-        this.index = new PartitionedMapChunkBackedKeyedStore(
+        this.store = new PartitionedMapChunkBackedKeyedStore(
             new FileBackedMapChunkFactory(8, false, 8, false, 100, mapDirectories),
             new FileBackedMapChunkFactory(8, false, 8, false, 100, swapDirectories),
             chunkStore,
             keyedStoreStripingLocksProvider,
             4); //TODO expose number of partitions
+        */
     }
 
     @Override
@@ -49,11 +48,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
 
     @Override
     public Optional<BM> getUnread(MiruStreamId streamId) throws Exception {
-        SwappableFiler filer = index.get(streamId.getBytes(), -1);
-        if (filer == null) {
-            return Optional.absent();
-        }
-        return Optional.of(new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId)).getIndex());
+        return new MiruOnDiskInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, -1, stripingLocksProvider.lock(streamId)).getIndex();
     }
 
     @Override
@@ -62,8 +57,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     }
 
     private MiruInvertedIndex<BM> getOrCreateUnread(MiruStreamId streamId) throws Exception {
-        SwappableFiler filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
-        return new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId));
+        return new MiruOnDiskInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, newFilerInitialCapacity, stripingLocksProvider.lock(streamId));
     }
 
     @Override
@@ -85,29 +79,27 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return index.mapStoreSizeInBytes();
+        return 0;
     }
 
     @Override
     public void close() {
-        index.close();
+        store.close();
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<Map<MiruStreamId, MiruInvertedIndex<BM>>> importItems) throws Exception {
-        Map<MiruStreamId, MiruInvertedIndex<BM>> importIndex = importItems.bulkExport(tenantId);
-        for (Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : importIndex.entrySet()) {
-            MiruStreamId streamId = entry.getKey();
-            SwappableFiler filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
-
-            final BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>(entry.getValue().getIndex(), entry.getValue().lastId());
-            MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId));
-            miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
-                @Override
-                public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
-                    return bitmapAndLastId;
+    public void bulkImport(final MiruTenantId tenantId, BulkExport<Void, KeyedInvertedIndexStream<BM>> export) throws Exception {
+        export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
+            @Override
+            public boolean stream(byte[] key, MiruInvertedIndex<BM> importIndex) throws IOException {
+                try {
+                    MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, store, key, -1, -1, new Object());
+                    invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));
+                    return true;
+                } catch (Exception e) {
+                    throw new IOException("Failed to stream import", e);
                 }
-            });
-        }
+            }
+        });
     }
 }

@@ -422,10 +422,10 @@ public class MiruIndexer<BM> {
 
                             // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
                             for (MiruTermId fieldValue : fieldValues) {
-                                Optional<MiruInvertedIndex<BM>> optionalFieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
-                                if (optionalFieldValueIndex.isPresent()) {
-                                    MiruInvertedIndex<BM> fieldValueIndex = optionalFieldValueIndex.get();
-                                    aggregateIndex.andNotToSourceSize(Collections.singletonList(fieldValueIndex.getIndexUnsafe()));
+                                MiruInvertedIndex<BM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
+                                Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe();
+                                if (optionalIndex.isPresent()) {
+                                    aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()));
                                 }
                             }
                             latestFieldIndex.index(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
@@ -519,9 +519,11 @@ public class MiruIndexer<BM> {
                         MiruTermId aggregateFieldValue = idAndTerm.term;
                         MiruInvertedIndex<BM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
                             pairedLatestWork.aggregateFieldId, aggregateFieldValue);
-                        BM aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe();
-                        aggregateBitmaps.add(aggregateBitmap);
-                        ids.add(idAndTerm.id);
+                        Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe();
+                        if (aggregateBitmap.isPresent()) {
+                            aggregateBitmaps.add(aggregateBitmap.get());
+                            ids.add(idAndTerm.id);
+                        }
                     }
 
                     invertedIndex.andNotToSourceSize(aggregateBitmaps);

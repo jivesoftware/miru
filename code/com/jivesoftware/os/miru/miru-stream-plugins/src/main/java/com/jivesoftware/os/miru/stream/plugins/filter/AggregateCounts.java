@@ -16,7 +16,6 @@ import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 import java.util.ArrayList;
@@ -80,12 +79,12 @@ public class AggregateCounts {
             long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
             CardinalityAndLastSetBit answerCollector = null;
             for (MiruTermId aggregateTermId : aggregateTerms) { // Consider
-                Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
-                if (!invertedIndex.isPresent()) {
+                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
 
-                BM termIndex = invertedIndex.get().getIndex();
+                BM termIndex = optionalTermIndex.get();
                 BM revisedAnswer = reusable.next();
                 answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
                 answer = revisedAnswer;
@@ -137,10 +136,10 @@ public class AggregateCounts {
                     byte[] aggregateValue = aggregateTermId.getBytes();
                     aggregateTerms.add(aggregateTermId);
 
-                    Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
-                    checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
+                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                    checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
-                    BM termIndex = invertedIndex.get().getIndex();
+                    BM termIndex = optionalTermIndex.get();
 
                     BM revisedAnswer = reusable.next();
                     answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);

@@ -55,6 +55,7 @@ public class MiruManageServiceTest {
             registryStore.getReplicaRegistry(),
             registryStore.getTopologyRegistry(),
             registryStore.getConfigRegistry(),
+            registryStore.getWriterPartitionRegistry(),
             numberOfReplicas,
             TimeUnit.HOURS.toMillis(1));
         MiruWAL miruWAL = new MiruWALInitializer().initialize("test", setOfSortedMapsImplInitializer, mapper);

@@ -49,7 +49,7 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         MiruFilter combinedFilter = request.query.streamFilter;
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<List<MiruFieldFilter>>absent(),
-                    Optional.of(Arrays.asList(request.query.streamFilter, request.query.constraintsFilter)));
+                Optional.of(Arrays.asList(request.query.streamFilter, request.query.constraintsFilter)));
         }
 
         List<BM> ands = new ArrayList<>();
@@ -58,7 +58,7 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndexProvider(), combinedFilter, solutionLog, filtered, -1);
         ands.add(filtered);
 
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex()));
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
@@ -81,14 +81,14 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         }
 
         return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.fromNullable(counter)),
-                solutionLog.asList());
+            solutionLog.asList());
     }
 
     @Override
     public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper,
-            MiruPartitionId partitionId,
-            Optional<AggregateCountsReport> report)
-            throws Exception {
+        MiruPartitionId partitionId,
+        Optional<AggregateCountsReport> report)
+        throws Exception {
         return new AggregateCountsRemotePartitionReader(requestHelper).filterCustomStream(partitionId, request, report);
     }
 
@@ -97,9 +97,9 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         Optional<AggregateCountsReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new AggregateCountsReport(
-                    answer.get().aggregateTerms,
-                    answer.get().skippedDistincts,
-                    answer.get().collectedDistincts));
+                answer.get().aggregateTerms,
+                answer.get().skippedDistincts,
+                answer.get().collectedDistincts));
         }
         return report;
     }

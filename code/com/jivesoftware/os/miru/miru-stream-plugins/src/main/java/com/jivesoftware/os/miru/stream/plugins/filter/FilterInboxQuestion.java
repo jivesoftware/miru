@@ -39,9 +39,9 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public FilterInboxQuestion(AggregateCounts aggregateCounts,
-            MiruJustInTimeBackfillerizer backfillerizer,
-            MiruRequest<AggregateCountsQuery> request,
-            boolean unreadOnly) {
+        MiruJustInTimeBackfillerizer backfillerizer,
+        MiruRequest<AggregateCountsQuery> request,
+        boolean unreadOnly) {
 
         Preconditions.checkArgument(!MiruStreamId.NULL.equals(request.query.streamId), "Inbox queries require a streamId");
         this.aggregateCounts = aggregateCounts;
@@ -71,8 +71,8 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
             if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
                 LOG.debug("No answer time index intersection");
                 return new MiruPartitionResponse<>(
-                        aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
-                        solutionLog.asList());
+                    aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                    solutionLog.asList());
             }
             ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
@@ -83,8 +83,8 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
             if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
                 LOG.debug("No count time index intersection");
                 return new MiruPartitionResponse<>(
-                        aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
-                        solutionLog.asList());
+                    aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                    solutionLog.asList());
             }
             counterAnds.add(bitmaps.buildTimeRangeMask(
                 stream.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp));
@@ -97,8 +97,8 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
             return new MiruPartitionResponse<>(
-                    aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
-                    solutionLog.asList());
+                aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                solutionLog.asList());
         }
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
@@ -117,7 +117,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
                 ands.add(unreadIndex.get());
             }
         }
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex()));
 
         BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
@@ -136,15 +136,15 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         bitmaps.and(counter, counterAnds);
 
         return new MiruPartitionResponse<>(
-                aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.of(counter)),
-                solutionLog.asList());
+            aggregateCounts.getAggregateCounts(bitmaps, stream, request, report, answer, Optional.of(counter)),
+            solutionLog.asList());
     }
 
     @Override
     public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper,
-            MiruPartitionId partitionId,
-            Optional<AggregateCountsReport> report)
-            throws Exception {
+        MiruPartitionId partitionId,
+        Optional<AggregateCountsReport> report)
+        throws Exception {
         AggregateCountsRemotePartitionReader reader = new AggregateCountsRemotePartitionReader(requestHelper);
         if (unreadOnly) {
             return reader.filterInboxStreamUnread(partitionId, request, report);
@@ -157,16 +157,16 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         Optional<AggregateCountsReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new AggregateCountsReport(
-                    answer.get().aggregateTerms,
-                    answer.get().skippedDistincts,
-                    answer.get().collectedDistincts));
+                answer.get().aggregateTerms,
+                answer.get().skippedDistincts,
+                answer.get().collectedDistincts));
         }
         return report;
     }
 
     private boolean timeIndexIntersectsTimeRange(MiruTimeIndex timeIndex, MiruTimeRange timeRange) {
         return timeRange.smallestTimestamp <= timeIndex.getLargestTimestamp() &&
-                timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
+            timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
     }
 
 }

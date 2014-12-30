@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import java.util.Collections;
 import java.util.Set;
@@ -51,12 +50,12 @@ public class NumberOfDistincts {
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
 
             for (MiruTermId aggregateTermId : aggregateTerms) {
-                Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
-                if (!invertedIndex.isPresent()) {
+                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
 
-                BM termIndex = invertedIndex.get().getIndex();
+                BM termIndex = optionalTermIndex.get();
 
                 BM revisedAnswer = reusable.next();
                 bitmaps.andNot(revisedAnswer, answer, Collections.singletonList(termIndex));
@@ -84,11 +83,11 @@ public class NumberOfDistincts {
                     MiruTermId aggregateTermId = fieldValues[0];
 
                     aggregateTerms.add(aggregateTermId);
-                    Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
-                    checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
+                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                    checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     BM revisedAnswer = reusable.next();
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, invertedIndex.get().getIndex());
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, optionalTermIndex.get());
                     answer = revisedAnswer;
 
                     collectedDistincts++;

@@ -3,12 +3,8 @@ package com.jivesoftware.os.miru.service.locator;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.google.common.io.BaseEncoding;
-import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
-import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
-import com.jivesoftware.os.filer.io.RandomAccessFiler;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
@@ -38,33 +34,6 @@ public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocat
         File[] partitionPaths = getPartitionPaths(identifier);
         //TODO leaky
         return new File(partitionPaths[Math.abs(name.hashCode()) % partitionPaths.length], name + ".filer");
-    }
-
-    @Override
-    public RandomAccessFiler getRandomAccessFiler(MiruResourcePartitionIdentifier identifier, String name, String mode) throws IOException {
-        File file = getFilerFile(identifier, name);
-        file.createNewFile();
-        return new RandomAccessFiler(file, mode);
-    }
-
-    @Override
-    public ByteBufferBackedFiler getByteBufferBackedFiler(MiruResourcePartitionIdentifier identifier, String name, long length) throws IOException {
-        File file = getFilerFile(identifier, name);
-        file.createNewFile();
-
-        FileBackedMemMappedByteBufferFactory bufferFactory = new FileBackedMemMappedByteBufferFactory(file.getParentFile());
-        ByteBuffer byteBuffer = bufferFactory.allocate(file.getName(), length);
-        return new ByteBufferBackedFiler(file, byteBuffer);
-    }
-
-    @Override
-    public File[] getMapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return makeSubDirectories(getMapPaths(identifier), name);
-    }
-
-    @Override
-    public File[] getSwapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return makeSubDirectories(getSwapPaths(identifier), name);
     }
 
     @Override

@@ -19,4 +19,14 @@ public interface MiruAuthzIndex<BM> {
     long sizeOnDisk() throws Exception;
 
     void close();
+
+    public static class AuthzAndInvertedIndex<BM> {
+        public final String authz;
+        public final MiruInvertedIndex<BM> invertedIndex;
+
+        public AuthzAndInvertedIndex(String authz, MiruInvertedIndex<BM> invertedIndex) {
+            this.authz = authz;
+            this.invertedIndex = invertedIndex;
+        }
+    }
 }

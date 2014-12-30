@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
@@ -29,8 +28,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
-import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.allocator.HybridMiruContextAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
@@ -94,41 +91,30 @@ public class MiruContextFactoryTest {
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<String>(8),
-            new ByteArrayStripingLocksProvider(8));
+            new StripingLocksProvider<MiruTermId>(8));
 
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
             schemaProvider,
             activityInternExtern,
             readTrackingWALReader,
             diskResourceLocator,
-            new OnDiskMiruContextAllocator.MiruFilerProviderFactory() {
-                @Override
-                public MiruFilerProvider getFilerProvider(MiruResourcePartitionIdentifier identifier, String name) {
-                    return new OnDiskMiruContextAllocator.MemMappedFilerProvider(identifier, name, diskResourceLocator);
-                }
-            },
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<String>(8),
-            new ByteArrayStripingLocksProvider(8));
+            new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<MiruStreamId>(8),
+            new StripingLocksProvider<String>(8));
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
             schemaProvider,
             activityInternExtern,
             readTrackingWALReader,
             diskResourceLocator,
-            new OnDiskMiruContextAllocator.MiruFilerProviderFactory() {
-                @Override
-                public MiruFilerProvider getFilerProvider(MiruResourcePartitionIdentifier identifier, String name) {
-                    return new OnDiskMiruContextAllocator.OnDiskFilerProvider(identifier, name, diskResourceLocator);
-                }
-            },
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<String>(8),
-            new ByteArrayStripingLocksProvider(8));
+            new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<MiruStreamId>(8),
+            new StripingLocksProvider<String>(8));
 
         streamFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()
@@ -183,8 +169,8 @@ public class MiruContextFactoryTest {
             int fieldId = schema.getFieldId(MiruFieldName.OBJECT_ID.getFieldName());
             if (fieldId >= 0) {
                 MiruTermId termId = new MiruTermId(String.valueOf(i).getBytes());
-                assertEquals(onDiskContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(fieldId, termId).get().getIndex(),
-                    inMemContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(fieldId, termId).get().getIndex());
+                assertEquals(onDiskContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(fieldId, termId).getIndex(),
+                    inMemContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(fieldId, termId).getIndex());
             }
         }
     }

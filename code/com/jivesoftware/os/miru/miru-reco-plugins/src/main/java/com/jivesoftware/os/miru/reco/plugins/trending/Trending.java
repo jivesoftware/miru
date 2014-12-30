@@ -14,7 +14,6 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.reco.plugins.trending.OldTrendingAnswer.Trendy;
@@ -60,12 +59,12 @@ public class Trending {
         if (fieldId >= 0) {
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
             for (MiruTermId aggregateTermId : aggregateTerms) {
-                Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
-                if (!invertedIndex.isPresent()) {
+                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
 
-                BM termIndex = invertedIndex.get().getIndex();
+                BM termIndex = optionalTermIndex.get();
                 BM revisedAnswer = reusable.next();
                 bitmaps.andNot(revisedAnswer, answer, Collections.singletonList(termIndex));
                 answer = revisedAnswer;
@@ -109,10 +108,10 @@ public class Trending {
                     byte[] aggregateValue = aggregateTermId.getBytes();
                     aggregateTerms.add(aggregateTermId);
 
-                    Optional<MiruInvertedIndex<BM>> invertedIndex = fieldIndex.get(fieldId, aggregateTermId);
-                    checkState(invertedIndex.isPresent(), "Unable to load inverted index for aggregateTermId: %s", aggregateTermId);
+                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                    checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: %s", aggregateTermId);
 
-                    BM termIndex = invertedIndex.get().getIndex();
+                    BM termIndex = optionalTermIndex.get();
 
                     BM revisedAnswer = reusable.next();
                     answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);

@@ -44,6 +44,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
@@ -57,6 +58,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     private final RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry;
+    private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
 
     private final int defaultNumberOfReplicas;
     private final long defaultTopologyIsStaleAfterMillis;
@@ -70,6 +72,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry,
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry,
         int defaultNumberOfReplicas,
         long defaultTopologyIsStaleAfterMillis) {
 
@@ -80,6 +83,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         this.replicaRegistry = replicaRegistry;
         this.topologyRegistry = topologyRegistry;
         this.configRegistry = configRegistry;
+        this.writerPartitionRegistry = writerPartitionRegistry;
         this.defaultNumberOfReplicas = defaultNumberOfReplicas;
         this.defaultTopologyIsStaleAfterMillis = defaultTopologyIsStaleAfterMillis;
     }
@@ -162,6 +166,22 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     @Override
     public int getNumberOfReplicas(MiruTenantId tenantId) throws Exception {
         return getTenantConfig(tenantId).getInt(MiruTenantConfigFields.number_of_replicas, defaultNumberOfReplicas);
+    }
+
+    @Override
+    public Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception {
+        final AtomicReference<MiruPartitionId> latestPartitionId = new AtomicReference<>();
+        writerPartitionRegistry.getValues(MiruVoidByte.INSTANCE, tenantId, null, null, 1_000, false, null, null, new CallbackStream<MiruPartitionId>() {
+            @Override
+            public MiruPartitionId callback(MiruPartitionId partitionId) throws Exception {
+                MiruPartitionId latest = latestPartitionId.get();
+                if (latest == null || partitionId.compareTo(latest) > 0) {
+                    latestPartitionId.set(partitionId);
+                }
+                return partitionId;
+            }
+        });
+        return Optional.fromNullable(latestPartitionId.get());
     }
 
     @Override

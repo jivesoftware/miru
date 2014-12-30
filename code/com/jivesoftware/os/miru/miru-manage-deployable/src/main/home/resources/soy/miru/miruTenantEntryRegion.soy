@@ -7,7 +7,6 @@
  * @param config
  * @param? configNumberOfReplicas
  * @param? configTopologyIsStaleAfterMillis
- * @param partitionCount
  * @param partitions
  */
 {template .tenantEntryRegion}
@@ -50,34 +49,33 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {foreach $partition in $partitions}
+                    {foreach $p in $partitions}
                         <tr>
                             <td colspan="6" style="background-color: #eee; font-size:90%;">
-                                Partition {$partition.partitionId}
+                                Partition {$p.partitionId} (size: {$p.activityCount})
                             </td>
                         </tr>
                         {call .tenantEntryPartitions}
                             {param type: 'online' /}
-                            {param partitions: $partition.online /}
+                            {param partitions: $p.online /}
                         {/call}
                         {call .tenantEntryPartitions}
                             {param type: 'rebuilding' /}
-                            {param partitions: $partition.rebuilding /}
+                            {param partitions: $p.rebuilding /}
                         {/call}
                         {call .tenantEntryPartitions}
                             {param type: 'bootstrap' /}
-                            {param partitions: $partition.bootstrap /}
+                            {param partitions: $p.bootstrap /}
                         {/call}
                         {call .tenantEntryPartitions}
                             {param type: 'offline' /}
-                            {param partitions: $partition.offline /}
+                            {param partitions: $p.offline /}
                         {/call}
-                    {/foreach}
-                    {if $partitionCount == 0}
+                    {ifempty}
                         <tr>
                             <td colspan="6">There are no registered partitions for this tenant</td>
                         </tr>
-                    {/if}
+                    {/foreach}
                 </tbody>
             </table>
         </div>

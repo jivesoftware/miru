@@ -1,23 +1,24 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Iterators;
-import com.jivesoftware.os.filer.map.store.MapChunkFactory;
-import com.jivesoftware.os.filer.map.store.PrimitivesMapStoresBuilder;
+import com.jivesoftware.os.filer.map.store.api.KeyValueContext;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
+import com.jivesoftware.os.filer.map.store.api.KeyValueTransaction;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import com.jivesoftware.os.miru.service.index.BulkStream;
+import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author jonathan
  */
-public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIndex>, BulkExport<MiruTimeIndex> {
+public class MiruInMemoryTimeIndex implements MiruTimeIndex,
+    BulkImport<Void, BulkStream<MiruTimeIndex.Entry>>,
+    BulkExport<Void, BulkStream<MiruTimeIndex.Entry>> {
 
     //TODO there's a good argument for making this a FileBackMapStore even for the in-memory impl
     //TODO (it's only used for index/repair, so disk paging won't slow reads)
@@ -33,12 +34,16 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     private final int initialCapacity = 32; //TODO configure?
 
     public MiruInMemoryTimeIndex(Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
-        MapChunkFactory mapChunkFactory) {
+        KeyValueStore<Long, Integer> timestampToIndex) {
         this.timestamps = new long[initialCapacity];
         this.id = new AtomicInteger(0);
-        this.timestampToIndex = new PrimitivesMapStoresBuilder()
+        this.timestampToIndex = timestampToIndex;
+        /*
+        this.timestampToIndex = new PrimitivesMapStoresBuilder<ChunkFiler>()
+            .setMapChunkProvider(mapChunkProvider)
             .setMapChunkFactory(mapChunkFactory)
             .buildLongInt();
+        */
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
     }
 
@@ -76,9 +81,15 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
             largestTimestamp = timestamp;
         }
 
-        int nextId = nextId();
+        final int nextId = nextId();
         synchronized (timestampToIndex) {
-            timestampToIndex.add(timestamp, nextId);
+            timestampToIndex.execute(timestamp, true, new KeyValueTransaction<Integer, Void>() {
+                @Override
+                public Void commit(KeyValueContext<Integer> keyValueContext) throws IOException {
+                    keyValueContext.set(nextId);
+                    return null;
+                }
+            });
         }
         if (timestamp < smallestTimestamp) {
             if (timeOrderAnomalyStream.isPresent()) {
@@ -126,14 +137,14 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
 
     @Override
     public int getExactId(long timestamp) throws Exception {
-        Integer index = timestampToIndex.get(timestamp);
+        Integer index = timestampToIndex.execute(timestamp, false, getExactIdTransaction);
         return index != null ? index : -1;
     }
 
     @Override
     public boolean contains(long timestamp) throws Exception {
         synchronized (timestampToIndex) {
-            return timestampToIndex.getUnsafe(timestamp) != null;
+            return timestampToIndex.execute(timestamp, false, containsTransaction);
         }
     }
 
@@ -173,23 +184,8 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     }
 
     @Override
-    public Iterable<Entry> getEntries() {
-        return new Iterable<Entry>() {
-            @Override
-            public Iterator<Entry> iterator() {
-                return Iterators.transform(timestampToIndex.iterator(), new Function<KeyValueStore.Entry<Long, Integer>, Entry>() {
-                    @Override
-                    public Entry apply(KeyValueStore.Entry<Long, Integer> input) {
-                        return new Entry(input.getKey(), input.getValue());
-                    }
-                });
-            }
-        };
-    }
-
-    @Override
     public long sizeInMemory() throws Exception {
-        return timestamps.length * 8 + 0; // /*timestampToIndex.sizeInBytes();*/
+        return 0;
     }
 
     @Override
@@ -202,17 +198,42 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex, BulkImport<MiruTime
     }
 
     @Override
-    public MiruTimeIndex bulkExport(MiruTenantId tenantId) throws Exception {
-        return this;
+    public Void bulkExport(MiruTenantId tenantId, final BulkStream<Entry> callback) throws Exception {
+        for (int i = 0; i < timestamps.length; i++) {
+            if (!callback.stream(new Entry(timestamps[i], i))) {
+                break;
+            }
+        }
+        return null;
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruTimeIndex> importItems) throws Exception {
-        MiruTimeIndex importTimeIndex = importItems.bulkExport(tenantId);
-        for (Entry entry : importTimeIndex.getEntries()) {
-            nextId(entry.time);
-        }
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Void, BulkStream<Entry>> export) throws Exception {
+        export.bulkExport(tenantId, new BulkStream<Entry>() {
+            @Override
+            public boolean stream(Entry entry) throws Exception {
+                int index = nextId(entry.time);
+                if (index != entry.index) {
+                    throw new RuntimeException("Import out of order, expected " + index + " but found " + entry.index);
+                }
+                return true;
+            }
+        });
     }
+
+    private final KeyValueTransaction<Integer, Integer> getExactIdTransaction = new KeyValueTransaction<Integer, Integer>() {
+        @Override
+        public Integer commit(KeyValueContext<Integer> keyValueContext) throws IOException {
+            return keyValueContext.get();
+        }
+    };
+
+    private final KeyValueTransaction<Integer, Boolean> containsTransaction = new KeyValueTransaction<Integer, Boolean>() {
+        @Override
+        public Boolean commit(KeyValueContext<Integer> keyValueContext) throws IOException {
+            return keyValueContext.get() != null;
+        }
+    };
 
     public static interface TimeOrderAnomalyStream {
 

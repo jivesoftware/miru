@@ -76,7 +76,7 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
         }
 
         // 4) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex()));
 
         // AND it all together and return the results
         BM answer = bitmaps.create();

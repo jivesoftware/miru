@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.index.memory;
+package com.jivesoftware.os.miru.service.index.disk;
 
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.BulkStream;
+import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,9 +24,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * Hybrid impl. Activity data lives in a keyed store, last index is an atomic integer.
+ * Chunk-backed impl. Activity data lives in a keyed store, last index is an atomic integer backed by a filer.
  */
-public class MiruHybridActivityIndex implements MiruActivityIndex,
+public class MiruChunkActivityIndex implements MiruActivityIndex,
     BulkImport<Void, BulkStream<MiruInternalActivity>>,
     BulkExport<Void, BulkStream<MiruInternalActivity>> {
 
@@ -34,12 +35,15 @@ public class MiruHybridActivityIndex implements MiruActivityIndex,
     private final KeyedFilerStore keyedStore;
     private final AtomicInteger indexSize = new AtomicInteger(-1);
     private final MiruInternalActivityMarshaller internalActivityMarshaller;
+    private final MiruFilerProvider indexSizeFiler;
 
-    public MiruHybridActivityIndex(KeyedFilerStore keyedStore,
-        MiruInternalActivityMarshaller internalActivityMarshaller)
+    public MiruChunkActivityIndex(KeyedFilerStore keyedStore,
+        MiruInternalActivityMarshaller internalActivityMarshaller,
+        MiruFilerProvider indexSizeFiler)
         throws Exception {
         this.keyedStore = keyedStore;
         this.internalActivityMarshaller = internalActivityMarshaller;
+        this.indexSizeFiler = indexSizeFiler;
     }
 
     @Override
@@ -123,9 +127,17 @@ public class MiruHybridActivityIndex implements MiruActivityIndex,
     @Override
     public void ready(int index) throws Exception {
         log.trace("Check if index {} should extend capacity {}", index, indexSize);
-        int size = index + 1;
+        final int size = index + 1;
         synchronized (indexSize) {
             if (size > indexSize.get()) {
+                indexSizeFiler.execute(4, new FilerTransaction<Filer, Void>() {
+                    @Override
+                    public Void commit(Filer chunkFiler) throws IOException {
+                        chunkFiler.seek(0);
+                        FilerIO.writeInt(chunkFiler, size, "size");
+                        return null;
+                    }
+                });
                 log.debug("Capacity extended to {}", size);
                 indexSize.set(size);
             }
@@ -134,16 +146,35 @@ public class MiruHybridActivityIndex implements MiruActivityIndex,
 
     @Override
     public long sizeInMemory() {
-        return 0;
+        return -1; //unclear whether we're in memory or on disk
     }
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return -1; //keyedStore.mapStoreSizeInBytes();
+        return -1; //indexSizeFiler.length() + keyedStore.mapStoreSizeInBytes();
     }
 
     private int capacity() {
-        return indexSize.get();
+        try {
+            int size = indexSize.get();
+            if (size < 0) {
+                size = indexSizeFiler.execute(-1, new FilerTransaction<Filer, Integer>() {
+                    @Override
+                    public Integer commit(Filer chunkFiler) throws IOException {
+                        if (chunkFiler != null) {
+                            chunkFiler.seek(0);
+                            return FilerIO.readInt(chunkFiler, "size");
+                        } else {
+                            return 0;
+                        }
+                    }
+                });
+                indexSize.set(size);
+            }
+            return size;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

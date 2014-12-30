@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
-import com.google.common.collect.Lists;
+import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionBean;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionCoordBean;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -30,11 +31,17 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
+    private final MiruActivityWALReader activityWALReader;
 
-    public MiruTenantEntryRegion(String template, MiruSoyRenderer renderer, MiruClusterRegistry clusterRegistry) {
+    public MiruTenantEntryRegion(String template,
+        MiruSoyRenderer renderer,
+        MiruClusterRegistry clusterRegistry,
+        MiruActivityWALReader activityWALReader) {
+
         this.template = template;
         this.renderer = renderer;
         this.clusterRegistry = clusterRegistry;
+        this.activityWALReader = activityWALReader;
     }
 
     @Override
@@ -50,39 +57,45 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
             data.put("config", false);
         }
 
-        List<MiruTopologyStatus> statusForTenant;
+        SortedMap<MiruPartitionId, PartitionBean> partitionsMap = Maps.newTreeMap();
         try {
-            statusForTenant = clusterRegistry.getTopologyStatusForTenant(tenant);
+            List<MiruTopologyStatus> statusForTenant = clusterRegistry.getTopologyStatusForTenant(tenant);
+
+            Optional<MiruPartitionId> latestPartitionId = clusterRegistry.getLatestPartitionIdForTenant(tenant);
+
+            if (latestPartitionId.isPresent()) {
+                for (MiruPartitionId latest = latestPartitionId.get(); latest != null; latest = latest.prev()) {
+                    partitionsMap.put(latest, new PartitionBean(latest.getId(), activityWALReader.count(tenant, latest)));
+                }
+            }
+
+            for (MiruTopologyStatus status : statusForTenant) {
+                MiruPartition partition = status.partition;
+                MiruPartitionId partitionId = partition.coord.partitionId;
+                PartitionBean partitionBean = partitionsMap.get(partitionId);
+                if (partitionBean == null) {
+                    partitionBean = new PartitionBean(partitionId.getId(), activityWALReader.count(tenant, partitionId));
+                    partitionsMap.put(partitionId, partitionBean);
+                }
+                MiruPartitionState state = partition.info.state;
+                MiruPartitionCoordMetrics metrics = status.metrics;
+                PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, metrics.sizeInMemory, metrics
+                    .sizeOnDisk);
+                if (state == MiruPartitionState.online) {
+                    partitionBean.getOnline().add(partitionCoordBean);
+                } else if (state == MiruPartitionState.rebuilding) {
+                    partitionBean.getRebuilding().add(partitionCoordBean);
+                } else if (state == MiruPartitionState.bootstrap) {
+                    partitionBean.getBootstrap().add(partitionCoordBean);
+                } else if (state == MiruPartitionState.offline) {
+                    partitionBean.getOffline().add(partitionCoordBean);
+                }
+            }
         } catch (Exception e) {
             log.error("Unable to get partitions for tenant: " + tenant);
-            statusForTenant = Lists.newArrayList();
-        }
-
-        SortedMap<MiruPartitionId, PartitionBean> partitionsMap = Maps.newTreeMap();
-        for (MiruTopologyStatus status : statusForTenant) {
-            MiruPartition partition = status.partition;
-            MiruPartitionId partitionId = partition.coord.partitionId;
-            PartitionBean partitionBean = partitionsMap.get(partitionId);
-            if (partitionBean == null) {
-                partitionBean = new PartitionBean(partitionId.getId());
-                partitionsMap.put(partitionId, partitionBean);
-            }
-            MiruPartitionState state = partition.info.state;
-            MiruPartitionCoordMetrics metrics = status.metrics;
-            PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, metrics.sizeInMemory, metrics.sizeOnDisk);
-            if (state == MiruPartitionState.online) {
-                partitionBean.getOnline().add(partitionCoordBean);
-            } else if (state == MiruPartitionState.rebuilding) {
-                partitionBean.getRebuilding().add(partitionCoordBean);
-            } else if (state == MiruPartitionState.bootstrap) {
-                partitionBean.getBootstrap().add(partitionCoordBean);
-            } else if (state == MiruPartitionState.offline) {
-                partitionBean.getOffline().add(partitionCoordBean);
-            }
         }
 
         data.put("tenant", tenant.toString());
-        data.put("partitionsCount", statusForTenant.size());
         data.put("partitions", partitionsMap.values());
 
         return renderer.render(template, data);

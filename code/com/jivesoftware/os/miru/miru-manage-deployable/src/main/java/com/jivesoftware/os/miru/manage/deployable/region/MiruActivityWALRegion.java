@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
@@ -16,6 +17,7 @@ import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.WALBean;
 import com.jivesoftware.os.miru.manage.deployable.region.input.MiruActivityWALRegionInput;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,8 +56,20 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
             data.put("tenant", new String(tenantId.getBytes(), Charsets.UTF_8));
 
             try {
-                List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
-                List<MiruPartitionId> partitions = Lists.transform(partitionsForTenant, partitionToId);
+                Optional<MiruPartitionId> latestPartitionId = clusterRegistry.getLatestPartitionIdForTenant(tenantId);
+                List<MiruPartitionId> partitionIds = Lists.newArrayList();
+                if (latestPartitionId.isPresent()) {
+                    for (MiruPartitionId latest = latestPartitionId.get(); latest != null; latest = latest.prev()) {
+                        partitionIds.add(latest);
+                    }
+                    Collections.reverse(partitionIds);
+                }
+                List<Map<String, String>> partitions = Lists.newArrayList();
+                for (MiruPartitionId partitionId : partitionIds) {
+                    partitions.add(ImmutableMap.<String, String>of(
+                        "id", partitionId.toString(),
+                        "count", String.valueOf(activityWALReader.count(tenantId, partitionId))));
+                }
                 data.put("partitions", partitions);
 
                 if (optionalPartitionId.isPresent()) {

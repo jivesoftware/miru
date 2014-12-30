@@ -38,8 +38,10 @@
                 <label for="partitionPicker">Select Partition</label>
                 <p>
                 {foreach $p in $partitions}
-                    {if not isFirst($p)}, {/if}
-                    <a href="/miru/manage/wal/activity/{$tenant}/{$p.id}#focus">{$p.id}</a>
+                    {if not isFirst($p)} {/if}
+                    <a href="/miru/manage/wal/activity/{$tenant}/{$p.id}#focus" class="activity-wal-partition">
+                        {$p.id} {$p.count}
+                    </a>
                 {/foreach}
                 </p>
             </div>

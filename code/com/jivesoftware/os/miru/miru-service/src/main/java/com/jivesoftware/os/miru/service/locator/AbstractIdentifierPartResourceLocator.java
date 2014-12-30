@@ -1,13 +1,9 @@
 package com.jivesoftware.os.miru.service.locator;
 
-import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
-import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
-import com.jivesoftware.os.filer.io.RandomAccessFiler;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.apache.commons.io.FileUtils;
 
@@ -34,33 +30,6 @@ public abstract class AbstractIdentifierPartResourceLocator implements MiruResou
     @Override
     public File getFilerFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
         return new File(getPartitionPathByName(identifier, name), name + ".filer");
-    }
-
-    @Override
-    public RandomAccessFiler getRandomAccessFiler(MiruResourcePartitionIdentifier identifier, String name, String mode) throws IOException {
-        File file = getFilerFile(identifier, name);
-        file.createNewFile();
-        return new RandomAccessFiler(file, mode);
-    }
-
-    @Override
-    public ByteBufferBackedFiler getByteBufferBackedFiler(MiruResourcePartitionIdentifier identifier, String name, long length) throws IOException {
-        File file = getFilerFile(identifier, name);
-        file.createNewFile();
-
-        FileBackedMemMappedByteBufferFactory bufferFactory = new FileBackedMemMappedByteBufferFactory(file.getParentFile());
-        ByteBuffer byteBuffer = bufferFactory.allocate(file.getName(), Math.max(file.length(), length));
-        return new ByteBufferBackedFiler(file, byteBuffer);
-    }
-
-    @Override
-    public File[] getMapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return ensureDirectories(makeSubDirectories(getMapPaths(identifier), name));
-    }
-
-    @Override
-    public File[] getSwapDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
-        return ensureDirectories(makeSubDirectories(getSwapPaths(identifier), name));
     }
 
     @Override

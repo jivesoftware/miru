@@ -104,6 +104,7 @@ public class MiruPluginTestBootstrap {
             registryStore.getReplicaRegistry(),
             registryStore.getTopologyRegistry(),
             registryStore.getConfigRegistry(),
+            registryStore.getWriterPartitionRegistry(),
             3,
             TimeUnit.HOURS.toMillis(1));
 

@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
+import com.jivesoftware.os.filer.map.store.api.KeyValueContext;
+import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
+import com.jivesoftware.os.filer.map.store.api.KeyValueTransaction;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -10,24 +12,22 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex.InboxAndLastActivityIndex;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.io.IOException;
 
 /**
  * An in-memory representation of all inbox indexes in a given system
  */
-public class MiruInMemoryInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<InboxAndLastActivityIndex<BM>>, BulkExport<InboxAndLastActivityIndex<BM>> {
+public class MiruInMemoryInboxIndex<BM> implements MiruInboxIndex<BM>,
+    BulkImport<Void, KeyedInvertedIndexStream<BM>>,
+    BulkExport<Void, KeyedInvertedIndexStream<BM>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final ConcurrentMap<MiruStreamId, MiruInvertedIndex<BM>> index;
-    private final Map<MiruStreamId, Integer> lastActivityIndex;
+    private final KeyValueStore<byte[], ReadWrite<BM>> store;
 
-    public MiruInMemoryInboxIndex(MiruBitmaps<BM> bitmaps) {
+    public MiruInMemoryInboxIndex(MiruBitmaps<BM> bitmaps,
+        KeyValueStore<byte[], ReadWrite<BM>> store) {
         this.bitmaps = bitmaps;
-        this.index = new ConcurrentHashMap<>();
-        this.lastActivityIndex = new ConcurrentHashMap<>();
+        this.store = store;
     }
 
     @Override
@@ -38,53 +38,27 @@ public class MiruInMemoryInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImpor
 
     @Override
     public Optional<BM> getInbox(MiruStreamId streamId) throws Exception {
-        MiruInvertedIndex<BM> got = index.get(streamId);
-        if (got == null) {
-            return Optional.absent();
-        }
-        return Optional.<BM>fromNullable(got.getIndex());
+        return new MiruInMemoryInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1).getIndex();
     }
 
     @Override
     public MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception {
-        MiruInvertedIndex<BM> got = index.get(streamId);
-        if (got == null) {
-            index.putIfAbsent(streamId, new MiruInMemoryInvertedIndex<>(bitmaps));
-            got = index.get(streamId);
-        }
-        return got;
+        return new MiruInMemoryInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1);
     }
 
     @Override
-    public int getLastActivityIndex(MiruStreamId streamId) {
-        Integer got = lastActivityIndex.get(streamId);
-        if (got == null) {
-            got = -1;
-        }
-        return got;
-    }
-
-    @Override
-    public void setLastActivityIndex(MiruStreamId streamId, int activityIndex) {
-        lastActivityIndex.put(streamId, activityIndex);
+    public int getLastActivityIndex(MiruStreamId streamId) throws Exception {
+        return store.execute(streamId.getBytes(), false, getLastActivityIndexTransaction);
     }
 
     @Override
     public long sizeInMemory() throws Exception {
-        long sizeInBytes = lastActivityIndex.size() * 12; // 8 byte stream ID + 4 byte index
-        for (Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : index.entrySet()) {
-            sizeInBytes += entry.getKey().getBytes().length + entry.getValue().sizeInMemory();
-        }
-        return sizeInBytes;
+        return 0;
     }
 
     @Override
     public long sizeOnDisk() throws Exception {
-        long sizeInBytes = 0;
-        for (Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : index.entrySet()) {
-            sizeInBytes += entry.getValue().sizeOnDisk();
-        }
-        return sizeInBytes;
+        return 0;
     }
 
     @Override
@@ -92,24 +66,50 @@ public class MiruInMemoryInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImpor
     }
 
     @Override
-    public InboxAndLastActivityIndex<BM> bulkExport(MiruTenantId tenantId) throws Exception {
-        return new InboxAndLastActivityIndex<>(index, lastActivityIndex);
+    public Void bulkExport(MiruTenantId tenantId, final KeyedInvertedIndexStream<BM> callback) throws Exception {
+        store.streamKeys(new KeyValueStore.KeyStream<byte[]>() {
+            @Override
+            public boolean stream(byte[] bytes) throws IOException {
+                return callback.stream(bytes, new MiruInMemoryInvertedIndex<>(bitmaps, store, bytes, -1));
+            }
+        });
+        return null;
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<InboxAndLastActivityIndex<BM>> importItems) throws Exception {
-        InboxAndLastActivityIndex<BM> inboxAndLastActivityIndex = importItems.bulkExport(tenantId);
-        this.index.putAll(inboxAndLastActivityIndex.index);
-        this.lastActivityIndex.putAll(inboxAndLastActivityIndex.lastActivityIndex);
+    public void bulkImport(MiruTenantId tenantId, BulkExport<Void, KeyedInvertedIndexStream<BM>> export) throws Exception {
+        export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
+            @Override
+            public boolean stream(byte[] key, final MiruInvertedIndex<BM> invertedIndex) throws IOException {
+                store.execute(key, true, new KeyValueTransaction<ReadWrite<BM>, Void>() {
+                    @Override
+                    public Void commit(KeyValueContext<ReadWrite<BM>> keyValueContext) throws IOException {
+                        try {
+                            Optional<BM> index = invertedIndex.getIndex();
+                            ReadWrite<BM> readWrite;
+                            if (index.isPresent()) {
+                                readWrite = new ReadWrite<>(index.get(), invertedIndex.lastId());
+                            } else {
+                                readWrite = new ReadWrite<>(bitmaps.create(), -1);
+                            }
+                            keyValueContext.set(readWrite);
+                            return null;
+                        } catch (Exception e) {
+                            throw new IOException("Failed to stream import", e);
+                        }
+                    }
+                });
+                return true;
+            }
+        });
     }
 
-    public static class InboxAndLastActivityIndex<BM2> {
-        public final Map<MiruStreamId, MiruInvertedIndex<BM2>> index;
-        public final Map<MiruStreamId, Integer> lastActivityIndex;
-
-        public InboxAndLastActivityIndex(Map<MiruStreamId, MiruInvertedIndex<BM2>> index, Map<MiruStreamId, Integer> lastActivityIndex) {
-            this.index = ImmutableMap.copyOf(index);
-            this.lastActivityIndex = ImmutableMap.copyOf(lastActivityIndex);
+    //TODO pass in
+    private final KeyValueTransaction<ReadWrite<BM>, Integer> getLastActivityIndexTransaction = new KeyValueTransaction<ReadWrite<BM>, Integer>() {
+        @Override
+        public Integer commit(KeyValueContext<ReadWrite<BM>> keyValueContext) throws IOException {
+            ReadWrite<BM> readWrite = keyValueContext.get();
+            return readWrite != null ? readWrite.lastId : -1;
         }
-    }
+    };
 }

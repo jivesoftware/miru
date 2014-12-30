@@ -1,27 +1,26 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.KeyPartitioner;
-import com.jivesoftware.os.filer.io.KeyValueMarshaller;
-import com.jivesoftware.os.filer.io.RandomAccessFiler;
-import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
-import com.jivesoftware.os.filer.map.store.PartitionedMapChunkBackedMapStore;
+import com.jivesoftware.os.filer.io.FilerTransaction;
+import com.jivesoftware.os.filer.map.store.api.KeyValueContext;
+import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
+import com.jivesoftware.os.filer.map.store.api.KeyValueTransaction;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import com.jivesoftware.os.miru.service.index.BulkStream;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
-import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** @author jonathan */
-public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIndex> {
+public class MiruOnDiskTimeIndex implements MiruTimeIndex,
+    BulkImport<Void, BulkStream<MiruTimeIndex.Entry>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -31,7 +30,6 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     private static final int searchIndexKeySize = 8;
     private static final int searchIndexValueSize = 4;
 
-    private Filer filer;
     private int lastId;
     private long smallestTimestamp;
     private long largestTimestamp;
@@ -41,73 +39,35 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     private int searchIndexSizeInBytes;
 
     private final MiruFilerProvider filerProvider;
-    private final PartitionedMapChunkBackedMapStore<Long, Integer> timestampToIndex;
+    private final KeyValueStore<Long, Integer> timestampToIndex;
 
     public MiruOnDiskTimeIndex(MiruFilerProvider filerProvider,
-        String[] mapDirectories,
-        StripingLocksProvider<String> keyedStoreStripingLocksProvider)
+        KeyValueStore<Long, Integer> timestampToIndex)
         throws IOException {
+
         this.filerProvider = filerProvider;
+        this.timestampToIndex = timestampToIndex;
 
-        FileBackedMapChunkFactory chunkFactory = new FileBackedMapChunkFactory(8, false, 4, false, 32, mapDirectories);
-        this.timestampToIndex = new PartitionedMapChunkBackedMapStore<>(chunkFactory, keyedStoreStripingLocksProvider, null,
-            new KeyPartitioner<Long>() {
-                private final int numPartitions = 4;
-
-                @Override
-                public String keyPartition(Long key) {
-                    return "partition-" + (key % numPartitions);
-                }
-
-                @Override
-                public Iterable<String> allPartitions() {
-                    List<String> partitions = Lists.newArrayListWithCapacity(numPartitions);
-                    for (int i = 0; i < numPartitions; i++) {
-                        partitions.add(String.valueOf(i));
-                    }
-                    return partitions;
-                }
-            },
-            new KeyValueMarshaller<Long, Integer>() {
-                @Override
-                public byte[] keyBytes(Long key) {
-                    return FilerIO.longBytes(key);
-                }
-
-                @Override
-                public byte[] valueBytes(Integer value) {
-                    return FilerIO.intBytes(value);
-                }
-
-                @Override
-                public Long bytesKey(byte[] bytes, int offset) {
-                    return FilerIO.bytesLong(bytes, offset);
-                }
-
-                @Override
-                public Integer bytesValue(Long key, byte[] valueBytes, int offset) {
-                    return FilerIO.bytesInt(valueBytes, offset);
-                }
-            });
-
-        File file = filerProvider.getBackingFile();
-        if (file.length() > 0) {
-            filer = filerProvider.getFiler(file.length());
-            init();
-        }
+        init();
     }
 
     private void init() throws IOException {
-        synchronized (filer.lock()) {
-            this.filer.seek(0);
-            this.lastId = FilerIO.readInt(filer, "lastId");
-            this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp");
-            this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp");
-            this.timestampsLength = FilerIO.readInt(filer, "timestampsLength");
-            this.searchIndexLevels = FilerIO.readShort(filer, "searchIndexLevels");
-            this.searchIndexSegments = FilerIO.readShort(filer, "searchIndexSegments");
-            this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
-        }
+        filerProvider.execute(-1, new FilerTransaction<Filer, Void>() {
+            @Override
+            public Void commit(Filer filer) throws IOException {
+                if (filer != null) {
+                    filer.seek(0);
+                    MiruOnDiskTimeIndex.this.lastId = FilerIO.readInt(filer, "lastId");
+                    MiruOnDiskTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp");
+                    MiruOnDiskTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp");
+                    MiruOnDiskTimeIndex.this.timestampsLength = FilerIO.readInt(filer, "timestampsLength");
+                    MiruOnDiskTimeIndex.this.searchIndexLevels = FilerIO.readShort(filer, "searchIndexLevels");
+                    MiruOnDiskTimeIndex.this.searchIndexSegments = FilerIO.readShort(filer, "searchIndexSegments");
+                    MiruOnDiskTimeIndex.this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
+                }
+                return null;
+            }
+        });
     }
 
     /**
@@ -133,29 +93,36 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
      *      1536: { 1536, 1664, 1792, 1920 }
      * </pre>
      */
-    private static void segmentForSearch(MiruTimeIndex index, com.jivesoftware.os.filer.io.Filer filer, int remainingLevels, int segments, long fp,
-        int smallestId, int largestId) throws IOException {
-
-        seekTo(filer, fp);
-
+    private void segmentForSearch(Filer filer, int remainingLevels, int segments, long fp, int smallestId, int largestId) throws IOException {
         final int delta = largestId - smallestId;
 
-        // write index for this section
+        // first select the ids for this section
         int[] segmentAtIds = new int[segments];
         for (int i = 0; i < segments; i++) {
             segmentAtIds[i] = smallestId + delta * i / segments;
-            //System.out.println("FP: " + filer.getFilePointer() + " index: " + index.getTimestamp(segmentAtIds[i]));
-            FilerIO.writeLong(filer, index.getTimestamp(segmentAtIds[i]), "ts");
         }
 
+        // next get the timestamp for each selected id
+        long[] timestampAtIds = new long[segments];
+        for (int i = 0; i < segments; i++) {
+            filer.seek(headerSizeInBytes + searchIndexSizeInBytes + segmentAtIds[i] * timestampSize);
+            timestampAtIds[i] = FilerIO.readLong(filer, "ts");
+        }
+
+        // now write the timestamps for this section
+        filer.seek(fp);
+        for (int i = 0; i < segments; i++) {
+            FilerIO.writeLong(filer, timestampAtIds[i], "ts");
+        }
+
+        // finally write the table for the next level, or the ids if this is the final level
         long subSegmentsFp = fp + segments * searchIndexKeySize;
+        filer.seek(subSegmentsFp);
 
         remainingLevels--;
         if (remainingLevels == 0) {
             // no more levels, so write id values
             for (int i = 0; i < segments; i++) {
-                seekTo(filer, subSegmentsFp + i * searchIndexValueSize);
-                //System.out.println("FP: " + filer.getFilePointer() + " value: " + segmentAtIds[i]);
                 FilerIO.writeInt(filer, segmentAtIds[i], "id");
             }
         } else {
@@ -164,7 +131,7 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
             for (int i = 0; i < segments; i++) {
                 int segmentSmallestId = segmentAtIds[i];
                 int segmentLargestId = (i < segments - 1) ? segmentAtIds[i + 1] : largestId;
-                segmentForSearch(index, filer, remainingLevels, segments, subSegmentsFp + i * subSegmentWidth, segmentSmallestId, segmentLargestId);
+                segmentForSearch(filer, remainingLevels, segments, subSegmentsFp + i * subSegmentWidth, segmentSmallestId, segmentLargestId);
             }
         }
     }
@@ -175,14 +142,6 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
             offset = segments * (searchIndexKeySize + offset); // size of index and sub-levels (cascading)
         }
         return offset;
-    }
-
-    //TODO delta should always be 0 if the algorithm is correct, so eventually we will remove all calls to this
-    private static void seekTo(com.jivesoftware.os.filer.io.Filer filer, long fp) throws IOException {
-        if (fp - filer.getFilePointer() != 0) {
-            System.out.println("Delta: " + (fp - filer.getFilePointer()));
-        }
-        filer.seek(fp);
     }
 
     @Override
@@ -201,17 +160,20 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     }
 
     @Override
-    public long getTimestamp(int id) {
+    public long getTimestamp(final int id) {
         if (id >= timestampsLength) {
             return 0l;
         }
-        synchronized (filer.lock()) {
-            try {
-                filer.seek(headerSizeInBytes + searchIndexSizeInBytes + id * timestampSize);
-                return FilerIO.readLong(filer, "ts");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        try {
+            return filerProvider.execute(-1, new FilerTransaction<Filer, Long>() {
+                @Override
+                public Long commit(Filer filer) throws IOException {
+                    filer.seek(headerSizeInBytes + searchIndexSizeInBytes + id * timestampSize);
+                    return FilerIO.readLong(filer, "ts");
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -224,46 +186,57 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
      Returns true index of activityTimestamp or where it would have been.
      */
     @Override
-    public int getClosestId(long timestamp) {
-        synchronized (filer.lock()) {
-            try {
-                long fp = headerSizeInBytes;
-                filer.seek(fp);
-                for (int remainingLevels = searchIndexLevels - 1; remainingLevels >= 0; remainingLevels--) {
-                    int segmentIndex = 0;
-                    for (; segmentIndex < searchIndexSegments; segmentIndex++) {
-                        long segmentTimestamp = FilerIO.readLong(filer, "ts");
-                        if (segmentTimestamp > timestamp) {
-                            break;
-                        }
-                    }
-                    segmentIndex--; // last index whose timestamp was less than the requested timestamp
-                    if (segmentIndex < 0) {
-                        segmentIndex = 0; // underflow, just keep tracking towards the smallest segment
-                    }
-                    fp += searchIndexSegments * searchIndexKeySize;
-                    if (remainingLevels == 0) {
-                        fp += segmentIndex * searchIndexValueSize;
-                    } else {
-                        fp += segmentIndex * segmentWidth(remainingLevels, searchIndexSegments);
-                    }
+    public int getClosestId(final long timestamp) {
+        try {
+            return filerProvider.execute(-1, new FilerTransaction<Filer, Integer>() {
+                @Override
+                public Integer commit(Filer filer) throws IOException {
+                    long fp = headerSizeInBytes;
                     filer.seek(fp);
-                }
+                    for (int remainingLevels = searchIndexLevels - 1; remainingLevels >= 0; remainingLevels--) {
+                        int segmentIndex = 0;
+                        for (; segmentIndex < searchIndexSegments; segmentIndex++) {
+                            long segmentTimestamp = FilerIO.readLong(filer, "ts");
+                            if (segmentTimestamp > timestamp) {
+                                break;
+                            }
+                        }
+                        segmentIndex--; // last index whose timestamp was less than the requested timestamp
+                        if (segmentIndex < 0) {
+                            segmentIndex = 0; // underflow, just keep tracking towards the smallest segment
+                        }
+                        fp += searchIndexSegments * searchIndexKeySize;
+                        if (remainingLevels == 0) {
+                            fp += segmentIndex * searchIndexValueSize;
+                        } else {
+                            fp += segmentIndex * segmentWidth(remainingLevels, searchIndexSegments);
+                        }
+                        filer.seek(fp);
+                    }
 
-                int id = FilerIO.readInt(filer, "id");
-                for (; id <= lastId && getTimestamp(id) < timestamp; id++) {
-                }
+                    int id = FilerIO.readInt(filer, "id");
+                    while (id <= lastId && getTimestamp(id) < timestamp) {
+                        id++;
+                    }
 
-                return id;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+                    return id;
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
+    private final KeyValueTransaction<Integer, Integer> exactIdTransaction = new KeyValueTransaction<Integer, Integer>() {
+        @Override
+        public Integer commit(KeyValueContext<Integer> keyValueContext) throws IOException {
+            return keyValueContext.get();
+        }
+    };
+
     @Override
     public int getExactId(long timestamp) throws Exception {
-        Integer id = timestampToIndex.get(timestamp);
+        Integer id = timestampToIndex.execute(timestamp, false, exactIdTransaction);
         return id != null ? id : -1;
     }
 
@@ -306,69 +279,72 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex, BulkImport<MiruTimeIn
     }
 
     @Override
-    public Iterable<Entry> getEntries() {
-        throw new UnsupportedOperationException("Disk index does not support getting entries");
-    }
-
-    @Override
     public long sizeInMemory() {
         return 0;
     }
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return filer.length() + timestampToIndex.estimateSizeInBytes();
+        return -1;
     }
 
     @Override
     public void close() {
-        try {
-            if (filer != null) {
-                filer.close();
-            }
-        } catch (IOException e) {
-            log.error("Failed to remove time index", e);
-        }
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruTimeIndex> importItems) throws Exception {
-        MiruTimeIndex index = importItems.bulkExport(tenantId);
-
-        long length;
-        try (RandomAccessFiler filer = new RandomAccessFiler(filerProvider.getBackingFile(), "rw")) {
-            synchronized (filer.lock()) {
+    public void bulkImport(final MiruTenantId tenantId, final BulkExport<Void, BulkStream<Entry>> export) throws Exception {
+        //TODO expose to config
+        filerProvider.execute(512, new FilerTransaction<Filer, Void>() {
+            @Override
+            public Void commit(final Filer filer) throws IOException {
                 short levels = 3; // TODO - Config or allow it to be passed in?
                 short segments = 10; // TODO - Config or allow it to be passed in?
 
-                int lastId = index.lastId();
+                int searchIndexSizeInBytes = segmentWidth(levels, segments);
+                filer.seek(headerSizeInBytes + searchIndexSizeInBytes);
+
+                final AtomicInteger lastId = new AtomicInteger(-1);
+                final AtomicLong smallestTimestamp = new AtomicLong(Long.MAX_VALUE);
+                final AtomicLong largestTimestamp = new AtomicLong(Long.MIN_VALUE);
+                try {
+                    export.bulkExport(tenantId, new BulkStream<Entry>() {
+                        @Override
+                        public boolean stream(final Entry entry) throws Exception {
+                            FilerIO.writeLong(filer, entry.time, "ts");
+                            lastId.set(entry.index);
+                            smallestTimestamp.compareAndSet(Long.MAX_VALUE, entry.time);
+                            largestTimestamp.set(entry.time);
+                            //TODO holy transactions, batman!
+                            timestampToIndex.execute(entry.time, true, new KeyValueTransaction<Integer, Void>() {
+                                @Override
+                                public Void commit(KeyValueContext<Integer> keyValueContext) throws IOException {
+                                    keyValueContext.set(entry.index);
+                                    return null;
+                                }
+                            });
+                            return true;
+                        }
+                    });
+                } catch (Exception e) {
+                    throw new IOException("Failed to stream entries", e);
+                }
+
                 filer.seek(0);
-                FilerIO.writeInt(filer, lastId, "lastId");
-                FilerIO.writeLong(filer, index.getSmallestTimestamp(), "smallestTimestamp");
-                FilerIO.writeLong(filer, index.getLargestTimestamp(), "largestTimestamp");
-                FilerIO.writeInt(filer, lastId + 1, "timestampsLength");
+                FilerIO.writeInt(filer, lastId.get(), "lastId");
+                FilerIO.writeLong(filer, smallestTimestamp.get(), "smallestTimestamp");
+                FilerIO.writeLong(filer, largestTimestamp.get(), "largestTimestamp");
+                FilerIO.writeInt(filer, lastId.get() + 1, "timestampsLength");
                 FilerIO.writeShort(filer, levels, "searchIndexLevels");
                 FilerIO.writeShort(filer, segments, "searchIndexSegments");
 
-                seekTo(filer, headerSizeInBytes);
-                segmentForSearch(index, filer, levels, segments, headerSizeInBytes, 0, lastId + 1);
+                filer.seek(headerSizeInBytes);
+                segmentForSearch(filer, levels, segments, headerSizeInBytes, 0, lastId.get() + 1);
 
-                int searchIndexSizeInBytes = segmentWidth(levels, segments);
-                seekTo(filer, headerSizeInBytes + searchIndexSizeInBytes);
-
-                for (int id = 0; id <= lastId; id++) {
-                    FilerIO.writeLong(filer, index.getTimestamp(id), "ts");
-                }
-
-                length = filer.length();
+                return null;
             }
-        }
+        });
 
-        for (Entry timeIndex : index.getEntries()) {
-            timestampToIndex.add(timeIndex.time, timeIndex.index);
-        }
-
-        this.filer = filerProvider.getFiler(length);
         init();
     }
 

@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.google.common.base.Optional;
 import java.util.List;
 
 /**
@@ -12,10 +13,10 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
      * Gets the raw index in a safe manner. The returned index is guaranteed to be free of concurrent writes,
      * so this method is safe to use even if the calling thread does not hold the context's write lock.
      *
-     * @return the raw unsafe index
+     * @return the raw safe index
      * @throws Exception
      */
-    BM getIndex() throws Exception;
+    Optional<BM> getIndex() throws Exception;
 
     /**
      * Gets the raw index in an unsafe manner. The returned index is not guaranteed to be free of concurrent writes,
@@ -24,7 +25,7 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
      * @return the raw unsafe index
      * @throws Exception
      */
-    BM getIndexUnsafe() throws Exception;
+    Optional<BM> getIndexUnsafe() throws Exception;
 
     void remove(int id) throws Exception;
 

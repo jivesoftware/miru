@@ -3,30 +3,19 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
-import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
-import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
-import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
-import com.jivesoftware.os.filer.map.store.ByteBufferProviderBackedMapChunkFactory;
-import com.jivesoftware.os.filer.map.store.BytesObjectMapStore;
-import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
-import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
-import com.jivesoftware.os.filer.map.store.VariableKeySizeBytesObjectMapStore;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskFieldIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruHybridFieldIndex;
-import java.nio.file.Files;
+import com.jivesoftware.os.miru.service.stream.MiruContext;
 import java.util.List;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -43,11 +32,10 @@ public class MiruFieldTest {
         enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
     public <BM> void getInvertedIndex(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> fieldIndex, int fieldId, List<Integer> ids) throws Exception {
         for (int id : ids) {
-            Optional<MiruInvertedIndex<BM>> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id)));
+            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex();
             assertTrue(optional.isPresent());
-            MiruInvertedIndex<BM> invertedIndex = optional.get();
-            assertEquals(bitmaps.cardinality(invertedIndex.getIndex()), 1);
-            assertTrue(bitmaps.isSet(invertedIndex.getIndex(), id));
+            assertEquals(bitmaps.cardinality(optional.get()), 1);
+            assertTrue(bitmaps.isSet(optional.get(), id));
         }
     }
 
@@ -59,7 +47,7 @@ public class MiruFieldTest {
         int median = ids.get(ids.size() / 2);
 
         for (int id : ids) {
-            Optional<MiruInvertedIndex<BM>> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id)), median);
+            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id)), median).getIndex();
             assertEquals(optional.isPresent(), id > median, "Should be " + optional.isPresent() + ": " + id + " > " + median);
         }
     }
@@ -67,60 +55,27 @@ public class MiruFieldTest {
     @DataProvider(name = "miruFieldDataProvider")
     public Object[][] miruFieldDataProvider() throws Exception {
         List<Integer> ids = Lists.newArrayList();
+        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(2);
         MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1");
 
-        @SuppressWarnings("unchecked")
-        VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>[] inMemIndexes = new VariableKeySizeBytesObjectMapStore[] {
-            new VariableKeySizeBytesObjectMapStore<byte[], MiruInvertedIndex<EWAHCompressedBitmap>>(
-                new BytesObjectMapStore[] {
-                    new BytesObjectMapStore("16", 16, null,
-                        new ByteBufferProviderBackedMapChunkFactory(16, true, 0, false, 10, new ByteBufferProvider("field-0", new HeapByteBufferFactory())),
-                        PassThroughKeyMarshaller.INSTANCE)
-                },
-                PassThroughKeyMarshaller.INSTANCE)
-        };
-        MiruHybridFieldIndex<EWAHCompressedBitmap> hybridFieldIndex = new MiruHybridFieldIndex<>(new MiruBitmapsEWAH(2), inMemIndexes);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true, 64).allocate(bitmaps, coord);
+        MiruFieldIndex<EWAHCompressedBitmap> hybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         for (int id = 0; id < 10; id++) {
             ids.add(id);
             hybridFieldIndex.index(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), id);
         }
 
-        String[] indexMapDirectories = new String[] {
-            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath(),
-            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath()
-        };
-        String[] indexSwapDirectories = new String[] {
-            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath(),
-            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath()
-        };
-        String[] chunkDirectories = new String[] {
-            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath(),
-            Files.createTempDirectory(getClass().getSimpleName()).toFile().getAbsolutePath()
-        };
+        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10, 64).allocate(bitmaps, coord);
+        MiruFieldIndex<EWAHCompressedBitmap> onDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
-        // 512 min size, times 10 field indexes
-        MultiChunkStore multiChunkStore = new ChunkStoreInitializer().initializeMultiFileBacked(chunkDirectories, "data", 4, 5_120, false, 8,
-            new ByteArrayStripingLocksProvider(64));
-
-        VariableKeySizeMapChunkBackedKeyedStore[] onDiskIndexes = new VariableKeySizeMapChunkBackedKeyedStore[1];
-        VariableKeySizeMapChunkBackedKeyedStore.Builder builder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
-        builder.add(16, new PartitionedMapChunkBackedKeyedStore(
-            new FileBackedMapChunkFactory(16, true, 8, false, 100, indexMapDirectories),
-            new FileBackedMapChunkFactory(16, true, 8, false, 100, indexSwapDirectories),
-            multiChunkStore,
-            new StripingLocksProvider<String>(8),
-            4)); //TODO expose number of partitions
-        onDiskIndexes[0] = builder.build();
-
-        MiruOnDiskFieldIndex<EWAHCompressedBitmap> onDiskFieldIndex = new MiruOnDiskFieldIndex<>(new MiruBitmapsEWAH(2), onDiskIndexes);
-        // need to export/import both the field and its index (a little strange)
-        onDiskFieldIndex.bulkImport(tenantId, hybridFieldIndex);
+        ((BulkImport) onDiskFieldIndex).bulkImport(tenantId, (BulkExport) hybridFieldIndex);
 
         return new Object[][] {
-            { new MiruBitmapsEWAH(2), hybridFieldIndex, fieldDefinition.fieldId, ids },
-            { new MiruBitmapsEWAH(2), onDiskFieldIndex, fieldDefinition.fieldId, ids }
+            { bitmaps, hybridFieldIndex, fieldDefinition.fieldId, ids },
+            { bitmaps, onDiskFieldIndex, fieldDefinition.fieldId, ids }
         };
     }
 }

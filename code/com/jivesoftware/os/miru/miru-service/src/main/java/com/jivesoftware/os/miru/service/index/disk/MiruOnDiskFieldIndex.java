@@ -1,41 +1,44 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
-import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
+import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
+import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.service.index.BulkEntry;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import java.util.Iterator;
-import java.util.List;
+import com.jivesoftware.os.miru.service.index.BulkStream;
+import com.jivesoftware.os.miru.service.index.SimpleBulkExport;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author jonathan
  */
-public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>,
-    BulkExport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> {
+public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>,
+    BulkImport<Void, BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>>,
+    BulkExport<Void, BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final VariableKeySizeMapChunkBackedKeyedStore[] indexes;
+    private final KeyedFilerStore[] indexes;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
-    private final StripingLocksProvider<MiruTermId> stripingLocksProvider = new StripingLocksProvider<>(1024); //TODO expose to config
+    private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
     private final long newFilerInitialCapacity = 512;
 
-    public MiruOnDiskFieldIndex(MiruBitmaps<BM> bitmaps, VariableKeySizeMapChunkBackedKeyedStore[] indexes) throws Exception {
+    public MiruOnDiskFieldIndex(MiruBitmaps<BM> bitmaps,
+        KeyedFilerStore[] indexes,
+        StripingLocksProvider<MiruTermId> stripingLocksProvider)
+        throws Exception {
         this.bitmaps = bitmaps;
         this.indexes = indexes;
+        this.stripingLocksProvider = stripingLocksProvider;
     }
 
     @Override
@@ -55,44 +58,29 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<
 
     @Override
     public void remove(int fieldId, MiruTermId termId, int id) throws Exception {
-        Optional<MiruInvertedIndex<BM>> got = get(fieldId, termId);
-        if (got.isPresent()) {
-            got.get().remove(id);
-        }
+        MiruInvertedIndex<BM> got = get(fieldId, termId);
+        got.remove(id);
     }
 
     @Override
-    public Iterator<MiruTermId> getTermIdsForField(int fieldId) throws Exception {
-        return Iterators.transform(indexes[fieldId].keysIterator(), new Function<IBA, MiruTermId>() {
+    public void streamTermIdsForField(int fieldId, final TermIdStream termIdStream) throws Exception {
+        indexes[fieldId].streamKeys(new KeyValueStore.KeyStream<IBA>() {
             @Override
-            public MiruTermId apply(IBA input) {
-                return new MiruTermId(input.getBytes());
+            public boolean stream(IBA iba) throws IOException {
+                return termIdStream.stream(new MiruTermId(iba.getBytes()));
             }
         });
     }
 
     @Override
-    public Optional<MiruInvertedIndex<BM>> get(int fieldId, MiruTermId termId) throws Exception {
-        SwappableFiler filer = indexes[fieldId].get(termId.getBytes(), -1);
-        if (filer == null) {
-            return Optional.absent();
-        }
-        return Optional.<MiruInvertedIndex<BM>>of(new MiruOnDiskInvertedIndex<>(bitmaps, filer,
-            stripingLocksProvider.lock(termId)));
+    public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId) throws Exception {
+        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, -1, stripingLocksProvider.lock(termId));
     }
 
     @Override
-    public Optional<MiruInvertedIndex<BM>> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        SwappableFiler filer = indexes[fieldId].get(termId.getBytes(), -1);
-        if (filer == null) {
-            return Optional.absent();
-        }
-        MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer,
+    public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), considerIfIndexIdGreaterThanN, -1,
             stripingLocksProvider.lock(termId));
-        if (invertedIndex.lastId() <= considerIfIndexIdGreaterThanN) {
-            return Optional.absent();
-        }
-        return Optional.<MiruInvertedIndex<BM>>of(invertedIndex);
     }
 
     @Override
@@ -101,58 +89,57 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>, BulkImport<
     }
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
-        SwappableFiler filer = indexes[fieldId].get(termId.getBytes(), newFilerInitialCapacity);
-        return new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(termId));
+        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, newFilerInitialCapacity, stripingLocksProvider.lock(termId));
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> importItems) throws Exception {
-        Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>> fieldIterator = importItems.bulkExport(tenantId);
-        int fieldId = 0;
-        while (fieldIterator.hasNext()) {
-            Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>> iter = fieldIterator.next();
-            while (iter.hasNext()) {
-                BulkEntry<byte[], MiruInvertedIndex<BM>> entry = iter.next();
-                SwappableFiler filer = indexes[fieldId].get(entry.key, newFilerInitialCapacity);
+    public void bulkImport(final MiruTenantId tenantId,
+        BulkExport<Void, BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>> export)
+        throws Exception {
 
-                final BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>(entry.value.getIndex(), entry.value.lastId());
-                MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer,
-                    stripingLocksProvider.lock(new MiruTermId(entry.key)));
-                miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
+        final AtomicInteger fieldId = new AtomicInteger(0);
+        export.bulkExport(tenantId, new BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>() {
+            @Override
+            public boolean stream(BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>> export) throws Exception {
+                export.bulkExport(tenantId, new BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
                     @Override
-                    public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
-                        return bitmapAndLastId;
+                    public boolean stream(final BulkEntry<byte[], MiruInvertedIndex<BM>> entry) throws Exception {
+                        MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId.get()], entry.key,
+                            -1, newFilerInitialCapacity, stripingLocksProvider.lock(new MiruTermId(entry.key)));
+                        miruOnDiskInvertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(entry.value));
+                        return true;
                     }
                 });
+                fieldId.incrementAndGet();
+                return true;
             }
-            fieldId++;
-        }
+        });
     }
 
     @Override
-    public Iterator<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>> bulkExport(MiruTenantId tenantId) throws Exception {
-        List<Iterator<BulkEntry<byte[], MiruInvertedIndex<BM>>>> iterators = Lists.newArrayListWithCapacity(indexes.length);
-        for (VariableKeySizeMapChunkBackedKeyedStore index : indexes) {
-            if (index != null) {
-                iterators.add(Iterators.transform(index.iterator(),
-                    new Function<KeyValueStore.Entry<IBA, SwappableFiler>, BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
-                        @Override
-                        public BulkEntry<byte[], MiruInvertedIndex<BM>> apply(KeyValueStore.Entry<IBA, SwappableFiler> input) {
-                            byte[] termBytes = input.getKey().getBytes();
-                            return new BulkEntry<byte[], MiruInvertedIndex<BM>>(termBytes,
-                                new MiruOnDiskInvertedIndex<>(bitmaps, input.getValue(), stripingLocksProvider.lock(new MiruTermId(termBytes))));
-                        }
-                    }));
-            }
-        }
-        return iterators.iterator();
-    }
+    public Void bulkExport(MiruTenantId tenantId, BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> callback)
+        throws Exception {
 
-    public void copyTo(MiruOnDiskFieldIndex<BM> to) throws Exception {
-        for (int i = 0; i < indexes.length; i++) {
-            if (indexes[i] != null) {
-                indexes[i].copyTo(to.indexes[i]);
-            }
+        for (final KeyedFilerStore index : indexes) {
+            callback.stream(new BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>() {
+                @Override
+                public Void bulkExport(MiruTenantId tenantId, final BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>> callback) throws Exception {
+                    index.stream(new KeyValueStore.EntryStream<IBA, Filer>() {
+                        @Override
+                        public boolean stream(IBA iba, Filer filer) throws IOException {
+                            try {
+                                callback.stream(new BulkEntry<byte[], MiruInvertedIndex<BM>>(iba.getBytes(),
+                                    new MiruOnDiskInvertedIndex<>(bitmaps, index, iba.getBytes(), -1, newFilerInitialCapacity, new Object())));
+                            } catch (Exception e) {
+                                throw new IOException("Failed to stream export", e);
+                            }
+                            return false;
+                        }
+                    });
+                    return null;
+                }
+            });
         }
+        return null;
     }
 }

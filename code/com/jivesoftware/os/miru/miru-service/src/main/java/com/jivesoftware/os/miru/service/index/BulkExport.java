@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 
-public interface BulkExport<T> {
+public interface BulkExport<T, C> {
 
-    T bulkExport(MiruTenantId tenantId) throws Exception;
+    T bulkExport(MiruTenantId tenantId, C callback) throws Exception;
 
 }

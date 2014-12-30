@@ -30,7 +30,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public TrendingQuestion(Trending trending,
-            MiruRequest<TrendingQuery> request) {
+        MiruRequest<TrendingQuery> request) {
         this.trending = trending;
         this.request = request;
     }
@@ -50,7 +50,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
         if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
             return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, bitmaps.create(), solutionLog),
-                    solutionLog.asList());
+                solutionLog.asList());
         }
         ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
 
@@ -66,7 +66,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex())));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex()));
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
@@ -83,7 +83,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
 
     @Override
     public MiruPartitionResponse<OldTrendingAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<TrendingReport> report)
-            throws Exception {
+        throws Exception {
         return new TrendingRemotePartitionReader(requestHelper).scoreTrending(partitionId, request, report);
     }
 
@@ -92,14 +92,14 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
         Optional<TrendingReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new TrendingReport(
-                    answer.get().aggregateTerms,
-                    answer.get().collectedDistincts));
+                answer.get().aggregateTerms,
+                answer.get().collectedDistincts));
         }
         return report;
     }
 
     private boolean timeIndexIntersectsTimeRange(MiruTimeIndex timeIndex, MiruTimeRange timeRange) {
         return timeRange.smallestTimestamp <= timeIndex.getLargestTimestamp() &&
-                timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
+            timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
     }
 }

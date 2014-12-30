@@ -22,7 +22,6 @@ import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
@@ -246,11 +245,12 @@ public class MiruService implements Miru {
         try (MiruRequestHandle<BM> handle = partition.getQueryHandle()) {
             MiruRequestContext<BM> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
-            Optional<? extends MiruInvertedIndex<BM>> invertedIndex = requestContext.getFieldIndexProvider()
+            Optional<BM> index = requestContext.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
-                .get(fieldId, new MiruTermId(termValue.getBytes(Charsets.UTF_8)));
-            if (invertedIndex.isPresent()) {
-                return bitmapsDebug.toString(handle.getBitmaps(), invertedIndex.get().getIndex());
+                .get(fieldId, new MiruTermId(termValue.getBytes(Charsets.UTF_8)))
+                .getIndex();
+            if (index.isPresent()) {
+                return bitmapsDebug.toString(handle.getBitmaps(), index.get());
             } else {
                 return "Index not present";
             }

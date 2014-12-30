@@ -32,7 +32,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public RecoQuestion(CollaborativeFiltering collaborativeFiltering,
-            MiruRequest<RecoQuery> query) {
+        MiruRequest<RecoQuery> query) {
         this.collaborativeFiltering = collaborativeFiltering;
         this.request = query;
     }
@@ -67,7 +67,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        BM buildIndexMask = bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), Optional.of(stream.getRemovalIndex().getIndex()));
+        BM buildIndexMask = bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex());
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "indexMask contains {} items.", bitmaps.cardinality(buildIndexMask));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "indexMask bitmap {}", buildIndexMask);
@@ -85,8 +85,8 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         }
 
         return new MiruPartitionResponse<>(
-                collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, stream, request, report, answer),
-                solutionLog.asList()
+            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, stream, request, report, answer),
+            solutionLog.asList()
         );
     }
 

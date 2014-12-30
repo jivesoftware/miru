@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
+import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -35,7 +35,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     public final MiruReadTrackingWALReader readTrackingWALReader;
     public final MiruActivityInternExtern activityInternExtern;
     public final StripingLocksProvider<MiruStreamId> streamLocks;
-    public final Optional<MultiChunkStore> chunkStore;
+    public final Optional<ChunkStore[]> chunkStores;
     public final Optional<? extends MiruResourcePartitionIdentifier> transientResource;
 
     public MiruContext(MiruSchema schema,
@@ -49,7 +49,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         MiruReadTrackingWALReader readTrackingWALReader,
         MiruActivityInternExtern activityInternExtern,
         StripingLocksProvider<MiruStreamId> streamLocks,
-        Optional<MultiChunkStore> chunkStore,
+        Optional<ChunkStore[]> chunkStores,
         Optional<? extends MiruResourcePartitionIdentifier> transientResource) {
         this.schema = schema;
         this.timeIndex = timeIndex;
@@ -62,7 +62,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         this.readTrackingWALReader = readTrackingWALReader;
         this.activityInternExtern = activityInternExtern;
         this.streamLocks = streamLocks;
-        this.chunkStore = chunkStore;
+        this.chunkStores = chunkStores;
         this.transientResource = transientResource;
     }
 

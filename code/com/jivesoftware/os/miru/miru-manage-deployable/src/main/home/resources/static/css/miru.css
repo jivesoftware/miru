@@ -71,3 +71,10 @@ img.balancer-visual {
     margin-bottom: -2px;
     display: block;
 }
+
+a.activity-wal-partition {
+    background-color: #eee;
+    padding: 8px;
+    border-radius: 8px;
+    margin-right:8px;
+}

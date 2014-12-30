@@ -1,40 +1,38 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
-import com.jivesoftware.os.filer.io.Filer;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
-import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
-import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
+import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
-import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex.InboxAndLastActivityIndex;
-import java.util.Map;
+import com.jivesoftware.os.miru.service.index.SimpleBulkExport;
+import com.jivesoftware.os.miru.service.index.memory.KeyedInvertedIndexStream;
+import java.io.IOException;
 
 /** @author jonathan */
-public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<InboxAndLastActivityIndex<BM>> {
+public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<Void, KeyedInvertedIndexStream<BM>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final PartitionedMapChunkBackedKeyedStore index;
+    private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider = new StripingLocksProvider<>(64);
-    private final long newFilerInitialCapacity = 512;
+    private final long newFilerInitialCapacity = 512; //TODO expose to config
 
     public MiruOnDiskInboxIndex(MiruBitmaps<BM> bitmaps,
+        KeyedFilerStore store)
+        throws Exception {
+        this.bitmaps = bitmaps;
+        this.store = store;
+        /*
         String[] mapDirectories,
         String[] swapDirectories,
         MultiChunkStore chunkStore,
-        StripingLocksProvider<String> keyedStoreStripingLocksProvider)
-        throws Exception {
-        this.bitmaps = bitmaps;
+        StripingLocksProvider<String> keyedStoreStripingLocksProvider
         //TODO actual capacity? should this be shared with a key prefix?
         this.index = new PartitionedMapChunkBackedKeyedStore(
             new FileBackedMapChunkFactory(8, false, 8, false, 100, mapDirectories),
@@ -42,6 +40,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
             chunkStore,
             keyedStoreStripingLocksProvider,
             4); //TODO expose number of partitions
+        */
     }
 
     @Override
@@ -49,46 +48,28 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
         getAppender(streamId).append(id);
     }
 
+    private MiruOnDiskInvertedIndex<BM> indexFor(MiruStreamId streamId) {
+        return new MiruOnDiskInvertedIndex<>(bitmaps,
+            store,
+            streamId.getBytes(),
+            -1,
+            newFilerInitialCapacity,
+            stripingLocksProvider.lock(streamId));
+    }
+
     @Override
     public Optional<BM> getInbox(MiruStreamId streamId) throws Exception {
-        SwappableFiler filer = index.get(streamId.getBytes(), -1);
-        if (filer == null) {
-            return Optional.absent();
-        }
-        return Optional.of(new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId), 4).getIndex());
+        return indexFor(streamId).getIndex();
     }
 
     @Override
     public MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception {
-        SwappableFiler filer = index.get(streamId.getBytes(), -1);
-        if (filer == null) {
-            filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
-            setLastActivityIndex(streamId, -1); // Initialize lastActivityIndex to -1 when we create the on-disk index
-        }
-        return new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId), 4);
+        return indexFor(streamId);
     }
 
     @Override
     public int getLastActivityIndex(MiruStreamId streamId) throws Exception {
-        Filer filer = index.get(streamId.getBytes(), -1);
-        if (filer == null) {
-            return -1;
-        }
-
-        synchronized (filer.lock()) {
-            filer.seek(0);
-            return FilerIO.readInt(filer, "lastActivityIndex");
-        }
-    }
-
-    @Override
-    public void setLastActivityIndex(MiruStreamId streamId, int activityIndex) throws Exception {
-        Filer filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
-
-        synchronized (filer.lock()) {
-            filer.seek(0);
-            FilerIO.writeInt(filer, activityIndex, "lastActivityIndex");
-        }
+        return indexFor(streamId).lastId();
     }
 
     @Override
@@ -98,53 +79,36 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return index.mapStoreSizeInBytes();
+        return 0;
     }
 
     @Override
     public void close() {
-        index.close();
+        store.close();
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<InboxAndLastActivityIndex<BM>> importItems) throws Exception {
-        InboxAndLastActivityIndex<BM> bulkImport = importItems.bulkExport(tenantId);
-
-        for (Map.Entry<MiruStreamId, MiruInvertedIndex<BM>> entry : bulkImport.index.entrySet()) {
-            MiruStreamId streamId = entry.getKey();
-            SwappableFiler filer = index.get(streamId.getBytes(), newFilerInitialCapacity);
-
-            synchronized (filer.lock()) {
-                filer.sync();
-                filer.seek(0);
-                if (bulkImport.lastActivityIndex.containsKey(streamId)) {
-                    FilerIO.writeInt(filer, bulkImport.lastActivityIndex.get(streamId), "lastActivityIndex");
-                } else {
-                    FilerIO.writeInt(filer, -1, "lastActivityIndex"); // Initialize lastActivityIndex to -1 if no value exists
+    public void bulkImport(final MiruTenantId tenantId, BulkExport<Void, KeyedInvertedIndexStream<BM>> export) throws Exception {
+        export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
+            @Override
+            public boolean stream(byte[] key, final MiruInvertedIndex<BM> importIndex) throws IOException {
+                try {
+                    Optional<BM> index = importIndex.getIndex();
+                    if (index.isPresent()) {
+                        long importFilerCapacity = MiruOnDiskInvertedIndex.serializedSizeInBytes(bitmaps, index.get());
+                        MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps,
+                            store,
+                            key,
+                            -1,
+                            importFilerCapacity,
+                            new Object());
+                        invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));
+                    }
+                    return true;
+                } catch (Exception e) {
+                    throw new IOException("Failed to stream import", e);
                 }
             }
-
-            final BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>(entry.getValue().getIndex(), entry.getValue().lastId());
-            MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(streamId), 4);
-            miruOnDiskInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
-                @Override
-                public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
-                    return bitmapAndLastId;
-                }
-            });
-        }
-
-        // If for some reason we didn't have an inverted index for a given streamId, handle it here
-        for (Map.Entry<MiruStreamId, Integer> entry : bulkImport.lastActivityIndex.entrySet()) {
-            if (bulkImport.index.containsKey(entry.getKey())) {
-                continue; // Already handled above
-            }
-            Filer filer = index.get(entry.getKey().getBytes(), newFilerInitialCapacity);
-
-            synchronized (filer.lock()) {
-                filer.seek(0);
-                FilerIO.writeInt(filer, entry.getValue(), "lastActivityIndex");
-            }
-        }
+        });
     }
 }

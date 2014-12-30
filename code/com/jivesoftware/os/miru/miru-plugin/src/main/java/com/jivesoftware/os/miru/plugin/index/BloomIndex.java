@@ -101,9 +101,8 @@ public class BloomIndex<BM> {
         return mights;
     }
 
-    public <V extends HasValue> void mightContain(MiruInvertedIndex<BM> bloomIndex, List<Mights<V>> mights, MightContain<V> contains) throws Exception {
+    public <V extends HasValue> void mightContain(BM bloomBitmap, List<Mights<V>> mights, MightContain<V> contains) throws Exception {
 
-        BM bloomBitmap = bloomIndex.getIndex();
         MiruIntIterator setBits = bitmaps.intIterator(bloomBitmap);
         if (setBits.hasNext()) {
             int cursor = setBits.next();

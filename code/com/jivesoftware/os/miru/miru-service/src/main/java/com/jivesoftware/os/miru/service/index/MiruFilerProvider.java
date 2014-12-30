@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.filer.io.Filer;
-import java.io.File;
+import com.jivesoftware.os.filer.io.FilerTransaction;
 import java.io.IOException;
 
 /**
@@ -9,7 +9,5 @@ import java.io.IOException;
  */
 public interface MiruFilerProvider {
 
-    File getBackingFile() throws IOException;
-
-    Filer getFiler(long length) throws IOException;
+    <R> R execute(long initialCapacity, FilerTransaction<Filer, R> filerTransaction) throws IOException;
 }

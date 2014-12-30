@@ -6,7 +6,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
@@ -26,6 +25,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
@@ -36,8 +36,6 @@ import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
-import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
@@ -180,41 +178,31 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<String>(8),
-            new ByteArrayStripingLocksProvider(8));
+            new StripingLocksProvider<MiruTermId>(8));
 
         MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
             schemaProvider,
             activityInternExtern,
             readTrackingWALReader,
             new MiruTempDirectoryResourceLocator(),
-            new OnDiskMiruContextAllocator.MiruFilerProviderFactory() {
-                @Override
-                public MiruFilerProvider getFilerProvider(MiruResourcePartitionIdentifier identifier, String name) {
-                    return new OnDiskMiruContextAllocator.MemMappedFilerProvider(identifier, name, new MiruTempDirectoryResourceLocator());
-                }
-            },
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<String>(8),
-            new ByteArrayStripingLocksProvider(8));
+            new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<MiruStreamId>(8),
+            new StripingLocksProvider<String>(8));
+
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
             schemaProvider,
             activityInternExtern,
             readTrackingWALReader,
             new MiruTempDirectoryResourceLocator(),
-            new OnDiskMiruContextAllocator.MiruFilerProviderFactory() {
-                @Override
-                public MiruFilerProvider getFilerProvider(MiruResourcePartitionIdentifier identifier, String name) {
-                    return new OnDiskMiruContextAllocator.OnDiskFilerProvider(identifier, name, new MiruTempDirectoryResourceLocator());
-                }
-            },
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<String>(8),
-            new ByteArrayStripingLocksProvider(8));
+            new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<MiruStreamId>(8),
+            new StripingLocksProvider<String>(8));
 
         contextFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()
@@ -230,6 +218,7 @@ public class MiruLocalHostedPartitionTest {
             defaultStorage);
         clusterRegistry = new MiruRCVSClusterRegistry(
             timestamper,
+            new RowColumnValueStoreImpl(),
             new RowColumnValueStoreImpl(),
             new RowColumnValueStoreImpl(),
             new RowColumnValueStoreImpl(),

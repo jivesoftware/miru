@@ -33,6 +33,8 @@ public interface MiruClusterRegistry {
 
     void ensurePartitionCoord(MiruPartitionCoord coord) throws Exception;
 
+    Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception;
+
     List<MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception;
 
     List<MiruPartition> getPartitionsForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception;

@@ -1,51 +1,50 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
-import com.jivesoftware.os.filer.chunk.store.MultiChunkStore;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.keyed.store.PartitionedMapChunkBackedKeyedStore;
-import com.jivesoftware.os.filer.keyed.store.SwappableFiler;
-import com.jivesoftware.os.filer.keyed.store.VariableKeySizeMapChunkBackedKeyedStore;
-import com.jivesoftware.os.filer.map.store.FileBackedMapChunkFactory;
+import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
+import com.jivesoftware.os.miru.service.index.SimpleBulkExport;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
-import java.io.File;
+import com.jivesoftware.os.miru.service.index.memory.KeyedInvertedIndexStream;
+import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 /** @author jonathan */
-public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<Map<String, MiruInvertedIndex<BM>>> {
+public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
+    BulkImport<Void, KeyedInvertedIndexStream<BM>> {
 
     static final BaseEncoding coder = BaseEncoding.base32().lowerCase().omitPadding();
     static final Splitter splitter = Splitter.on('.');
 
     private final MiruBitmaps<BM> bitmaps;
-    private final VariableKeySizeMapChunkBackedKeyedStore keyedStore;
+    private final KeyedFilerStore keyedStore;
     private final MiruAuthzCache<BM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
-    private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskAuthzIndex(MiruBitmaps<BM> bitmaps,
-        String[] baseMapDirectories,
-        String[] baseSwapDirectories,
-        MultiChunkStore chunkStore,
+        KeyedFilerStore keyedStore,
         MiruAuthzCache<BM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
         throws Exception {
 
-        this.stripingLocksProvider = stripingLocksProvider;
         this.bitmaps = bitmaps;
+        this.keyedStore = keyedStore;
+        this.cache = cache;
+        this.stripingLocksProvider = stripingLocksProvider;
 
+        /*
+        long newFilerInitialCapacity = 512;
         int[] keySizeThresholds = { 4, 16, 64, 256, 1_024 };
         //TODO actual capacity? should this be shared with a key prefix?
         //TODO expose to config
@@ -66,37 +65,34 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
                 stripingLocksProvider,
                 4)); //TODO expose num partitions to config
         }
-
         this.keyedStore = keyedStoreBuilder.build();
-        this.cache = cache;
+        */
     }
 
     @Override
     public long sizeInMemory() throws Exception {
-        return cache.sizeInBytes();
+        return 0;
     }
 
     @Override
     public long sizeOnDisk() throws Exception {
-        return keyedStore.sizeInBytes();
+        return 0;
     }
 
     @Override
     public void index(String authz, int id) {
-        throw new UnsupportedOperationException("On disk indexes are readOnly");
+        throw new UnsupportedOperationException("On disk authz indexes are readOnly");
     }
 
     @Override
     public void repair(String authz, int id, boolean value) throws Exception {
         MiruInvertedIndex index = get(authz);
-        if (index != null) {
-            if (value) {
-                index.set(id);
-            } else {
-                index.remove(id);
-            }
-            cache.increment(authz);
+        if (value) {
+            index.set(id);
+        } else {
+            index.remove(id);
         }
+        cache.increment(authz);
     }
 
     @Override
@@ -106,11 +102,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
     }
 
     private MiruInvertedIndex<BM> get(String authz) throws Exception {
-        SwappableFiler filer = keyedStore.get(key(authz), -1);
-        if (filer == null) {
-            return null;
-        }
-        return new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(authz));
+        return new MiruOnDiskInvertedIndex<>(bitmaps, keyedStore, key(authz), -1, -1, stripingLocksProvider.lock(authz));
     }
 
     private static byte[] key(String authz) {
@@ -141,26 +133,29 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>, BulkImport<
         return cache.getOrCompose(authzExpression, new MiruAuthzUtils.IndexRetriever<BM>() {
             @Override
             public BM getIndex(String authz) throws Exception {
-                MiruInvertedIndex<BM> index = get(authz);
-                return index != null ? index.getIndex() : null;
+                return get(authz).getIndex().orNull();
             }
         });
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<Map<String, MiruInvertedIndex<BM>>> importItems) throws Exception {
-        Map<String, MiruInvertedIndex<BM>> authzMap = importItems.bulkExport(tenantId);
-        for (Map.Entry<String, MiruInvertedIndex<BM>> entry : authzMap.entrySet()) {
-            final MiruInvertedIndex<BM> fromMiruInvertedIndex = entry.getValue();
-
-            SwappableFiler filer = keyedStore.get(key(entry.getKey()), newFilerInitialCapacity);
-            MiruOnDiskInvertedIndex<BM> toMiruInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, filer, stripingLocksProvider.lock(entry.getKey()));
-            toMiruInvertedIndex.bulkImport(tenantId, new BulkExport<BitmapAndLastId<BM>>() {
-                @Override
-                public BitmapAndLastId<BM> bulkExport(MiruTenantId tenantId) throws Exception {
-                    return new BitmapAndLastId<>(fromMiruInvertedIndex.getIndex(), fromMiruInvertedIndex.lastId());
+    public void bulkImport(final MiruTenantId tenantId, BulkExport<Void, KeyedInvertedIndexStream<BM>> export) throws Exception {
+        export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
+            @Override
+            public boolean stream(byte[] key, MiruInvertedIndex<BM> importIndex) throws IOException {
+                try {
+                    Optional<BM> index = importIndex.getIndex();
+                    if (index.isPresent()) {
+                        long importFilerCapacity = MiruOnDiskInvertedIndex.serializedSizeInBytes(bitmaps, index.get());
+                        MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(
+                            bitmaps, keyedStore, key, -1, importFilerCapacity, new Object());
+                        invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));
+                    }
+                    return true;
+                } catch (Exception e) {
+                    throw new IOException("Failed to stream import", e);
                 }
-            });
-        }
+            }
+        });
     }
 }
