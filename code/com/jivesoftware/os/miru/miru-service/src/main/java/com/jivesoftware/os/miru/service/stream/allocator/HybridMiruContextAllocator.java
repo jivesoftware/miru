@@ -128,8 +128,9 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
             chunkStores[i] = chunkStoreInitializer.initialize(
-                chunkPaths[i % chunkPaths.length],
+                chunkPaths,
                 "chunks",
+                i,
                 fromChunkStores[i].sizeInBytes(),
                 true,
                 partitionChunkStoreConcurrencyLevel);

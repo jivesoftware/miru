@@ -159,7 +159,7 @@ public class IndexTestUtil {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.initialize(pathsToPartitions[i], "chunks", 512, true, 64);
+            chunkStores[i] = chunkStoreInitializer.initialize(pathsToPartitions, "chunks", i, 512, true, 64);
         }
 
         return chunkStores;
