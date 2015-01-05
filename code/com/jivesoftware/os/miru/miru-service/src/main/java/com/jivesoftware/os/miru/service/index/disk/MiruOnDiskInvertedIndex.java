@@ -296,13 +296,17 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>,
                 byte[] bytes = new byte[(int) filer.length()];
                 FilerIO.read(filer, bytes);
                 //TODO just add a byte marker, this sucks
-                if (bytes.length > LAST_ID_LENGTH + 4 && FilerIO.bytesInt(bytes, LAST_ID_LENGTH) > 0) {
-                    int lastId = FilerIO.bytesInt(bytes, 0);
-                    DataInput dataInput = ByteStreams.newDataInput(bytes, LAST_ID_LENGTH);
-                    try {
-                        return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
-                    } catch (Exception e) {
-                        throw new IOException("Failed to deserialize", e);
+                if (bytes.length > LAST_ID_LENGTH + 4) {
+                    if (FilerIO.bytesInt(bytes, LAST_ID_LENGTH) > 0) {
+                        int lastId = FilerIO.bytesInt(bytes, 0);
+                        DataInput dataInput = ByteStreams.newDataInput(bytes, LAST_ID_LENGTH);
+                        try {
+                            return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
+                        } catch (Exception e) {
+                            throw new IOException("Failed to deserialize", e);
+                        }
+                    } else {
+                        return new BitmapAndLastId<>(bitmaps.create(), -1);
                     }
                 }
             }
