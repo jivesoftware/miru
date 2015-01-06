@@ -164,9 +164,9 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             KeyedFilerStore[] indexes = new KeyedFilerStore[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 int fieldId = fieldDefinition.fieldId;
-                if (fieldType == MiruFieldType.latest && !fieldDefinition.indexLatest ||
-                    fieldType == MiruFieldType.pairedLatest && fieldDefinition.pairedLatestFieldNames.isEmpty() ||
-                    fieldType == MiruFieldType.bloom && fieldDefinition.bloomFieldNames.isEmpty()) {
+                if (fieldType == MiruFieldType.latest && !fieldDefinition.indexLatest
+                    || fieldType == MiruFieldType.pairedLatest && fieldDefinition.pairedLatestFieldNames.isEmpty()
+                    || fieldType == MiruFieldType.bloom && fieldDefinition.bloomFieldNames.isEmpty()) {
                     indexes[fieldId] = null;
                 } else {
                     indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId));
@@ -185,8 +185,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             .build();
 
         TxKeyObjectStore<byte[], ReadWrite<BM>>[] authZPartitiones = new TxKeyObjectStore[chunkStores.length];
-        for(int i=0;i<chunkStores.length;i++) {
-            authZPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i], 
+        for (int i = 0; i < chunkStores.length; i++) {
+            authZPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
                 PassThroughKeyMarshaller.INSTANCE,
                 keyBytes("authzIndex"),
                 10, //TODO expose to config
@@ -196,12 +196,11 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
         MiruInMemoryAuthzIndex<BM> authzIndex = new MiruInMemoryAuthzIndex<>(
             bitmaps,
-            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(),authZPartitiones),
+            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), authZPartitiones),
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
 
-
         TxKeyObjectStore<byte[], ReadWrite<BM>>[] removealIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
-        for(int i=0;i<chunkStores.length;i++) {
+        for (int i = 0; i < chunkStores.length; i++) {
             removealIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
                 PassThroughKeyMarshaller.INSTANCE,
                 keyBytes("removalIndex"),
@@ -212,13 +211,12 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
         MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(
             bitmaps,
-            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(),removealIndexPartitiones),
-            new byte[] { 0 },
+            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), removealIndexPartitiones),
+            new byte[]{0},
             -1);
 
-
         TxKeyObjectStore<byte[], ReadWrite<BM>>[] unreadTrackingIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
-        for(int i=0;i<chunkStores.length;i++) {
+        for (int i = 0; i < chunkStores.length; i++) {
             unreadTrackingIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
                 PassThroughKeyMarshaller.INSTANCE,
                 keyBytes("unreadTrackingIndex"),
@@ -230,11 +228,9 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         MiruInMemoryUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex<>(bitmaps,
             new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), unreadTrackingIndexPartitiones));
 
-
-
         TxKeyObjectStore<byte[], ReadWrite<BM>>[] inboxIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
-        for(int i=0;i<chunkStores.length;i++) {
-            unreadTrackingIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
+        for (int i = 0; i < chunkStores.length; i++) {
+            inboxIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
                 PassThroughKeyMarshaller.INSTANCE,
                 keyBytes("inboxIndex"),
                 10, //TODO expose to config
