@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.filer.io.ByteArrayPartitionFunction;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
@@ -208,6 +209,7 @@ public class MiruInvertedIndexTest {
         return new MiruInMemoryInvertedIndex<>(bitmaps,
             IndexTestUtil.<byte[], ReadWrite<BM>>buildKeyObjectStore("index",
                 IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory()),
+                new ByteArrayPartitionFunction(),
                 PassThroughKeyMarshaller.INSTANCE,
                 1,
                 false),

@@ -6,13 +6,16 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.filer.io.ByteArrayPartitionFunction;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyObjectStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
+import com.jivesoftware.os.filer.keyed.store.TxPartitionedKeyObjectStore;
 import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
@@ -180,42 +183,66 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             .maximumSize(partitionAuthzCacheSize)
             .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
             .build();
-        MiruInMemoryAuthzIndex<BM> authzIndex = new MiruInMemoryAuthzIndex<>(
-            bitmaps,
-            new TxKeyObjectStore<byte[], ReadWrite<BM>>(chunkStores,
+
+        TxKeyObjectStore<byte[], ReadWrite<BM>>[] authZPartitiones = new TxKeyObjectStore[chunkStores.length];
+        for(int i=0;i<chunkStores.length;i++) {
+            authZPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i], 
                 PassThroughKeyMarshaller.INSTANCE,
                 keyBytes("authzIndex"),
                 10, //TODO expose to config
                 128, //TODO ditto
-                true),
+                true);
+        }
+
+        MiruInMemoryAuthzIndex<BM> authzIndex = new MiruInMemoryAuthzIndex<>(
+            bitmaps,
+            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(),authZPartitiones),
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
 
-        MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(
-            bitmaps,
-            new TxKeyObjectStore<byte[], ReadWrite<BM>>(chunkStores,
+
+        TxKeyObjectStore<byte[], ReadWrite<BM>>[] removealIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
+        for(int i=0;i<chunkStores.length;i++) {
+            removealIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
                 PassThroughKeyMarshaller.INSTANCE,
                 keyBytes("removalIndex"),
                 2,
                 1,
-                false),
+                false);
+        }
+
+        MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(
+            bitmaps,
+            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(),removealIndexPartitiones),
             new byte[] { 0 },
             -1);
 
-        MiruInMemoryUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex<>(bitmaps,
-            new TxKeyObjectStore<byte[], ReadWrite<BM>>(chunkStores,
+
+        TxKeyObjectStore<byte[], ReadWrite<BM>>[] unreadTrackingIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
+        for(int i=0;i<chunkStores.length;i++) {
+            unreadTrackingIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
                 PassThroughKeyMarshaller.INSTANCE,
                 keyBytes("unreadTrackingIndex"),
                 10, //TODO expose to config
                 16, //TODO ditto (except expose to schema instead)
-                true));
+                true);
+        }
 
-        MiruInMemoryInboxIndex<BM> inboxIndex = new MiruInMemoryInboxIndex<>(bitmaps,
-            new TxKeyObjectStore<byte[], ReadWrite<BM>>(chunkStores,
+        MiruInMemoryUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex<>(bitmaps,
+            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), unreadTrackingIndexPartitiones));
+
+
+
+        TxKeyObjectStore<byte[], ReadWrite<BM>>[] inboxIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
+        for(int i=0;i<chunkStores.length;i++) {
+            unreadTrackingIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
                 PassThroughKeyMarshaller.INSTANCE,
                 keyBytes("inboxIndex"),
                 10, //TODO expose to config
                 16, //TODO ditto (except expose to schema instead)
-                true));
+                true);
+        }
+        MiruInMemoryInboxIndex<BM> inboxIndex = new MiruInMemoryInboxIndex<>(bitmaps,
+            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), inboxIndexPartitiones));
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 

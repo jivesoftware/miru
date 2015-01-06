@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.stream.allocator;
 
+import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;

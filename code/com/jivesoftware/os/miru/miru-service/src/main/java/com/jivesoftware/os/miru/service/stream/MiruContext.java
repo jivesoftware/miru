@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
  * Composes the building blocks of a MiruContext together for convenience.
  *
  * @author jonathan
+ * @param <BM>
  */
 public class MiruContext<BM> implements MiruRequestContext<BM> {
 
