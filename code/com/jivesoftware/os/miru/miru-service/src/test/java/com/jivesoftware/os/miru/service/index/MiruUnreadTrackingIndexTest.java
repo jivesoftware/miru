@@ -77,8 +77,8 @@ public class MiruUnreadTrackingIndexTest {
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
-        EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).get();
-        assertEquals(unread.cardinality(), 0);
+        Optional<EWAHCompressedBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId);
+        assertFalse(unread.isPresent());
 
         miruUnreadTrackingIndex.index(streamId, 1);
         miruUnreadTrackingIndex.index(streamId, 3);
@@ -88,19 +88,21 @@ public class MiruUnreadTrackingIndexTest {
         readMask.set(2);
         miruUnreadTrackingIndex.applyRead(streamId, readMask);
 
-        unread = miruUnreadTrackingIndex.getUnread(streamId).get();
-        assertEquals(unread.cardinality(), 1);
-        assertTrue(unread.get(3));
+        unread = miruUnreadTrackingIndex.getUnread(streamId);
+        assertTrue(unread.isPresent());
+        assertEquals(unread.get().cardinality(), 1);
+        assertTrue(unread.get().get(3));
 
         EWAHCompressedBitmap unreadMask = new EWAHCompressedBitmap();
         unreadMask.set(1);
         unreadMask.set(3);
         miruUnreadTrackingIndex.applyUnread(streamId, unreadMask);
 
-        unread = miruUnreadTrackingIndex.getUnread(streamId).get();
-        assertEquals(unread.cardinality(), 2);
-        assertTrue(unread.get(1));
-        assertTrue(unread.get(3));
+        unread = miruUnreadTrackingIndex.getUnread(streamId);
+        assertTrue(unread.isPresent());
+        assertEquals(unread.get().cardinality(), 2);
+        assertTrue(unread.get().get(1));
+        assertTrue(unread.get().get(3));
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")

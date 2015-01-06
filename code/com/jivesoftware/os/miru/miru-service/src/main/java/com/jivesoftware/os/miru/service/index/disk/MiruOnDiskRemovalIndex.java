@@ -10,9 +10,8 @@ public class MiruOnDiskRemovalIndex<BM> extends MiruOnDiskInvertedIndex<BM> impl
         KeyedFilerStore keyedFilerStore,
         byte[] keyBytes,
         int considerIfIndexIdGreaterThanN,
-        long initialCapacityInBytes,
         Object mutationLock) {
 
-        super(bitmaps, keyedFilerStore, keyBytes, considerIfIndexIdGreaterThanN, initialCapacityInBytes, mutationLock);
+        super(bitmaps, keyedFilerStore, keyBytes, considerIfIndexIdGreaterThanN, mutationLock);
     }
 }

@@ -184,7 +184,8 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex,
 
     @Override
     public void stream(Stream stream) throws Exception {
-        for (int i = 0; i < timestamps.length; i++) {
+        int lastId = lastId();
+        for (int i = 0; i <= lastId; i++) {
             if (!stream.stream(new Entry(timestamps[i], i))) {
                 break;
             }

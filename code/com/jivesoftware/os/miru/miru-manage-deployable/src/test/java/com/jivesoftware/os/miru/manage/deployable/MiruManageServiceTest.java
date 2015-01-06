@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
@@ -42,12 +43,17 @@ public class MiruManageServiceTest {
     public void before() throws Exception {
         int numberOfReplicas = 3;
 
+        tenantId = new MiruTenantId("test1".getBytes());
+        partitionId = MiruPartitionId.of(0);
+        hosts = Lists.newArrayList();
+
         MiruSoyRendererConfig config = BindInterfaceToConfiguration.bindDefault(MiruSoyRendererConfig.class);
         config.setPathToSoyResources("src/main/home/resources/soy");
 
         InMemorySetOfSortedMapsImplInitializer setOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
         ObjectMapper mapper = new ObjectMapper();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", setOfSortedMapsImplInitializer, mapper);
+        registryStore.getWriterPartitionRegistry().add(MiruVoidByte.INSTANCE, tenantId, 1, MiruPartitionId.of(0), null, null);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
             registryStore.getHostsRegistry(),
             registryStore.getExpectedTenantsRegistry(),
@@ -63,10 +69,6 @@ public class MiruManageServiceTest {
         miruManageService = new MiruManageInitializer().initialize(renderer, clusterRegistry, registryStore, miruWAL);
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
-
-        tenantId = new MiruTenantId("test1".getBytes());
-        partitionId = MiruPartitionId.of(0);
-        hosts = Lists.newArrayList();
 
         for (int i = 0; i < numberOfReplicas; i++) {
             MiruHost host = new MiruHost("host" + i, 10_000 + i);

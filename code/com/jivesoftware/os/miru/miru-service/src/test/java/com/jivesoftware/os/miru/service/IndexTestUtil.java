@@ -97,8 +97,7 @@ public class IndexTestUtil {
 
         MiruReadTrackingWALReaderImpl readTrackingWALReader = new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL);
 
-        return new OnDiskMiruContextAllocator("onDisk",
-            schemaProvider,
+        return new OnDiskMiruContextAllocator(schemaProvider,
             activityInternExtern,
             readTrackingWALReader,
             new MiruTempDirectoryResourceLocator(),
@@ -130,13 +129,13 @@ public class IndexTestUtil {
         int keySize,
         boolean variableKeySize) {
 
-        TxKeyObjectStore<K,V>[] partitions = new TxKeyObjectStore[chunkStores.length];
-        for(int i=0;i<chunkStores.length;i++) {
+        TxKeyObjectStore<K, V>[] partitions = new TxKeyObjectStore[chunkStores.length];
+        for (int i = 0; i < chunkStores.length; i++) {
             partitions[i] = new TxKeyObjectStore<>(chunkStores[i],
-            keyMarshaller,
-            keyBytes(name),
-            10,
-            keySize, variableKeySize);
+                keyMarshaller,
+                keyBytes(name),
+                10,
+                keySize, variableKeySize);
         }
 
         return new TxPartitionedKeyObjectStore<>(partitionFunction, partitions);

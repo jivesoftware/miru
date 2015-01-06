@@ -23,22 +23,12 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     private final MiruBitmaps<BM> bitmaps;
     private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
-    private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, KeyedFilerStore store, StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
         this.store = store;
         this.stripingLocksProvider = stripingLocksProvider;
-        /*
-        //TODO actual capacity? should this be shared with a key prefix?
-        this.store = new PartitionedMapChunkBackedKeyedStore(
-            new FileBackedMapChunkFactory(8, false, 8, false, 100, mapDirectories),
-            new FileBackedMapChunkFactory(8, false, 8, false, 100, swapDirectories),
-            chunkStore,
-            keyedStoreStripingLocksProvider,
-            4); //TODO expose number of partitions
-        */
     }
 
     @Override
@@ -48,7 +38,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
 
     @Override
     public Optional<BM> getUnread(MiruStreamId streamId) throws Exception {
-        return new MiruOnDiskInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, -1, stripingLocksProvider.lock(streamId)).getIndex();
+        return new MiruOnDiskInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, stripingLocksProvider.lock(streamId)).getIndex();
     }
 
     @Override
@@ -57,7 +47,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
     }
 
     private MiruInvertedIndex<BM> getOrCreateUnread(MiruStreamId streamId) throws Exception {
-        return new MiruOnDiskInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, newFilerInitialCapacity, stripingLocksProvider.lock(streamId));
+        return new MiruOnDiskInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, stripingLocksProvider.lock(streamId));
     }
 
     @Override
@@ -93,7 +83,7 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
             @Override
             public boolean stream(byte[] key, MiruInvertedIndex<BM> importIndex) throws IOException {
                 try {
-                    MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, store, key, -1, -1, new Object());
+                    MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, store, key, -1, new Object());
                     invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));
                     return true;
                 } catch (Exception e) {

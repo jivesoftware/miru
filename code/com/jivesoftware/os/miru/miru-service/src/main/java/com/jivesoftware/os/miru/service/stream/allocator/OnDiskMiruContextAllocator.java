@@ -1,14 +1,13 @@
 package com.jivesoftware.os.miru.service.stream.allocator;
 
-import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
@@ -35,14 +34,12 @@ import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInboxIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskRemovalIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.locator.MiruDiskResourceAnalyzer;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import java.io.File;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -52,21 +49,18 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
     private static final String DISK_FORMAT_VERSION = "version-10";
 
-    private final String contextName;
     private final MiruSchemaProvider schemaProvider;
     private final MiruActivityInternExtern activityInternExtern;
     private final MiruReadTrackingWALReader readTrackingWALReader;
     private final MiruResourceLocator resourceLocator;
     private final int numberOfChunkStores;
     private final int partitionAuthzCacheSize;
-    private final MiruDiskResourceAnalyzer diskResourceAnalyzer = new MiruDiskResourceAnalyzer();
     private final int partitionChunkStoreConcurrencyLevel;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
 
-    public OnDiskMiruContextAllocator(String contextName,
-        MiruSchemaProvider schemaProvider,
+    public OnDiskMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
         MiruReadTrackingWALReader readTrackingWALReader,
         MiruResourceLocator resourceLocator,
@@ -75,7 +69,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         int partitionChunkStoreConcurrencyLevel,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider, StripingLocksProvider<String> authzStripingLocksProvider) {
-        this.contextName = contextName;
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -90,18 +83,14 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
     @Override
     public boolean checkMarkedStorage(MiruPartitionCoord coord) throws Exception {
-        List<String> mapDirectories = Lists.newArrayList("activity", "index", "authz", "unread", "inbox", "timestampToIndex");
-
         MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
         String[] chunkPaths = filesToPaths(resourceLocator.getChunkDirectories(identifier, "chunks"));
         if (!new ChunkStoreInitializer().checkExists(chunkPaths, "chunks", numberOfChunkStores)) {
             return false;
         }
 
-        return diskResourceAnalyzer.checkExists(
-            resourceLocator.getPartitionPaths(identifier),
-            Lists.newArrayList(DISK_FORMAT_VERSION),
-            mapDirectories);
+        File versionFile = resourceLocator.getFilerFile(new MiruPartitionCoordIdentifier(coord), DISK_FORMAT_VERSION);
+        return versionFile.exists();
     }
 
     @Override
@@ -115,9 +104,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
         File versionFile = resourceLocator.getFilerFile(identifier, DISK_FORMAT_VERSION);
         versionFile.createNewFile();
-
-        File contextNameFile = resourceLocator.getFilerFile(identifier, contextName);
-        contextNameFile.createNewFile();
 
         String[] chunkPaths = filesToPaths(resourceLocator.getChunkDirectories(identifier, "chunks"));
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
@@ -138,7 +124,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             new TxKeyValueStore<>(chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
-                4, false, 8, false));
+                8, false, 4, false));
 
         TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"));
         MiruChunkActivityIndex activityIndex = new MiruChunkActivityIndex(
@@ -180,7 +166,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex")),
             new byte[] { 0 },
             -1,
-            512, //TODO expose to config
             new Object());
 
         MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,

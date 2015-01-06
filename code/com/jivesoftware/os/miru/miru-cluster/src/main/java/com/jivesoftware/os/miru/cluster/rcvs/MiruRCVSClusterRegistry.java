@@ -174,9 +174,11 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         writerPartitionRegistry.getValues(MiruVoidByte.INSTANCE, tenantId, null, null, 1_000, false, null, null, new CallbackStream<MiruPartitionId>() {
             @Override
             public MiruPartitionId callback(MiruPartitionId partitionId) throws Exception {
-                MiruPartitionId latest = latestPartitionId.get();
-                if (latest == null || partitionId.compareTo(latest) > 0) {
-                    latestPartitionId.set(partitionId);
+                if (partitionId != null) {
+                    MiruPartitionId latest = latestPartitionId.get();
+                    if (latest == null || partitionId.compareTo(latest) > 0) {
+                        latestPartitionId.set(partitionId);
+                    }
                 }
                 return partitionId;
             }

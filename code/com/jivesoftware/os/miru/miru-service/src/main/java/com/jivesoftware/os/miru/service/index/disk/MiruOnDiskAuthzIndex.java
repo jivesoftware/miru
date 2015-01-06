@@ -1,9 +1,6 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
-import com.google.common.io.BaseEncoding;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -18,14 +15,10 @@ import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.memory.KeyedInvertedIndexStream;
 import java.io.IOException;
-import java.util.List;
 
 /** @author jonathan */
 public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
     BulkImport<Void, KeyedInvertedIndexStream<BM>> {
-
-    static final BaseEncoding coder = BaseEncoding.base32().lowerCase().omitPadding();
-    static final Splitter splitter = Splitter.on('.');
 
     private final MiruBitmaps<BM> bitmaps;
     private final KeyedFilerStore keyedStore;
@@ -102,30 +95,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
     }
 
     private MiruInvertedIndex<BM> get(String authz) throws Exception {
-        return new MiruOnDiskInvertedIndex<>(bitmaps, keyedStore, key(authz), -1, -1, stripingLocksProvider.lock(authz));
-    }
-
-    private static byte[] key(String authz) {
-        boolean negated = authz.endsWith("#");
-        if (negated) {
-            authz = authz.substring(0, authz.length() - 1);
-        }
-        List<byte[]> bytesList = Lists.newArrayList();
-        for (String authzComponent : splitter.split(authz)) {
-            byte[] bytes = coder.decode(authzComponent);
-            bytesList.add(bytes);
-        }
-        if (negated) {
-            bytesList.add(new byte[] { 0 });
-        }
-        int length = bytesList.size() * 8;
-        byte[] concatenatedAuthzBytes = new byte[length];
-        int i = 0;
-        for (byte[] bytes : bytesList) {
-            System.arraycopy(bytes, 0, concatenatedAuthzBytes, i * 8, bytes.length);
-            i++;
-        }
-        return concatenatedAuthzBytes;
+        return new MiruOnDiskInvertedIndex<>(bitmaps, keyedStore, MiruAuthzUtils.key(authz), -1, stripingLocksProvider.lock(authz));
     }
 
     @Override
@@ -146,9 +116,8 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
                 try {
                     Optional<BM> index = importIndex.getIndex();
                     if (index.isPresent()) {
-                        long importFilerCapacity = MiruOnDiskInvertedIndex.serializedSizeInBytes(bitmaps, index.get());
                         MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(
-                            bitmaps, keyedStore, key, -1, importFilerCapacity, new Object());
+                            bitmaps, keyedStore, key, -1, new Object());
                         invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));
                     }
                     return true;

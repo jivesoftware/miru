@@ -93,19 +93,7 @@ public class MiruContextFactoryTest {
             config.getPartitionChunkStoreConcurrencyLevel(),
             new StripingLocksProvider<MiruTermId>(8));
 
-        MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
-            schemaProvider,
-            activityInternExtern,
-            readTrackingWALReader,
-            diskResourceLocator,
-            config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize(),
-            config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<MiruTermId>(8),
-            new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8));
-        MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
-            schemaProvider,
+        MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
             activityInternExtern,
             readTrackingWALReader,
             diskResourceLocator,
@@ -122,7 +110,7 @@ public class MiruContextFactoryTest {
                 .put(MiruBackingStorage.memory_fixed, hybridContextAllocator)
                 .put(MiruBackingStorage.hybrid, hybridContextAllocator)
                 .put(MiruBackingStorage.hybrid_fixed, hybridContextAllocator)
-                .put(MiruBackingStorage.mem_mapped, memMappedContextAllocator)
+                .put(MiruBackingStorage.mem_mapped, diskContextAllocator)
                 .put(MiruBackingStorage.disk, diskContextAllocator)
                 .build(),
             diskResourceLocator,

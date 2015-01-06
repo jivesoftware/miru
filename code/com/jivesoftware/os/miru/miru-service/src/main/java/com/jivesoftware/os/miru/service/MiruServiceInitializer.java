@@ -136,20 +136,7 @@ public class MiruServiceInitializer {
             fieldIndexStripingLocksProvider);
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
-        MiruContextAllocator memMappedContextAllocator = new OnDiskMiruContextAllocator("memMap",
-            schemaProvider,
-            internExtern,
-            readTrackingWALReader,
-            diskResourceLocator,
-            config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize(),
-            config.getPartitionChunkStoreConcurrencyLevel(),
-            fieldIndexStripingLocksProvider,
-            streamStripingLocksProvider,
-            authzStripingLocksProvider);
-
-        MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator("onDisk",
-            schemaProvider,
+        MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
             internExtern,
             readTrackingWALReader,
             diskResourceLocator,
@@ -166,7 +153,7 @@ public class MiruServiceInitializer {
                 .put(MiruBackingStorage.memory_fixed, hybridContextAllocator)
                 .put(MiruBackingStorage.hybrid, hybridContextAllocator)
                 .put(MiruBackingStorage.hybrid_fixed, hybridContextAllocator)
-                .put(MiruBackingStorage.mem_mapped, memMappedContextAllocator)
+                .put(MiruBackingStorage.mem_mapped, diskContextAllocator)
                 .put(MiruBackingStorage.disk, diskContextAllocator)
                 .build(),
             diskResourceLocator,

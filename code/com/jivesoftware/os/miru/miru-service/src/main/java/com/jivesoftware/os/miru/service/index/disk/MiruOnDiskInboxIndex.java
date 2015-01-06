@@ -28,19 +28,6 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
         throws Exception {
         this.bitmaps = bitmaps;
         this.store = store;
-        /*
-        String[] mapDirectories,
-        String[] swapDirectories,
-        MultiChunkStore chunkStore,
-        StripingLocksProvider<String> keyedStoreStripingLocksProvider
-        //TODO actual capacity? should this be shared with a key prefix?
-        this.index = new PartitionedMapChunkBackedKeyedStore(
-            new FileBackedMapChunkFactory(8, false, 8, false, 100, mapDirectories),
-            new FileBackedMapChunkFactory(8, false, 8, false, 100, swapDirectories),
-            chunkStore,
-            keyedStoreStripingLocksProvider,
-            4); //TODO expose number of partitions
-        */
     }
 
     @Override
@@ -53,7 +40,6 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
             store,
             streamId.getBytes(),
             -1,
-            newFilerInitialCapacity,
             stripingLocksProvider.lock(streamId));
     }
 
@@ -95,12 +81,10 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
                 try {
                     Optional<BM> index = importIndex.getIndex();
                     if (index.isPresent()) {
-                        long importFilerCapacity = MiruOnDiskInvertedIndex.serializedSizeInBytes(bitmaps, index.get());
                         MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps,
                             store,
                             key,
                             -1,
-                            importFilerCapacity,
                             new Object());
                         invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));
                     }

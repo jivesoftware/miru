@@ -219,8 +219,8 @@ public class CollaborativeFiltering {
                                 fieldId,
                                 indexUtil.makeBloomTerm(fieldValues[0], request.query.retrieveFieldName2))
                                 .getIndex();
-                            if (index.isPresent()) {
                                 final MutableInt count = new MutableInt(0);
+                            if (index.isPresent()) {
                                 bloomIndex.mightContain(index.get(), wantBits, new BloomIndex.MightContain<MiruTermCount>() {
 
                                     @Override

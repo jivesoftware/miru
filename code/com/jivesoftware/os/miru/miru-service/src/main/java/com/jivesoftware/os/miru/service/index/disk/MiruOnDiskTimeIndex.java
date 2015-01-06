@@ -94,7 +94,8 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
      *      1536: { 1536, 1664, 1792, 1920 }
      * </pre>
      */
-    private void segmentForSearch(Filer filer, int remainingLevels, int segments, long fp, int smallestId, int largestId) throws IOException {
+    private static void segmentForSearch(Filer filer, long searchIndexSizeInBytes, int remainingLevels, int segments, long fp, int smallestId, int largestId)
+        throws IOException {
         final int delta = largestId - smallestId;
 
         // first select the ids for this section
@@ -132,7 +133,8 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
             for (int i = 0; i < segments; i++) {
                 int segmentSmallestId = segmentAtIds[i];
                 int segmentLargestId = (i < segments - 1) ? segmentAtIds[i + 1] : largestId;
-                segmentForSearch(filer, remainingLevels, segments, subSegmentsFp + i * subSegmentWidth, segmentSmallestId, segmentLargestId);
+                segmentForSearch(filer, searchIndexSizeInBytes, remainingLevels, segments, subSegmentsFp + i * subSegmentWidth,
+                    segmentSmallestId, segmentLargestId);
             }
         }
     }
@@ -362,8 +364,7 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
                 FilerIO.writeShort(filer, levels, "searchIndexLevels");
                 FilerIO.writeShort(filer, segments, "searchIndexSegments");
 
-                filer.seek(headerSizeInBytes);
-                segmentForSearch(filer, levels, segments, headerSizeInBytes, 0, lastId.get() + 1);
+                segmentForSearch(filer, searchIndexSizeInBytes, levels, segments, headerSizeInBytes, 0, lastId.get() + 1);
 
                 return null;
             }

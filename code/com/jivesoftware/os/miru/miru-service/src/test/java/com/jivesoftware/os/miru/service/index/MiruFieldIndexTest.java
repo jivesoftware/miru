@@ -113,8 +113,8 @@ public class MiruFieldIndexTest {
         ((BulkImport) miruOnDiskFieldIndex).bulkImport(tenantId, (BulkExport) miruHybridFieldIndex);
 
         return new Object[][] {
-            { miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory },
-            { miruOnDiskFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.disk }
+            { bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory },
+            { bitmaps, miruOnDiskFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.disk }
         };
     }
 }

@@ -43,8 +43,8 @@ public class MiruInboxIndexTest {
         assertNotNull(inbox);
         Optional<EWAHCompressedBitmap> inboxIndex = miruInboxIndex.getInbox(miruStreamId);
         assertNotNull(inboxIndex);
-        assertTrue(inboxIndex.isPresent());
-        assertEquals(inboxIndex.get().sizeInBytes(), 8);
+        assertFalse(inboxIndex.isPresent());
+        //assertEquals(inboxIndex.get().sizeInBytes(), 8);
     }
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
@@ -63,19 +63,6 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testLastActivityIndexNotSetAutomatically(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds)
-        throws Exception {
-
-        int lastActivityIndex = miruInboxIndex.getLastActivityIndex(streamId);
-        assertEquals(lastActivityIndex, -1);
-
-        int nextId = Integer.MAX_VALUE / 2;
-        miruInboxIndex.index(streamId, nextId);
-        lastActivityIndex = miruInboxIndex.getLastActivityIndex(streamId);
-        assertEquals(lastActivityIndex, -1);
-    }
-
-    @Test(dataProvider = "miruInboxIndexDataProviderWithData")
     public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId,
         List<Integer> indexedIds) throws Exception {
 
@@ -86,16 +73,19 @@ public class MiruInboxIndexTest {
         int nextId = Integer.MAX_VALUE / 2;
         miruInboxIndex.index(newStreamId, nextId);
         lastActivityIndex = miruInboxIndex.getLastActivityIndex(newStreamId);
-        assertEquals(lastActivityIndex, -1);
+        assertEquals(lastActivityIndex, nextId);
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
     public void testLastActivityIndex(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
 
+        int expected = miruInboxIndex.getLastActivityIndex(streamId);
+        assertEquals(expected, indexedIds.get(indexedIds.size() - 1).intValue());
+
         int nextId = Integer.MAX_VALUE / 3;
         miruInboxIndex.getAppender(streamId).appendAndExtend(Collections.<Integer>emptyList(), nextId);
         int lastActivityIndex = miruInboxIndex.getLastActivityIndex(streamId);
-        assertEquals(lastActivityIndex, nextId);
+        assertEquals(lastActivityIndex, expected);
     }
 
     @DataProvider(name = "miruInboxIndexDataProvider")

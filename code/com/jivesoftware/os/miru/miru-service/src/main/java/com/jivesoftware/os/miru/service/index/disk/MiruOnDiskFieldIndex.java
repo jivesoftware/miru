@@ -30,7 +30,6 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>,
     private final KeyedFilerStore[] indexes;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
-    private final long newFilerInitialCapacity = 512;
 
     public MiruOnDiskFieldIndex(MiruBitmaps<BM> bitmaps,
         KeyedFilerStore[] indexes,
@@ -74,12 +73,12 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>,
 
     @Override
     public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId) throws Exception {
-        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, -1, stripingLocksProvider.lock(termId));
+        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, stripingLocksProvider.lock(termId));
     }
 
     @Override
     public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), considerIfIndexIdGreaterThanN, -1,
+        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), considerIfIndexIdGreaterThanN,
             stripingLocksProvider.lock(termId));
     }
 
@@ -89,7 +88,7 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>,
     }
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
-        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, newFilerInitialCapacity, stripingLocksProvider.lock(termId));
+        return new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, stripingLocksProvider.lock(termId));
     }
 
     @Override
@@ -105,7 +104,7 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>,
                     @Override
                     public boolean stream(final BulkEntry<byte[], MiruInvertedIndex<BM>> entry) throws Exception {
                         MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId.get()], entry.key,
-                            -1, newFilerInitialCapacity, stripingLocksProvider.lock(new MiruTermId(entry.key)));
+                            -1, stripingLocksProvider.lock(new MiruTermId(entry.key)));
                         miruOnDiskInvertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(entry.value));
                         return true;
                     }
@@ -131,12 +130,11 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>,
                         @Override
                         public boolean stream(IBA iba, Filer filer) throws IOException {
                             try {
-                                callback.stream(new BulkEntry<byte[], MiruInvertedIndex<BM>>(iba.getBytes(),
-                                    new MiruOnDiskInvertedIndex<>(bitmaps, index, iba.getBytes(), -1, newFilerInitialCapacity, new Object())));
+                                return callback.stream(new BulkEntry<byte[], MiruInvertedIndex<BM>>(iba.getBytes(),
+                                    new MiruOnDiskInvertedIndex<>(bitmaps, index, iba.getBytes(), -1, new Object())));
                             } catch (Exception e) {
                                 throw new IOException("Failed to stream export", e);
                             }
-                            return false;
                         }
                     });
                     return null;

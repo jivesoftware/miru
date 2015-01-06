@@ -149,8 +149,12 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
     private <BM> MiruContext<BM> buildMiruContext(MiruBitmaps<BM> bitmaps, MiruSchema schema, ChunkStore[] chunkStores)
         throws Exception {
 
-        MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent(),
-            new TxKeyValueStore<>(chunkStores, new LongIntKeyValueMarshaller(), keyBytes("timeIndex"), 8, false, 4, false));
+        MiruInMemoryTimeIndex timeIndex = new MiruInMemoryTimeIndex(
+            Optional.<MiruInMemoryTimeIndex.TimeOrderAnomalyStream>absent(),
+            new TxKeyValueStore<>(chunkStores,
+                new LongIntKeyValueMarshaller(),
+                keyBytes("timeIndex"),
+                8, false, 4, false));
 
         TxKeyedFilerStore activityKeyedFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex-map"));
         MiruChunkActivityIndex activityIndex = new MiruChunkActivityIndex(
@@ -212,7 +216,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(
             bitmaps,
             new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), removealIndexPartitiones),
-            new byte[]{0},
+            new byte[] { 0 },
             -1);
 
         TxKeyObjectStore<byte[], ReadWrite<BM>>[] unreadTrackingIndexPartitiones = new TxKeyObjectStore[chunkStores.length];

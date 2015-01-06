@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.index.memory;
 
-import com.google.common.base.Charsets;
 import com.jivesoftware.os.filer.map.store.api.KeyValueContext;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueTransaction;
@@ -65,7 +64,7 @@ public class MiruInMemoryAuthzIndex<BM> implements MiruAuthzIndex<BM>,
     }
 
     private MiruInvertedIndex<BM> getOrAllocate(String authz) {
-        return new MiruInMemoryInvertedIndex<>(bitmaps, store, authz.getBytes(Charsets.UTF_8), -1);
+        return new MiruInMemoryInvertedIndex<>(bitmaps, store, MiruAuthzUtils.key(authz), -1);
     }
 
     @Override
