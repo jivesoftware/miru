@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.BulkStream;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,11 +19,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /** @author jonathan */
 public class MiruOnDiskTimeIndex implements MiruTimeIndex,
-    BulkImport<Void, BulkStream<MiruTimeIndex.Entry>> {
+    BulkImport<MiruTimeIndex, Void> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private static final int headerSizeInBytes = 4 + 8 + 8 + 4 + 2 + 2;
+    private static final short levels = 3; // TODO - Config or allow it to be passed in?
+    private static final short segments = 10; // TODO - Config or allow it to be passed in?
 
     private static final int timestampSize = 8;
     private static final int searchIndexKeySize = 8;
@@ -279,6 +280,29 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
     }
 
     @Override
+    public void stream(final Stream stream) throws Exception {
+        filerProvider.execute(-1, new FilerTransaction<Filer, Void>() {
+            @Override
+            public Void commit(Filer filer) throws IOException {
+                filer.seek(headerSizeInBytes + segmentWidth(levels, segments));
+                int count = lastId() + 1;
+                for (int i = 0; i < count; i++) {
+                    long ts = FilerIO.readLong(filer, "ts");
+                    int index = timestampToIndex.execute(ts, false, streamTransaction);
+                    try {
+                        if (!stream.stream(new Entry(ts, index))) {
+                            break;
+                        }
+                    } catch (Exception e) {
+                        throw new IOException("Failed to stream", e);
+                    }
+                }
+                return null;
+            }
+        });
+    }
+
+    @Override
     public long sizeInMemory() {
         return 0;
     }
@@ -293,24 +317,24 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
     }
 
     @Override
-    public void bulkImport(final MiruTenantId tenantId, final BulkExport<Void, BulkStream<Entry>> export) throws Exception {
-        //TODO expose to config
-        filerProvider.execute(512, new FilerTransaction<Filer, Void>() {
+    public void bulkImport(final MiruTenantId tenantId, final BulkExport<MiruTimeIndex, Void> export) throws Exception {
+        final MiruTimeIndex importTimeIndex = export.bulkExport(tenantId, null);
+        int numberOfEntries = importTimeIndex.lastId() + 1;
+
+        final int searchIndexSizeInBytes = segmentWidth(levels, segments);
+        int initialFilerSize = headerSizeInBytes + searchIndexSizeInBytes + 8 * numberOfEntries;
+        filerProvider.execute(initialFilerSize, new FilerTransaction<Filer, Void>() {
             @Override
             public Void commit(final Filer filer) throws IOException {
-                short levels = 3; // TODO - Config or allow it to be passed in?
-                short segments = 10; // TODO - Config or allow it to be passed in?
-
-                int searchIndexSizeInBytes = segmentWidth(levels, segments);
                 filer.seek(headerSizeInBytes + searchIndexSizeInBytes);
 
                 final AtomicInteger lastId = new AtomicInteger(-1);
                 final AtomicLong smallestTimestamp = new AtomicLong(Long.MAX_VALUE);
                 final AtomicLong largestTimestamp = new AtomicLong(Long.MIN_VALUE);
                 try {
-                    export.bulkExport(tenantId, new BulkStream<Entry>() {
+                    importTimeIndex.stream(new Stream() {
                         @Override
-                        public boolean stream(final Entry entry) throws Exception {
+                        public boolean stream(final Entry entry) throws IOException {
                             FilerIO.writeLong(filer, entry.time, "ts");
                             lastId.set(entry.index);
                             smallestTimestamp.compareAndSet(Long.MAX_VALUE, entry.time);
@@ -348,4 +372,11 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
         init();
     }
 
+    private static final KeyValueTransaction<Integer, Integer> streamTransaction = new KeyValueTransaction<Integer, Integer>() {
+        @Override
+        public Integer commit(KeyValueContext<Integer> context) throws IOException {
+            Integer result = context.get();
+            return result != null ? result : -1;
+        }
+    };
 }

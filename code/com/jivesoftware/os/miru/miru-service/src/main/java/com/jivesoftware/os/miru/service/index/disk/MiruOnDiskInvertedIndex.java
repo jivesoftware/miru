@@ -273,7 +273,10 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>,
     @Override
     public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInvertedIndex<BM>, Void> export) throws Exception {
         MiruInvertedIndex<BM> exportIndex = export.bulkExport(tenantId, null);
-        setIndex(exportIndex.getIndex().get(), exportIndex.lastId());
+        Optional<BM> optionalIndex = exportIndex.getIndex();
+        if (optionalIndex.isPresent()) {
+            setIndex(optionalIndex.get(), exportIndex.lastId());
+        }
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.googlecode.javaewah.IntIterator;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -22,20 +23,26 @@ import org.testng.annotations.Test;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContextAllocator;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContextAllocator;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 
 public class MiruAuthzIndexTest {
 
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
-    public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<Integer, EWAHCompressedBitmap> bitsIn)
+    public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<String, List<Integer>> bitsIn)
         throws Exception {
 
-        for (Map.Entry<Integer, EWAHCompressedBitmap> entry : bitsIn.entrySet()) {
-            String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) entry.getKey()));
+        for (Map.Entry<String, List<Integer>> entry : bitsIn.entrySet()) {
+            String authz = entry.getKey();
             MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(ImmutableList.of(authz));
 
             EWAHCompressedBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression);
+            List<Integer> actual = Lists.newArrayList();
+            IntIterator iter = bitsOut.intIterator();
+            while (iter.hasNext()) {
+                actual.add(iter.next());
+            }
 
-            assertEquals(bitsOut, entry.getValue());
+            assertEquals(actual, entry.getValue());
         }
     }
 
@@ -49,7 +56,7 @@ public class MiruAuthzIndexTest {
         // Create in-memory authz index
         MiruContextAllocator hybridAllocator = buildHybridContextAllocator(4, 10, true, 64);
         MiruAuthzIndex<EWAHCompressedBitmap> largeMiruInMemoryAuthzIndex = hybridAllocator.allocate(bitmaps, coord).authzIndex;
-        Map<String, List<Integer>> largeBitsIn = populateAuthzIndex(largeMiruInMemoryAuthzIndex, miruAuthzUtils, 100);
+        Map<String, List<Integer>> largeBitsIn = populateAuthzIndex(largeMiruInMemoryAuthzIndex, miruAuthzUtils, 2);
 
         MiruContextAllocator onDiskAllocator = buildOnDiskContextAllocator(4, 10, 64);
         MiruAuthzIndex<EWAHCompressedBitmap> largeMiruOnDiskAuthzIndex = onDiskAllocator.allocate(bitmaps, coord).authzIndex;
@@ -78,10 +85,11 @@ public class MiruAuthzIndexTest {
             bits.add(100_000 * i);
             bits.add(1_000_000 * i);
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
+
             for (Integer bit : bits) {
                 authzIndex.index(authz, bit);
             }
-            bitsIn.put(authz, bits);
+            assertNull(bitsIn.put(authz, bits));
         }
         return bitsIn;
     }

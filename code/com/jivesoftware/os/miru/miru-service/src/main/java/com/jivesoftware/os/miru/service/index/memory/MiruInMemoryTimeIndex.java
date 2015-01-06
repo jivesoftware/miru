@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.BulkStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,8 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author jonathan
  */
 public class MiruInMemoryTimeIndex implements MiruTimeIndex,
-    BulkImport<Void, BulkStream<MiruTimeIndex.Entry>>,
-    BulkExport<Void, BulkStream<MiruTimeIndex.Entry>> {
+    BulkImport<MiruTimeIndex, Void>,
+    BulkExport<MiruTimeIndex, Void> {
 
     //TODO there's a good argument for making this a FileBackMapStore even for the in-memory impl
     //TODO (it's only used for index/repair, so disk paging won't slow reads)
@@ -184,6 +183,15 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex,
     }
 
     @Override
+    public void stream(Stream stream) throws Exception {
+        for (int i = 0; i < timestamps.length; i++) {
+            if (!stream.stream(new Entry(timestamps[i], i))) {
+                break;
+            }
+        }
+    }
+
+    @Override
     public long sizeInMemory() throws Exception {
         return 0;
     }
@@ -198,18 +206,14 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex,
     }
 
     @Override
-    public Void bulkExport(MiruTenantId tenantId, final BulkStream<Entry> callback) throws Exception {
-        for (int i = 0; i < timestamps.length; i++) {
-            if (!callback.stream(new Entry(timestamps[i], i))) {
-                break;
-            }
-        }
-        return null;
+    public MiruTimeIndex bulkExport(MiruTenantId tenantId, Void callback) throws Exception {
+        return this;
     }
 
     @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<Void, BulkStream<Entry>> export) throws Exception {
-        export.bulkExport(tenantId, new BulkStream<Entry>() {
+    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruTimeIndex, Void> export) throws Exception {
+        MiruTimeIndex timeIndex = export.bulkExport(tenantId, null);
+        timeIndex.stream(new Stream() {
             @Override
             public boolean stream(Entry entry) throws Exception {
                 int index = nextId(entry.time);

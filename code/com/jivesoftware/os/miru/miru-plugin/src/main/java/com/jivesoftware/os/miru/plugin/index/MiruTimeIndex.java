@@ -57,6 +57,12 @@ public interface MiruTimeIndex {
 
     void close();
 
+    void stream(Stream stream) throws Exception;
+
+    interface Stream {
+        boolean stream(Entry entry) throws Exception;
+    }
+
     class Entry {
 
         public final long time;
