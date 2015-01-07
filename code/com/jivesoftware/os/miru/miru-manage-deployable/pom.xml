@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>upena-deployable-management</artifactId>
-        <version>0.173-SNAPSHOT</version>
+        <version>0.173</version>
         <relativePath>../inheritance-poms/upena-deployable-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-manage-deployable</artifactId>
-    <version>0.173-SNAPSHOT</version>
+    <version>0.173</version>
     <properties>
         <java.main>com.jivesoftware.os.miru.manage.deployable.MiruManageMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
@@ -111,33 +111,33 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.173-SNAPSHOT</version>
+            <version>0.173</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
-            <version>0.173-SNAPSHOT</version>
+            <version>0.173</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-analytics-plugins</artifactId>
-            <version>0.173-SNAPSHOT</version>
+            <version>0.173</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-reco-plugins</artifactId>
-            <version>0.173-SNAPSHOT</version>
+            <version>0.173</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.173-SNAPSHOT</version>
+            <version>0.173</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.173-SNAPSHOT</version>
+            <version>0.173</version>
         </dependency>
 
         <dependency>
