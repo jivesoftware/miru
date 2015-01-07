@@ -55,7 +55,4 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
 
     void or(BM mask) throws Exception;
 
-    long sizeInMemory() throws Exception;
-
-    long sizeOnDisk() throws Exception;
 }

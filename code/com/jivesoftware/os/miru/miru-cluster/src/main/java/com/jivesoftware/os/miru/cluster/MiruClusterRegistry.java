@@ -6,7 +6,6 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -17,7 +16,7 @@ import java.util.Map;
 
 public interface MiruClusterRegistry {
 
-    void sendHeartbeatForHost(MiruHost miruHost, long sizeInMemory, long sizeOnDisk) throws Exception;
+    void sendHeartbeatForHost(MiruHost miruHost) throws Exception;
 
     LinkedHashSet<HostHeartbeat> getAllHosts() throws Exception;
 
@@ -45,7 +44,7 @@ public interface MiruClusterRegistry {
 
     Map<MiruPartitionId, MiruReplicaSet> getReplicaSets(MiruTenantId tenantId, Collection<MiruPartitionId> requiredPartitionId) throws Exception;
 
-    void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo, MiruPartitionCoordMetrics metrics,
+    void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo,
         Optional<Long> refreshTimestamp) throws Exception;
 
     boolean isPartitionActive(MiruPartitionCoord coord) throws Exception;
@@ -64,14 +63,11 @@ public interface MiruClusterRegistry {
 
         public final MiruHost host;
         public final long heartbeat;
-        public final long sizeInMemory;
-        public final long sizeOnDisk;
+        
 
-        public HostHeartbeat(MiruHost host, long heartbeat, long sizeInMemory, long sizeOnDisk) {
+        public HostHeartbeat(MiruHost host, long heartbeat) {
             this.host = host;
             this.heartbeat = heartbeat;
-            this.sizeInMemory = sizeInMemory;
-            this.sizeOnDisk = sizeOnDisk;
         }
 
         // only host contributes to equals()

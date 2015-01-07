@@ -33,10 +33,6 @@ public interface MiruHostedPartition<BM> {
 
     void warm();
 
-    long sizeInMemory() throws Exception;
-
-    long sizeOnDisk() throws Exception;
-
     void setStorage(MiruBackingStorage storage) throws Exception;
 
     MiruRequestHandle<BM> getQueryHandle() throws Exception;

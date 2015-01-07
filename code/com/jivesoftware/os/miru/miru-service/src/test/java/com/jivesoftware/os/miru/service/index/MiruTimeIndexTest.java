@@ -165,7 +165,6 @@ public class MiruTimeIndexTest {
                 MiruTimeIndex onDiskTimeIndex = onDiskContextAllocator.allocate(bitmaps, coord).timeIndex;
                 ((BulkImport) onDiskTimeIndex).bulkImport(tenantId, (BulkExport) inMemoryTimeIndex);
                 System.out.println("CopyToDisk" +
-                    " size=" + formatter.format(onDiskTimeIndex.sizeOnDisk()) +
                     " levels=" + levels +
                     " segments=" + segments +
                     " elapsed=" + formatter.format(System.currentTimeMillis() - start));

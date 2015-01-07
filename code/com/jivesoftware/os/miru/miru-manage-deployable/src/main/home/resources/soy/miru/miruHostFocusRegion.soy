@@ -18,8 +18,6 @@
                         <th>Partition</th>
                         <th>Status</th>
                         <th>Storage</th>
-                        <th>Size in memory</th>
-                        <th>Size on disk</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,8 +69,6 @@
             <td>{$partition.partitionId}</td>
             <td style="text-transform:uppercase;">{$type}</td>
             <td>{$partition.backingStorage}</td>
-            <td>{$partition.sizeInMemory}</td>
-            <td>{$partition.sizeOnDisk}</td>
         </tr>
     {/foreach}
 {/template}

@@ -110,7 +110,7 @@ public class MiruPluginTestBootstrap {
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
 
-        clusterRegistry.sendHeartbeatForHost(miruHost, 0, 0);
+        clusterRegistry.sendHeartbeatForHost(miruHost);
         replicaSetDirector.electToReplicaSetForTenantPartition(tenantId, partitionId,
             new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3),
             System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));

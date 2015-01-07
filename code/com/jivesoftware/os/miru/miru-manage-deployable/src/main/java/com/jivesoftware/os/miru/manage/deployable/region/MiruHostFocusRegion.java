@@ -8,7 +8,6 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -64,14 +63,11 @@ public class MiruHostFocusRegion implements MiruRegion<MiruHost> {
                     tenantsMap.put(tenantId, tenantBean);
                 }
                 MiruPartition partition = status.partition;
-                MiruPartitionCoordMetrics metrics = status.metrics;
                 MiruPartitionState state = (partition != null) ? partition.info.state : MiruPartitionState.offline;
                 MiruBackingStorage storage = (partition != null) ? partition.info.storage : MiruBackingStorage.unknown;
                 PartitionCoordBean partitionCoordBean = new PartitionCoordBean(
                         partition != null ? partition.coord : null,
-                        storage,
-                        metrics.sizeInMemory,
-                        metrics.sizeOnDisk);
+                        storage);
                 if (state == MiruPartitionState.online) {
                     tenantBean.getOnline().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.rebuilding) {

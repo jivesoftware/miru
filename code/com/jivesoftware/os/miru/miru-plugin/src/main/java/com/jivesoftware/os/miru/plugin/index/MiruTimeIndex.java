@@ -51,10 +51,6 @@ public interface MiruTimeIndex {
 
     int nextId(long timestamp) throws Exception;
 
-    long sizeInMemory() throws Exception;
-
-    long sizeOnDisk() throws Exception;
-
     void close();
 
     void stream(Stream stream) throws Exception;

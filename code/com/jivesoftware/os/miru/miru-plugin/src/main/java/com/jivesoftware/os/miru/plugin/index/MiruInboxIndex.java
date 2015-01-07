@@ -48,20 +48,7 @@ public interface MiruInboxIndex<BM> {
      */
     void index(MiruStreamId streamId, int id) throws Exception;
 
-    /**
-     * Returns the index size in bytes in memory.
-     *
-     * @return the size in bytes
-     */
-    long sizeInMemory() throws Exception;
-
-    /**
-     * Returns the index size in bytes on disk.
-     *
-     * @return the size in bytes
-     */
-    long sizeOnDisk() throws Exception;
-
+   
     /** Frees resources used by this index. */
     void close();
 }

@@ -116,34 +116,4 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         return streamLocks;
     }
 
-    public long sizeInMemory() throws Exception {
-        /*
-        long sizeInBytes = 0;
-        sizeInBytes += activityIndex.sizeInMemory();
-        sizeInBytes += authzIndex.sizeInMemory();
-        sizeInBytes += fieldIndex.sizeInMemory();
-        sizeInBytes += inboxIndex.sizeInMemory();
-        sizeInBytes += removalIndex.sizeInMemory();
-        sizeInBytes += timeIndex.sizeInMemory();
-        sizeInBytes += unreadTrackingIndex.sizeInMemory();
-        */
-        return -1;
-    }
-
-    public long sizeOnDisk() throws Exception {
-        /*
-        long sizeInBytes = 0;
-        sizeInBytes += activityIndex.sizeOnDisk();
-        sizeInBytes += authzIndex.sizeOnDisk();
-        sizeInBytes += fieldIndex.sizeOnDisk();
-        sizeInBytes += inboxIndex.sizeOnDisk();
-        sizeInBytes += removalIndex.sizeOnDisk();
-        sizeInBytes += timeIndex.sizeOnDisk();
-        sizeInBytes += unreadTrackingIndex.sizeOnDisk();
-        if (chunkStore.isPresent()) {
-            sizeInBytes += chunkStore.get().sizeInBytes();
-        }
-        */
-        return -1;
-    }
 }

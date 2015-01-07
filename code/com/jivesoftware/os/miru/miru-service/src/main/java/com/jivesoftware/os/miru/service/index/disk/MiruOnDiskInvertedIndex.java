@@ -234,16 +234,6 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>,
     }
 
     @Override
-    public long sizeInMemory() throws Exception {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return 0;
-    }
-
-    @Override
     public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInvertedIndex<BM>, Void> export) throws Exception {
         MiruInvertedIndex<BM> exportIndex = export.bulkExport(tenantId, null);
         Optional<BM> optionalIndex = exportIndex.getIndex();

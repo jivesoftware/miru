@@ -5,7 +5,6 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -78,9 +77,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                     partitionsMap.put(partitionId, partitionBean);
                 }
                 MiruPartitionState state = partition.info.state;
-                MiruPartitionCoordMetrics metrics = status.metrics;
-                PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, metrics.sizeInMemory, metrics
-                    .sizeOnDisk);
+                PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage);
                 if (state == MiruPartitionState.online) {
                     partitionBean.getOnline().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.rebuilding) {

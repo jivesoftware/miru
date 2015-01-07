@@ -36,40 +36,6 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
         this.cache = cache;
         this.stripingLocksProvider = stripingLocksProvider;
 
-        /*
-        long newFilerInitialCapacity = 512;
-        int[] keySizeThresholds = { 4, 16, 64, 256, 1_024 };
-        //TODO actual capacity? should this be shared with a key prefix?
-        //TODO expose to config
-        VariableKeySizeMapChunkBackedKeyedStore.Builder keyedStoreBuilder = new VariableKeySizeMapChunkBackedKeyedStore.Builder();
-        for (int keySize : keySizeThresholds) {
-            String[] mapDirectories = new String[baseMapDirectories.length];
-            for (int i = 0; i < mapDirectories.length; i++) {
-                mapDirectories[i] = new File(baseMapDirectories[i], String.valueOf(keySize)).getAbsolutePath();
-            }
-            String[] swapDirectories = new String[baseSwapDirectories.length];
-            for (int i = 0; i < mapDirectories.length; i++) {
-                swapDirectories[i] = new File(baseSwapDirectories[i], String.valueOf(keySize)).getAbsolutePath();
-            }
-            keyedStoreBuilder.add(keySize, new PartitionedMapChunkBackedKeyedStore(
-                new FileBackedMapChunkFactory(keySize, false, 8, false, 100, mapDirectories),
-                new FileBackedMapChunkFactory(keySize, false, 8, false, 100, swapDirectories),
-                chunkStore,
-                stripingLocksProvider,
-                4)); //TODO expose num partitions to config
-        }
-        this.keyedStore = keyedStoreBuilder.build();
-        */
-    }
-
-    @Override
-    public long sizeInMemory() throws Exception {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return 0;
     }
 
     @Override

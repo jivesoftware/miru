@@ -132,16 +132,6 @@ public class MiruHybridActivityIndex implements MiruActivityIndex,
         }
     }
 
-    @Override
-    public long sizeInMemory() {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return -1; //keyedStore.mapStoreSizeInBytes();
-    }
-
     private int capacity() {
         return indexSize.get();
     }

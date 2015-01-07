@@ -60,16 +60,6 @@ public class MiruInMemoryUnreadTrackingIndex<BM> implements MiruUnreadTrackingIn
     }
 
     @Override
-    public long sizeInMemory() throws Exception {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return 0;
-    }
-
-    @Override
     public void close() {
     }
 

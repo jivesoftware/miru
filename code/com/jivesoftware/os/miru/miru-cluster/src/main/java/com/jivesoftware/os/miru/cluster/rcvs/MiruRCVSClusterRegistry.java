@@ -21,7 +21,6 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -89,8 +88,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public void sendHeartbeatForHost(MiruHost miruHost, long sizeInMemory, long sizeOnDisk) throws Exception {
-        hostsRegistry.add(MiruVoidByte.INSTANCE, miruHost, MiruHostsColumnKey.heartbeat, new MiruHostsColumnValue(sizeInMemory, sizeOnDisk), null, timestamper);
+    public void sendHeartbeatForHost(MiruHost miruHost) throws Exception {
+        hostsRegistry.add(MiruVoidByte.INSTANCE, miruHost, MiruHostsColumnKey.heartbeat, new MiruHostsColumnValue(), null, timestamper);
     }
 
     @Override
@@ -114,7 +113,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                                 && columnValueAndTimestamp.getColumn().getIndex() == MiruHostsColumnKey.heartbeat.getIndex()) {
                                 MiruHostsColumnValue value = columnValueAndTimestamp.getValue();
                                 hostHeartbeats.
-                                    add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp(), value.sizeInMemory, value.sizeOnDisk));
+                                    add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp()));
                             }
                             return columnValueAndTimestamp;
                         }
@@ -286,7 +285,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo, MiruPartitionCoordMetrics metrics,
+    public void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo,
         Optional<Long> refreshTimestamp) throws Exception {
 
         synchronized (topologyLocks.lock(new TenantPartitionHostKey(coord))) {
@@ -316,7 +315,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 }
             }
 
-            MiruTopologyColumnValue update = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, metrics.sizeInMemory, metrics.sizeOnDisk);
+            MiruTopologyColumnValue update = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage);
 
             Timestamper timestamper = new ConstantTimestamper(timestamp);
             topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
@@ -397,8 +396,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                             MiruTopologyStatus status = new MiruTopologyStatus(
                                 new MiruPartition(
                                     new MiruPartitionCoord(tenantId, c.getColumn().partitionId, host),
-                                    new MiruPartitionCoordInfo(value.state, value.storage)),
-                                new MiruPartitionCoordMetrics(value.sizeInMemory, value.sizeOnDisk));
+                                    new MiruPartitionCoordInfo(value.state, value.storage)));
 
                             List<MiruTopologyStatus> statuses = topologies.get(tenantId, c.getColumn().partitionId);
                             if (statuses == null) {
@@ -522,9 +520,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 MiruPartitionState state = normalizeState(value.state, cvat.getTimestamp(), topologyIsStaleAfterMillis);
                 MiruBackingStorage storage = value.storage;
                 MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(state, storage);
-                statuses.add(new MiruTopologyStatus(
-                    new MiruPartition(coord, coordInfo),
-                    new MiruPartitionCoordMetrics(value.sizeInMemory, value.sizeOnDisk)));
+                statuses.add(new MiruTopologyStatus(new MiruPartition(coord, coordInfo)));
             }
         }
         return statuses;
@@ -578,7 +574,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         expectedTenantPartitionsRegistry.add(coord.tenantId, coord.host, coord.partitionId, MiruVoidByte.INSTANCE, null, timestamper);
         topologyRegistry.addIfNotExists(MiruVoidByte.INSTANCE, coord.tenantId,
             new MiruTopologyColumnKey(coord.partitionId, coord.host),
-            new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, -1, -1),
+            new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory),
             null, timestamper);
         log.debug("Expecting {}", coord);
     }

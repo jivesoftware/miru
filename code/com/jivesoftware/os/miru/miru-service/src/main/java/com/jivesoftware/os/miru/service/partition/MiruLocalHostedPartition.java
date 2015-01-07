@@ -12,7 +12,6 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -59,10 +58,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final MiruActivityWALReader activityWALReader;
     private final MiruPartitionEventHandler partitionEventHandler;
     private final MiruRebuildDirector rebuildDirector;
-    private final AtomicLong sizeInMemoryBytes = new AtomicLong();
-    private final AtomicLong sizeOnDiskBytes = new AtomicLong();
-    private final AtomicLong sizeInMemoryExpiresAfter = new AtomicLong();
-    private final AtomicLong sizeOnDiskExpiresAfter = new AtomicLong();
     private final AtomicBoolean removed = new AtomicBoolean(false);
 
     private final Collection<ScheduledFuture<?>> futures;
@@ -305,27 +300,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         accessorRef.get().markForRefresh();
     }
 
-    @Override
-    public long sizeInMemory() throws Exception {
-        long expiresAfter = sizeInMemoryExpiresAfter.get();
-        MiruPartitionAccessor<BM> accessor = accessorRef.get();
-        if (timestamper.get() > expiresAfter && accessor.info.state == MiruPartitionState.online) {
-            sizeInMemoryBytes.set(accessor.context != null ? accessor.context.sizeInMemory() : 0);
-            sizeInMemoryExpiresAfter.set(timestamper.get() + TimeUnit.MINUTES.toMillis(1));
-        }
-        return sizeInMemoryBytes.get();
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        long expiresAfter = sizeOnDiskExpiresAfter.get();
-        MiruPartitionAccessor<BM> accessor = accessorRef.get();
-        if (timestamper.get() > expiresAfter && accessor.info.state == MiruPartitionState.online) {
-            sizeOnDiskBytes.set(accessor.context != null ? accessor.context.sizeOnDisk() : 0);
-            sizeOnDiskExpiresAfter.set(timestamper.get() + TimeUnit.MINUTES.toMillis(1));
-        }
-        return sizeOnDiskBytes.get();
-    }
 
     @Override
     public void setStorage(MiruBackingStorage storage) throws Exception {
@@ -513,8 +487,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
             Optional<Long> timestamp = accessor.refreshTimestamp.getAndSet(null);
             if (timestamp != null) {
-                MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(-1, -1); //TODO is checking sizes even worth it?
-                partitionEventHandler.updateTopology(coord, Optional.of(accessor.info), metrics, timestamp);
+                partitionEventHandler.updateTopology(coord, Optional.of(accessor.info), timestamp);
             }
         }
 

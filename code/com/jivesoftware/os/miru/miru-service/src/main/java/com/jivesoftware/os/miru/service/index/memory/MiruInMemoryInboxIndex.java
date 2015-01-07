@@ -52,16 +52,6 @@ public class MiruInMemoryInboxIndex<BM> implements MiruInboxIndex<BM>,
     }
 
     @Override
-    public long sizeInMemory() throws Exception {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return 0;
-    }
-
-    @Override
     public void close() {
     }
 

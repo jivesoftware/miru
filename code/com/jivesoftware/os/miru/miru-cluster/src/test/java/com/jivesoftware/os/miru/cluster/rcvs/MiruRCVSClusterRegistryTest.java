@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -70,8 +69,7 @@ public class MiruRCVSClusterRegistryTest {
         assertEquals(electedHosts.size(), 1);
 
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
-        MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(0, 0);
-        registry.updateTopology(coord, Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)), metrics,
+        registry.updateTopology(coord, Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)),
             Optional.of(timestamper.get()));
 
         List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
@@ -86,7 +84,6 @@ public class MiruRCVSClusterRegistryTest {
         MiruTopologyStatus status = onlineStatus.get(0);
         assertEquals(status.partition.coord, coord);
         assertEquals(status.partition.info.storage, MiruBackingStorage.disk);
-        assertEquals(status.metrics, metrics);
     }
 
     @Test
@@ -100,8 +97,7 @@ public class MiruRCVSClusterRegistryTest {
         assertEquals(electedHosts.size(), 1);
 
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
-        MiruPartitionCoordMetrics metrics = new MiruPartitionCoordMetrics(0, 0);
-        registry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), metrics, Optional.of(timestamper.get()));
+        registry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(timestamper.get()));
 
         List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
         List<MiruTopologyStatus> offlineStatus = Lists.newArrayList();
@@ -116,7 +112,6 @@ public class MiruRCVSClusterRegistryTest {
         MiruTopologyStatus status = offlineStatus.get(0);
         assertEquals(status.partition.coord, coord);
         assertEquals(status.partition.info.storage, MiruBackingStorage.memory);
-        assertEquals(status.metrics, metrics);
     }
 
     @Test
@@ -153,7 +148,7 @@ public class MiruRCVSClusterRegistryTest {
         MiruHost[] hosts = new MiruHost[numHosts];
         for (int i = 0; i < numHosts; i++) {
             hosts[i] = new MiruHost("localhost", 49_600 + i);
-            registry.sendHeartbeatForHost(hosts[i], -1, -1);
+            registry.sendHeartbeatForHost(hosts[i]);
         }
         return hosts;
     }

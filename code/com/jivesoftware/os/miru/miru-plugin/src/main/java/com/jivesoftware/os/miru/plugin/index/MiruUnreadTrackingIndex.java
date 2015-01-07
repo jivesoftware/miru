@@ -19,9 +19,5 @@ public interface MiruUnreadTrackingIndex<BM> {
 
     void applyUnread(MiruStreamId streamId, BM unreadMask) throws Exception;
 
-    long sizeInMemory() throws Exception;
-
-    long sizeOnDisk() throws Exception;
-
     void close();
 }

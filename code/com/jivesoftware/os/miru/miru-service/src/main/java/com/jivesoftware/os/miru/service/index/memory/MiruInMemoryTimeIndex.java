@@ -191,17 +191,7 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex,
             }
         }
     }
-
-    @Override
-    public long sizeInMemory() throws Exception {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() {
-        return 0;
-    }
-
+    
     @Override
     public void close() {
     }

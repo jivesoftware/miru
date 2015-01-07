@@ -305,16 +305,6 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
     }
 
     @Override
-    public long sizeInMemory() {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return -1;
-    }
-
-    @Override
     public void close() {
     }
 

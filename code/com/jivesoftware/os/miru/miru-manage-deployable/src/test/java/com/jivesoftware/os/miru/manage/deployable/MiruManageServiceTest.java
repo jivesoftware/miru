@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
+import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
@@ -28,7 +29,6 @@ import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -72,7 +72,7 @@ public class MiruManageServiceTest {
 
         for (int i = 0; i < numberOfReplicas; i++) {
             MiruHost host = new MiruHost("host" + i, 10_000 + i);
-            clusterRegistry.sendHeartbeatForHost(host, i, i);
+            clusterRegistry.sendHeartbeatForHost(host);
             hosts.add(host);
         }
 

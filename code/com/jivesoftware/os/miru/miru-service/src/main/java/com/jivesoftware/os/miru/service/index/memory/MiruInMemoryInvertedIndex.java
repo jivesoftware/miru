@@ -304,16 +304,6 @@ public class MiruInMemoryInvertedIndex<BM> implements MiruInvertedIndex<BM>,
     }
 
     @Override
-    public long sizeInMemory() {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return 0;
-    }
-
-    @Override
     public MiruInvertedIndex<BM> bulkExport(MiruTenantId tenantId, Void callback) throws Exception {
         return this;
     }

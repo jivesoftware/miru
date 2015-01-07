@@ -26,19 +26,8 @@ public class MiruHostEntryRegion implements MiruRegion<MiruClusterRegistry.HostH
 
         data.put("host", host);
         data.put("heartbeat", String.valueOf(System.currentTimeMillis() - hostHeartbeat.heartbeat));
-        data.put("sizeInMemory", readableSize(hostHeartbeat.sizeInMemory));
-        data.put("sizeOnDisk", readableSize(hostHeartbeat.sizeOnDisk));
 
         return renderer.render(template, data);
     }
 
-    private String readableSize(long sizeInBytes) {
-        if (sizeInBytes > 1_000_000) {
-            return (sizeInBytes / 1_000_000) + " MB";
-        } else if (sizeInBytes > 1_000) {
-            return (sizeInBytes / 1_000) + " kB";
-        } else {
-            return sizeInBytes + " b";
-        }
-    }
 }

@@ -144,16 +144,6 @@ public class MiruChunkActivityIndex implements MiruActivityIndex,
         }
     }
 
-    @Override
-    public long sizeInMemory() {
-        return -1; //unclear whether we're in memory or on disk
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return -1; //indexSizeFiler.length() + keyedStore.mapStoreSizeInBytes();
-    }
-
     private int capacity() {
         try {
             int size = indexSize.get();

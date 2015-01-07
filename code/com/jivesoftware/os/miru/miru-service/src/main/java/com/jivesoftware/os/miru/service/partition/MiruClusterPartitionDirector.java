@@ -141,22 +141,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     /** MiruService calls this on a periodic interval */
     public void heartbeat() {
         try {
-            long sizeInMemory = -1;
-            long sizeOnDisk = -1;
-            //TODO is checking sizes even worth it?
-            /*
-            for (MiruTenantTopology<?> topology : expectedTenants.topologies()) {
-                for (MiruHostedPartition<?> partition : topology.allPartitions()) {
-                    try {
-                        sizeInMemory += partition.sizeInMemory();
-                        sizeOnDisk += partition.sizeOnDisk();
-                    } catch (Exception e) {
-                        LOG.warn("Failed to get size in bytes for partition " + partition, e);
-                    }
-                }
-            }
-            */
-            clusterRegistry.sendHeartbeatForHost(host, sizeInMemory, sizeOnDisk);
+            clusterRegistry.sendHeartbeatForHost(host);
         } catch (Throwable t) {
             LOG.error("Heartbeat encountered a problem", t);
         }

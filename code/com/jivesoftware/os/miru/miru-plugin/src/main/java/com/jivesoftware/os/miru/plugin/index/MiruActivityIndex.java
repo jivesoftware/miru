@@ -64,19 +64,6 @@ public interface MiruActivityIndex {
      */
     void ready(int index) throws Exception;
 
-    /**
-     * Total size in bytes of this index in memory.
-     *
-     * @return total size in bytes
-     */
-    long sizeInMemory() throws Exception;
-
-    /**
-     * Total size in bytes of this index on disk.
-     *
-     * @return total size in bytes
-     */
-    long sizeOnDisk() throws Exception;
 
     /** Free resources used by the index. */
     void close();

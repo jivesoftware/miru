@@ -32,16 +32,6 @@ public class MiruInMemoryAuthzIndex<BM> implements MiruAuthzIndex<BM>,
     }
 
     @Override
-    public long sizeInMemory() throws Exception {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return 0;
-    }
-
-    @Override
     public void index(String authz, int id) throws Exception {
         getOrAllocate(authz).append(id);
         cache.increment(authz);

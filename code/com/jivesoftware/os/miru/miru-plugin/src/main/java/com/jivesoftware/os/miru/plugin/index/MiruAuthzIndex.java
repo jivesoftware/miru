@@ -14,10 +14,6 @@ public interface MiruAuthzIndex<BM> {
 
     void repair(String authz, int id, boolean value) throws Exception;
 
-    long sizeInMemory() throws Exception;
-
-    long sizeOnDisk() throws Exception;
-
     void close();
 
     public static class AuthzAndInvertedIndex<BM> {

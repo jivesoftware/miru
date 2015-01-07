@@ -16,7 +16,6 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordMetrics;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -486,8 +485,7 @@ public class MiruLocalHostedPartitionTest {
     }
 
     private void setActive(boolean active) throws Exception {
-        clusterRegistry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), new MiruPartitionCoordMetrics(-1, -1),
-            Optional.of(syntheticTimestamp.incrementAndGet()));
+        clusterRegistry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(syntheticTimestamp.incrementAndGet()));
         if (!active) {
             syntheticTimestamp.addAndGet(TimeUnit.HOURS.toMillis(1) + 1000);
         }

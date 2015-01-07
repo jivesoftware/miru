@@ -23,17 +23,10 @@ public class MiruHostsColumnValueMarshaller implements TypeMarshaller<MiruHostsC
     public MiruHostsColumnValue fromLexBytes(byte[] bytes) throws Exception {
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
 
-        long sizeInMemory = -1;
-        if (buffer.limit() >= 8) {
-            sizeInMemory = buffer.getLong();
-        }
+        buffer.getLong(); // This is unused space from when we had sizeInMemory
+        buffer.getLong(); // This is unused space from when we had sizeOnDisk
 
-        long sizeOnDisk = -1;
-        if (buffer.limit() >= 16) {
-            sizeOnDisk = buffer.getLong();
-        }
-
-        return new MiruHostsColumnValue(sizeInMemory, sizeOnDisk);
+        return new MiruHostsColumnValue();
     }
 
     @Override
@@ -41,8 +34,8 @@ public class MiruHostsColumnValueMarshaller implements TypeMarshaller<MiruHostsC
         int capacity = 16;
         ByteBuffer buffer = ByteBuffer.allocate(capacity);
 
-        buffer.putLong(miruHostsColumnValue.sizeInMemory);
-        buffer.putLong(miruHostsColumnValue.sizeOnDisk);
+        buffer.putLong(-1); // This is unused space from when we had sizeInMemory
+        buffer.putLong(-1); // This is unused space from when we had sizeOnDisk
 
         return buffer.array();
     }

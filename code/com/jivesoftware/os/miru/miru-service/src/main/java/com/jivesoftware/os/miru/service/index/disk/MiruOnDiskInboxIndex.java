@@ -21,8 +21,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
     private final MiruBitmaps<BM> bitmaps;
     private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider = new StripingLocksProvider<>(64);
-    private final long newFilerInitialCapacity = 512; //TODO expose to config
-
+    
     public MiruOnDiskInboxIndex(MiruBitmaps<BM> bitmaps,
         KeyedFilerStore store)
         throws Exception {
@@ -56,16 +55,6 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
     @Override
     public int getLastActivityIndex(MiruStreamId streamId) throws Exception {
         return indexFor(streamId).lastId();
-    }
-
-    @Override
-    public long sizeInMemory() throws Exception {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return 0;
     }
 
     @Override
