@@ -44,11 +44,11 @@ public interface MiruInboxIndex<BM> {
      * automatically.
      *
      * @param streamId the inbox to index this activity in
-     * @param id the activity id to index
+     * @param id       the activity id to index
      */
     void index(MiruStreamId streamId, int id) throws Exception;
 
-   
+
     /** Frees resources used by this index. */
     void close();
 }

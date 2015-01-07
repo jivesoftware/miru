@@ -9,7 +9,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class MiruTopologyStatus {
 
     public final MiruPartition partition;
-    
 
     @JsonCreator
     public MiruTopologyStatus(@JsonProperty("partition") MiruPartition partition) {

@@ -63,7 +63,7 @@ public interface MiruClusterRegistry {
 
         public final MiruHost host;
         public final long heartbeat;
-        
+
 
         public HostHeartbeat(MiruHost host, long heartbeat) {
             this.host = host;

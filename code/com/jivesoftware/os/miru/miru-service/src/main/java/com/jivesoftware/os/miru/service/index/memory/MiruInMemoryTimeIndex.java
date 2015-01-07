@@ -191,7 +191,7 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex,
             }
         }
     }
-    
+
     @Override
     public void close() {
     }

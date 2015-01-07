@@ -23,6 +23,8 @@ import static org.testng.Assert.fail;
  */
 public class MiruBitmapsTimeRangeTest {
 
+    private final int numberOfChunkStores = 4;
+
     @Test(dataProvider = "evenTimeIndexDataProvider")
     public <BM> void testBuildEvenTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
         final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
@@ -154,12 +156,12 @@ public class MiruBitmapsTimeRangeTest {
     private MiruTimeIndex buildInMemoryTimeIndex() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        return buildHybridContextAllocator(4, 10, true, 64).allocate(bitmaps, coord).timeIndex;
+        return buildHybridContextAllocator(numberOfChunkStores, 10, true, 64).allocate(bitmaps, coord).timeIndex;
     }
 
     private MiruTimeIndex buildOnDiskTimeIndex() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        return buildOnDiskContextAllocator(4, 10, 64).allocate(bitmaps, coord).timeIndex;
+        return buildOnDiskContextAllocator(numberOfChunkStores, 10, 64).allocate(bitmaps, coord).timeIndex;
     }
 }

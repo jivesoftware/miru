@@ -19,6 +19,6 @@ public class MiruTopologyColumnValueMarshallerTest {
         MiruTopologyColumnValue actual = marshaller.fromLexBytes(marshaller.toLexBytes(expected));
         assertEquals(actual.state, expected.state);
         assertEquals(actual.storage, expected.storage);
-       
+
     }
 }

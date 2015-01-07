@@ -180,6 +180,11 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
         }
     }
 
+    private long readTimestamp(Filer filer, int id) throws IOException {
+        filer.seek(headerSizeInBytes + searchIndexSizeInBytes + id * timestampSize);
+        return FilerIO.readLong(filer, "ts");
+    }
+
     @Override
     public int nextId(long timestamp) {
         throw new UnsupportedOperationException("Mem mapped indexes are readOnly");
@@ -194,40 +199,44 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
             return filerProvider.execute(-1, new FilerTransaction<Filer, Integer>() {
                 @Override
                 public Integer commit(Filer filer) throws IOException {
-                    long fp = headerSizeInBytes;
-                    filer.seek(fp);
-                    for (int remainingLevels = searchIndexLevels - 1; remainingLevels >= 0; remainingLevels--) {
-                        int segmentIndex = 0;
-                        for (; segmentIndex < searchIndexSegments; segmentIndex++) {
-                            long segmentTimestamp = FilerIO.readLong(filer, "ts");
-                            if (segmentTimestamp > timestamp) {
-                                break;
-                            }
-                        }
-                        segmentIndex--; // last index whose timestamp was less than the requested timestamp
-                        if (segmentIndex < 0) {
-                            segmentIndex = 0; // underflow, just keep tracking towards the smallest segment
-                        }
-                        fp += searchIndexSegments * searchIndexKeySize;
-                        if (remainingLevels == 0) {
-                            fp += segmentIndex * searchIndexValueSize;
-                        } else {
-                            fp += segmentIndex * segmentWidth(remainingLevels, searchIndexSegments);
-                        }
-                        filer.seek(fp);
-                    }
-
-                    int id = FilerIO.readInt(filer, "id");
-                    while (id <= lastId && getTimestamp(id) < timestamp) {
-                        id++;
-                    }
-
-                    return id;
+                    return readClosestId(filer, timestamp);
                 }
             });
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private int readClosestId(Filer filer, long timestamp) throws IOException {
+        long fp = headerSizeInBytes;
+        filer.seek(fp);
+        for (int remainingLevels = searchIndexLevels - 1; remainingLevels >= 0; remainingLevels--) {
+            int segmentIndex = 0;
+            for (; segmentIndex < searchIndexSegments; segmentIndex++) {
+                long segmentTimestamp = FilerIO.readLong(filer, "ts");
+                if (segmentTimestamp > timestamp) {
+                    break;
+                }
+            }
+            segmentIndex--; // last index whose timestamp was less than the requested timestamp
+            if (segmentIndex < 0) {
+                segmentIndex = 0; // underflow, just keep tracking towards the smallest segment
+            }
+            fp += searchIndexSegments * searchIndexKeySize;
+            if (remainingLevels == 0) {
+                fp += segmentIndex * searchIndexValueSize;
+            } else {
+                fp += segmentIndex * segmentWidth(remainingLevels, searchIndexSegments);
+            }
+            filer.seek(fp);
+        }
+
+        int id = FilerIO.readInt(filer, "id");
+        while (id <= lastId && readTimestamp(filer, id) < timestamp) {
+            id++;
+        }
+
+        return id;
     }
 
     private final KeyValueTransaction<Integer, Integer> exactIdTransaction = new KeyValueTransaction<Integer, Integer>() {
@@ -250,35 +259,53 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
     }
 
     @Override
-    public int smallestExclusiveTimestampIndex(long timestamp) {
-        int index = getClosestId(timestamp);
-        if (index == 0) {
-            return 0;
+    public int smallestExclusiveTimestampIndex(final long timestamp) {
+        try {
+            return filerProvider.execute(-1, new FilerTransaction<Filer, Integer>() {
+                @Override
+                public Integer commit(Filer filer) throws IOException {
+                    int index = readClosestId(filer, timestamp);
+                    if (index == 0) {
+                        return 0;
+                    }
+                    int lastId = lastId();
+                    if (index > lastId) {
+                        return lastId + 1;
+                    }
+                    while (index <= lastId && readTimestamp(filer, index) <= timestamp) {
+                        index++;
+                    }
+                    return index;
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        int lastId = lastId();
-        if (index > lastId) {
-            return lastId + 1;
-        }
-        while (index <= lastId && getTimestamp(index) <= timestamp) {
-            index++;
-        }
-        return index;
     }
 
     @Override
-    public int largestInclusiveTimestampIndex(long timestamp) {
-        int index = getClosestId(timestamp);
-        if (index == timestampsLength) {
-            return timestampsLength - 1;
+    public int largestInclusiveTimestampIndex(final long timestamp) {
+        try {
+            return filerProvider.execute(-1, new FilerTransaction<Filer, Integer>() {
+                @Override
+                public Integer commit(Filer filer) throws IOException {
+                    int index = readClosestId(filer, timestamp);
+                    if (index == timestampsLength) {
+                        return timestampsLength - 1;
+                    }
+                    int lastId = lastId();
+                    if (index > lastId) {
+                        return lastId;
+                    }
+                    while (index <= lastId && readTimestamp(filer, index) <= timestamp) {
+                        index++;
+                    }
+                    return index - 1;
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        int lastId = lastId();
-        if (index > lastId) {
-            return lastId;
-        }
-        while (index <= lastId && getTimestamp(index) <= timestamp) {
-            index++;
-        }
-        return index - 1;
     }
 
     @Override

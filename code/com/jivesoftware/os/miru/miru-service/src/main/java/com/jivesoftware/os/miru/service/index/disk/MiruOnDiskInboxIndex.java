@@ -21,7 +21,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
     private final MiruBitmaps<BM> bitmaps;
     private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider = new StripingLocksProvider<>(64);
-    
+
     public MiruOnDiskInboxIndex(MiruBitmaps<BM> bitmaps,
         KeyedFilerStore store)
         throws Exception {
