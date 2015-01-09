@@ -144,7 +144,7 @@ public class MiruTimeIndexTest {
         int capacity = 100; //1_000_000;
         long start = System.currentTimeMillis();
 
-        MiruTimeIndex inMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true, 64).allocate(bitmaps, coord).timeIndex;
+        MiruTimeIndex inMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true).allocate(bitmaps, coord).timeIndex;
         for (int i = 0; i < capacity; i++) {
             inMemoryTimeIndex.nextId(i * 10);
         }
@@ -153,7 +153,7 @@ public class MiruTimeIndexTest {
             " elapsed=" + formatter.format(System.currentTimeMillis() - start));
         System.out.println();
 
-        MiruContextAllocator onDiskContextAllocator = IndexTestUtil.buildOnDiskContextAllocator(numberOfChunkStores, 10, 64);
+        MiruContextAllocator onDiskContextAllocator = IndexTestUtil.buildOnDiskContextAllocator(numberOfChunkStores, 10);
 
         for (int levels : tryLevels) {
             for (int segments : trySegments) {
@@ -192,7 +192,7 @@ public class MiruTimeIndexTest {
         int capacity = 1_000;
 
         // Set up and import in-memory implementation
-        MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true, 64).allocate(bitmaps, coord).timeIndex;
+        MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true).allocate(bitmaps, coord).timeIndex;
 
         final long[] importValues = new long[capacity];
         for (int i = 0; i < capacity; i++) {
@@ -203,7 +203,7 @@ public class MiruTimeIndexTest {
         }
 
         // Set up and import on-disk implementation
-        MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContextAllocator(numberOfChunkStores, 10, 64).allocate(bitmaps, coord).timeIndex;
+        MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContextAllocator(numberOfChunkStores, 10).allocate(bitmaps, coord).timeIndex;
         ((BulkImport) miruOnDiskTimeIndex).bulkImport(tenantId, (BulkExport) miruInMemoryTimeIndex);
 
         return new Object[][] {
@@ -215,7 +215,7 @@ public class MiruTimeIndexTest {
     @DataProvider(name = "miruTimeIndexDataProviderWithRangeData")
     public Object[][] miruTimeIndexDataProviderWithRangeData() throws Exception {
         // Set up and import in-memory implementation
-        MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true, 64).allocate(bitmaps, coord).timeIndex;
+        MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true).allocate(bitmaps, coord).timeIndex;
 
         final long[] importValues = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
 
@@ -224,7 +224,7 @@ public class MiruTimeIndexTest {
         }
 
         // Set up and import on-disk implementation
-        MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContextAllocator(numberOfChunkStores, 10, 64).allocate(bitmaps, coord).timeIndex;
+        MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContextAllocator(numberOfChunkStores, 10).allocate(bitmaps, coord).timeIndex;
         ((BulkImport) miruOnDiskTimeIndex).bulkImport(tenantId, (BulkExport) miruInMemoryTimeIndex);
 
         return new Object[][] {

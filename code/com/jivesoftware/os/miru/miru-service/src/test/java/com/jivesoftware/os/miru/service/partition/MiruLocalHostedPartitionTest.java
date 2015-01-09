@@ -141,7 +141,6 @@ public class MiruLocalHostedPartitionTest {
         when(config.getDefaultStorage()).thenReturn(defaultStorage.name());
         when(config.getPartitionNumberOfChunkStores()).thenReturn(1);
         when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
-        when(config.getPartitionChunkStoreConcurrencyLevel()).thenReturn(8);
 
         RowColumnValueStoreImpl<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity> activityWAL =
             new RowColumnValueStoreImpl<>();
@@ -176,8 +175,8 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
-            config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<MiruTermId>(8));
+            new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<Long>(64));
 
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
             activityInternExtern,
@@ -185,10 +184,10 @@ public class MiruLocalHostedPartitionTest {
             new MiruTempDirectoryResourceLocator(),
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
-            config.getPartitionChunkStoreConcurrencyLevel(),
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8));
+            new StripingLocksProvider<String>(8),
+            new StripingLocksProvider<Long>(64));
 
         contextFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

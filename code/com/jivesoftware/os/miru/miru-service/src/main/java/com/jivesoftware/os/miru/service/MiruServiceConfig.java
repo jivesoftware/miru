@@ -23,12 +23,12 @@ public interface MiruServiceConfig extends Config {
     @StringDefault("var/lib/miru/transient")
     String getTransientResourceLocatorPaths();
 
+    // 32 MB
     @LongDefault(33_554_432)
-        // 32 MB
     long getDiskResourceInitialChunkSize();
 
-    @LongDefault(4_096)
-        // 4 KB
+    // 32 MB
+    @LongDefault(33_554_432)
     long getTransientResourceInitialChunkSize();
 
     @LongDefault(5_000)
@@ -83,11 +83,6 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(true)
     boolean getPartitionDeleteChunkStoreOnClose();
 
-    @IntDefault(24)
-    int getPartitionChunkStoreConcurrencyLevel();
-
-    void setPartitionChunkStoreConcurrencyLevel(int partitionChunkStoreConcurrencyLevel);
-
     @IntDefault(65_536)
     int getFieldIndexNumberOfLocks();
 
@@ -98,7 +93,7 @@ public interface MiruServiceConfig extends Config {
     int getAuthzNumberOfLocks();
 
     @IntDefault(65_536)
-    int getKeyedStoreNumberOfLocks();
+    int getChunkStoreNumberOfLocks();
 
     @StringDefault("hybrid")
     String getDefaultStorage();

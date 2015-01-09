@@ -55,10 +55,10 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
     private final MiruResourceLocator resourceLocator;
     private final int numberOfChunkStores;
     private final int partitionAuthzCacheSize;
-    private final int partitionChunkStoreConcurrencyLevel;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
+    private final StripingLocksProvider<Long> chunkStripingLocksProvider;
 
     public OnDiskMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -66,27 +66,30 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         MiruResourceLocator resourceLocator,
         int numberOfChunkStores,
         int partitionAuthzCacheSize,
-        int partitionChunkStoreConcurrencyLevel,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
-        StripingLocksProvider<MiruStreamId> streamStripingLocksProvider, StripingLocksProvider<String> authzStripingLocksProvider) {
+        StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
+        StripingLocksProvider<String> authzStripingLocksProvider,
+        StripingLocksProvider<Long> chunkStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
         this.resourceLocator = resourceLocator;
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
-        this.partitionChunkStoreConcurrencyLevel = partitionChunkStoreConcurrencyLevel;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
         this.streamStripingLocksProvider = streamStripingLocksProvider;
         this.authzStripingLocksProvider = authzStripingLocksProvider;
+        this.chunkStripingLocksProvider = chunkStripingLocksProvider;
     }
 
     @Override
     public boolean checkMarkedStorage(MiruPartitionCoord coord) throws Exception {
         MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
-        String[] chunkPaths = filesToPaths(resourceLocator.getChunkDirectories(identifier, "chunks"));
-        if (!new ChunkStoreInitializer().checkExists(chunkPaths, "chunks", numberOfChunkStores)) {
-            return false;
+        File[] chunkDirs = resourceLocator.getChunkDirectories(identifier, "chunks");
+        for (int i = 0; i < numberOfChunkStores; i++) {
+            if (!new ChunkStoreInitializer().checkExists(chunkDirs, "chunk-" + i)) {
+                return false;
+            }
         }
 
         File versionFile = resourceLocator.getFilerFile(new MiruPartitionCoordIdentifier(coord), DISK_FORMAT_VERSION);
@@ -105,17 +108,15 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         File versionFile = resourceLocator.getFilerFile(identifier, DISK_FORMAT_VERSION);
         versionFile.createNewFile();
 
-        String[] chunkPaths = filesToPaths(resourceLocator.getChunkDirectories(identifier, "chunks"));
+        File[] chunkDirs = resourceLocator.getChunkDirectories(identifier, "chunks");
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.initialize(
-                chunkPaths,
-                "chunks",
-                i,
+            chunkStores[i] = chunkStoreInitializer.openOrCreate(
+                chunkDirs,
+                "chunk-" + i,
                 resourceLocator.getInitialChunkSize(),
-                true,
-                partitionChunkStoreConcurrencyLevel);
+                chunkStripingLocksProvider);
         }
 
         KeyedFilerStore timeIndexFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("timeIndex-index"));

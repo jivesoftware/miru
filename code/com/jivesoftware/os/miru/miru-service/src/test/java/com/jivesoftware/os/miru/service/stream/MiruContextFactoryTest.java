@@ -64,7 +64,6 @@ public class MiruContextFactoryTest {
         when(config.getPartitionNumberOfChunkStores()).thenReturn(4);
         when(config.getPartitionAuthzCacheSize()).thenReturn(2);
         when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
-        when(config.getPartitionChunkStoreConcurrencyLevel()).thenReturn(8);
 
         RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
             new RowColumnValueStoreImpl<>();
@@ -90,8 +89,8 @@ public class MiruContextFactoryTest {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
-            config.getPartitionChunkStoreConcurrencyLevel(),
-            new StripingLocksProvider<MiruTermId>(8));
+            new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<Long>(64));
 
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
             activityInternExtern,
@@ -99,10 +98,10 @@ public class MiruContextFactoryTest {
             diskResourceLocator,
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
-            config.getPartitionChunkStoreConcurrencyLevel(),
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8));
+            new StripingLocksProvider<String>(8),
+            new StripingLocksProvider<Long>(64));
 
         streamFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

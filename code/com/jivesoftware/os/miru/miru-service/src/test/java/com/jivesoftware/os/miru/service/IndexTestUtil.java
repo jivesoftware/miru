@@ -5,7 +5,6 @@ import com.google.common.collect.Interners;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
-import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.KeyMarshaller;
 import com.jivesoftware.os.filer.io.KeyValueMarshaller;
@@ -36,6 +35,7 @@ import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALCol
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
 import com.jivesoftware.os.rcvs.inmemory.RowColumnValueStoreImpl;
+import java.io.File;
 import java.nio.file.Files;
 
 /**
@@ -48,8 +48,7 @@ public class IndexTestUtil {
 
     public static MiruContextAllocator buildHybridContextAllocator(int numberOfChunkStores,
         int partitionAuthzCacheSize,
-        boolean partitionDeleteChunkStoreOnClose,
-        int partitionChunkStoreConcurrencyLevel) {
+        boolean partitionDeleteChunkStoreOnClose) {
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS));
 
@@ -74,13 +73,12 @@ public class IndexTestUtil {
             numberOfChunkStores,
             partitionAuthzCacheSize,
             partitionDeleteChunkStoreOnClose,
-            partitionChunkStoreConcurrencyLevel,
-            new StripingLocksProvider<MiruTermId>(8));
+            new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<Long>(64));
     }
 
     public static MiruContextAllocator buildOnDiskContextAllocator(int numberOfChunkStores,
-        int partitionAuthzCacheSize,
-        int partitionChunkStoreConcurrencyLevel) {
+        int partitionAuthzCacheSize) {
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS));
 
@@ -103,10 +101,10 @@ public class IndexTestUtil {
             new MiruTempDirectoryResourceLocator(),
             numberOfChunkStores,
             partitionAuthzCacheSize,
-            partitionChunkStoreConcurrencyLevel,
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8));
+            new StripingLocksProvider<String>(8),
+            new StripingLocksProvider<Long>(64));
     }
 
     public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name,
@@ -145,29 +143,28 @@ public class IndexTestUtil {
         return new TxKeyedFilerStore(chunkStores, keyBytes(name));
     }
 
-    public static ChunkStore[] buildByteBufferBackedChunkStores(int numberOfChunkStores, ByteBufferFactory byteBufferFactory) throws Exception {
+    public static ChunkStore[] buildByteBufferBackedChunkStores(int numberOfChunkStores, ByteBufferFactory byteBufferFactory, long segmentSize)
+        throws Exception {
+
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.create(new ByteBufferProvider(keyBytes("chunks-" + i), byteBufferFactory),
-                512,
-                true,
-                64);
+            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new StripingLocksProvider<Long>(64));
         }
 
         return chunkStores;
     }
 
     public static ChunkStore[] buildFileBackedChunkStores(int numberOfChunkStores) throws Exception {
-        String[] pathsToPartitions = new String[numberOfChunkStores];
+        File[] pathsToPartitions = new File[numberOfChunkStores];
         for (int i = 0; i < numberOfChunkStores; i++) {
-            pathsToPartitions[i] = Files.createTempDirectory("chunks").toFile().getAbsolutePath();
+            pathsToPartitions[i] = Files.createTempDirectory("chunks").toFile();
         }
 
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.initialize(pathsToPartitions, "chunks", i, 512, true, 64);
+            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, "chunks-" + i, 512, new StripingLocksProvider<Long>(64));
         }
 
         return chunkStores;

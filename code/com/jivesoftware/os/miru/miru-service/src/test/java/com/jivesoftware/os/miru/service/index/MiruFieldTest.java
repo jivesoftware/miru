@@ -60,7 +60,7 @@ public class MiruFieldTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1");
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> hybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         for (int id = 0; id < 10; id++) {
@@ -68,7 +68,7 @@ public class MiruFieldTest {
             hybridFieldIndex.index(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), id);
         }
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> onDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         ((BulkImport) onDiskFieldIndex).bulkImport(tenantId, (BulkExport) hybridFieldIndex);

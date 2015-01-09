@@ -85,10 +85,10 @@ public class MiruFieldIndexTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = buildHybridContextAllocator(4, 10, true, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruInMemoryFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = buildOnDiskContextAllocator(4, 10, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         return new Object[][] {
@@ -103,11 +103,11 @@ public class MiruFieldIndexTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = buildHybridContextAllocator(4, 10, true, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruHybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
         miruHybridFieldIndex.index(0, new MiruTermId("term1".getBytes()), 1, 2, 3);
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = buildOnDiskContextAllocator(4, 10, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         ((BulkImport) miruOnDiskFieldIndex).bulkImport(tenantId, (BulkExport) miruHybridFieldIndex);

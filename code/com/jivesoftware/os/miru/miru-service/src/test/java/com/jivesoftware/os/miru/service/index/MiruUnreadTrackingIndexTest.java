@@ -146,7 +146,7 @@ public class MiruUnreadTrackingIndexTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruInMemoryUnreadTrackingIndex = buildHybridContextAllocator(4, 10, true, 64)
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruInMemoryUnreadTrackingIndex = buildHybridContextAllocator(4, 10, true)
             .allocate(bitmaps, coord).unreadTrackingIndex;
 
         if (autoCreate) {
@@ -155,7 +155,7 @@ public class MiruUnreadTrackingIndexTest {
             }
         }
 
-        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = buildOnDiskContextAllocator(4, 10, 64)
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = buildOnDiskContextAllocator(4, 10)
             .allocate(bitmaps, coord).unreadTrackingIndex;
 
         ((BulkImport) miruOnDiskUnreadTrackingIndex).bulkImport(tenantId, (BulkExport) miruInMemoryUnreadTrackingIndex);

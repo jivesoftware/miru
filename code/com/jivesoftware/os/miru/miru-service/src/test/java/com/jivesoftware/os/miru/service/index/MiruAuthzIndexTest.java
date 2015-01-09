@@ -54,11 +54,11 @@ public class MiruAuthzIndexTest {
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         // Create in-memory authz index
-        MiruContextAllocator hybridAllocator = buildHybridContextAllocator(4, 10, true, 64);
+        MiruContextAllocator hybridAllocator = buildHybridContextAllocator(4, 10, true);
         MiruAuthzIndex<EWAHCompressedBitmap> largeMiruInMemoryAuthzIndex = hybridAllocator.allocate(bitmaps, coord).authzIndex;
         Map<String, List<Integer>> largeBitsIn = populateAuthzIndex(largeMiruInMemoryAuthzIndex, miruAuthzUtils, 2);
 
-        MiruContextAllocator onDiskAllocator = buildOnDiskContextAllocator(4, 10, 64);
+        MiruContextAllocator onDiskAllocator = buildOnDiskContextAllocator(4, 10);
         MiruAuthzIndex<EWAHCompressedBitmap> largeMiruOnDiskAuthzIndex = onDiskAllocator.allocate(bitmaps, coord).authzIndex;
         ((BulkImport) largeMiruOnDiskAuthzIndex).bulkImport(tenantId, (BulkExport) largeMiruInMemoryAuthzIndex);
 

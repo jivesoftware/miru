@@ -113,13 +113,13 @@ public class MiruActivityIndexTest {
     }
 
     private MiruActivityIndex buildHybridActivityIndex() throws Exception {
-        MiruContext<RoaringBitmap> hybridContext = buildHybridContextAllocator(4, 10, true, 64).allocate(new MiruBitmapsRoaring(),
+        MiruContext<RoaringBitmap> hybridContext = buildHybridContextAllocator(4, 10, true).allocate(new MiruBitmapsRoaring(),
             new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000)));
         return hybridContext.activityIndex;
     }
 
     private MiruActivityIndex buildOnDiskActivityIndex() throws Exception {
-        MiruContext<RoaringBitmap> hybridContext = buildOnDiskContextAllocator(4, 10, 64).allocate(new MiruBitmapsRoaring(),
+        MiruContext<RoaringBitmap> hybridContext = buildOnDiskContextAllocator(4, 10).allocate(new MiruBitmapsRoaring(),
             new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000)));
         return hybridContext.activityIndex;
     }

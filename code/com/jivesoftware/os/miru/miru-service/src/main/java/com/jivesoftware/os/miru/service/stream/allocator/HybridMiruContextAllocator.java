@@ -8,7 +8,6 @@ import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteArrayPartitionFunction;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
-import com.jivesoftware.os.filer.io.ByteBufferProvider;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
@@ -66,8 +65,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
     private final int numberOfChunkStores;
     private final int partitionAuthzCacheSize;
     private final boolean partitionDeleteChunkStoreOnClose;
-    private final int partitionChunkStoreConcurrencyLevel;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
+    private final StripingLocksProvider<Long> chunkStripingLocksProvider;
 
     public HybridMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -77,7 +76,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         int numberOfChunkStores,
         int partitionAuthzCacheSize,
         boolean partitionDeleteChunkStoreOnClose,
-        int partitionChunkStoreConcurrencyLevel, StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider) {
+        StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
+        StripingLocksProvider<Long> chunkStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -86,8 +86,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.partitionDeleteChunkStoreOnClose = partitionDeleteChunkStoreOnClose;
-        this.partitionChunkStoreConcurrencyLevel = partitionChunkStoreConcurrencyLevel;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
+        this.chunkStripingLocksProvider = chunkStripingLocksProvider;
     }
 
     @Override
@@ -102,11 +102,9 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
+        long initialChunkSize = hybridResourceLocator.getInitialChunkSize();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.create(new ByteBufferProvider(keyBytes("chunks-" + i), byteBufferFactory),
-                hybridResourceLocator.getInitialChunkSize(),
-                true,
-                partitionChunkStoreConcurrencyLevel);
+            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, initialChunkSize, chunkStripingLocksProvider);
         }
 
         return buildMiruContext(bitmaps, schema, chunkStores);
@@ -126,17 +124,16 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
         ChunkStore[] fromChunkStores = from.chunkStores.get();
 
-        String[] chunkPaths = filesToPaths(hybridResourceLocator.getChunkDirectories(identifier, "chunks"));
+        File[] chunkDirs = hybridResourceLocator.getChunkDirectories(identifier, "chunks");
+        StripingLocksProvider<Long> locksProvider = new StripingLocksProvider<>(64);
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.initialize(
-                chunkPaths,
-                "chunks",
-                i,
-                fromChunkStores[i].sizeInBytes(),
-                true,
-                partitionChunkStoreConcurrencyLevel);
+            chunkStores[i] = chunkStoreInitializer.openOrCreate(
+                chunkDirs,
+                "chunk-" + i,
+                hybridResourceLocator.getInitialChunkSize(),
+                locksProvider);
             fromChunkStores[i].copyTo(chunkStores[i]);
         }
 

@@ -122,6 +122,7 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(config.getFieldIndexNumberOfLocks());
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
+        StripingLocksProvider<Long> chunkStripingLocksProvider = new StripingLocksProvider<>(config.getChunkStoreNumberOfLocks());
 
         MiruHybridResourceLocator transientResourceLocator = resourceLocatorProvider.getTransientResourceLocator();
         MiruContextAllocator hybridContextAllocator = new HybridMiruContextAllocator(schemaProvider,
@@ -132,8 +133,8 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
-            config.getPartitionChunkStoreConcurrencyLevel(),
-            fieldIndexStripingLocksProvider);
+            fieldIndexStripingLocksProvider,
+            chunkStripingLocksProvider);
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
@@ -142,10 +143,10 @@ public class MiruServiceInitializer {
             diskResourceLocator,
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionAuthzCacheSize(),
-            config.getPartitionChunkStoreConcurrencyLevel(),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
-            authzStripingLocksProvider);
+            authzStripingLocksProvider,
+            chunkStripingLocksProvider);
 
         MiruContextFactory streamFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

@@ -156,12 +156,12 @@ public class MiruBitmapsTimeRangeTest {
     private MiruTimeIndex buildInMemoryTimeIndex() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        return buildHybridContextAllocator(numberOfChunkStores, 10, true, 64).allocate(bitmaps, coord).timeIndex;
+        return buildHybridContextAllocator(numberOfChunkStores, 10, true).allocate(bitmaps, coord).timeIndex;
     }
 
     private MiruTimeIndex buildOnDiskTimeIndex() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        return buildOnDiskContextAllocator(numberOfChunkStores, 10, 64).allocate(bitmaps, coord).timeIndex;
+        return buildOnDiskContextAllocator(numberOfChunkStores, 10).allocate(bitmaps, coord).timeIndex;
     }
 }

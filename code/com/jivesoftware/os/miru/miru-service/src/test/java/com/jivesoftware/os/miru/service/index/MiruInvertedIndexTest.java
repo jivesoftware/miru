@@ -208,7 +208,7 @@ public class MiruInvertedIndexTest {
     private <BM> MiruInMemoryInvertedIndex<BM> buildInMemoryInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
         return new MiruInMemoryInvertedIndex<>(bitmaps,
             IndexTestUtil.<byte[], ReadWrite<BM>>buildKeyObjectStore("index",
-                IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory()),
+                IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096),
                 new ByteArrayPartitionFunction(),
                 PassThroughKeyMarshaller.INSTANCE,
                 1,
@@ -220,7 +220,7 @@ public class MiruInvertedIndexTest {
     private <BM> MiruOnDiskInvertedIndex<BM> buildOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
         return new MiruOnDiskInvertedIndex<>(bitmaps,
             IndexTestUtil.buildKeyedFilerStore("index",
-                IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory())),
+                IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096)),
             new byte[] { 0 },
             -1,
             new Object());

@@ -115,7 +115,7 @@ public class MiruIndexerTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruIndexer<EWAHCompressedBitmap> miruIndexer = new MiruIndexer<>(bitmaps);
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
 
         // Build in-memory index stream object
         MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[] { "abcde" },
@@ -125,7 +125,7 @@ public class MiruIndexerTest {
         MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "klmno" },
             ImmutableMap.of(DefaultMiruSchemaDefinition.FIELDS[2].name, "value3"));
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
 
         // Index initial activities
         miruIndexer.index(hybridContext,

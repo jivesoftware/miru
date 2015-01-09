@@ -95,10 +95,10 @@ public class MiruInboxIndexTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = hybridContext.inboxIndex;
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = onDiskContext.inboxIndex;
 
         ((BulkImport) miruOnDiskInboxIndex).bulkImport(tenantId, (BulkExport) miruInMemoryInboxIndex);
@@ -118,14 +118,14 @@ public class MiruInboxIndexTest {
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = hybridContext.inboxIndex;
 
         miruInMemoryInboxIndex.index(streamId, 1);
         miruInMemoryInboxIndex.index(streamId, 2);
         miruInMemoryInboxIndex.index(streamId, 3);
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10, 64).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = onDiskContext.inboxIndex;
 
         ((BulkImport) miruOnDiskInboxIndex).bulkImport(tenantId, (BulkExport) miruInMemoryInboxIndex);
