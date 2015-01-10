@@ -72,6 +72,9 @@ public class MiruOnDiskUnreadTrackingIndex<BM> implements MiruUnreadTrackingInde
         export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
             @Override
             public boolean stream(byte[] key, MiruInvertedIndex<BM> importIndex) throws IOException {
+                if (key == null) {
+                    return true;
+                }
                 try {
                     MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, store, key, -1, new Object());
                     invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));

@@ -97,6 +97,33 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
     @Override
     public <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
+        //TODO this is a mess
+        return new MiruContext<>(schema, null, null, null, null, null, null, null, null, null, null,
+            Optional.<ChunkStore[]>absent(), Optional.<MiruResourcePartitionIdentifier>absent());
+    }
+
+    @Override
+    public <BM> MiruContext<BM> stateChanged(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM> from, MiruPartitionState state)
+        throws Exception {
+
+        MiruContext<BM> updated = null;
+        if (state == MiruPartitionState.rebuilding) {
+            updated = allocateRebuilding(bitmaps, coord);
+        } else if (state == MiruPartitionState.online) {
+            updated = allocateOnline(bitmaps, from);
+        }
+
+        if (updated != null) {
+            LOG.info("Updated hybrid context when state changed to {}", state);
+            return updated;
+        } else {
+            return from;
+        }
+    }
+
+    private <BM> MiruContext<BM> allocateRebuilding(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
@@ -110,13 +137,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         return buildMiruContext(bitmaps, schema, chunkStores);
     }
 
-    @Override
-    public <BM> MiruContext<BM> stateChanged(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM> from, MiruPartitionState state)
-        throws Exception {
-
-        if (state != MiruPartitionState.online) {
-            return from;
-        }
+    private <BM> MiruContext<BM> allocateOnline(MiruBitmaps<BM> bitmaps, MiruContext<BM> from) throws Exception {
 
         MiruSchema schema = from.schema;
 
@@ -137,10 +158,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             fromChunkStores[i].copyTo(chunkStores[i]);
         }
 
-        MiruContext<BM> miruContext = buildMiruContext(bitmaps, schema, chunkStores);
-
-        LOG.info("Updated context when hybrid state changed to {}", state);
-        return miruContext;
+        return buildMiruContext(bitmaps, schema, chunkStores);
     }
 
     private <BM> MiruContext<BM> buildMiruContext(MiruBitmaps<BM> bitmaps, MiruSchema schema, ChunkStore[] chunkStores)

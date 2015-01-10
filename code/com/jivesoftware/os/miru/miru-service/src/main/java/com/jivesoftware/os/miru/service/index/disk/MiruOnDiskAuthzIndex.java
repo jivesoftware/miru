@@ -79,6 +79,9 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
         export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
             @Override
             public boolean stream(byte[] key, MiruInvertedIndex<BM> importIndex) throws IOException {
+                if (key == null) {
+                    return true;
+                }
                 try {
                     Optional<BM> index = importIndex.getIndex();
                     if (index.isPresent()) {

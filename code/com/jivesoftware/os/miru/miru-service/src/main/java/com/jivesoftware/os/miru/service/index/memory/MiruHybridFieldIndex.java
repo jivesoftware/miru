@@ -108,6 +108,9 @@ public class MiruHybridFieldIndex<BM> implements MiruFieldIndex<BM>,
         throws Exception {
 
         for (final KeyValueStore<byte[], ReadWrite<BM>> index : indexes) {
+            if (index == null) {
+                continue;
+            }
             callback.stream(new BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>() {
                 @Override
                 public Void bulkExport(MiruTenantId tenantId, final BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>> callback) throws Exception {

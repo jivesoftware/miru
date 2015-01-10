@@ -67,6 +67,9 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
         export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
             @Override
             public boolean stream(byte[] key, final MiruInvertedIndex<BM> importIndex) throws IOException {
+                if (key == null) {
+                    return true;
+                }
                 try {
                     Optional<BM> index = importIndex.getIndex();
                     if (index.isPresent()) {

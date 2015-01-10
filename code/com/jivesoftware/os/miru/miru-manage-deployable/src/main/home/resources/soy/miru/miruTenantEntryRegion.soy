@@ -44,14 +44,12 @@
                         <th>Storage</th>
                         <th>Logical name</th>
                         <th>Port</th>
-                        <th>Size in memory</th>
-                        <th>Size on disk</th>
                     </tr>
                 </thead>
                 <tbody>
                     {foreach $p in $partitions}
                         <tr>
-                            <td colspan="6" style="background-color: #eee; font-size:90%;">
+                            <td colspan="4" style="background-color: #eee; font-size:90%;">
                                 Partition {$p.partitionId} (size: {$p.activityCount})
                             </td>
                         </tr>
@@ -73,7 +71,7 @@
                         {/call}
                     {ifempty}
                         <tr>
-                            <td colspan="6">There are no registered partitions for this tenant</td>
+                            <td colspan="4">There are no registered partitions for this tenant</td>
                         </tr>
                     {/foreach}
                 </tbody>

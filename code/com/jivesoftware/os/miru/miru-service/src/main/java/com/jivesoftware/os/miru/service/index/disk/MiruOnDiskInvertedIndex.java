@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.Filer;
@@ -40,8 +41,8 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>,
         int considerIfIndexIdGreaterThanN,
         Object mutationLock) {
         this.bitmaps = bitmaps;
-        this.keyedFilerStore = keyedFilerStore;
-        this.keyBytes = keyBytes;
+        this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
+        this.keyBytes = Preconditions.checkNotNull(keyBytes);
         this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
         this.mutationLock = mutationLock;
     }

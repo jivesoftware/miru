@@ -101,13 +101,13 @@
                                 <td>{$activity.version == $activity.collisionId ? '=' : $activity.version ?: ''}</td>
                             </tr>
                             <tr id="readFilter-{$activity.timestamp}" style="display:none">
-                                <td colspan="7">
+                                <td colspan="9">
                                     <em>ReadFilter</em> {$activity.readFilter?:''}
                                 </td>
                             </tr>
                         {ifempty}
                             <tr>
-                                <td colspan="7">No read events found</td>
+                                <td colspan="9">No read events found</td>
                             </tr>
                         {/foreach}
                     </tbody>

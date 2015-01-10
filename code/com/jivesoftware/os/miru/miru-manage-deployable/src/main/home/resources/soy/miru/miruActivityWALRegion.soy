@@ -112,23 +112,23 @@
                                 </td>
                             </tr>
                             <tr id="activityAuthz-{$activity.timestamp}" style="display:none">
-                                <td colspan="8">
+                                <td colspan="10">
                                     <em>ActAuthz</em> {$activity.activityAuthz?:''}
                                 </td>
                             </tr>
                             <tr id="activityFieldsValues-{$activity.timestamp}" style="display:none">
-                                <td colspan="8">
+                                <td colspan="10">
                                     <em>ActFields</em> {$activity.activityFieldsValues?:''}
                                 </td>
                             </tr>
                             <tr id="activityPropsValues-{$activity.timestamp}" style="display:none">
-                                <td colspan="8">
+                                <td colspan="10">
                                     <em>ActProps</em> {$activity.activityPropsValues?:''}
                                 </td>
                             </tr>
                         {ifempty}
                             <tr>
-                                <td colspan="8">No activity found</td>
+                                <td colspan="10">No activity found</td>
                             </tr>
                         {/foreach}
                     </tbody>

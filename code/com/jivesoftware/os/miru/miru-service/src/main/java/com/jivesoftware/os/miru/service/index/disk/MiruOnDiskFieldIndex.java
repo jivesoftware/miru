@@ -100,15 +100,17 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>,
         export.bulkExport(tenantId, new BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>() {
             @Override
             public boolean stream(BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>> export) throws Exception {
-                export.bulkExport(tenantId, new BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
-                    @Override
-                    public boolean stream(final BulkEntry<byte[], MiruInvertedIndex<BM>> entry) throws Exception {
-                        MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId.get()], entry.key,
-                            -1, stripingLocksProvider.lock(new MiruTermId(entry.key)));
-                        miruOnDiskInvertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(entry.value));
-                        return true;
-                    }
-                });
+                if (indexes[fieldId.get()] != null) {
+                    export.bulkExport(tenantId, new BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
+                        @Override
+                        public boolean stream(final BulkEntry<byte[], MiruInvertedIndex<BM>> entry) throws Exception {
+                            MiruOnDiskInvertedIndex<BM> miruOnDiskInvertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps, indexes[fieldId.get()], entry.key,
+                                -1, stripingLocksProvider.lock(new MiruTermId(entry.key)));
+                            miruOnDiskInvertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(entry.value));
+                            return true;
+                        }
+                    });
+                }
                 fieldId.incrementAndGet();
                 return true;
             }
@@ -129,10 +131,14 @@ public class MiruOnDiskFieldIndex<BM> implements MiruFieldIndex<BM>,
                     index.stream(new KeyValueStore.EntryStream<IBA, Filer>() {
                         @Override
                         public boolean stream(IBA iba, Filer filer) throws IOException {
+                            if (iba == null || filer == null) {
+                                return true;
+                            }
                             try {
                                 return callback.stream(new BulkEntry<byte[], MiruInvertedIndex<BM>>(iba.getBytes(),
                                     new MiruOnDiskInvertedIndex<>(bitmaps, index, iba.getBytes(), -1, new Object())));
                             } catch (Exception e) {
+                                e.printStackTrace();
                                 throw new IOException("Failed to stream export", e);
                             }
                         }
