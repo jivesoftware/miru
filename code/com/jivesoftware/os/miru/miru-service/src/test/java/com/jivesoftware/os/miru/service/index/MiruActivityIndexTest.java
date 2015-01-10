@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -11,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
+import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
 import java.util.Arrays;
 import org.apache.commons.lang.RandomStringUtils;
 import org.roaringbitmap.RoaringBitmap;
@@ -113,14 +115,20 @@ public class MiruActivityIndexTest {
     }
 
     private MiruActivityIndex buildHybridActivityIndex() throws Exception {
-        MiruContext<RoaringBitmap> hybridContext = buildHybridContextAllocator(4, 10, true).allocate(new MiruBitmapsRoaring(),
-            new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000)));
+        MiruContextAllocator allocator = buildHybridContextAllocator(4, 10, true);
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruContext<RoaringBitmap> hybridContext = allocator.allocate(bitmaps, coord);
+        hybridContext = allocator.stateChanged(bitmaps, coord, hybridContext, MiruPartitionState.rebuilding);
         return hybridContext.activityIndex;
     }
 
     private MiruActivityIndex buildOnDiskActivityIndex() throws Exception {
-        MiruContext<RoaringBitmap> hybridContext = buildOnDiskContextAllocator(4, 10).allocate(new MiruBitmapsRoaring(),
-            new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000)));
+        MiruContextAllocator allocator = buildOnDiskContextAllocator(4, 10);
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruContext<RoaringBitmap> hybridContext = allocator.allocate(bitmaps, coord);
+        hybridContext = allocator.stateChanged(bitmaps, coord, hybridContext, MiruPartitionState.rebuilding);
         return hybridContext.activityIndex;
     }
 

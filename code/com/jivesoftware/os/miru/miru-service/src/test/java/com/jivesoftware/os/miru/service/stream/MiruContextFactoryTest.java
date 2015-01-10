@@ -10,6 +10,7 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -126,7 +127,8 @@ public class MiruContextFactoryTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, host);
 
         MiruIndexer<EWAHCompressedBitmap> indexer = new MiruIndexer<>(bitmaps);
-        MiruContext<EWAHCompressedBitmap> inMemContext = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
+        MiruContext<EWAHCompressedBitmap> inMemContext = streamFactory.stateChanged(bitmaps, coord,
+            streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory), MiruBackingStorage.memory, MiruPartitionState.rebuilding);
 
         for (int i = 0; i < numberOfActivities; i++) {
             String[] authz = { "aaaabbbbcccc" };
@@ -200,7 +202,8 @@ public class MiruContextFactoryTest {
         }
 
         MiruIndexer<EWAHCompressedBitmap> indexer = new MiruIndexer<>(bitmaps);
-        MiruContext<EWAHCompressedBitmap> inMemContext = streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory);
+        MiruContext<EWAHCompressedBitmap> inMemContext = streamFactory.stateChanged(bitmaps, coord,
+            streamFactory.allocate(bitmaps, coord, MiruBackingStorage.memory), MiruBackingStorage.memory, MiruPartitionState.rebuilding);
         int id = inMemContext.getTimeIndex().nextId(System.currentTimeMillis());
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(0));
         indexer.index(inMemContext, new ArrayList<>(Arrays.asList(new MiruActivityAndId<>(builder.build(), id))), MoreExecutors.sameThreadExecutor());

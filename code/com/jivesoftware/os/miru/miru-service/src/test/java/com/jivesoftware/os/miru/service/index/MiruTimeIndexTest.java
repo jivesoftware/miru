@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
@@ -144,7 +145,8 @@ public class MiruTimeIndexTest {
         int capacity = 100; //1_000_000;
         long start = System.currentTimeMillis();
 
-        MiruTimeIndex inMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true).allocate(bitmaps, coord).timeIndex;
+        MiruContextAllocator allocator = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true);
+        MiruTimeIndex inMemoryTimeIndex = allocator.stateChanged(bitmaps, coord, allocator.allocate(bitmaps, coord), MiruPartitionState.rebuilding).timeIndex;
         for (int i = 0; i < capacity; i++) {
             inMemoryTimeIndex.nextId(i * 10);
         }
@@ -192,7 +194,9 @@ public class MiruTimeIndexTest {
         int capacity = 1_000;
 
         // Set up and import in-memory implementation
-        MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true).allocate(bitmaps, coord).timeIndex;
+        MiruContextAllocator inMemAllocator = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true);
+        MiruTimeIndex miruInMemoryTimeIndex = inMemAllocator.stateChanged(bitmaps, coord, inMemAllocator.allocate(bitmaps, coord),
+            MiruPartitionState.rebuilding).timeIndex;
 
         final long[] importValues = new long[capacity];
         for (int i = 0; i < capacity; i++) {
@@ -215,7 +219,9 @@ public class MiruTimeIndexTest {
     @DataProvider(name = "miruTimeIndexDataProviderWithRangeData")
     public Object[][] miruTimeIndexDataProviderWithRangeData() throws Exception {
         // Set up and import in-memory implementation
-        MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true).allocate(bitmaps, coord).timeIndex;
+        MiruContextAllocator inMemAllocator = IndexTestUtil.buildHybridContextAllocator(numberOfChunkStores, 10, true);
+        MiruTimeIndex miruInMemoryTimeIndex = inMemAllocator.stateChanged(bitmaps, coord, inMemAllocator.allocate(bitmaps, coord),
+            MiruPartitionState.rebuilding).timeIndex;
 
         final long[] importValues = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
 
