@@ -6,10 +6,9 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
-import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.client.base.MiruBestEffortFailureTolerantClient;
-import com.jivesoftware.os.miru.client.base.MiruHttpActivitySenderProvider;
+import com.jivesoftware.os.miru.client.base.MiruLiveIngressActivitySenderProvider;
+import com.jivesoftware.os.miru.client.base.MiruWarmActivitySenderProvider;
 import com.jivesoftware.os.miru.client.rcvs.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
@@ -24,7 +23,6 @@ import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.MiruWriteToReadTrackingAndSipWAL;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -39,29 +37,19 @@ public class MiruClientInitializer {
 
         ExecutorService sendActivitiesToHostsThreadPool = Executors.newFixedThreadPool(config.getSendActivitiesThreadPoolSize());
 
+        Collection<HttpClientConfiguration> configurations = Lists.newArrayList();
+        HttpClientConfig baseConfig = HttpClientConfig.newBuilder() // TODO refactor so this is passed in.
+            .setSocketTimeoutInMillis(config.getSocketTimeoutInMillis())
+            .setMaxConnections(config.getMaxConnections())
+            .build();
+        configurations.add(baseConfig);
+        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configurations);
+
         MiruActivitySenderProvider activitySenderProvider;
         if (config.getLiveIngress()) {
-            Collection<HttpClientConfiguration> configurations = Lists.newArrayList();
-            HttpClientConfig baseConfig = HttpClientConfig.newBuilder() // TODO refator so this is passed in.
-                .setSocketTimeoutInMillis(config.getSocketTimeoutInMillis())
-                .setMaxConnections(config.getMaxConnections())
-                .build();
-            configurations.add(baseConfig);
-            HttpClientFactory httpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configurations);
-            activitySenderProvider = new MiruHttpActivitySenderProvider(httpClientFactory, new ObjectMapper());
+            activitySenderProvider = new MiruLiveIngressActivitySenderProvider(httpClientFactory, new ObjectMapper());
         } else {
-            activitySenderProvider = new MiruActivitySenderProvider() {
-
-                @Override
-                public MiruActivitySenderProvider.MiruActivitySender get(MiruHost host) {
-                    return new MiruActivitySender() {
-
-                        @Override
-                        public void send(List<MiruPartitionedActivity> activities) {
-                        }
-                    };
-                }
-            };
+            activitySenderProvider = new MiruWarmActivitySenderProvider(httpClientFactory, new ObjectMapper());
         }
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());

@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
@@ -16,6 +17,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -114,6 +116,8 @@ public class MiruPluginTestBootstrap {
         replicaSetDirector.electToReplicaSetForTenantPartition(tenantId, partitionId,
             new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3),
             System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
+        clusterRegistry.updateTopology(new MiruPartitionCoord(tenantId, partitionId, miruHost), Optional.<MiruPartitionCoordInfo>absent(),
+            Optional.of(System.currentTimeMillis()));
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
         if (!partitionedActivities.isEmpty()) {

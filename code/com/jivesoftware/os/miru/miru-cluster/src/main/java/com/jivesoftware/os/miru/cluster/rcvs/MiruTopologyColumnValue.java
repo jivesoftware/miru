@@ -10,9 +10,11 @@ public class MiruTopologyColumnValue {
 
     public final MiruPartitionState state;
     public final MiruBackingStorage storage;
+    public final long lastActiveTimestamp;
 
-    public MiruTopologyColumnValue(MiruPartitionState state, MiruBackingStorage storage) {
+    public MiruTopologyColumnValue(MiruPartitionState state, MiruBackingStorage storage, long lastActiveTimestamp) {
         this.state = state;
         this.storage = storage;
+        this.lastActiveTimestamp = lastActiveTimestamp;
     }
 }

@@ -7,6 +7,7 @@ import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.MiruService;
+import java.util.List;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -19,6 +20,7 @@ import javax.ws.rs.core.Response;
 
 import static com.jivesoftware.os.miru.api.MiruReader.INSPECT_ENDPOINT;
 import static com.jivesoftware.os.miru.api.MiruReader.QUERY_SERVICE_ENDPOINT_PREFIX;
+import static com.jivesoftware.os.miru.api.MiruReader.WARM_ALL_ENDPOINT;
 import static com.jivesoftware.os.miru.api.MiruReader.WARM_ENDPOINT;
 
 @Path(QUERY_SERVICE_ENDPOINT_PREFIX)
@@ -43,6 +45,26 @@ public class MiruReaderEndpoints {
             return responseHelper.jsonResponse("");
         } catch (Exception e) {
             log.error("Failed to warm.", e);
+            return Response.serverError().build();
+        }
+    }
+
+    @POST
+    @Path(WARM_ALL_ENDPOINT)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response warm(List<MiruTenantId> tenantIds) {
+        try {
+            for (MiruTenantId tenantId : tenantIds) {
+                try {
+                    miruService.warm(tenantId);
+                } catch (Exception e) {
+                    log.error("Failed to warm tenant {}", new Object[] { tenantId }, e);
+                }
+            }
+            return responseHelper.jsonResponse("");
+        } catch (Exception e) {
+            log.error("Failed to warm multiple tenants.", e);
             return Response.serverError().build();
         }
     }

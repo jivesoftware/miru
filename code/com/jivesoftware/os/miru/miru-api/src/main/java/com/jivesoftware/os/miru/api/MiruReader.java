@@ -9,6 +9,7 @@ public interface MiruReader {
     public static final String QUERY_SERVICE_ENDPOINT_PREFIX = "/miru/reader";
 
     public static final String WARM_ENDPOINT = "/warm";
+    public static final String WARM_ALL_ENDPOINT = "/warmall";
     public static final String INSPECT_ENDPOINT = "/inspect";
 
     <P, R> R read(MiruTenantId tenantId, Optional<MiruActorId> actorId, P params, String endpoint, Class<R> resultClass, R defaultResult)

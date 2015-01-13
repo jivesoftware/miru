@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -69,14 +70,20 @@ public class MiruRebalanceDirector {
         this.readerRequestHelpers = readerRequestHelpers;
     }
 
-    public void shiftTopologies(MiruHost fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
+    public void shiftTopologies(Optional<MiruHost> fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
         LinkedHashSet<MiruClusterRegistry.HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
         List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(hostHeartbeats, heartbeatToHost));
 
         int moved = 0;
         int skipped = 0;
         int missed = 0;
-        for (MiruTenantId tenantId : clusterRegistry.getTenantsForHost(fromHost)) {
+        List<MiruTenantId> tenantIds;
+        if (fromHost.isPresent()) {
+            tenantIds = clusterRegistry.getTenantsForHost(fromHost.get());
+        } else {
+            tenantIds = clusterRegistry.allTenantIds();
+        }
+        for (MiruTenantId tenantId : tenantIds) {
             int numberOfReplicas = clusterRegistry.getNumberOfReplicas(tenantId);
             List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
             MiruPartitionId currentPartitionId = findCurrentPartitionId(partitionsForTenant);
@@ -86,7 +93,7 @@ public class MiruRebalanceDirector {
                 MiruPartitionId partitionId = cell.getColumnKey();
                 List<MiruPartition> partitions = cell.getValue();
                 Set<MiruHost> hostsWithPartition = Sets.newHashSet(Collections2.transform(partitions, partitionToHost));
-                if (!hostsWithPartition.contains(fromHost)) {
+                if (fromHost.isPresent() && !hostsWithPartition.contains(fromHost.get())) {
                     missed++;
                     LOG.trace("Missed {} {}", tenantId, partitionId);
                     continue;
@@ -95,7 +102,16 @@ public class MiruRebalanceDirector {
                     LOG.trace("Skipped {} {}", tenantId, partitionId);
                     continue;
                 }
-                List<MiruHost> hostsToElect = selectHostsStrategy.selectHosts(fromHost, allHosts, partitions, numberOfReplicas);
+
+                MiruHost pivotHost;
+                if (fromHost.isPresent()) {
+                    pivotHost = fromHost.get();
+                } else if (partitions.isEmpty()) {
+                    pivotHost = allHosts.get(new Random().nextInt(allHosts.size()));
+                } else {
+                    pivotHost = partitions.get(0).coord.host;
+                }
+                List<MiruHost> hostsToElect = selectHostsStrategy.selectHosts(pivotHost, allHosts, partitions, numberOfReplicas);
                 electHosts(tenantId, partitionId, Lists.transform(partitions, partitionToHost), hostsToElect);
                 moved++;
             }

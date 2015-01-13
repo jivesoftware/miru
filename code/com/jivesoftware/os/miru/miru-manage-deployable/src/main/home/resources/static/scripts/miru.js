@@ -3,6 +3,31 @@ window.$ = window.jQuery;
 window.miru = {};
 
 miru.balancer = {
+
+    repair: function(ele) {
+        var $button = $(ele);
+        $button.attr('disabled', 'disabled');
+        var value = $button.val();
+        $.ajax({
+            type: "POST",
+            url: "/miru/manage/topology/repair",
+            data: {},
+            //contentType: "application/json",
+            success: function() {
+                $button.val('Success');
+                setTimeout(function() {
+                    miru.balancer.resetButton($button, value);
+                }, 2000);
+            },
+            error: function() {
+                $button.val('Failure');
+                setTimeout(function() {
+                    miru.balancer.resetButton($button, value);
+                }, 2000);
+            }
+        });
+    },
+
     rebalance: function(ele, host, port, direction) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');

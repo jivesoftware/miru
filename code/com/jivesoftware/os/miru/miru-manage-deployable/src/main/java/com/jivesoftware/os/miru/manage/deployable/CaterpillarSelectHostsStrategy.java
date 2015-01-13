@@ -17,10 +17,14 @@ public class CaterpillarSelectHostsStrategy implements SelectHostsStrategy {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final boolean caterpillar;
     private final int numberOfPlaces;
     private final boolean currentPartitionOnly;
 
-    public CaterpillarSelectHostsStrategy(int numberOfPlaces, boolean currentPartitionOnly) {
+    public CaterpillarSelectHostsStrategy(boolean caterpillar,
+        int numberOfPlaces,
+        boolean currentPartitionOnly) {
+        this.caterpillar = caterpillar;
         this.numberOfPlaces = numberOfPlaces;
         this.currentPartitionOnly = currentPartitionOnly;
     }
@@ -53,7 +57,7 @@ public class CaterpillarSelectHostsStrategy implements SelectHostsStrategy {
 
             boolean contiguous = (start >= 0);
             if (contiguous) {
-                if (numberOfPlaces != 0) {
+                if (caterpillar) {
                     //    \_/-.--.--.--.--.--.
                     //    (")__)__)__)__)__)__)
                     //     ^ "" "" "" "" "" ""

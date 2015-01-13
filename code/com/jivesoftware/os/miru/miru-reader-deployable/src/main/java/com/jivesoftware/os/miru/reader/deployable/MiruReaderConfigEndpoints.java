@@ -177,7 +177,7 @@ public class MiruReaderConfigEndpoints {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
         } catch (Throwable t) {
-            log.error("Failed to check state for tenant {} partition {}", new Object[] { tenantId, partitionId });
+            log.error("Failed to check state for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
             return Response.serverError().build();
         }
     }
@@ -196,7 +196,7 @@ public class MiruReaderConfigEndpoints {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
         } catch (Throwable t) {
-            log.error("Failed to check state for tenant {} partition {}", new Object[] { tenantId, partitionId });
+            log.error("Failed to prioritize rebuild for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
             return Response.serverError().build();
         }
     }

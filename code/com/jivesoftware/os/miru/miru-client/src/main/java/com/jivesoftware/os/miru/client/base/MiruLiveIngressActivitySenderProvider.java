@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** @author jonathan */
-public class MiruHttpActivitySenderProvider implements MiruActivitySenderProvider {
+public class MiruLiveIngressActivitySenderProvider implements MiruActivitySenderProvider {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -24,7 +24,7 @@ public class MiruHttpActivitySenderProvider implements MiruActivitySenderProvide
 
     private static final ConcurrentHashMap<String, RequestHelper> hostToRequestHelpers = new ConcurrentHashMap<>();
 
-    public MiruHttpActivitySenderProvider(HttpClientFactory httpClientFactory,
+    public MiruLiveIngressActivitySenderProvider(HttpClientFactory httpClientFactory,
         ObjectMapper objectMapper) {
         this.sendActivitesEndpointUrl = MiruWriter.WRITER_SERVICE_ENDPOINT_PREFIX + MiruWriter.ADD_ACTIVITIES;
         this.httpClientFactory = httpClientFactory;

@@ -5,13 +5,18 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
+import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -186,20 +191,53 @@ public class MiruManageEndpoints {
     @Path("/topology/shift")
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response shiftTopologies(@FormParam("host") String host, @FormParam("port") int port, @FormParam("direction") int direction) {
+    public Response shiftTopologies(@FormParam("host") String host,
+        @FormParam("port") int port,
+        @FormParam("direction") int direction,
+        @FormParam("unhealthyPct") @DefaultValue("0.24") float unhealthyPct,
+        @FormParam("probability") @DefaultValue("0.10") float probability) {
         try {
             ShiftPredicate shiftPredicate;
+            boolean caterpillar;
             if (direction == 0) {
-                shiftPredicate = new UnhealthyTopologyShiftPredicate(0.24f); //TODO should be passed in
+                // "zero" means evac
+                caterpillar = false;
+                shiftPredicate = new UnhealthyTopologyShiftPredicate(unhealthyPct); //TODO should be passed in
             } else {
-                shiftPredicate = new RandomShiftPredicate(0.10f);
+                // "non-zero" means shift by N places
+                caterpillar = true;
+                shiftPredicate = new RandomShiftPredicate(probability);
             }
-            rebalanceDirector.shiftTopologies(new MiruHost(host, port),
+            rebalanceDirector.shiftTopologies(Optional.of(new MiruHost(host, port)),
                 shiftPredicate,
-                new CaterpillarSelectHostsStrategy(direction, false));
+                new CaterpillarSelectHostsStrategy(caterpillar, direction, false));
             return Response.ok("success").build();
         } catch (Throwable t) {
-            LOG.error("POST /topology/shift {} {} {}", new Object[] { host, port, direction }, t);
+            LOG.error("POST /topology/shift {} {} {} {} {}", new Object[] { host, port, direction, unhealthyPct, probability }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @POST
+    @Path("/topology/repair")
+    @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response repairTopologies() {
+        try {
+            rebalanceDirector.shiftTopologies(Optional.<MiruHost>absent(),
+                new ShiftPredicate() {
+                    @Override
+                    public boolean needsToShift(MiruTenantId tenantId,
+                        MiruPartitionId partitionId,
+                        Collection<MiruClusterRegistry.HostHeartbeat> hostHeartbeats,
+                        List<MiruPartition> partitions) {
+                        return true;
+                    }
+                },
+                new CaterpillarSelectHostsStrategy(true, 0, false));
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /topology/repair", t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

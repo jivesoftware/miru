@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -17,7 +16,6 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class MiruLocalPartitionFactory {
 
-    private final Timestamper timestamper;
     private final MiruServiceConfig config;
     private final MiruContextFactory miruContextFactory;
     private final MiruActivityWALReader activityWALReader;
@@ -31,8 +29,7 @@ public class MiruLocalPartitionFactory {
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
 
-    public MiruLocalPartitionFactory(Timestamper timestamper,
-        MiruServiceConfig config,
+    public MiruLocalPartitionFactory(MiruServiceConfig config,
         MiruContextFactory miruContextFactory,
         MiruActivityWALReader activityWALReader,
         MiruPartitionEventHandler partitionEventHandler,
@@ -44,7 +41,6 @@ public class MiruLocalPartitionFactory {
         ExecutorService sipIndexExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs) {
-        this.timestamper = timestamper;
         this.config = config;
         this.miruContextFactory = miruContextFactory;
         this.activityWALReader = activityWALReader;
@@ -60,7 +56,9 @@ public class MiruLocalPartitionFactory {
     }
 
     public <BM> MiruHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return new MiruLocalHostedPartition<>(timestamper, bitmaps, coord, miruContextFactory,
+        return new MiruLocalHostedPartition<>(bitmaps,
+            coord,
+            miruContextFactory,
             activityWALReader,
             partitionEventHandler,
             rebuildDirector,

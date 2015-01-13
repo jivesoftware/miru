@@ -142,8 +142,8 @@ public class MiruPartitionAccessor<BM> {
             && !beginWriters.isEmpty() && beginWriters.equals(endWriters);
     }
 
-    void markForRefresh() {
-        refreshTimestamp.set(Optional.of(System.currentTimeMillis()));
+    void markForRefresh(Optional<Long> timestamp) {
+        refreshTimestamp.set(timestamp);
     }
 
     public static enum IndexStrategy {
@@ -281,7 +281,7 @@ public class MiruPartitionAccessor<BM> {
 
     MiruRequestHandle<BM> getRequestHandle() {
         log.debug("Request handle requested for {}", coord);
-        markForRefresh();
+        markForRefresh(Optional.of(System.currentTimeMillis()));
 
         try {
             semaphore.acquire();

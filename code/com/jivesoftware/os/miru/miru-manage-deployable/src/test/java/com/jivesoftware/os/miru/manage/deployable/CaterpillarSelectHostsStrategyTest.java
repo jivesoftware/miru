@@ -9,7 +9,7 @@ public class CaterpillarSelectHostsStrategyTest {
 
     @Test
     public void testStartOfContiguousRun() throws Exception {
-        CaterpillarSelectHostsStrategy caterpillarSelectHostsStrategy = new CaterpillarSelectHostsStrategy(1, false);
+        CaterpillarSelectHostsStrategy caterpillarSelectHostsStrategy = new CaterpillarSelectHostsStrategy(true, 1, false);
 
         assertEquals(0, caterpillarSelectHostsStrategy.startOfContiguousRun(10, Arrays.asList(0, 1, 2)));
         assertEquals(0, caterpillarSelectHostsStrategy.startOfContiguousRun(10, Arrays.asList(4, 5, 6)));

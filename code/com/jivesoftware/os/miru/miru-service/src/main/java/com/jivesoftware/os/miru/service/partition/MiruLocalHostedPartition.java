@@ -27,7 +27,6 @@ import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -51,7 +50,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final Timestamper timestamper;
     private final MiruBitmaps<BM> bitmaps;
     private final MiruPartitionCoord coord;
     private final MiruContextFactory contextFactory;
@@ -102,7 +100,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private static final HealthCounter bootstrapCounter = HealthFactory.getHealthCounter(BootstrapCount.class, MinMaxHealthChecker.FACTORY);
 
     public MiruLocalHostedPartition(
-        Timestamper timestamper,
         MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
         MiruContextFactory contextFactory,
@@ -126,7 +123,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         long partitionBanUnregisteredSchemaMillis)
         throws Exception {
 
-        this.timestamper = timestamper;
         this.bitmaps = bitmaps;
         this.coord = coord;
         this.contextFactory = contextFactory;
@@ -153,6 +149,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
         MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, contextFactory.findBackingStorage(coord));
         MiruPartitionAccessor<BM> accessor = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo, null, 0, indexRepairs, indexer);
+        accessor.markForRefresh(Optional.<Long>absent());
         this.accessorRef.set(accessor);
         log.incAtomic("state>" + accessor.info.state.name());
 
@@ -288,13 +285,17 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
 
         if (partitionWakeOnIndex) {
-            accessor.markForRefresh();
+            accessor.markForRefresh(Optional.of(System.currentTimeMillis()));
         }
     }
 
     @Override
     public void warm() {
-        accessorRef.get().markForRefresh();
+        accessorRef.get().markForRefresh(Optional.of(System.currentTimeMillis()));
+
+        log.inc("warm", 1);
+        log.inc("warm>tenant>" + coord.tenantId, 1);
+        log.inc("warm>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, 1);
     }
 
     @Override
@@ -431,11 +432,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 }
             }
 
-            Optional<Long> refreshTimestamp = Optional.absent();
-            if (update.info.state != MiruPartitionState.offline) {
-                refreshTimestamp = Optional.of(timestamper.get());
-            }
-            update.refreshTimestamp.set(refreshTimestamp);
+            update.markForRefresh(Optional.<Long>absent());
 
             accessorRef.set(update);
 
@@ -751,16 +748,26 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     }
                 }
             );
+
+            int count = partitionedActivities.size();
             accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip, sipIndexExecutor);
 
             long suggestedTimestamp = sipTracker.suggestTimestamp(afterTimestamp);
-            boolean sipUpdated = accessor.sipTimestamp.compareAndSet(afterTimestamp, suggestedTimestamp);
-            if (sipUpdated) {
-                if (accessor.info.storage.isDiskBacked()) {
-                    contextFactory.markSip(coord, suggestedTimestamp);
+            while (suggestedTimestamp > afterTimestamp) {
+                if (accessor.sipTimestamp.compareAndSet(afterTimestamp, suggestedTimestamp)) {
+                    if (accessor.info.storage.isDiskBacked()) {
+                        contextFactory.markSip(coord, suggestedTimestamp);
+                    }
+                    accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
+                    break;
+                } else {
+                    afterTimestamp = accessor.sipTimestamp.get();
                 }
-                accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
             }
+
+            log.inc("sip", count);
+            log.inc("sip>tenant>" + coord.tenantId, count);
+            log.inc("sip>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, count);
 
             return accessorRef.get() == accessor;
         }
