@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** @author jonathan */
-public class MiruOnDiskTimeIndex implements MiruTimeIndex,
+public class MiruFilerTimeIndex implements MiruTimeIndex,
     BulkImport<MiruTimeIndex, Void> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -42,7 +42,7 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
     private final MiruFilerProvider filerProvider;
     private final KeyValueStore<Long, Integer> timestampToIndex;
 
-    public MiruOnDiskTimeIndex(MiruFilerProvider filerProvider,
+    public MiruFilerTimeIndex(MiruFilerProvider filerProvider,
         KeyValueStore<Long, Integer> timestampToIndex)
         throws IOException {
 
@@ -58,13 +58,13 @@ public class MiruOnDiskTimeIndex implements MiruTimeIndex,
             public Void commit(Filer filer) throws IOException {
                 if (filer != null) {
                     filer.seek(0);
-                    MiruOnDiskTimeIndex.this.lastId = FilerIO.readInt(filer, "lastId");
-                    MiruOnDiskTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp");
-                    MiruOnDiskTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp");
-                    MiruOnDiskTimeIndex.this.timestampsLength = FilerIO.readInt(filer, "timestampsLength");
-                    MiruOnDiskTimeIndex.this.searchIndexLevels = FilerIO.readShort(filer, "searchIndexLevels");
-                    MiruOnDiskTimeIndex.this.searchIndexSegments = FilerIO.readShort(filer, "searchIndexSegments");
-                    MiruOnDiskTimeIndex.this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
+                    MiruFilerTimeIndex.this.lastId = FilerIO.readInt(filer, "lastId");
+                    MiruFilerTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp");
+                    MiruFilerTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp");
+                    MiruFilerTimeIndex.this.timestampsLength = FilerIO.readInt(filer, "timestampsLength");
+                    MiruFilerTimeIndex.this.searchIndexLevels = FilerIO.readShort(filer, "searchIndexLevels");
+                    MiruFilerTimeIndex.this.searchIndexSegments = FilerIO.readShort(filer, "searchIndexSegments");
+                    MiruFilerTimeIndex.this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
                 }
                 return null;
             }

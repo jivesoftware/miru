@@ -55,16 +55,16 @@ public class MiruAuthzIndexTest {
 
         // Create in-memory authz index
         MiruContextAllocator hybridAllocator = buildHybridContextAllocator(4, 10, true);
-        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruInMemoryAuthzIndex = hybridAllocator.allocate(bitmaps, coord).authzIndex;
-        Map<String, List<Integer>> largeBitsIn = populateAuthzIndex(largeMiruInMemoryAuthzIndex, miruAuthzUtils, 2);
+        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruHybridAuthzIndex = hybridAllocator.allocate(bitmaps, coord).authzIndex;
+        Map<String, List<Integer>> largeHybridBitsIn = populateAuthzIndex(largeMiruHybridAuthzIndex, miruAuthzUtils, 2);
 
         MiruContextAllocator onDiskAllocator = buildOnDiskContextAllocator(4, 10);
         MiruAuthzIndex<EWAHCompressedBitmap> largeMiruOnDiskAuthzIndex = onDiskAllocator.allocate(bitmaps, coord).authzIndex;
-        ((BulkImport) largeMiruOnDiskAuthzIndex).bulkImport(tenantId, (BulkExport) largeMiruInMemoryAuthzIndex);
+        Map<String, List<Integer>> largeOnDiskBitsIn = populateAuthzIndex(largeMiruOnDiskAuthzIndex, miruAuthzUtils, 2);
 
         return new Object[][] {
-            { largeMiruInMemoryAuthzIndex, miruAuthzUtils, largeBitsIn },
-            { largeMiruOnDiskAuthzIndex, miruAuthzUtils, largeBitsIn }
+            { largeMiruHybridAuthzIndex, miruAuthzUtils, largeHybridBitsIn },
+            { largeMiruOnDiskAuthzIndex, miruAuthzUtils, largeOnDiskBitsIn }
         };
     }
 

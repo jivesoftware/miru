@@ -1,7 +1,8 @@
-package com.jivesoftware.os.miru.service.index.memory;
+package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -11,21 +12,24 @@ import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.BulkExport;
 import com.jivesoftware.os.miru.service.index.BulkImport;
 import com.jivesoftware.os.miru.service.index.SimpleBulkExport;
+import com.jivesoftware.os.miru.service.index.memory.KeyedInvertedIndexStream;
 import java.io.IOException;
 import java.util.Collections;
 
 /** @author jonathan */
-public class MiruInMemoryUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM>,
-    BulkImport<Void, KeyedInvertedIndexStream<BM>>,
-    BulkExport<Void, KeyedInvertedIndexStream<BM>> {
+public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM>,
+    BulkExport<Void, KeyedInvertedIndexStream<BM>>,
+    BulkImport<Void, KeyedInvertedIndexStream<BM>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final KeyValueStore<byte[], ReadWrite<BM>> store;
+    private final KeyedFilerStore store;
+    private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
-    public MiruInMemoryUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
-        KeyValueStore<byte[], ReadWrite<BM>> store) {
+    public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, KeyedFilerStore store, StripingLocksProvider<MiruStreamId> stripingLocksProvider)
+        throws Exception {
         this.bitmaps = bitmaps;
         this.store = store;
+        this.stripingLocksProvider = stripingLocksProvider;
     }
 
     @Override
@@ -35,47 +39,37 @@ public class MiruInMemoryUnreadTrackingIndex<BM> implements MiruUnreadTrackingIn
 
     @Override
     public Optional<BM> getUnread(MiruStreamId streamId) throws Exception {
-        return getIndex(streamId).getIndex();
+        return new MiruFilerInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, stripingLocksProvider.lock(streamId)).getIndex();
     }
 
     @Override
     public MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception {
-        return getIndex(streamId);
+        return getOrCreateUnread(streamId);
     }
 
-    private MiruInMemoryInvertedIndex<BM> getIndex(MiruStreamId streamId) throws Exception {
-        return new MiruInMemoryInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1);
+    private MiruInvertedIndex<BM> getOrCreateUnread(MiruStreamId streamId) throws Exception {
+        return new MiruFilerInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, stripingLocksProvider.lock(streamId));
     }
 
     @Override
     public void applyRead(MiruStreamId streamId, BM readMask) throws Exception {
-        MiruInvertedIndex<BM> unread = getIndex(streamId);
+        MiruInvertedIndex<BM> unread = getOrCreateUnread(streamId);
         unread.andNotToSourceSize(Collections.singletonList(readMask));
     }
 
     @Override
     public void applyUnread(MiruStreamId streamId, BM unreadMask) throws Exception {
-        MiruInvertedIndex<BM> unread = getIndex(streamId);
+        MiruInvertedIndex<BM> unread = getOrCreateUnread(streamId);
         unread.orToSourceSize(unreadMask);
     }
 
     @Override
     public void close() {
+        store.close();
     }
 
     @Override
-    public Void bulkExport(MiruTenantId tenantId, final KeyedInvertedIndexStream<BM> callback) throws Exception {
-        store.streamKeys(new KeyValueStore.KeyStream<byte[]>() {
-            @Override
-            public boolean stream(byte[] bytes) throws IOException {
-                try {
-                    MiruInvertedIndex<BM> index = getIndex(new MiruStreamId(bytes));
-                    return callback.stream(bytes, index);
-                } catch (Exception e) {
-                    throw new IOException("Failed to stream export", e);
-                }
-            }
-        });
+    public Void bulkExport(MiruTenantId tenantId, KeyedInvertedIndexStream<BM> callback) throws Exception {
         return null;
     }
 
@@ -84,8 +78,11 @@ public class MiruInMemoryUnreadTrackingIndex<BM> implements MiruUnreadTrackingIn
         export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
             @Override
             public boolean stream(byte[] key, MiruInvertedIndex<BM> importIndex) throws IOException {
+                if (key == null) {
+                    return true;
+                }
                 try {
-                    MiruInMemoryInvertedIndex<BM> invertedIndex = getIndex(new MiruStreamId(key));
+                    MiruFilerInvertedIndex<BM> invertedIndex = new MiruFilerInvertedIndex<>(bitmaps, store, key, -1, new Object());
                     invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));
                     return true;
                 } catch (Exception e) {

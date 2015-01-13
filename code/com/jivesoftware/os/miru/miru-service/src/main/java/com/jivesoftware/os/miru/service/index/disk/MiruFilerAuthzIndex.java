@@ -17,7 +17,8 @@ import com.jivesoftware.os.miru.service.index.memory.KeyedInvertedIndexStream;
 import java.io.IOException;
 
 /** @author jonathan */
-public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
+public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM>,
+    BulkExport<Void, KeyedInvertedIndexStream<BM>>,
     BulkImport<Void, KeyedInvertedIndexStream<BM>> {
 
     private final MiruBitmaps<BM> bitmaps;
@@ -25,7 +26,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
     private final MiruAuthzCache<BM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
 
-    public MiruOnDiskAuthzIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerAuthzIndex(MiruBitmaps<BM> bitmaps,
         KeyedFilerStore keyedStore,
         MiruAuthzCache<BM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
@@ -39,8 +40,8 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
     }
 
     @Override
-    public void index(String authz, int id) {
-        throw new UnsupportedOperationException("On disk authz indexes are readOnly");
+    public void index(String authz, int id) throws Exception {
+        get(authz).append(id);
     }
 
     @Override
@@ -61,7 +62,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
     }
 
     private MiruInvertedIndex<BM> get(String authz) throws Exception {
-        return new MiruOnDiskInvertedIndex<>(bitmaps, keyedStore, MiruAuthzUtils.key(authz), -1, stripingLocksProvider.lock(authz));
+        return new MiruFilerInvertedIndex<>(bitmaps, keyedStore, MiruAuthzUtils.key(authz), -1, stripingLocksProvider.lock(authz));
     }
 
     @Override
@@ -75,6 +76,12 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
     }
 
     @Override
+    public Void bulkExport(MiruTenantId tenantId, KeyedInvertedIndexStream<BM> callback) throws Exception {
+        //TODO NEVER
+        return null;
+    }
+
+    @Override
     public void bulkImport(final MiruTenantId tenantId, BulkExport<Void, KeyedInvertedIndexStream<BM>> export) throws Exception {
         export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
             @Override
@@ -85,7 +92,7 @@ public class MiruOnDiskAuthzIndex<BM> implements MiruAuthzIndex<BM>,
                 try {
                     Optional<BM> index = importIndex.getIndex();
                     if (index.isPresent()) {
-                        MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(
+                        MiruFilerInvertedIndex<BM> invertedIndex = new MiruFilerInvertedIndex<>(
                             bitmaps, keyedStore, key, -1, new Object());
                         invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(importIndex));
                     }

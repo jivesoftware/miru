@@ -92,7 +92,6 @@ public class MiruLocalHostedPartitionTest {
     private ScheduledExecutorService scheduledRebuildService;
     private ScheduledExecutorService scheduledSipMigrateService;
     private ExecutorService rebuildExecutor;
-    private ExecutorService rebuildIndexExecutor;
     private ExecutorService sipIndexExecutor;
     private AtomicReference<MiruLocalHostedPartition.BootstrapRunnable> bootstrapRunnable;
     private AtomicReference<MiruLocalHostedPartition.RebuildIndexRunnable> rebuildIndexRunnable;
@@ -176,6 +175,8 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
             new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<MiruStreamId>(8),
+            new StripingLocksProvider<String>(8),
             new StripingLocksProvider<Long>(64));
 
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
@@ -262,9 +263,9 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
 
         setActive(false);
         waitForRef(bootstrapRunnable).run();
@@ -281,9 +282,9 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
         indexBoundaryActivity(localHostedPartition); // eligible for disk
 
         sipMigrateIndexRunnable.get().run(); // writers are closed, should migrate
@@ -300,12 +301,12 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
         indexBoundaryActivity(localHostedPartition); // eligible for disk
 
-        rebuildIndexRunnable.get().run(); // online mem_mapped
+        rebuildIndexRunnable.get().run(); // enters online mem_mapped
 
         localHostedPartition.setStorage(MiruBackingStorage.disk);
 
@@ -321,12 +322,12 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
         indexBoundaryActivity(localHostedPartition); // eligible for disk
 
-        sipMigrateIndexRunnable.get().run(); // online mem_mapped
+        sipMigrateIndexRunnable.get().run(); // enters online mem_mapped
 
         localHostedPartition.setStorage(MiruBackingStorage.memory_fixed);
 
@@ -342,9 +343,9 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
 
         localHostedPartition.setStorage(MiruBackingStorage.memory_fixed);
 
@@ -360,9 +361,9 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
 
         localHostedPartition.setStorage(MiruBackingStorage.memory);
 
@@ -378,11 +379,11 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
         indexBoundaryActivity(localHostedPartition); // eligible for disk
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online mem_mapped (hot deployable)
 
         setActive(false);
         waitForRef(bootstrapRunnable).run();
@@ -404,9 +405,9 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
 
         setActive(false);
         waitForRef(bootstrapRunnable).run();
@@ -427,9 +428,9 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         setActive(true);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
-        waitForRef(rebuildIndexRunnable).run();
-        waitForRef(sipMigrateIndexRunnable).run(); // online memory
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
 
         localHostedPartition.remove();
 
@@ -459,7 +460,7 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexer<>(bitmaps), true, 100, 100, 10_000, 5_000, 5_000, 30_000);
 
         indexNormalActivity(localHostedPartition);
-        waitForRef(bootstrapRunnable).run(); // bootstrap
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
@@ -476,10 +477,13 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), defaultStorage);
 
-        setActive(true);
-        waitForRef(bootstrapRunnable).run(); // no effect
 
-        assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
+        setActive(true);
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // stays bootstrap
+        waitForRef(sipMigrateIndexRunnable).run(); // stays bootstrap
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
         assertEquals(localHostedPartition.getStorage(), defaultStorage);
     }
 

@@ -3,19 +3,15 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.filer.io.ByteArrayPartitionFunction;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
-import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.bitmap.AnswerCardinalityLastSetBitmapStorage;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInvertedIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInvertedIndex;
-import com.jivesoftware.os.miru.service.index.memory.ReadWrite;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerInvertedIndex;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -174,7 +170,6 @@ public class MiruInvertedIndexTest {
         int diskSets = 1_000;
 
         return new Object[][] {
-            { buildInMemoryInvertedIndex(bitmaps), memoryAppends, memorySets },
             { buildOnDiskInvertedIndex(bitmaps), diskAppends, diskSets }
         };
     }
@@ -183,7 +178,6 @@ public class MiruInvertedIndexTest {
     public Object[][] miruInvertedIndexDataProvider() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
         return new Object[][] {
-            { buildInMemoryInvertedIndex(bitmaps) },
             { buildOnDiskInvertedIndex(bitmaps) }
         };
     }
@@ -192,33 +186,17 @@ public class MiruInvertedIndexTest {
     public Object[][] miruInvertedIndexDataProviderWithData() throws Exception {
         MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
-        MiruInMemoryInvertedIndex<EWAHCompressedBitmap> miruInMemoryInvertedIndex = buildInMemoryInvertedIndex(bitmaps);
 
-        miruInMemoryInvertedIndex.append(1, 2, 3);
-
-        MiruOnDiskInvertedIndex<EWAHCompressedBitmap> miruOnDiskInvertedIndex = buildOnDiskInvertedIndex(bitmaps);
-        miruOnDiskInvertedIndex.bulkImport(tenantId, miruInMemoryInvertedIndex);
+        MiruFilerInvertedIndex<EWAHCompressedBitmap> miruFilerInvertedIndex = buildOnDiskInvertedIndex(bitmaps);
+        miruFilerInvertedIndex.append(1, 2, 3);
 
         return new Object[][] {
-            { miruInMemoryInvertedIndex, Sets.newHashSet(1, 2, 3) },
-            { miruOnDiskInvertedIndex, Sets.newHashSet(1, 2, 3) }
+            { miruFilerInvertedIndex, Sets.newHashSet(1, 2, 3) }
         };
     }
 
-    private <BM> MiruInMemoryInvertedIndex<BM> buildInMemoryInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
-        return new MiruInMemoryInvertedIndex<>(bitmaps,
-            IndexTestUtil.<byte[], ReadWrite<BM>>buildKeyObjectStore("index",
-                IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096),
-                new ByteArrayPartitionFunction(),
-                PassThroughKeyMarshaller.INSTANCE,
-                1,
-                false),
-            new byte[] { 0 },
-            -1);
-    }
-
-    private <BM> MiruOnDiskInvertedIndex<BM> buildOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
-        return new MiruOnDiskInvertedIndex<>(bitmaps,
+    private <BM> MiruFilerInvertedIndex<BM> buildOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
+        return new MiruFilerInvertedIndex<>(bitmaps,
             IndexTestUtil.buildKeyedFilerStore("index",
                 IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096)),
             new byte[] { 0 },
@@ -231,7 +209,7 @@ public class MiruInvertedIndexTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
         ExecutorService executorService = Executors.newFixedThreadPool(8);
 
-        final MiruInMemoryInvertedIndex<EWAHCompressedBitmap> miruInMemoryInvertedIndex = buildInMemoryInvertedIndex(bitmaps);
+        final MiruFilerInvertedIndex<EWAHCompressedBitmap> invertedIndex = buildOnDiskInvertedIndex(bitmaps);
         final AtomicInteger idProvider = new AtomicInteger();
         final AtomicInteger done = new AtomicInteger();
         final int runs = 10_000;
@@ -250,14 +228,14 @@ public class MiruInvertedIndexTest {
                     }
                     if (random.nextBoolean()) {
                         try {
-                            miruInMemoryInvertedIndex.append(id);
+                            invertedIndex.append(id);
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
                     }
                 }
                 try {
-                    EWAHCompressedBitmap index = miruInMemoryInvertedIndex.getIndex().get();
+                    EWAHCompressedBitmap index = invertedIndex.getIndex().get();
                     System.out.println("appender is done, final cardinality=" + index.cardinality() + " bits=" + index.sizeInBits());
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -283,7 +261,7 @@ public class MiruInvertedIndexTest {
                         }
 
                         try {
-                            EWAHCompressedBitmap index = miruInMemoryInvertedIndex.getIndex().get();
+                            EWAHCompressedBitmap index = invertedIndex.getIndex().get();
                             EWAHCompressedBitmap container = new EWAHCompressedBitmap();
                             AnswerCardinalityLastSetBitmapStorage answer = new AnswerCardinalityLastSetBitmapStorage(container);
                             index.andToContainer(other, answer);
@@ -311,18 +289,18 @@ public class MiruInvertedIndexTest {
 
     @Test(groups = "slow", enabled = false, description = "Performance test")
     public void testInMemoryAppenderSpeed() throws Exception {
-        MiruInMemoryInvertedIndex<EWAHCompressedBitmap> miruInMemoryInvertedIndex = buildInMemoryInvertedIndex(new MiruBitmapsEWAH(100));
+        MiruFilerInvertedIndex<EWAHCompressedBitmap> invertedIndex = buildOnDiskInvertedIndex(new MiruBitmapsEWAH(100));
 
         Random r = new Random(1_249_871_239_817_231_827l);
         long t = System.currentTimeMillis();
         for (int i = 0; i < 1_000_000; i++) {
             if (r.nextBoolean()) {
-                miruInMemoryInvertedIndex.append(i);
+                invertedIndex.append(i);
             }
         }
 
         long elapsed = System.currentTimeMillis() - t;
-        EWAHCompressedBitmap index = miruInMemoryInvertedIndex.getIndex().get();
+        EWAHCompressedBitmap index = invertedIndex.getIndex().get();
         System.out.println("cardinality=" + index.cardinality() + " bits=" + index.sizeInBits() + " bytes=" + index.sizeInBytes() + " elapsed=" + elapsed);
     }
 }

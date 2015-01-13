@@ -1,5 +1,9 @@
-package com.jivesoftware.os.miru.service.index.memory;
+package com.jivesoftware.os.miru.service.index.disk;
 
+import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.IBA;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -18,16 +22,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author jonathan
  */
-public class MiruHybridFieldIndex<BM> implements MiruFieldIndex<BM>,
+public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM>,
     BulkImport<Void, BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>>,
     BulkExport<Void, BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final KeyValueStore<byte[], ReadWrite<BM>>[] indexes;
+    private final KeyedFilerStore[] indexes;
+    // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
+    private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
 
-    public MiruHybridFieldIndex(MiruBitmaps<BM> bitmaps, KeyValueStore<byte[], ReadWrite<BM>>[] indexes) {
+    public MiruFilerFieldIndex(MiruBitmaps<BM> bitmaps,
+        KeyedFilerStore[] indexes,
+        StripingLocksProvider<MiruTermId> stripingLocksProvider)
+        throws Exception {
         this.bitmaps = bitmaps;
         this.indexes = indexes;
+        this.stripingLocksProvider = stripingLocksProvider;
     }
 
     @Override
@@ -53,22 +63,23 @@ public class MiruHybridFieldIndex<BM> implements MiruFieldIndex<BM>,
 
     @Override
     public void streamTermIdsForField(int fieldId, final TermIdStream termIdStream) throws Exception {
-        indexes[fieldId].streamKeys(new KeyValueStore.KeyStream<byte[]>() {
+        indexes[fieldId].streamKeys(new KeyValueStore.KeyStream<IBA>() {
             @Override
-            public boolean stream(byte[] bytes) throws IOException {
-                return termIdStream.stream(new MiruTermId(bytes));
+            public boolean stream(IBA iba) throws IOException {
+                return termIdStream.stream(new MiruTermId(iba.getBytes()));
             }
         });
     }
 
     @Override
     public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId) throws Exception {
-        return new MiruInMemoryInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1);
+        return new MiruFilerInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, stripingLocksProvider.lock(termId));
     }
 
     @Override
     public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        return new MiruInMemoryInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), considerIfIndexIdGreaterThanN);
+        return new MiruFilerInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), considerIfIndexIdGreaterThanN,
+            stripingLocksProvider.lock(termId));
     }
 
     @Override
@@ -77,7 +88,7 @@ public class MiruHybridFieldIndex<BM> implements MiruFieldIndex<BM>,
     }
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
-        return new MiruInMemoryInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1);
+        return new MiruFilerInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, stripingLocksProvider.lock(termId));
     }
 
     @Override
@@ -89,14 +100,17 @@ public class MiruHybridFieldIndex<BM> implements MiruFieldIndex<BM>,
         export.bulkExport(tenantId, new BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>>() {
             @Override
             public boolean stream(BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>> export) throws Exception {
-                export.bulkExport(tenantId, new BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
-                    @Override
-                    public boolean stream(final BulkEntry<byte[], MiruInvertedIndex<BM>> entry) throws Exception {
-                        MiruInMemoryInvertedIndex<BM> invertedIndex = new MiruInMemoryInvertedIndex<>(bitmaps, indexes[fieldId.get()], entry.key, -1);
-                        invertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(entry.value));
-                        return true;
-                    }
-                });
+                if (indexes[fieldId.get()] != null) {
+                    export.bulkExport(tenantId, new BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>() {
+                        @Override
+                        public boolean stream(final BulkEntry<byte[], MiruInvertedIndex<BM>> entry) throws Exception {
+                            MiruFilerInvertedIndex<BM> miruFilerInvertedIndex = new MiruFilerInvertedIndex<>(bitmaps, indexes[fieldId.get()], entry.key,
+                                -1, stripingLocksProvider.lock(new MiruTermId(entry.key)));
+                            miruFilerInvertedIndex.bulkImport(tenantId, new SimpleBulkExport<>(entry.value));
+                            return true;
+                        }
+                    });
+                }
                 fieldId.incrementAndGet();
                 return true;
             }
@@ -107,23 +121,26 @@ public class MiruHybridFieldIndex<BM> implements MiruFieldIndex<BM>,
     public Void bulkExport(MiruTenantId tenantId, BulkStream<BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>> callback)
         throws Exception {
 
-        for (final KeyValueStore<byte[], ReadWrite<BM>> index : indexes) {
+        for (final KeyedFilerStore index : indexes) {
             if (index == null) {
                 continue;
             }
             callback.stream(new BulkExport<Void, BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>>>() {
                 @Override
                 public Void bulkExport(MiruTenantId tenantId, final BulkStream<BulkEntry<byte[], MiruInvertedIndex<BM>>> callback) throws Exception {
-                    index.stream(new KeyValueStore.EntryStream<byte[], ReadWrite<BM>>() {
+                    index.stream(new KeyValueStore.EntryStream<IBA, Filer>() {
                         @Override
-                        public boolean stream(byte[] bytes, ReadWrite<BM> readWrite) throws IOException {
+                        public boolean stream(IBA iba, Filer filer) throws IOException {
+                            if (iba == null || filer == null) {
+                                return true;
+                            }
                             try {
-                                callback.stream(new BulkEntry<byte[], MiruInvertedIndex<BM>>(bytes,
-                                    new MiruInMemoryInvertedIndex<>(bitmaps, index, bytes, -1)));
+                                return callback.stream(new BulkEntry<byte[], MiruInvertedIndex<BM>>(iba.getBytes(),
+                                    new MiruFilerInvertedIndex<>(bitmaps, index, iba.getBytes(), -1, new Object())));
                             } catch (Exception e) {
+                                e.printStackTrace();
                                 throw new IOException("Failed to stream export", e);
                             }
-                            return false;
                         }
                     });
                     return null;

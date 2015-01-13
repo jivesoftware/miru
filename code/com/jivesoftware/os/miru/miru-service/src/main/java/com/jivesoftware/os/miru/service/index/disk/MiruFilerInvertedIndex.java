@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 
 /** @author jonathan */
-public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>,
+public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM>,
     BulkImport<MiruInvertedIndex<BM>, Void>,
     BulkExport<MiruInvertedIndex<BM>, Void> {
 
@@ -35,7 +35,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>,
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
-    public MiruOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerInvertedIndex(MiruBitmaps<BM> bitmaps,
         KeyedFilerStore keyedFilerStore,
         byte[] keyBytes,
         int considerIfIndexIdGreaterThanN,
@@ -50,7 +50,7 @@ public class MiruOnDiskInvertedIndex<BM> implements MiruInvertedIndex<BM>,
     @Override
     public Optional<BM> getIndex() throws Exception {
         if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
-            return null;
+            return Optional.absent();
         }
         //TODO transaction should be passed in since it only depends on 'bitmaps'
         BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.execute(keyBytes, -1, new GetWithLastIdTransaction<>(bitmaps));

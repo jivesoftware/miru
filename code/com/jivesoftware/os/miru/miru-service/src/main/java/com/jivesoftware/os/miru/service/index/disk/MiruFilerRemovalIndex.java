@@ -4,9 +4,9 @@ import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 
-public class MiruOnDiskRemovalIndex<BM> extends MiruOnDiskInvertedIndex<BM> implements MiruRemovalIndex<BM> {
+public class MiruFilerRemovalIndex<BM> extends MiruFilerInvertedIndex<BM> implements MiruRemovalIndex<BM> {
 
-    public MiruOnDiskRemovalIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerRemovalIndex(MiruBitmaps<BM> bitmaps,
         KeyedFilerStore keyedFilerStore,
         byte[] keyBytes,
         int considerIfIndexIdGreaterThanN,

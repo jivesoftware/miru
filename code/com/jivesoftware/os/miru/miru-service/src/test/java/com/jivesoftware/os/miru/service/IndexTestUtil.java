@@ -6,15 +6,11 @@ import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
-import com.jivesoftware.os.filer.io.KeyMarshaller;
 import com.jivesoftware.os.filer.io.KeyValueMarshaller;
-import com.jivesoftware.os.filer.io.PartitionFunction;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
-import com.jivesoftware.os.filer.keyed.store.TxKeyObjectStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
-import com.jivesoftware.os.filer.keyed.store.TxPartitionedKeyObjectStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
@@ -74,6 +70,8 @@ public class IndexTestUtil {
             partitionAuthzCacheSize,
             partitionDeleteChunkStoreOnClose,
             new StripingLocksProvider<MiruTermId>(8),
+            new StripingLocksProvider<MiruStreamId>(8),
+            new StripingLocksProvider<String>(8),
             new StripingLocksProvider<Long>(64));
     }
 
@@ -118,25 +116,6 @@ public class IndexTestUtil {
             keyValueMarshaller,
             keyBytes(name),
             keySize, variableKeySize, payloadSize, variablePayloadSizes);
-    }
-
-    public static <K, V> KeyValueStore<K, V> buildKeyObjectStore(String name,
-        ChunkStore[] chunkStores,
-        PartitionFunction<K> partitionFunction,
-        KeyMarshaller<K> keyMarshaller,
-        int keySize,
-        boolean variableKeySize) {
-
-        TxKeyObjectStore<K, V>[] partitions = new TxKeyObjectStore[chunkStores.length];
-        for (int i = 0; i < chunkStores.length; i++) {
-            partitions[i] = new TxKeyObjectStore<>(chunkStores[i],
-                keyMarshaller,
-                keyBytes(name),
-                10,
-                keySize, variableKeySize);
-        }
-
-        return new TxPartitionedKeyObjectStore<>(partitionFunction, partitions);
     }
 
     public static KeyedFilerStore buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {

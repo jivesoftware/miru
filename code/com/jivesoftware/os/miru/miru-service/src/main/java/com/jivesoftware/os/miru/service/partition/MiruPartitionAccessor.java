@@ -42,7 +42,7 @@ public class MiruPartitionAccessor<BM> {
     public final MiruBitmaps<BM> bitmaps;
     public final MiruPartitionCoord coord;
     public final MiruPartitionCoordInfo info;
-    public final MiruContext<BM> context;
+    public final Optional<MiruContext<BM>> context;
 
     public final AtomicLong sipTimestamp;
     public final AtomicLong rebuildTimestamp;
@@ -61,7 +61,7 @@ public class MiruPartitionAccessor<BM> {
     private MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
-        MiruContext<BM> context,
+        Optional<MiruContext<BM>> context,
         AtomicLong sipTimestamp,
         AtomicLong rebuildTimestamp,
         AtomicReference<Optional<Long>> refreshTimestamp,
@@ -91,7 +91,7 @@ public class MiruPartitionAccessor<BM> {
     MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
-        MiruContext<BM> context,
+        Optional<MiruContext<BM>> context,
         long sipTimestamp,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer) {
@@ -106,11 +106,11 @@ public class MiruPartitionAccessor<BM> {
     }
 
     MiruPartitionAccessor<BM> copyToContext(MiruContext<BM> toContext) {
-        return new MiruPartitionAccessor<>(bitmaps, coord, info, toContext, sipTimestamp, rebuildTimestamp, refreshTimestamp,
+        return new MiruPartitionAccessor<>(bitmaps, coord, info, Optional.of(toContext), sipTimestamp, rebuildTimestamp, refreshTimestamp,
             seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs, indexer);
     }
 
-    MiruContext<BM> close() throws InterruptedException {
+    Optional<MiruContext<BM>> close() throws InterruptedException {
         semaphore.acquire(PERMITS);
         try {
             closed.set(true);
@@ -121,7 +121,7 @@ public class MiruPartitionAccessor<BM> {
     }
 
     boolean needsHotDeploy() {
-        return info.state == MiruPartitionState.offline && info.storage.isDiskBacked();
+        return (info.state == MiruPartitionState.offline || info.state == MiruPartitionState.bootstrap) && info.storage.isDiskBacked();
     }
 
     boolean isOpenForWrites() {
@@ -217,9 +217,14 @@ public class MiruPartitionAccessor<BM> {
         ExecutorService indexExecutor)
         throws Exception {
 
+        if (!context.isPresent()) {
+            log.warn("Ignored activity for empty context");
+            return 0;
+        }
+
         int activityCount = 0;
         if (!partitionedActivities.isEmpty()) {
-            MiruTimeIndex timeIndex = context.getTimeIndex();
+            MiruTimeIndex timeIndex = context.get().getTimeIndex();
 
             List<MiruActivityAndId<MiruActivity>> indexables = new ArrayList<>(partitionedActivities.size());
 
@@ -233,7 +238,7 @@ public class MiruPartitionAccessor<BM> {
 
             partitionedActivities.clear(); // The frees up the MiruPartitionedActivity to be garbage collected.
             if (!indexables.isEmpty()) {
-                indexer.index(context, indexables, indexExecutor);
+                indexer.index(context.get(), indexables, indexExecutor);
                 activityCount = indexables.size();
             }
         }
@@ -241,19 +246,19 @@ public class MiruPartitionAccessor<BM> {
     }
 
     private void handleRepairType(MiruPartitionedActivity partitionedActivity) throws Exception {
-        MiruTimeIndex timeIndex = context.getTimeIndex();
+        MiruTimeIndex timeIndex = context.get().getTimeIndex();
         MiruActivity activity = partitionedActivity.activity.get();
 
         int id = timeIndex.getExactId(activity.time);
         if (id < 0) {
             log.warn("Attempted to repair an activity that does not belong to this partition: {}", activity);
         } else {
-            indexer.repair(context, activity, id);
+            indexer.repair(context.get(), activity, id);
         }
     }
 
     private void handleRemoveType(MiruPartitionedActivity partitionedActivity, IndexStrategy strategy) throws Exception {
-        MiruTimeIndex timeIndex = context.getTimeIndex();
+        MiruTimeIndex timeIndex = context.get().getTimeIndex();
         MiruActivity activity = partitionedActivity.activity.get();
         log.debug("Handling removal type for {} with strategy {}", activity, strategy);
 
@@ -263,14 +268,14 @@ public class MiruPartitionAccessor<BM> {
             log.trace("Removing activity for exact id {}", id);
         } else {
             id = timeIndex.nextId(activity.time);
-            indexer.set(context, Arrays.asList(new MiruActivityAndId<>(activity, id)));
+            indexer.set(context.get(), Arrays.asList(new MiruActivityAndId<>(activity, id)));
             log.trace("Removing activity for next id {}", id);
         }
 
         if (id < 0) {
             log.warn("Attempted to remove an activity that does not belong to this partition: {}", activity);
         } else {
-            indexer.remove(context, activity, id);
+            indexer.remove(context.get(), activity, id);
         }
     }
 
@@ -302,10 +307,10 @@ public class MiruPartitionAccessor<BM> {
                     throw new MiruPartitionUnavailableException("Partition is not online");
                 }
 
-                if (context == null) {
-                    throw new MiruPartitionUnavailableException("Stream not set");
+                if (!context.isPresent()) {
+                    throw new MiruPartitionUnavailableException("Context not set");
                 }
-                return context;
+                return context.get();
             }
 
             @Override
@@ -355,12 +360,12 @@ public class MiruPartitionAccessor<BM> {
             }
 
             @Override
-            public MiruContext<BM> getStream() {
+            public Optional<MiruContext<BM>> getContext() {
                 return context;
             }
 
             @Override
-            public MiruPartitionAccessor<BM> migrated(MiruContext<BM> stream,
+            public MiruPartitionAccessor<BM> migrated(MiruContext<BM> context,
                 Optional<MiruBackingStorage> storage,
                 Optional<MiruPartitionState> state,
                 long sipTimestamp) {
@@ -372,7 +377,7 @@ public class MiruPartitionAccessor<BM> {
                 if (state.isPresent()) {
                     migratedInfo = migratedInfo.copyToState(state.get());
                 }
-                return new MiruPartitionAccessor<>(bitmaps, coord, migratedInfo, stream, sipTimestamp, indexRepairs, indexer);
+                return new MiruPartitionAccessor<>(bitmaps, coord, migratedInfo, Optional.of(context), sipTimestamp, indexRepairs, indexer);
             }
 
             @Override

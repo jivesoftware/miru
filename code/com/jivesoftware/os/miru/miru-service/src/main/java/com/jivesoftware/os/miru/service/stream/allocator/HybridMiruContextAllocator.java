@@ -6,16 +6,12 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.filer.io.ByteArrayPartitionFunction;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
-import com.jivesoftware.os.filer.keyed.store.TxKeyObjectStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
-import com.jivesoftware.os.filer.keyed.store.TxPartitionedKeyObjectStore;
-import com.jivesoftware.os.filer.map.store.PassThroughKeyMarshaller;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -34,14 +30,13 @@ import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
-import com.jivesoftware.os.miru.service.index.disk.MiruChunkActivityIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskFieldIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryAuthzIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryInboxIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryRemovalIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerActivityIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerAuthzIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerFieldIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerInboxIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerRemovalIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryTimeIndex;
-import com.jivesoftware.os.miru.service.index.memory.MiruInMemoryUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.index.memory.ReadWrite;
 import com.jivesoftware.os.miru.service.locator.MiruHybridResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
@@ -66,6 +61,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
     private final int partitionAuthzCacheSize;
     private final boolean partitionDeleteChunkStoreOnClose;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
+    private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
+    private final StripingLocksProvider<String> authzStripingLocksProvider;
     private final StripingLocksProvider<Long> chunkStripingLocksProvider;
 
     public HybridMiruContextAllocator(MiruSchemaProvider schemaProvider,
@@ -77,6 +74,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         int partitionAuthzCacheSize,
         boolean partitionDeleteChunkStoreOnClose,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
+        StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
+        StripingLocksProvider<String> authzStripingLocksProvider,
         StripingLocksProvider<Long> chunkStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
@@ -87,6 +86,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.partitionDeleteChunkStoreOnClose = partitionDeleteChunkStoreOnClose;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
+        this.streamStripingLocksProvider = streamStripingLocksProvider;
+        this.authzStripingLocksProvider = authzStripingLocksProvider;
         this.chunkStripingLocksProvider = chunkStripingLocksProvider;
     }
 
@@ -97,10 +98,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
     @Override
     public <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
-        //TODO this is a mess
-        return new MiruContext<>(schema, null, null, null, null, null, null, null, null, null, null,
-            Optional.<ChunkStore[]>absent(), Optional.<MiruResourcePartitionIdentifier>absent());
+        return allocateRebuilding(bitmaps, coord);
     }
 
     @Override
@@ -108,10 +106,10 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         throws Exception {
 
         MiruContext<BM> updated = null;
-        if (state == MiruPartitionState.rebuilding) {
-            updated = allocateRebuilding(bitmaps, coord);
-        } else if (state == MiruPartitionState.online) {
+        if (state == MiruPartitionState.online) {
             updated = allocateOnline(bitmaps, from);
+            //TODO non-persistent state, EGREGIOUS HACK!
+            ((MiruInMemoryTimeIndex) from.timeIndex).transferTo((MiruInMemoryTimeIndex) updated.timeIndex);
         }
 
         if (updated != null) {
@@ -172,13 +170,13 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
                 8, false, 4, false));
 
         TxKeyedFilerStore activityKeyedFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex-map"));
-        MiruChunkActivityIndex activityIndex = new MiruChunkActivityIndex(
+        MiruFilerActivityIndex activityIndex = new MiruFilerActivityIndex(
             activityKeyedFilerStore,
             new MiruInternalActivityMarshaller(),
             new KeyedFilerProvider(activityKeyedFilerStore, keyBytes("activityIndex-size")));
 
         @SuppressWarnings("unchecked")
-        MiruOnDiskFieldIndex<BM>[] fieldIndexes = new MiruOnDiskFieldIndex[MiruFieldType.values().length];
+        MiruFilerFieldIndex<BM>[] fieldIndexes = new MiruFilerFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
             KeyedFilerStore[] indexes = new KeyedFilerStore[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
@@ -191,7 +189,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
                     indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId));
                 }
             }
-            fieldIndexes[fieldType.getIndex()] = new MiruOnDiskFieldIndex<>(bitmaps, indexes, fieldIndexStripingLocksProvider);
+            fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps, indexes, fieldIndexStripingLocksProvider);
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -203,61 +201,27 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
             .build();
 
-        TxKeyObjectStore<byte[], ReadWrite<BM>>[] authZPartitiones = new TxKeyObjectStore[chunkStores.length];
-        for (int i = 0; i < chunkStores.length; i++) {
-            authZPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
-                PassThroughKeyMarshaller.INSTANCE,
-                keyBytes("authzIndex"),
-                10, //TODO expose to config
-                128, //TODO ditto
-                true);
-        }
-
-        MiruInMemoryAuthzIndex<BM> authzIndex = new MiruInMemoryAuthzIndex<>(
+        MiruFilerAuthzIndex<BM> authzIndex = new MiruFilerAuthzIndex<>(
             bitmaps,
-            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), authZPartitiones),
-            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils));
+            new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex")),
+            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils),
+            authzStripingLocksProvider);
 
-        TxKeyObjectStore<byte[], ReadWrite<BM>>[] removealIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
-        for (int i = 0; i < chunkStores.length; i++) {
-            removealIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
-                PassThroughKeyMarshaller.INSTANCE,
-                keyBytes("removalIndex"),
-                2,
-                1,
-                false);
-        }
-
-        MiruInMemoryRemovalIndex<BM> removalIndex = new MiruInMemoryRemovalIndex<>(
+        MiruFilerRemovalIndex<BM> removalIndex = new MiruFilerRemovalIndex<>(
             bitmaps,
-            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), removealIndexPartitiones),
+            new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex")),
             new byte[] { 0 },
-            -1);
+            -1,
+            new Object());
 
-        TxKeyObjectStore<byte[], ReadWrite<BM>>[] unreadTrackingIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
-        for (int i = 0; i < chunkStores.length; i++) {
-            unreadTrackingIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
-                PassThroughKeyMarshaller.INSTANCE,
-                keyBytes("unreadTrackingIndex"),
-                10, //TODO expose to config
-                16, //TODO ditto (except expose to schema instead)
-                true);
-        }
+        MiruFilerUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
+            bitmaps,
+            new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex")),
+            streamStripingLocksProvider);
 
-        MiruInMemoryUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruInMemoryUnreadTrackingIndex<>(bitmaps,
-            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), unreadTrackingIndexPartitiones));
-
-        TxKeyObjectStore<byte[], ReadWrite<BM>>[] inboxIndexPartitiones = new TxKeyObjectStore[chunkStores.length];
-        for (int i = 0; i < chunkStores.length; i++) {
-            inboxIndexPartitiones[i] = new TxKeyObjectStore<>(chunkStores[i],
-                PassThroughKeyMarshaller.INSTANCE,
-                keyBytes("inboxIndex"),
-                10, //TODO expose to config
-                16, //TODO ditto (except expose to schema instead)
-                true);
-        }
-        MiruInMemoryInboxIndex<BM> inboxIndex = new MiruInMemoryInboxIndex<>(bitmaps,
-            new TxPartitionedKeyObjectStore<>(new ByteArrayPartitionFunction(), inboxIndexPartitiones));
+        MiruFilerInboxIndex<BM> inboxIndex = new MiruFilerInboxIndex<>(bitmaps,
+            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex")),
+            streamStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 

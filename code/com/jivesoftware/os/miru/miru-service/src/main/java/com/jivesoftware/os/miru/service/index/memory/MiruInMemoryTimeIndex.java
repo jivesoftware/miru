@@ -37,12 +37,6 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex,
         this.timestamps = new long[initialCapacity];
         this.id = new AtomicInteger(0);
         this.timestampToIndex = timestampToIndex;
-        /*
-        this.timestampToIndex = new PrimitivesMapStoresBuilder<ChunkFiler>()
-            .setMapChunkProvider(mapChunkProvider)
-            .setMapChunkFactory(mapChunkFactory)
-            .buildLongInt();
-        */
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
     }
 
@@ -194,6 +188,13 @@ public class MiruInMemoryTimeIndex implements MiruTimeIndex,
 
     @Override
     public void close() {
+    }
+
+    public void transferTo(MiruInMemoryTimeIndex to) throws IOException {
+        to.smallestTimestamp = smallestTimestamp;
+        to.largestTimestamp = largestTimestamp;
+        to.id.set(id.get());
+        to.timestamps = timestamps;
     }
 
     @Override

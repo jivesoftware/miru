@@ -134,7 +134,7 @@ public class MiruServiceInitializer {
             config.getPartitionAuthzCacheSize(),
             config.getPartitionDeleteChunkStoreOnClose(),
             fieldIndexStripingLocksProvider,
-            chunkStripingLocksProvider);
+            streamStripingLocksProvider, authzStripingLocksProvider, chunkStripingLocksProvider);
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,

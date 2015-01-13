@@ -27,13 +27,13 @@ import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
-import com.jivesoftware.os.miru.service.index.disk.MiruChunkActivityIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskAuthzIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskFieldIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskInboxIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskRemovalIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskTimeIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruOnDiskUnreadTrackingIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerActivityIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerAuthzIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerFieldIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerInboxIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerRemovalIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerTimeIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruFilerUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
@@ -120,7 +120,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         }
 
         KeyedFilerStore timeIndexFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("timeIndex-index"));
-        MiruOnDiskTimeIndex timeIndex = new MiruOnDiskTimeIndex(
+        MiruFilerTimeIndex timeIndex = new MiruFilerTimeIndex(
             new KeyedFilerProvider(timeIndexFilerStore, new byte[] { 0 }),
             new TxKeyValueStore<>(chunkStores,
                 new LongIntKeyValueMarshaller(),
@@ -128,13 +128,13 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 8, false, 4, false));
 
         TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"));
-        MiruChunkActivityIndex activityIndex = new MiruChunkActivityIndex(
+        MiruFilerActivityIndex activityIndex = new MiruFilerActivityIndex(
             activityFilerStore,
             new MiruInternalActivityMarshaller(),
             new KeyedFilerProvider(activityFilerStore, keyBytes("activityIndex-size")));
 
         @SuppressWarnings("unchecked")
-        MiruOnDiskFieldIndex<BM>[] fieldIndexes = new MiruOnDiskFieldIndex[MiruFieldType.values().length];
+        MiruFilerFieldIndex<BM>[] fieldIndexes = new MiruFilerFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
             KeyedFilerStore[] indexes = new KeyedFilerStore[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
@@ -147,7 +147,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                     indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId));
                 }
             }
-            fieldIndexes[fieldType.getIndex()] = new MiruOnDiskFieldIndex<>(bitmaps, indexes, fieldIndexStripingLocksProvider);
+            fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps, indexes, fieldIndexStripingLocksProvider);
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -158,23 +158,29 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             .maximumSize(partitionAuthzCacheSize)
             .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
             .build();
-        MiruOnDiskAuthzIndex<BM> authzIndex = new MiruOnDiskAuthzIndex<>(bitmaps,
+
+        MiruFilerAuthzIndex<BM> authzIndex = new MiruFilerAuthzIndex<>(
+            bitmaps,
             new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex")),
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils),
             authzStripingLocksProvider);
 
-        MiruOnDiskRemovalIndex<BM> removalIndex = new MiruOnDiskRemovalIndex<>(bitmaps,
+        MiruFilerRemovalIndex<BM> removalIndex = new MiruFilerRemovalIndex<>(
+            bitmaps,
             new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex")),
             new byte[] { 0 },
             -1,
             new Object());
 
-        MiruOnDiskUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruOnDiskUnreadTrackingIndex<>(bitmaps,
+        MiruFilerUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
+            bitmaps,
             new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex")),
             streamStripingLocksProvider);
 
-        MiruOnDiskInboxIndex<BM> inboxIndex = new MiruOnDiskInboxIndex<>(bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex")));
+        MiruFilerInboxIndex<BM> inboxIndex = new MiruFilerInboxIndex<>(
+            bitmaps,
+            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex")),
+            streamStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 

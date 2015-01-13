@@ -54,7 +54,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final Timestamper timestamper;
     private final MiruBitmaps<BM> bitmaps;
     private final MiruPartitionCoord coord;
-    private final MiruContextFactory streamFactory;
+    private final MiruContextFactory contextFactory;
     private final MiruActivityWALReader activityWALReader;
     private final MiruPartitionEventHandler partitionEventHandler;
     private final MiruRebuildDirector rebuildDirector;
@@ -105,7 +105,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         Timestamper timestamper,
         MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
-        MiruContextFactory streamFactory,
+        MiruContextFactory contextFactory,
         MiruActivityWALReader activityWALReader,
         MiruPartitionEventHandler partitionEventHandler,
         MiruRebuildDirector rebuildDirector,
@@ -129,7 +129,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.timestamper = timestamper;
         this.bitmaps = bitmaps;
         this.coord = coord;
-        this.streamFactory = streamFactory;
+        this.contextFactory = contextFactory;
         this.activityWALReader = activityWALReader;
         this.partitionEventHandler = partitionEventHandler;
         this.rebuildDirector = rebuildDirector;
@@ -149,8 +149,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.partitionMigrationWaitInMillis = 3_000; //TODO config
         this.maxSipClockSkew = TimeUnit.SECONDS.toMillis(10); //TODO config
         this.maxSipReplaySize = 100; //TODO config
+        this.futures = Lists.newCopyOnWriteArrayList(); // rebuild, sip-migrate
 
-        MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, streamFactory.findBackingStorage(coord));
+        MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, contextFactory.findBackingStorage(coord));
         MiruPartitionAccessor<BM> accessor = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo, null, 0, indexRepairs, indexer);
         this.accessorRef.set(accessor);
         log.incAtomic("state>" + accessor.info.state.name());
@@ -158,36 +159,28 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         scheduledBootstrapExecutor.scheduleWithFixedDelay(
             new BootstrapRunnable(), 0, partitionBootstrapIntervalInMillis, TimeUnit.MILLISECONDS);
 
-        futures = Lists.newArrayListWithCapacity(2); // rebuild, sip-migrate
     }
 
     private MiruPartitionAccessor<BM> open(MiruPartitionAccessor<BM> accessor, MiruPartitionCoordInfo coordInfo) throws Exception {
         synchronized (factoryLock) {
-            MiruPartitionState openingState;
-            if (accessor.info.storage.isMemoryBacked()) {
-                if (coordInfo.state == MiruPartitionState.offline) {
-                    openingState = MiruPartitionState.offline;
-                } else {
-                    openingState = MiruPartitionState.bootstrap;
-                }
-            } else {
-                openingState = MiruPartitionState.online;
-            }
+            MiruPartitionState openingState = coordInfo.state;
 
-            Optional<MiruContext<BM>> optionalStream = Optional.absent();
-            if (openingState != MiruPartitionState.offline && accessor.context == null) {
-                MiruContext<BM> stream = streamFactory.allocate(bitmaps, coord, accessor.info.storage);
-                optionalStream = Optional.of(stream);
+            Optional<MiruContext<BM>> optionalContext = Optional.absent();
+            if (openingState != MiruPartitionState.offline && openingState != MiruPartitionState.bootstrap && !accessor.context.isPresent()) {
+                MiruContext<BM> context = contextFactory.allocate(bitmaps, coord, accessor.info.storage);
+                optionalContext = Optional.of(context);
             }
-            MiruPartitionAccessor<BM> opened = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo.copyToState(openingState), optionalStream.orNull(),
-                streamFactory.getSip(coord), indexRepairs, indexer);
+            MiruPartitionAccessor<BM> opened = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo.copyToState(openingState), optionalContext,
+                contextFactory.getSip(coord), indexRepairs, indexer);
             opened = updatePartition(accessor, opened);
             if (opened != null) {
-                clearFutures();
-                futures.add(scheduledRebuildExecutor.scheduleWithFixedDelay(new RebuildIndexRunnable(),
-                    0, partitionRunnableIntervalInMillis, TimeUnit.MILLISECONDS));
-                futures.add(scheduledSipMigrateExecutor.scheduleWithFixedDelay(new SipMigrateIndexRunnable(),
-                    0, partitionRunnableIntervalInMillis, TimeUnit.MILLISECONDS));
+                if (accessor.info.state == MiruPartitionState.offline && openingState != MiruPartitionState.offline) {
+                    clearFutures();
+                    futures.add(scheduledRebuildExecutor.scheduleWithFixedDelay(new RebuildIndexRunnable(),
+                        0, partitionRunnableIntervalInMillis, TimeUnit.MILLISECONDS));
+                    futures.add(scheduledSipMigrateExecutor.scheduleWithFixedDelay(new SipMigrateIndexRunnable(),
+                        0, partitionRunnableIntervalInMillis, TimeUnit.MILLISECONDS));
+                }
                 return opened;
             } else {
                 return accessor;
@@ -217,11 +210,15 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             synchronized (factoryLock) {
                 MiruPartitionAccessor<BM> accessor = accessorRef.get();
                 MiruPartitionCoordInfo coordInfo = accessor.info.copyToState(MiruPartitionState.offline);
-                MiruPartitionAccessor<BM> closed = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo, null, 0, indexRepairs, indexer);
+                MiruPartitionAccessor<BM> closed = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo, Optional.<MiruContext<BM>>absent(), 0,
+                    indexRepairs, indexer);
                 closed = updatePartition(accessor, closed);
                 if (closed != null) {
                     if (accessor.context != null) {
-                        streamFactory.close(accessor.close(), accessor.info.storage);
+                        Optional<MiruContext<BM>> closedContext = accessor.close();
+                        if (closedContext.isPresent()) {
+                            contextFactory.close(closedContext.get(), accessor.info.storage);
+                        }
                     }
                     clearFutures();
                 }
@@ -300,7 +297,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         accessorRef.get().markForRefresh();
     }
 
-
     @Override
     public void setStorage(MiruBackingStorage storage) throws Exception {
         updateStorage(accessorRef.get(), storage, true);
@@ -312,103 +308,102 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             try (MiruMigrationHandle<BM> handle = accessor.getMigrationHandle(partitionMigrationWaitInMillis)) {
                 // make sure the accessor didn't change while getting the handle, and that it's ready to migrate
                 if (accessorRef.get() == accessor && handle.canMigrateTo(destinationStorage)) {
+                    Optional<MiruContext<BM>> fromContext = handle.getContext();
                     MiruBackingStorage existingStorage = accessor.info.storage;
-                    if (existingStorage == destinationStorage && !force) {
+                    if (!fromContext.isPresent()) {
+                        log.warn("Partition at {} ignored request to migrate from empty context", coord);
+
+                    } else if (existingStorage == destinationStorage && !force) {
                         log.warn("Partition at {} ignored request to migrate to same storage {}", coord, destinationStorage);
 
                     } else if (existingStorage.isMemoryBacked() && destinationStorage.isMemoryBacked()) {
-                        MiruContext<BM> fromStream = handle.getStream();
                         if (existingStorage == destinationStorage || !existingStorage.isIdentical(destinationStorage)) {
                             // same memory storage, or non-identical memory storage, triggers a rebuild
-                            MiruContext<BM> toStream = streamFactory.allocate(bitmaps, coord, destinationStorage);
-                            MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage),
+                            MiruContext<BM> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
+                            MiruPartitionAccessor<BM> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
                                 Optional.of(MiruPartitionState.bootstrap), 0);
                             migrated = updatePartition(accessor, migrated);
                             if (migrated != null) {
-                                if (fromStream != null) {
-                                    streamFactory.close(fromStream, existingStorage);
-                                }
-                                streamFactory.markStorage(coord, destinationStorage);
+                                contextFactory.close(fromContext.get(), existingStorage);
+                                contextFactory.markStorage(coord, destinationStorage);
                                 updated = true;
                             } else {
                                 log.warn("Partition at {} failed to migrate to {}", coord, destinationStorage);
                             }
                         } else {
+
                             // different but identical storage updates without a rebuild
-                            MiruPartitionAccessor<BM> migrated = handle.migrated(fromStream, Optional.of(destinationStorage),
+                            MiruPartitionAccessor<BM> migrated = handle.migrated(fromContext.get(), Optional.of(destinationStorage),
                                 Optional.<MiruPartitionState>absent(), accessor.sipTimestamp.get());
                             migrated = updatePartition(accessor, migrated);
                             if (migrated != null) {
-                                streamFactory.markStorage(coord, destinationStorage);
+                                contextFactory.markStorage(coord, destinationStorage);
                                 updated = true;
                             } else {
                                 log.warn("Partition at {} failed to migrate to {}", coord, destinationStorage);
                             }
                         }
                     } else if (existingStorage.isDiskBacked() && destinationStorage.isMemoryBacked()) {
-                        MiruContext<BM> fromStream = handle.getStream();
-                        MiruContext<BM> toStream = streamFactory.allocate(bitmaps, coord, destinationStorage);
+                        MiruContext<BM> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
                         // transitioning to memory, need to bootstrap and rebuild
                         Optional<MiruPartitionState> migrateToState = (accessor.info.state == MiruPartitionState.offline)
                             ? Optional.<MiruPartitionState>absent()
                             : Optional.of(MiruPartitionState.bootstrap);
-                        MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage), migrateToState, 0);
+                        MiruPartitionAccessor<BM> migrated = handle.migrated(toContext, Optional.of(destinationStorage), migrateToState, 0);
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            streamFactory.close(fromStream, existingStorage);
-                            streamFactory.cleanDisk(coord);
-                            streamFactory.markStorage(coord, destinationStorage);
+                            contextFactory.close(fromContext.get(), existingStorage);
+                            contextFactory.cleanDisk(coord);
+                            contextFactory.markStorage(coord, destinationStorage);
                             updated = true;
                         } else {
                             log.warn("Partition at {} failed to migrate to {}", coord, destinationStorage);
-                            streamFactory.close(toStream, destinationStorage);
-                            streamFactory.markStorage(coord, existingStorage);
+                            contextFactory.close(toContext, destinationStorage);
+                            contextFactory.markStorage(coord, existingStorage);
                         }
 
                     } else if (existingStorage.isMemoryBacked() && destinationStorage.isDiskBacked()) {
-                        streamFactory.cleanDisk(coord);
+                        contextFactory.cleanDisk(coord);
 
-                        MiruContext<BM> fromStream = handle.getStream();
                         MiruContext<BM> toStream;
                         if (destinationStorage == MiruBackingStorage.mem_mapped) {
-                            toStream = streamFactory.copy(bitmaps, coord, fromStream, MiruBackingStorage.mem_mapped);
+                            toStream = contextFactory.copy(bitmaps, coord, fromContext.get(), MiruBackingStorage.mem_mapped);
                         } else {
-                            toStream = streamFactory.copy(bitmaps, coord, fromStream, MiruBackingStorage.disk);
+                            toStream = contextFactory.copy(bitmaps, coord, fromContext.get(), MiruBackingStorage.disk);
                         }
 
-                        streamFactory.markSip(coord, accessor.sipTimestamp.get());
+                        contextFactory.markSip(coord, accessor.sipTimestamp.get());
                         MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage), Optional.<MiruPartitionState>absent(),
                             accessor.sipTimestamp.get());
 
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            streamFactory.close(fromStream, existingStorage);
-                            streamFactory.markStorage(coord, destinationStorage);
+                            contextFactory.close(fromContext.get(), existingStorage);
+                            contextFactory.markStorage(coord, destinationStorage);
                             updated = true;
                         } else {
                             log.warn("Partition at {} failed to migrate to {}, attempting to rewind", coord, destinationStorage);
-                            streamFactory.close(toStream, destinationStorage);
-                            streamFactory.cleanDisk(coord);
-                            streamFactory.markStorage(coord, existingStorage);
+                            contextFactory.close(toStream, destinationStorage);
+                            contextFactory.cleanDisk(coord);
+                            contextFactory.markStorage(coord, existingStorage);
                         }
 
                     } else if (existingStorage.isDiskBacked() && destinationStorage.isDiskBacked()) {
                         //TODO check existingStorage.isIdentical(destinationStorage), else rebuild and somehow mark for migration to destinationStorage
                         // rely on the fact that the underlying file structure is identical for disk-backed storage types
-                        MiruContext<BM> fromStream = handle.getStream();
-                        MiruContext<BM> toStream = streamFactory.allocate(bitmaps, coord, destinationStorage);
-                        MiruPartitionAccessor<BM> migrated = handle.migrated(toStream, Optional.of(destinationStorage), Optional.<MiruPartitionState>absent(),
+                        MiruContext<BM> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
+                        MiruPartitionAccessor<BM> migrated = handle.migrated(toContext, Optional.of(destinationStorage), Optional.<MiruPartitionState>absent(),
                             accessor.sipTimestamp.get());
 
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            streamFactory.close(fromStream, existingStorage);
-                            streamFactory.markStorage(coord, destinationStorage);
+                            contextFactory.close(fromContext.get(), existingStorage);
+                            contextFactory.markStorage(coord, destinationStorage);
                             updated = true;
                         } else {
                             log.info("Partition at {} failed to migrate to {}", coord, destinationStorage);
-                            streamFactory.close(toStream, destinationStorage);
-                            streamFactory.markStorage(coord, existingStorage);
+                            contextFactory.close(toContext, destinationStorage);
+                            contextFactory.markStorage(coord, existingStorage);
                         }
 
                     } else {
@@ -426,12 +421,14 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 return null;
             }
 
-            try {
-                MiruContext<BM> context = streamFactory.stateChanged(bitmaps, coord, update.context, update.info.storage, update.info.state);
-                update = update.copyToContext(context);
-            } catch (Exception e) {
-                log.error("Failed to notify state change, aborting", e);
-                return null;
+            if (update.context.isPresent()) {
+                try {
+                    MiruContext<BM> context = contextFactory.stateChanged(bitmaps, coord, update.context.get(), update.info.storage, update.info.state);
+                    update = update.copyToContext(context);
+                } catch (Exception e) {
+                    log.error("Failed to notify state change, aborting", e);
+                    return null;
+                }
             }
 
             Optional<Long> refreshTimestamp = Optional.absent();
@@ -500,7 +497,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             if (partitionEventHandler.isCoordActive(coord) && banUnregisteredSchema.get() < System.currentTimeMillis()) {
                 if (accessor.info.state == MiruPartitionState.offline) {
                     try {
-                        open(accessor, new MiruPartitionCoordInfo(MiruPartitionState.bootstrap, accessor.info.storage));
+                        open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap));
                     } catch (MiruPartitionUnavailableException e) {
                         log.warn("Partition is active for tenant {} but no schema is registered, banning for {} ms",
                             coord.tenantId, partitionBanUnregisteredSchemaMillis);
@@ -522,14 +519,22 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         public void run() {
             try {
                 MiruPartitionAccessor<BM> accessor = accessorRef.get();
+                if (!accessor.info.storage.isMemoryBacked()) {
+                    return;
+                }
+
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
                     long activityCount = activityWALReader.count(coord.tenantId, coord.partitionId);
                     Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, activityCount);
                     if (token.isPresent()) {
                         try {
-                            MiruPartitionAccessor<BM> rebuilding = accessor.copyToState(MiruPartitionState.rebuilding);
-                            rebuilding = updatePartition(accessor, rebuilding);
+                            MiruPartitionAccessor<BM> rebuilding;
+                            if (state == MiruPartitionState.bootstrap) {
+                                rebuilding = open(accessor, accessor.info.copyToState(MiruPartitionState.rebuilding));
+                            } else {
+                                rebuilding = accessor;
+                            }
                             if (rebuilding != null) {
                                 try {
                                     if (rebuild(rebuilding)) {
@@ -752,7 +757,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             boolean sipUpdated = accessor.sipTimestamp.compareAndSet(afterTimestamp, suggestedTimestamp);
             if (sipUpdated) {
                 if (accessor.info.storage.isDiskBacked()) {
-                    streamFactory.markSip(coord, suggestedTimestamp);
+                    contextFactory.markSip(coord, suggestedTimestamp);
                 }
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
             }

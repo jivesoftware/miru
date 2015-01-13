@@ -96,15 +96,13 @@ public class MiruInboxIndexTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
 
         MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
-        MiruInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = hybridContext.inboxIndex;
+        MiruInboxIndex<EWAHCompressedBitmap> miruHybridInboxIndex = hybridContext.inboxIndex;
 
         MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = onDiskContext.inboxIndex;
 
-        ((BulkImport) miruOnDiskInboxIndex).bulkImport(tenantId, (BulkExport) miruInMemoryInboxIndex);
-
         return new Object[][] {
-            { miruInMemoryInboxIndex, miruStreamId },
+            { miruHybridInboxIndex, miruStreamId },
             { miruOnDiskInboxIndex, miruStreamId }
         };
     }
@@ -119,19 +117,21 @@ public class MiruInboxIndexTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
         MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
-        MiruInboxIndex<EWAHCompressedBitmap> miruInMemoryInboxIndex = hybridContext.inboxIndex;
+        MiruInboxIndex<EWAHCompressedBitmap> miruHybridInboxIndex = hybridContext.inboxIndex;
 
-        miruInMemoryInboxIndex.index(streamId, 1);
-        miruInMemoryInboxIndex.index(streamId, 2);
-        miruInMemoryInboxIndex.index(streamId, 3);
+        miruHybridInboxIndex.index(streamId, 1);
+        miruHybridInboxIndex.index(streamId, 2);
+        miruHybridInboxIndex.index(streamId, 3);
 
         MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = onDiskContext.inboxIndex;
 
-        ((BulkImport) miruOnDiskInboxIndex).bulkImport(tenantId, (BulkExport) miruInMemoryInboxIndex);
+        miruOnDiskInboxIndex.index(streamId, 1);
+        miruOnDiskInboxIndex.index(streamId, 2);
+        miruOnDiskInboxIndex.index(streamId, 3);
 
         return new Object[][] {
-            { miruInMemoryInboxIndex, streamId, ImmutableList.of(1, 2, 3) },
+            { miruHybridInboxIndex, streamId, ImmutableList.of(1, 2, 3) },
             { miruOnDiskInboxIndex, streamId, ImmutableList.of(1, 2, 3) }
         };
     }

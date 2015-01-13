@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -119,7 +118,6 @@ public class MiruActivityIndexTest {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
         MiruContext<RoaringBitmap> hybridContext = allocator.allocate(bitmaps, coord);
-        hybridContext = allocator.stateChanged(bitmaps, coord, hybridContext, MiruPartitionState.rebuilding);
         return hybridContext.activityIndex;
     }
 
@@ -128,7 +126,6 @@ public class MiruActivityIndexTest {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
         MiruContext<RoaringBitmap> hybridContext = allocator.allocate(bitmaps, coord);
-        hybridContext = allocator.stateChanged(bitmaps, coord, hybridContext, MiruPartitionState.rebuilding);
         return hybridContext.activityIndex;
     }
 

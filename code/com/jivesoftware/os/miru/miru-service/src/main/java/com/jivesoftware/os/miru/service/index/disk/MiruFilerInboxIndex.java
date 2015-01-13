@@ -16,17 +16,21 @@ import com.jivesoftware.os.miru.service.index.memory.KeyedInvertedIndexStream;
 import java.io.IOException;
 
 /** @author jonathan */
-public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<Void, KeyedInvertedIndexStream<BM>> {
+public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM>,
+    BulkExport<Void, KeyedInvertedIndexStream<BM>>,
+    BulkImport<Void, KeyedInvertedIndexStream<BM>> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final KeyedFilerStore store;
-    private final StripingLocksProvider<MiruStreamId> stripingLocksProvider = new StripingLocksProvider<>(64);
+    private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
-    public MiruOnDiskInboxIndex(MiruBitmaps<BM> bitmaps,
-        KeyedFilerStore store)
+    public MiruFilerInboxIndex(MiruBitmaps<BM> bitmaps,
+        KeyedFilerStore store,
+        StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
         this.store = store;
+        this.stripingLocksProvider = stripingLocksProvider;
     }
 
     @Override
@@ -34,8 +38,8 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
         getAppender(streamId).append(id);
     }
 
-    private MiruOnDiskInvertedIndex<BM> indexFor(MiruStreamId streamId) {
-        return new MiruOnDiskInvertedIndex<>(bitmaps,
+    private MiruFilerInvertedIndex<BM> indexFor(MiruStreamId streamId) {
+        return new MiruFilerInvertedIndex<>(bitmaps,
             store,
             streamId.getBytes(),
             -1,
@@ -63,6 +67,12 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
     }
 
     @Override
+    public Void bulkExport(MiruTenantId tenantId, KeyedInvertedIndexStream<BM> callback) throws Exception {
+        //TODO NEVER
+        return null;
+    }
+
+    @Override
     public void bulkImport(final MiruTenantId tenantId, BulkExport<Void, KeyedInvertedIndexStream<BM>> export) throws Exception {
         export.bulkExport(tenantId, new KeyedInvertedIndexStream<BM>() {
             @Override
@@ -73,7 +83,7 @@ public class MiruOnDiskInboxIndex<BM> implements MiruInboxIndex<BM>, BulkImport<
                 try {
                     Optional<BM> index = importIndex.getIndex();
                     if (index.isPresent()) {
-                        MiruOnDiskInvertedIndex<BM> invertedIndex = new MiruOnDiskInvertedIndex<>(bitmaps,
+                        MiruFilerInvertedIndex<BM> invertedIndex = new MiruFilerInvertedIndex<>(bitmaps,
                             store,
                             key,
                             -1,

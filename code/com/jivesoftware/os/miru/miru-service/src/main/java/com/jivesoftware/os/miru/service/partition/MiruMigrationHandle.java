@@ -12,7 +12,7 @@ public interface MiruMigrationHandle<BM> extends AutoCloseable {
 
     boolean canMigrateTo(MiruBackingStorage destinationStorage);
 
-    MiruContext<BM> getStream();
+    Optional<MiruContext<BM>> getContext();
 
     MiruPartitionAccessor<BM> migrated(MiruContext<BM> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state, long sipTimestamp);
 }
