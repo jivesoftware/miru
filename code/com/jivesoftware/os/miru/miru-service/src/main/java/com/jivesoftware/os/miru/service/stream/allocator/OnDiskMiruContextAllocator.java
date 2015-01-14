@@ -115,7 +115,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
             chunkStores[i] = chunkStoreInitializer.openOrCreate(
                 chunkDirs,
                 "chunk-" + i,
-                resourceLocator.getInitialChunkSize(),
+                4_096, //TODO configure?
                 chunkStripingLocksProvider);
         }
 

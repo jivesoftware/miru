@@ -151,7 +151,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             chunkStores[i] = chunkStoreInitializer.openOrCreate(
                 chunkDirs,
                 "chunk-" + i,
-                hybridResourceLocator.getInitialChunkSize(),
+                4_096, //TODO configure?
                 locksProvider);
             fromChunkStores[i].copyTo(chunkStores[i]);
         }
