@@ -151,24 +151,26 @@ public class MiruRebalanceDirector {
     private Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> extractPartitions(boolean currentPartitionOnly,
         MiruTenantId tenantId,
         List<MiruPartition> partitionsForTenant,
-        MiruPartitionId currentPartitionId) {
+        final MiruPartitionId currentPartitionId) {
 
         Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> replicaTable = HashBasedTable.create();
+
+        if (currentPartitionOnly) {
+            replicaTable.put(tenantId, currentPartitionId, Lists.<MiruPartition>newArrayList());
+        } else {
+            for (MiruPartitionId partitionId = currentPartitionId; partitionId != null; partitionId = partitionId.prev()) {
+                replicaTable.put(tenantId, partitionId, Lists.<MiruPartition>newArrayList());
+            }
+        }
+
         for (MiruPartition partition : partitionsForTenant) {
             MiruPartitionId partitionId = partition.coord.partitionId;
-            if (currentPartitionOnly && currentPartitionId != null && partitionId.compareTo(currentPartitionId) < 0) {
-                continue;
-            }
             List<MiruPartition> partitions = replicaTable.get(tenantId, partitionId);
-            if (partitions == null) {
-                partitions = Lists.newArrayList();
-                replicaTable.put(tenantId, partitionId, partitions);
+            if (partitions != null) {
+                partitions.add(partition);
             }
-            if (currentPartitionId == null || partitionId.compareTo(currentPartitionId) > 0) {
-                currentPartitionId = partitionId;
-            }
-            partitions.add(partition);
         }
+
         return replicaTable;
     }
 

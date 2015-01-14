@@ -102,21 +102,21 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 if (value != null) {
                     final MiruHost host = value.getRow();
                     streams.add(new KeyedColumnValueCallbackStream<>(
-                        host, new CallbackStream<ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long>>() {
+                        host,
+                        new CallbackStream<ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long>>() {
 
-                        @Override
-                        public ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> callback(
-                            ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> columnValueAndTimestamp) throws Exception {
+                            @Override
+                            public ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> callback(
+                                ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> columnValueAndTimestamp) throws Exception {
 
-                            if (columnValueAndTimestamp != null
-                                && columnValueAndTimestamp.getColumn().getIndex() == MiruHostsColumnKey.heartbeat.getIndex()) {
-                                MiruHostsColumnValue value = columnValueAndTimestamp.getValue();
-                                hostHeartbeats.
-                                    add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp()));
+                                if (columnValueAndTimestamp != null &&
+                                    columnValueAndTimestamp.getColumn().getIndex() == MiruHostsColumnKey.heartbeat.getIndex()) {
+                                    MiruHostsColumnValue value = columnValueAndTimestamp.getValue();
+                                    hostHeartbeats.add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp()));
+                                }
+                                return columnValueAndTimestamp;
                             }
-                            return columnValueAndTimestamp;
-                        }
-                    }));
+                        }));
                 }
                 return value;
             }

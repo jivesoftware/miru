@@ -55,9 +55,9 @@ import com.jivesoftware.os.rcvs.marshall.primatives.LongTypeMarshaller;
  * - r: InverseDateAdded2 = Host2
  * - r: InverseDateAdded3 = Host3
  * ------
- * miru.reg.t [Void, Tenant] [t=topology, c=config, p=partition]
+ * miru.reg.t [Void, Tenant] [t=topology, c=config, p=partition, s=schema]
  * ---
- * - t: Partition1 Host1 = State BackingStorage SipTimestamp (timestamp for staleness)
+ * - t: Partition1 Host1 = State BackingStorage (timestamp for staleness)
  * - t: Partition1 Host1 = State BackingStorage (timestamp for staleness)
  * - t: Partition1 Host2 = State BackingStorage (timestamp for staleness)
  * - t: Partition1 Host3 = State BackingStorage (timestamp for staleness)
