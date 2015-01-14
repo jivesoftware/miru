@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
-    private static final String DISK_FORMAT_VERSION = "version-11";
+    private static final String DISK_FORMAT_VERSION = "version-12";
 
     private final MiruSchemaProvider schemaProvider;
     private final MiruActivityInternExtern activityInternExtern;
