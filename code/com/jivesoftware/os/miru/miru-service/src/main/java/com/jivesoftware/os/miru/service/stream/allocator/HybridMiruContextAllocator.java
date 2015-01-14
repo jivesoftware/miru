@@ -107,7 +107,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
 
         MiruContext<BM> updated = null;
         if (state == MiruPartitionState.online) {
-            updated = allocateOnline(bitmaps, from);
+            updated = allocateOnline(bitmaps, coord, from);
             //TODO non-persistent state, EGREGIOUS HACK!
             ((MiruInMemoryTimeIndex) from.timeIndex).transferTo((MiruInMemoryTimeIndex) updated.timeIndex);
         }
@@ -135,7 +135,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         return buildMiruContext(bitmaps, schema, chunkStores);
     }
 
-    private <BM> MiruContext<BM> allocateOnline(MiruBitmaps<BM> bitmaps, MiruContext<BM> from) throws Exception {
+    private <BM> MiruContext<BM> allocateOnline(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM> from) throws Exception {
 
         MiruSchema schema = from.schema;
 
@@ -150,6 +150,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         for (int i = 0; i < numberOfChunkStores; i++) {
             chunkStores[i] = chunkStoreInitializer.openOrCreate(
                 chunkDirs,
+                Math.abs(coord.hashCode() + i) % chunkDirs.length,
                 "chunk-" + i,
                 4_096, //TODO configure?
                 locksProvider);

@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
-    private static final String DISK_FORMAT_VERSION = "version-10";
+    private static final String DISK_FORMAT_VERSION = "version-11";
 
     private final MiruSchemaProvider schemaProvider;
     private final MiruActivityInternExtern activityInternExtern;
@@ -87,7 +87,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
         File[] chunkDirs = resourceLocator.getChunkDirectories(identifier, "chunks");
         for (int i = 0; i < numberOfChunkStores; i++) {
-            if (!new ChunkStoreInitializer().checkExists(chunkDirs, "chunk-" + i)) {
+            if (!new ChunkStoreInitializer().checkExists(chunkDirs, i, "chunk-" + i)) {
                 return false;
             }
         }
@@ -114,6 +114,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         for (int i = 0; i < numberOfChunkStores; i++) {
             chunkStores[i] = chunkStoreInitializer.openOrCreate(
                 chunkDirs,
+                Math.abs(coord.hashCode() + i) % chunkDirs.length,
                 "chunk-" + i,
                 4_096, //TODO configure?
                 chunkStripingLocksProvider);

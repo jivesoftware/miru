@@ -486,17 +486,17 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
 
         private void checkActive() throws Exception {
-            if (removed.get()) {
+            if (removed.get() || banUnregisteredSchema.get() >= System.currentTimeMillis()) {
                 return;
             }
 
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
-            if (partitionEventHandler.isCoordActive(coord) && banUnregisteredSchema.get() < System.currentTimeMillis()) {
+            if (partitionEventHandler.isCoordActive(coord)) {
                 if (accessor.info.state == MiruPartitionState.offline) {
                     try {
                         open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap));
                     } catch (MiruPartitionUnavailableException e) {
-                        log.warn("Partition is active for tenant {} but no schema is registered, banning for {} ms",
+                        log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
                             coord.tenantId, partitionBanUnregisteredSchemaMillis);
                         banUnregisteredSchema.set(System.currentTimeMillis() + partitionBanUnregisteredSchemaMillis);
                     }
@@ -512,11 +512,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
     protected class RebuildIndexRunnable implements Runnable {
 
+        private final AtomicLong banUnregisteredSchema = new AtomicLong();
+
         @Override
         public void run() {
             try {
                 MiruPartitionAccessor<BM> accessor = accessorRef.get();
-                if (!accessor.info.storage.isMemoryBacked()) {
+                if (!accessor.info.storage.isMemoryBacked() || banUnregisteredSchema.get() >= System.currentTimeMillis()) {
                     return;
                 }
 
@@ -542,6 +544,10 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                                     log.error("Rebuild encountered a problem", t);
                                 }
                             }
+                        } catch (MiruPartitionUnavailableException e) {
+                            log.warn("Rebuild: Partition is active for tenant {} but no schema is registered, banning for {} ms",
+                                coord.tenantId, partitionBanUnregisteredSchemaMillis);
+                            banUnregisteredSchema.set(System.currentTimeMillis() + partitionBanUnregisteredSchemaMillis);
                         } finally {
                             rebuildDirector.release(token.get());
                         }
