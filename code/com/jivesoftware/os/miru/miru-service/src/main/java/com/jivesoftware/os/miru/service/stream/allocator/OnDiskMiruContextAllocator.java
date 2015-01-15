@@ -6,7 +6,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.filer.chunk.store.FPStripingLocksProvider;
+import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
@@ -60,7 +60,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
     private final StripingLocksProvider<Long> chunkStripingLocksProvider;
-    private final FPStripingLocksProvider fpStripingLocksProvider;
 
     public OnDiskMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -71,8 +70,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
         StripingLocksProvider<String> authzStripingLocksProvider,
-        StripingLocksProvider<Long> chunkStripingLocksProvider,
-        FPStripingLocksProvider fpStripingLocksProvider) {
+        StripingLocksProvider<Long> chunkStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -83,7 +81,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         this.streamStripingLocksProvider = streamStripingLocksProvider;
         this.authzStripingLocksProvider = authzStripingLocksProvider;
         this.chunkStripingLocksProvider = chunkStripingLocksProvider;
-        this.fpStripingLocksProvider = fpStripingLocksProvider;
     }
 
     @Override
@@ -121,10 +118,11 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 Math.abs(coord.hashCode() + i) % chunkDirs.length,
                 "chunk-" + i,
                 4_096, //TODO configure?
+                new HeapByteBufferFactory(), //TODO replace with supplied cacheByteBufferFactory
                 chunkStripingLocksProvider);
         }
 
-        KeyedFilerStore timeIndexFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("timeIndex-index"), fpStripingLocksProvider);
+        KeyedFilerStore timeIndexFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("timeIndex-index"));
         MiruFilerTimeIndex timeIndex = new MiruFilerTimeIndex(
             new KeyedFilerProvider(timeIndexFilerStore, new byte[] { 0 }),
             new TxKeyValueStore<>(chunkStores,
@@ -132,7 +130,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 keyBytes("timeIndex-timestamps"),
                 8, false, 4, false));
 
-        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"), fpStripingLocksProvider);
+        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"));
         MiruFilerActivityIndex activityIndex = new MiruFilerActivityIndex(
             activityFilerStore,
             new MiruInternalActivityMarshaller(),
@@ -149,7 +147,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                     fieldType == MiruFieldType.bloom && fieldDefinition.bloomFieldNames.isEmpty()) {
                     indexes[fieldId] = null;
                 } else {
-                    indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), fpStripingLocksProvider);
+                    indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId));
                 }
             }
             fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps, indexes, fieldIndexStripingLocksProvider);
@@ -166,25 +164,25 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
         MiruFilerAuthzIndex<BM> authzIndex = new MiruFilerAuthzIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex"), fpStripingLocksProvider),
+            new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex")),
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils),
             authzStripingLocksProvider);
 
         MiruFilerRemovalIndex<BM> removalIndex = new MiruFilerRemovalIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), fpStripingLocksProvider),
+            new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex")),
             new byte[] { 0 },
             -1,
             new Object());
 
         MiruFilerUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex"), fpStripingLocksProvider),
+            new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex")),
             streamStripingLocksProvider);
 
         MiruFilerInboxIndex<BM> inboxIndex = new MiruFilerInboxIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex"), fpStripingLocksProvider),
+            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex")),
             streamStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
@@ -216,13 +214,5 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
     private byte[] keyBytes(String key) {
         return key.getBytes(Charsets.UTF_8);
-    }
-
-    private String[] filesToPaths(File[] files) {
-        String[] paths = new String[files.length];
-        for (int i = 0; i < paths.length; i++) {
-            paths[i] = files[i].getAbsolutePath();
-        }
-        return paths;
     }
 }

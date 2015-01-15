@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.filer.chunk.store.FPStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
@@ -123,7 +122,6 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
         StripingLocksProvider<Long> chunkStripingLocksProvider = new StripingLocksProvider<>(config.getChunkStoreNumberOfLocks());
-        FPStripingLocksProvider fpStripingLocksProvider = new FPStripingLocksProvider(config.getKeyedFilerNumberOfLocks());
 
         MiruHybridResourceLocator transientResourceLocator = resourceLocatorProvider.getTransientResourceLocator();
         MiruContextAllocator hybridContextAllocator = new HybridMiruContextAllocator(schemaProvider,
@@ -137,8 +135,7 @@ public class MiruServiceInitializer {
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
             authzStripingLocksProvider,
-            chunkStripingLocksProvider,
-            fpStripingLocksProvider);
+            chunkStripingLocksProvider);
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
@@ -150,7 +147,7 @@ public class MiruServiceInitializer {
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
             authzStripingLocksProvider,
-            chunkStripingLocksProvider, fpStripingLocksProvider);
+            chunkStripingLocksProvider);
 
         MiruContextFactory streamFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

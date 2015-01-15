@@ -4,7 +4,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Interners;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.filer.chunk.store.FPStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.KeyValueMarshaller;
@@ -73,8 +72,7 @@ public class IndexTestUtil {
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
             new StripingLocksProvider<String>(8),
-            new StripingLocksProvider<Long>(64),
-            new FPStripingLocksProvider(64));
+            new StripingLocksProvider<Long>(64));
     }
 
     public static MiruContextAllocator buildOnDiskContextAllocator(int numberOfChunkStores,
@@ -104,8 +102,7 @@ public class IndexTestUtil {
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
             new StripingLocksProvider<String>(8),
-            new StripingLocksProvider<Long>(64),
-            new FPStripingLocksProvider(64));
+            new StripingLocksProvider<Long>(64));
     }
 
     public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name,
@@ -122,7 +119,7 @@ public class IndexTestUtil {
     }
 
     public static KeyedFilerStore buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {
-        return new TxKeyedFilerStore(chunkStores, keyBytes(name), new FPStripingLocksProvider(8));
+        return new TxKeyedFilerStore(chunkStores, keyBytes(name));
     }
 
     public static ChunkStore[] buildByteBufferBackedChunkStores(int numberOfChunkStores, ByteBufferFactory byteBufferFactory, long segmentSize)
@@ -131,7 +128,7 @@ public class IndexTestUtil {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new StripingLocksProvider<Long>(64));
+            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), new StripingLocksProvider<Long>(64));
         }
 
         return chunkStores;
@@ -146,7 +143,8 @@ public class IndexTestUtil {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new StripingLocksProvider<Long>(64));
+            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(),
+                new StripingLocksProvider<Long>(64));
         }
 
         return chunkStores;
