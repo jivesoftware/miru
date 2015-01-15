@@ -95,6 +95,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(65_536)
     int getChunkStoreNumberOfLocks();
 
+    @IntDefault(65_536)
+    int getKeyedFilerNumberOfLocks();
+
     @StringDefault("hybrid")
     String getDefaultStorage();
 

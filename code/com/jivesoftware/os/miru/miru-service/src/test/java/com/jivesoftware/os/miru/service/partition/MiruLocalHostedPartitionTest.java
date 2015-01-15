@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.filer.chunk.store.FPStripingLocksProvider;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
@@ -177,7 +178,8 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
             new StripingLocksProvider<String>(8),
-            new StripingLocksProvider<Long>(64));
+            new StripingLocksProvider<Long>(64),
+            new FPStripingLocksProvider(64));
 
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
             activityInternExtern,
@@ -188,7 +190,8 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
             new StripingLocksProvider<String>(8),
-            new StripingLocksProvider<Long>(64));
+            new StripingLocksProvider<Long>(64),
+            new FPStripingLocksProvider(64));
 
         contextFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

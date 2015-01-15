@@ -6,6 +6,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.filer.chunk.store.FPStripingLocksProvider;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
@@ -59,6 +60,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
     private final StripingLocksProvider<Long> chunkStripingLocksProvider;
+    private final FPStripingLocksProvider fpStripingLocksProvider;
 
     public OnDiskMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -69,7 +71,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
         StripingLocksProvider<String> authzStripingLocksProvider,
-        StripingLocksProvider<Long> chunkStripingLocksProvider) {
+        StripingLocksProvider<Long> chunkStripingLocksProvider,
+        FPStripingLocksProvider fpStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -80,6 +83,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         this.streamStripingLocksProvider = streamStripingLocksProvider;
         this.authzStripingLocksProvider = authzStripingLocksProvider;
         this.chunkStripingLocksProvider = chunkStripingLocksProvider;
+        this.fpStripingLocksProvider = fpStripingLocksProvider;
     }
 
     @Override
@@ -120,7 +124,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 chunkStripingLocksProvider);
         }
 
-        KeyedFilerStore timeIndexFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("timeIndex-index"));
+        KeyedFilerStore timeIndexFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("timeIndex-index"), fpStripingLocksProvider);
         MiruFilerTimeIndex timeIndex = new MiruFilerTimeIndex(
             new KeyedFilerProvider(timeIndexFilerStore, new byte[] { 0 }),
             new TxKeyValueStore<>(chunkStores,
@@ -128,7 +132,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 keyBytes("timeIndex-timestamps"),
                 8, false, 4, false));
 
-        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"));
+        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"), fpStripingLocksProvider);
         MiruFilerActivityIndex activityIndex = new MiruFilerActivityIndex(
             activityFilerStore,
             new MiruInternalActivityMarshaller(),
@@ -145,7 +149,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                     fieldType == MiruFieldType.bloom && fieldDefinition.bloomFieldNames.isEmpty()) {
                     indexes[fieldId] = null;
                 } else {
-                    indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId));
+                    indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), fpStripingLocksProvider);
                 }
             }
             fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps, indexes, fieldIndexStripingLocksProvider);
@@ -162,25 +166,25 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
         MiruFilerAuthzIndex<BM> authzIndex = new MiruFilerAuthzIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex")),
+            new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex"), fpStripingLocksProvider),
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils),
             authzStripingLocksProvider);
 
         MiruFilerRemovalIndex<BM> removalIndex = new MiruFilerRemovalIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex")),
+            new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), fpStripingLocksProvider),
             new byte[] { 0 },
             -1,
             new Object());
 
         MiruFilerUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex")),
+            new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex"), fpStripingLocksProvider),
             streamStripingLocksProvider);
 
         MiruFilerInboxIndex<BM> inboxIndex = new MiruFilerInboxIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex")),
+            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex"), fpStripingLocksProvider),
             streamStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
