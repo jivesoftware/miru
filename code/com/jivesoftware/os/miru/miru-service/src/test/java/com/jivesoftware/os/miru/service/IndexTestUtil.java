@@ -71,8 +71,7 @@ public class IndexTestUtil {
             partitionDeleteChunkStoreOnClose,
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8),
-            new StripingLocksProvider<Long>(64));
+            new StripingLocksProvider<String>(8));
     }
 
     public static MiruContextAllocator buildOnDiskContextAllocator(int numberOfChunkStores,
@@ -101,8 +100,7 @@ public class IndexTestUtil {
             partitionAuthzCacheSize,
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8),
-            new StripingLocksProvider<Long>(64));
+            new StripingLocksProvider<String>(8));
     }
 
     public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name,
@@ -128,7 +126,7 @@ public class IndexTestUtil {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), new StripingLocksProvider<Long>(64));
+            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), 5_000);
         }
 
         return chunkStores;
@@ -143,8 +141,7 @@ public class IndexTestUtil {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(),
-                new StripingLocksProvider<Long>(64));
+            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(), 5_000);
         }
 
         return chunkStores;

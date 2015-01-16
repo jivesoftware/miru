@@ -121,7 +121,6 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(config.getFieldIndexNumberOfLocks());
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
-        StripingLocksProvider<Long> chunkStripingLocksProvider = new StripingLocksProvider<>(config.getChunkStoreNumberOfLocks());
 
         MiruHybridResourceLocator transientResourceLocator = resourceLocatorProvider.getTransientResourceLocator();
         MiruContextAllocator hybridContextAllocator = new HybridMiruContextAllocator(schemaProvider,
@@ -134,8 +133,7 @@ public class MiruServiceInitializer {
             config.getPartitionDeleteChunkStoreOnClose(),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
-            authzStripingLocksProvider,
-            chunkStripingLocksProvider);
+            authzStripingLocksProvider);
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
@@ -146,8 +144,7 @@ public class MiruServiceInitializer {
             config.getPartitionAuthzCacheSize(),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
-            authzStripingLocksProvider,
-            chunkStripingLocksProvider);
+            authzStripingLocksProvider);
 
         MiruContextFactory streamFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()

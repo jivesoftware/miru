@@ -64,7 +64,6 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
-    private final StripingLocksProvider<Long> chunkStripingLocksProvider;
 
     public HybridMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -76,8 +75,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         boolean partitionDeleteChunkStoreOnClose,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
-        StripingLocksProvider<String> authzStripingLocksProvider,
-        StripingLocksProvider<Long> chunkStripingLocksProvider) {
+        StripingLocksProvider<String> authzStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -89,7 +87,6 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
         this.streamStripingLocksProvider = streamStripingLocksProvider;
         this.authzStripingLocksProvider = authzStripingLocksProvider;
-        this.chunkStripingLocksProvider = chunkStripingLocksProvider;
     }
 
     @Override
@@ -133,7 +130,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
             chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory,
                 initialChunkSize,
                 new HeapByteBufferFactory(), //TODO replace with supplied cacheByteBufferFactory
-                chunkStripingLocksProvider);
+                5_000); //TODO configure?
         }
 
         return buildMiruContext(bitmaps, schema, chunkStores);
@@ -158,7 +155,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
                 "chunk-" + i,
                 4_096, //TODO configure?
                 new HeapByteBufferFactory(), //TODO replace with supplied cacheByteBufferFactory
-                locksProvider);
+                5_000); //TODO configure?
             fromChunkStores[i].copyTo(chunkStores[i]);
         }
 

@@ -59,7 +59,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
-    private final StripingLocksProvider<Long> chunkStripingLocksProvider;
 
     public OnDiskMiruContextAllocator(MiruSchemaProvider schemaProvider,
         MiruActivityInternExtern activityInternExtern,
@@ -69,8 +68,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         int partitionAuthzCacheSize,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
-        StripingLocksProvider<String> authzStripingLocksProvider,
-        StripingLocksProvider<Long> chunkStripingLocksProvider) {
+        StripingLocksProvider<String> authzStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
@@ -80,7 +78,6 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
         this.streamStripingLocksProvider = streamStripingLocksProvider;
         this.authzStripingLocksProvider = authzStripingLocksProvider;
-        this.chunkStripingLocksProvider = chunkStripingLocksProvider;
     }
 
     @Override
@@ -119,7 +116,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 "chunk-" + i,
                 4_096, //TODO configure?
                 new HeapByteBufferFactory(), //TODO replace with supplied cacheByteBufferFactory
-                chunkStripingLocksProvider);
+                5_000); //TODO configure?
         }
 
         KeyedFilerStore timeIndexFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("timeIndex-index"));

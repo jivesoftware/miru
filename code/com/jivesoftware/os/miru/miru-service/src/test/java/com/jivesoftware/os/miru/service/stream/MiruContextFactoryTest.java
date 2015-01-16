@@ -91,8 +91,7 @@ public class MiruContextFactoryTest {
             config.getPartitionDeleteChunkStoreOnClose(),
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8),
-            new StripingLocksProvider<Long>(64));
+            new StripingLocksProvider<String>(8));
 
         MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
             activityInternExtern,
@@ -102,8 +101,7 @@ public class MiruContextFactoryTest {
             config.getPartitionAuthzCacheSize(),
             new StripingLocksProvider<MiruTermId>(8),
             new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8),
-            new StripingLocksProvider<Long>(64));
+            new StripingLocksProvider<String>(8));
 
         streamFactory = new MiruContextFactory(
             ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()
