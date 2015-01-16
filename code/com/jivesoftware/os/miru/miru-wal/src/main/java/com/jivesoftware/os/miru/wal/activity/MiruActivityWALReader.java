@@ -28,7 +28,7 @@ public interface MiruActivityWALReader {
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 
-    long count(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+    MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     long countSip(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 

@@ -154,21 +154,28 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
     }
 
     @Override
-    public long count(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    public MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         final MutableLong count = new MutableLong(0);
+        final List<Integer> begins = Lists.newArrayList();
+        final List<Integer> ends = Lists.newArrayList();
         activityWAL.getValues(tenantId,
             new MiruActivityWALRow(partitionId.getId()),
-            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), 0),
+            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0),
             null, 1_000, false, null, null, new CallbackStream<MiruPartitionedActivity>() {
                 @Override
                 public MiruPartitionedActivity callback(MiruPartitionedActivity partitionedActivity) throws Exception {
-                    if (partitionedActivity != null && partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                        count.add(partitionedActivity.index);
+                    if (partitionedActivity != null) {
+                        if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
+                            count.add(partitionedActivity.index);
+                            begins.add(partitionedActivity.writerId);
+                        } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
+                            ends.add(partitionedActivity.writerId);
+                        }
                     }
                     return partitionedActivity;
                 }
             });
-        return count.longValue();
+        return new MiruActivityWALStatus(count.longValue(), begins, ends);
     }
 
     @Override

@@ -12,6 +12,8 @@ import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
+import com.jivesoftware.os.jive.utils.logger.MetricLogger;
+import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -48,6 +50,8 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class OnDiskMiruContextAllocator implements MiruContextAllocator {
+
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private static final String DISK_FORMAT_VERSION = "version-12";
 
@@ -90,12 +94,19 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         File[] chunkDirs = resourceLocator.getChunkDirectories(identifier, "chunks");
         for (int i = 0; i < numberOfChunkStores; i++) {
             if (!new ChunkStoreInitializer().checkExists(chunkDirs, i, "chunk-" + i)) {
+                log.warn("Partition missing chunk {} for {}", i, coord);
                 return false;
             }
         }
 
         File versionFile = resourceLocator.getFilerFile(new MiruPartitionCoordIdentifier(coord), DISK_FORMAT_VERSION);
-        return versionFile.exists();
+        if (!versionFile.exists()) {
+            log.warn("Partition missing version {} for {}", DISK_FORMAT_VERSION, coord);
+            return false;
+        }
+
+        log.info("Partition is on disk for {}", coord);
+        return true;
     }
 
     @Override

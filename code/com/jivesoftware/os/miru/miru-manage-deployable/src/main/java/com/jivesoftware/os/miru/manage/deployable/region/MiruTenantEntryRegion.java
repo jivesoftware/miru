@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionBean;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionCoordBean;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -64,16 +65,18 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
 
             if (latestPartitionId.isPresent()) {
                 for (MiruPartitionId latest = latestPartitionId.get(); latest != null; latest = latest.prev()) {
-                    partitionsMap.put(latest, new PartitionBean(latest.getId(), activityWALReader.count(tenant, latest)));
+                    MiruActivityWALStatus status = activityWALReader.getStatus(tenant, latest);
+                    partitionsMap.put(latest, new PartitionBean(latest.getId(), status.count, status.begins.size(), status.ends.size()));
                 }
             }
 
-            for (MiruTopologyStatus status : statusForTenant) {
-                MiruPartition partition = status.partition;
+            for (MiruTopologyStatus topologyStatus : statusForTenant) {
+                MiruPartition partition = topologyStatus.partition;
                 MiruPartitionId partitionId = partition.coord.partitionId;
                 PartitionBean partitionBean = partitionsMap.get(partitionId);
                 if (partitionBean == null) {
-                    partitionBean = new PartitionBean(partitionId.getId(), activityWALReader.count(tenant, partitionId));
+                    MiruActivityWALStatus status = activityWALReader.getStatus(tenant, partitionId);
+                    partitionBean = new PartitionBean(partitionId.getId(), status.count, status.begins.size(), status.ends.size());
                     partitionsMap.put(partitionId, partitionBean);
                 }
                 MiruPartitionState state = partition.info.state;

@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -152,7 +153,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.futures = Lists.newCopyOnWriteArrayList(); // rebuild, sip-migrate
 
         MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, contextFactory.findBackingStorage(coord));
-        MiruPartitionAccessor<BM> accessor = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo, null, 0, indexRepairs, indexer);
+        MiruPartitionAccessor<BM> accessor = new MiruPartitionAccessor<>(bitmaps,
+            coord,
+            coordInfo,
+            Optional.<MiruContext<BM>>absent(),
+            0,
+            indexRepairs,
+            indexer);
         accessor.markForRefresh(Optional.<Long>absent());
         this.accessorRef.set(accessor);
         log.incAtomic("state>" + accessor.info.state.name());
@@ -501,12 +508,14 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             MiruPartitionActiveTimestamp activeTimestamp = partitionEventHandler.isCoordActive(coord);
             if (activeTimestamp.active) {
                 if (accessor.info.state == MiruPartitionState.offline) {
-                    try {
-                        open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap));
-                    } catch (MiruPartitionUnavailableException e) {
-                        log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
-                            coord.tenantId, partitionBanUnregisteredSchemaMillis);
-                        banUnregisteredSchema.set(System.currentTimeMillis() + partitionBanUnregisteredSchemaMillis);
+                    if (accessor.info.storage.isMemoryBacked()) {
+                        try {
+                            open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap));
+                        } catch (MiruPartitionUnavailableException e) {
+                            log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
+                                coord.tenantId, partitionBanUnregisteredSchemaMillis);
+                            banUnregisteredSchema.set(System.currentTimeMillis() + partitionBanUnregisteredSchemaMillis);
+                        }
                     }
                 } else if (accessor.context.isPresent() && activeTimestamp.timestamp < (System.currentTimeMillis() - partitionReleaseContextCacheAfterMillis)) {
                     MiruContext<BM> context = accessor.context.get();
@@ -535,8 +544,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
-                    long activityCount = activityWALReader.count(coord.tenantId, coord.partitionId);
-                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, activityCount);
+                    MiruActivityWALStatus status = activityWALReader.getStatus(coord.tenantId, coord.partitionId);
+                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, status.count);
                     if (token.isPresent()) {
                         try {
                             MiruPartitionAccessor<BM> rebuilding;
@@ -563,7 +572,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             rebuildDirector.release(token.get());
                         }
                     } else {
-                        log.debug("Skipped rebuild because count={} available={}", activityCount, rebuildDirector.available());
+                        log.debug("Skipped rebuild because count={} available={}", status.count, rebuildDirector.available());
                     }
                 }
             } catch (Throwable t) {

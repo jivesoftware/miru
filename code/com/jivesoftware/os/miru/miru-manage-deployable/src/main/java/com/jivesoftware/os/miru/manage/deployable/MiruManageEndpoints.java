@@ -41,10 +41,14 @@ public class MiruManageEndpoints {
 
     private final MiruManageService miruManageService;
     private final MiruRebalanceDirector rebalanceDirector;
+    private final MiruWALDirector walDirector;
 
-    public MiruManageEndpoints(@Context MiruManageService miruManageService, @Context MiruRebalanceDirector rebalanceDirector) {
+    public MiruManageEndpoints(@Context MiruManageService miruManageService,
+        @Context MiruRebalanceDirector rebalanceDirector,
+        @Context MiruWALDirector walDirector) {
         this.miruManageService = miruManageService;
         this.rebalanceDirector = rebalanceDirector;
+        this.walDirector = walDirector;
     }
 
     @GET
@@ -281,5 +285,20 @@ public class MiruManageEndpoints {
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
+
+    @POST
+    @Path("/wal/repair")
+    @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response repairWAL() {
+        try {
+            walDirector.repairActivityWAL();
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /wal/repair", t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
 
 }

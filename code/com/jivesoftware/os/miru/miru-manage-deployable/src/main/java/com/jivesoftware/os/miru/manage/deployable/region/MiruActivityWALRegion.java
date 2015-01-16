@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.WALBean;
 import com.jivesoftware.os.miru.manage.deployable.region.input.MiruActivityWALRegionInput;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -66,9 +67,12 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                 }
                 List<Map<String, String>> partitions = Lists.newArrayList();
                 for (MiruPartitionId partitionId : partitionIds) {
+                    MiruActivityWALStatus status = activityWALReader.getStatus(tenantId, partitionId);
                     partitions.add(ImmutableMap.<String, String>of(
                         "id", partitionId.toString(),
-                        "count", String.valueOf(activityWALReader.count(tenantId, partitionId))));
+                        "count", String.valueOf(status.count),
+                        "begins", String.valueOf(status.begins.size()),
+                        "ends", String.valueOf(status.ends.size())));
                 }
                 data.put("partitions", partitions);
 

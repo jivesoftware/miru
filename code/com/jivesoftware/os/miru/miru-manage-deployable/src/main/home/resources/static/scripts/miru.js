@@ -84,3 +84,30 @@ miru.balancer = {
         $button.removeAttr('disabled');
     }
 };
+
+miru.activitywal = {
+
+    repair: function (ele) {
+        var $button = $(ele);
+        $button.attr('disabled', 'disabled');
+        var value = $button.val();
+        $.ajax({
+            type: "POST",
+            url: "/miru/manage/wal/repair",
+            data: {},
+            //contentType: "application/json",
+            success: function () {
+                $button.val('Success');
+                setTimeout(function () {
+                    miru.balancer.resetButton($button, value);
+                }, 2000);
+            },
+            error: function () {
+                $button.val('Failure');
+                setTimeout(function () {
+                    miru.balancer.resetButton($button, value);
+                }, 2000);
+            }
+        });
+    }
+};
