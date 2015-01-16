@@ -76,7 +76,8 @@ public class MiruLocalPartitionFactory {
             config.getPartitionRebuildFailureSleepMillis(),
             config.getPartitionBootstrapIntervalInMillis(),
             config.getPartitionRunnableIntervalInMillis(),
-            config.getPartitionBanUnregisteredSchemaMillis());
+            config.getPartitionBanUnregisteredSchemaMillis(),
+            config.getPartitionReleaseContextCacheAfterMillis());
     }
 
     public void prioritizeRebuild(MiruLocalHostedPartition<?> partition) {

@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruPartitionActiveTimestamp;
 
 /**
  *
@@ -23,7 +24,7 @@ public class MiruPartitionEventHandler {
         clusterRegistry.updateTopology(coord, info, refreshTimestamp);
     }
 
-    public boolean isCoordActive(MiruPartitionCoord coord) throws Exception {
+    public MiruPartitionActiveTimestamp isCoordActive(MiruPartitionCoord coord) throws Exception {
         return clusterRegistry.isPartitionActive(coord);
     }
 }

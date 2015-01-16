@@ -154,4 +154,7 @@ public class MiruContextFactory {
         getAllocator(storage).close(context);
     }
 
+    public <BM> void releaseCaches(MiruContext<BM> context, MiruBackingStorage storage) throws IOException {
+        getAllocator(storage).releaseCaches(context);
+    }
 }

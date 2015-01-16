@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.cluster.MiruPartitionActiveTimestamp;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
@@ -73,6 +74,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final long partitionRunnableIntervalInMillis;
     private final long partitionBanUnregisteredSchemaMillis;
     private final long partitionMigrationWaitInMillis;
+    private final long partitionReleaseContextCacheAfterMillis;
     private final long maxSipClockSkew;
     private final int maxSipReplaySize;
 
@@ -120,7 +122,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         long partitionRebuildFailureSleepMillis,
         long partitionBootstrapIntervalInMillis,
         long partitionRunnableIntervalInMillis,
-        long partitionBanUnregisteredSchemaMillis)
+        long partitionBanUnregisteredSchemaMillis,
+        long partitionReleaseContextCacheAfterMillis)
         throws Exception {
 
         this.bitmaps = bitmaps;
@@ -143,6 +146,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.partitionRunnableIntervalInMillis = partitionRunnableIntervalInMillis;
         this.partitionBanUnregisteredSchemaMillis = partitionBanUnregisteredSchemaMillis;
         this.partitionMigrationWaitInMillis = 3_000; //TODO config
+        this.partitionReleaseContextCacheAfterMillis = partitionReleaseContextCacheAfterMillis;
         this.maxSipClockSkew = TimeUnit.SECONDS.toMillis(10); //TODO config
         this.maxSipReplaySize = 100; //TODO config
         this.futures = Lists.newCopyOnWriteArrayList(); // rebuild, sip-migrate
@@ -152,6 +156,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         accessor.markForRefresh(Optional.<Long>absent());
         this.accessorRef.set(accessor);
         log.incAtomic("state>" + accessor.info.state.name());
+        log.incAtomic("storage>" + accessor.info.storage.name());
 
         scheduledBootstrapExecutor.scheduleWithFixedDelay(
             new BootstrapRunnable(), 0, partitionBootstrapIntervalInMillis, TimeUnit.MILLISECONDS);
@@ -437,7 +442,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             accessorRef.set(update);
 
             log.decAtomic("state>" + existing.info.state.name());
+            log.decAtomic("storage>" + existing.info.storage.name());
             log.incAtomic("state>" + update.info.state.name());
+            log.incAtomic("storage>" + update.info.storage.name());
             if (existing.info.state != MiruPartitionState.bootstrap && update.info.state == MiruPartitionState.bootstrap) {
                 bootstrapCounter.inc("Total number of partitions that need to be brought online.",
                     "Be patient. Rebalance. Increase number of concurrent rebuilds.");
@@ -491,7 +498,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             }
 
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
-            if (partitionEventHandler.isCoordActive(coord)) {
+            MiruPartitionActiveTimestamp activeTimestamp = partitionEventHandler.isCoordActive(coord);
+            if (activeTimestamp.active) {
                 if (accessor.info.state == MiruPartitionState.offline) {
                     try {
                         open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap));
@@ -500,6 +508,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             coord.tenantId, partitionBanUnregisteredSchemaMillis);
                         banUnregisteredSchema.set(System.currentTimeMillis() + partitionBanUnregisteredSchemaMillis);
                     }
+                } else if (accessor.context.isPresent() && activeTimestamp.timestamp < (System.currentTimeMillis() - partitionReleaseContextCacheAfterMillis)) {
+                    MiruContext<BM> context = accessor.context.get();
+                    contextFactory.releaseCaches(context, accessor.info.storage);
                 }
             } else {
                 if (accessor.info.state != MiruPartitionState.offline) {

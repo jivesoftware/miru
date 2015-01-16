@@ -47,7 +47,7 @@ public interface MiruClusterRegistry {
     void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo,
         Optional<Long> refreshTimestamp) throws Exception;
 
-    boolean isPartitionActive(MiruPartitionCoord coord) throws Exception;
+    MiruPartitionActiveTimestamp isPartitionActive(MiruPartitionCoord coord) throws Exception;
 
     MiruPartition getPartition(MiruPartitionCoord coord) throws Exception;
 

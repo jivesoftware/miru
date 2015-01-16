@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruPartitionActiveTimestamp;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
@@ -323,7 +324,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public boolean isPartitionActive(MiruPartitionCoord coord) throws Exception {
+    public MiruPartitionActiveTimestamp isPartitionActive(MiruPartitionCoord coord) throws Exception {
         MiruTenantConfig config = getTenantConfig(coord.tenantId);
         return isTenantPartitionActiveForHost(coord.tenantId, coord.partitionId, coord.host, config);
     }
@@ -532,7 +533,10 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         }
     }
 
-    private boolean isTenantPartitionActiveForHost(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host, MiruTenantConfig config)
+    private MiruPartitionActiveTimestamp isTenantPartitionActiveForHost(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        MiruHost host,
+        MiruTenantConfig config)
         throws Exception {
 
         MiruTopologyColumnKey key = new MiruTopologyColumnKey(partitionId, host);
@@ -544,7 +548,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             topologyTimestamp = valueAndTimestamps[0].getValue().lastActiveTimestamp;
         }
         long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, defaultTopologyIsStaleAfterMillis);
-        return topologyTimestamp > -1 && (topologyTimestamp + topologyIsStaleAfterMillis) > timestamper.get();
+        boolean active = topologyTimestamp > -1 && (topologyTimestamp + topologyIsStaleAfterMillis) > timestamper.get();
+        return new MiruPartitionActiveTimestamp(active, topologyTimestamp);
     }
 
     private final Function<MiruTopologyStatus, MiruPartition> topologyStatusToPartition = new Function<MiruTopologyStatus, MiruPartition>() {

@@ -6,7 +6,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
-import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
@@ -41,6 +41,7 @@ import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -54,6 +55,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
     private final MiruActivityInternExtern activityInternExtern;
     private final MiruReadTrackingWALReader readTrackingWALReader;
     private final MiruResourceLocator resourceLocator;
+    private final ByteBufferFactory cacheByteBufferFactory;
     private final int numberOfChunkStores;
     private final int partitionAuthzCacheSize;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
@@ -64,6 +66,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         MiruActivityInternExtern activityInternExtern,
         MiruReadTrackingWALReader readTrackingWALReader,
         MiruResourceLocator resourceLocator,
+        ByteBufferFactory cacheByteBufferFactory,
         int numberOfChunkStores,
         int partitionAuthzCacheSize,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
@@ -73,6 +76,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
         this.resourceLocator = resourceLocator;
+        this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
@@ -115,7 +119,7 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
                 Math.abs(coord.hashCode() + i) % chunkDirs.length,
                 "chunk-" + i,
                 4_096, //TODO configure?
-                new HeapByteBufferFactory(), //TODO replace with supplied cacheByteBufferFactory
+                cacheByteBufferFactory,
                 5_000); //TODO configure?
         }
 
@@ -207,6 +211,16 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
 
     @Override
     public <BM> void close(MiruContext<BM> context) {
+    }
+
+    @Override
+    public <BM> void releaseCaches(MiruContext<BM> context) throws IOException {
+        if (context.chunkStores.isPresent()) {
+            ChunkStore[] chunkStores = context.chunkStores.get();
+            for (ChunkStore chunkStore : chunkStores) {
+                chunkStore.rollCache();
+            }
+        }
     }
 
     private byte[] keyBytes(String key) {

@@ -1,9 +1,11 @@
 package com.jivesoftware.os.miru.service.locator;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import java.io.File;
+import java.util.Collections;
 import java.util.Set;
 
 /**
@@ -14,7 +16,7 @@ public class MiruHybridResourceCleaner {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final File[] basePaths;
-    private final Set<String> acquired = Sets.newHashSet();
+    private final Set<String> acquired = Collections.newSetFromMap(Maps.<String, Boolean>newConcurrentMap());
 
     public MiruHybridResourceCleaner(final File[] basePaths) {
         this.basePaths = basePaths;
@@ -24,11 +26,9 @@ public class MiruHybridResourceCleaner {
         for (File basePath : basePaths) {
             try {
                 Set<File> removalSet = Sets.newHashSet();
-                synchronized (acquired) {
-                    for (File file : basePath.listFiles()) {
-                        if (!acquired.contains(file.getName())) {
-                            removalSet.add(file);
-                        }
+                for (File file : basePath.listFiles()) {
+                    if (!acquired.contains(file.getName())) {
+                        removalSet.add(file);
                     }
                 }
                 for (File remove : removalSet) {
@@ -42,14 +42,10 @@ public class MiruHybridResourceCleaner {
     }
 
     public void acquired(String name) {
-        synchronized (acquired) {
-            acquired.add(name);
-        }
+        acquired.add(name);
     }
 
     public void released(String name) {
-        synchronized (acquired) {
-            acquired.remove(name);
-        }
+        acquired.remove(name);
     }
 }

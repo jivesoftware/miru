@@ -7,7 +7,6 @@ import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
-import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
@@ -57,7 +56,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
     private final MiruActivityInternExtern activityInternExtern;
     private final MiruReadTrackingWALReader readTrackingWALReader;
     private final MiruHybridResourceLocator hybridResourceLocator;
-    private final ByteBufferFactory byteBufferFactory;
+    private final ByteBufferFactory rebuildByteBufferFactory;
+    private final ByteBufferFactory cacheByteBufferFactory;
     private final int numberOfChunkStores;
     private final int partitionAuthzCacheSize;
     private final boolean partitionDeleteChunkStoreOnClose;
@@ -69,7 +69,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         MiruActivityInternExtern activityInternExtern,
         MiruReadTrackingWALReader readTrackingWALReader,
         MiruHybridResourceLocator hybridResourceLocator,
-        ByteBufferFactory byteBufferFactory,
+        ByteBufferFactory rebuildByteBufferFactory,
+        ByteBufferFactory cacheByteBufferFactory,
         int numberOfChunkStores,
         int partitionAuthzCacheSize,
         boolean partitionDeleteChunkStoreOnClose,
@@ -80,7 +81,8 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
         this.hybridResourceLocator = hybridResourceLocator;
-        this.byteBufferFactory = byteBufferFactory;
+        this.rebuildByteBufferFactory = rebuildByteBufferFactory;
+        this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.partitionDeleteChunkStoreOnClose = partitionDeleteChunkStoreOnClose;
@@ -127,9 +129,9 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         long initialChunkSize = hybridResourceLocator.getInitialChunkSize();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory,
+            chunkStores[i] = chunkStoreInitializer.create(rebuildByteBufferFactory,
                 initialChunkSize,
-                new HeapByteBufferFactory(), //TODO replace with supplied cacheByteBufferFactory
+                cacheByteBufferFactory,
                 5_000); //TODO configure?
         }
 
@@ -154,7 +156,7 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
                 Math.abs(coord.hashCode() + i) % chunkDirs.length,
                 "chunk-" + i,
                 4_096, //TODO configure?
-                new HeapByteBufferFactory(), //TODO replace with supplied cacheByteBufferFactory
+                cacheByteBufferFactory,
                 5_000); //TODO configure?
             fromChunkStores[i].copyTo(chunkStores[i]);
         }
@@ -253,6 +255,16 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
                 } catch (IOException e) {
                     LOG.warn("Failed to delete chunk store", e);
                 }
+            }
+        }
+    }
+
+    @Override
+    public <BM> void releaseCaches(MiruContext<BM> context) throws IOException {
+        if (context.chunkStores.isPresent()) {
+            ChunkStore[] chunkStores = context.chunkStores.get();
+            for (ChunkStore chunkStore : chunkStores) {
+                chunkStore.rollCache();
             }
         }
     }
