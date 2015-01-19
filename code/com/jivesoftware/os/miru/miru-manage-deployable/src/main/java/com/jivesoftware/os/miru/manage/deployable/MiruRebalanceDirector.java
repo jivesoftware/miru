@@ -15,7 +15,6 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.miru.api.MiruConfigReader;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -38,6 +37,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.imageio.ImageIO;
+
+import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX;
+import static com.jivesoftware.os.miru.api.MiruConfigReader.PRIORITIZE_REBUILD_ENDPOINT;
 
 /**
  *
@@ -201,7 +203,8 @@ public class MiruRebalanceDirector {
     }
 
     public void rebuildTenantPartition(MiruHost miruHost, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        readerRequestHelpers.get(miruHost).executeRequest("", MiruConfigReader.PRIORITIZE_REBUILD_ENDPOINT + "/" + tenantId + "/" + partitionId,
+        readerRequestHelpers.get(miruHost).executeRequest("",
+            CONFIG_SERVICE_ENDPOINT_PREFIX + PRIORITIZE_REBUILD_ENDPOINT + "/" + tenantId + "/" + partitionId,
             String.class, null);
     }
 
