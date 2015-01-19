@@ -53,10 +53,12 @@ public class MiruFilerActivityIndex implements MiruActivityIndex,
         try {
             return keyedStore.execute(FilerIO.intBytes(index), -1, new FilerTransaction<Filer, MiruInternalActivity>() {
                 @Override
-                public MiruInternalActivity commit(Filer filer) throws IOException {
+                public MiruInternalActivity commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
-                        filer.seek(0);
-                        return internalActivityMarshaller.fromFiler(tenantId, filer);
+                        synchronized (lock) {
+                            filer.seek(0);
+                            return internalActivityMarshaller.fromFiler(tenantId, filer);
+                        }
                     } else {
                         return null;
                     }
@@ -74,10 +76,12 @@ public class MiruFilerActivityIndex implements MiruActivityIndex,
         try {
             return keyedStore.execute(FilerIO.intBytes(index), -1, new FilerTransaction<Filer, MiruTermId[]>() {
                 @Override
-                public MiruTermId[] commit(Filer filer) throws IOException {
+                public MiruTermId[] commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
-                        filer.seek(0);
-                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
+                        synchronized (lock) {
+                            filer.seek(0);
+                            return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
+                        }
                     } else {
                         return null;
                     }
@@ -112,9 +116,11 @@ public class MiruFilerActivityIndex implements MiruActivityIndex,
                 final byte[] bytes = internalActivityMarshaller.toBytes(activity);
                 keyedStore.execute(FilerIO.intBytes(index), 4 + bytes.length, new FilerTransaction<Filer, Void>() {
                     @Override
-                    public Void commit(Filer filer) throws IOException {
-                        filer.seek(0);
-                        FilerIO.write(filer, bytes);
+                    public Void commit(Object lock, Filer filer) throws IOException {
+                        synchronized (lock) {
+                            filer.seek(0);
+                            FilerIO.write(filer, bytes);
+                        }
                         return null;
                     }
                 });
@@ -132,9 +138,11 @@ public class MiruFilerActivityIndex implements MiruActivityIndex,
             if (size > indexSize.get()) {
                 indexSizeFiler.execute(4, new FilerTransaction<Filer, Void>() {
                     @Override
-                    public Void commit(Filer chunkFiler) throws IOException {
-                        chunkFiler.seek(0);
-                        FilerIO.writeInt(chunkFiler, size, "size");
+                    public Void commit(Object lock, Filer filer) throws IOException {
+                        synchronized (lock) {
+                            filer.seek(0);
+                            FilerIO.writeInt(filer, size, "size");
+                        }
                         return null;
                     }
                 });
@@ -150,10 +158,12 @@ public class MiruFilerActivityIndex implements MiruActivityIndex,
             if (size < 0) {
                 size = indexSizeFiler.execute(-1, new FilerTransaction<Filer, Integer>() {
                     @Override
-                    public Integer commit(Filer chunkFiler) throws IOException {
-                        if (chunkFiler != null) {
-                            chunkFiler.seek(0);
-                            return FilerIO.readInt(chunkFiler, "size");
+                    public Integer commit(Object lock, Filer filer) throws IOException {
+                        if (filer != null) {
+                            synchronized (lock) {
+                                filer.seek(0);
+                                return FilerIO.readInt(filer, "size");
+                            }
                         } else {
                             return 0;
                         }

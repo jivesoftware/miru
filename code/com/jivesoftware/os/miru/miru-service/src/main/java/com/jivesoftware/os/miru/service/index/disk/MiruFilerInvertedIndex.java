@@ -21,7 +21,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM>,
     BulkImport<MiruInvertedIndex<BM>, Void>,
     BulkExport<MiruInvertedIndex<BM>, Void> {
@@ -52,8 +54,8 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM>,
         if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
             return Optional.absent();
         }
-        //TODO transaction should be passed in since it only depends on 'bitmaps'
-        BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.execute(keyBytes, -1, new GetWithLastIdTransaction<>(bitmaps));
+        byte[] rawBytes = keyedFilerStore.execute(keyBytes, -1, getTransaction);
+        BitmapAndLastId<BM> bitmapAndLastId = deser(rawBytes);
         if (bitmapAndLastId != null) {
             if (lastId == Integer.MIN_VALUE) {
                 lastId = bitmapAndLastId.lastId;
@@ -63,6 +65,24 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM>,
             lastId = -1;
             return Optional.absent();
         }
+    }
+
+    private BitmapAndLastId<BM> deser(byte[] bytes) throws IOException {
+        //TODO just add a byte marker, this sucks
+        if (bytes != null && bytes.length > LAST_ID_LENGTH + 4) {
+            if (FilerIO.bytesInt(bytes, LAST_ID_LENGTH) > 0) {
+                int lastId = FilerIO.bytesInt(bytes, 0);
+                DataInput dataInput = ByteStreams.newDataInput(bytes, LAST_ID_LENGTH);
+                try {
+                    return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
+                } catch (Exception e) {
+                    throw new IOException("Failed to deserialize", e);
+                }
+            } else {
+                return new BitmapAndLastId<>(bitmaps.create(), -1);
+            }
+        }
+        return null;
     }
 
     private BM getOrCreateIndex() throws Exception {
@@ -189,9 +209,11 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM>,
         return lastId;
     }
 
-    private static int getLastId(Filer filer) throws IOException {
-        filer.seek(0);
-        return FilerIO.readInt(filer, "lastId");
+    private static int getLastId(Object lock, Filer filer) throws IOException {
+        synchronized (lock) {
+            filer.seek(0);
+            return FilerIO.readInt(filer, "lastId");
+        }
     }
 
     @Override
@@ -250,47 +272,29 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM>,
 
     private static final FilerTransaction<Filer, Integer> lastIdTransaction = new FilerTransaction<Filer, Integer>() {
         @Override
-        public Integer commit(Filer filer) throws IOException {
+        public Integer commit(Object lock, Filer filer) throws IOException {
             if (filer != null) {
-                return getLastId(filer);
+                return getLastId(lock, filer);
             } else {
                 return -1;
             }
         }
     };
 
-    private static class GetWithLastIdTransaction<BM> implements FilerTransaction<Filer, BitmapAndLastId<BM>> {
+    private static final FilerTransaction<Filer, byte[]> getTransaction = new FilerTransaction<Filer, byte[]>() {
 
-        private final MiruBitmaps<BM> bitmaps;
-
-        private GetWithLastIdTransaction(MiruBitmaps<BM> bitmaps) {
-            this.bitmaps = bitmaps;
-        }
-
-        @Override
-        public BitmapAndLastId<BM> commit(Filer filer) throws IOException {
+        public byte[] commit(Object lock, Filer filer) throws IOException {
             if (filer != null) {
-                filer.seek(0);
-                byte[] bytes = new byte[(int) filer.length()];
-                FilerIO.read(filer, bytes);
-                //TODO just add a byte marker, this sucks
-                if (bytes.length > LAST_ID_LENGTH + 4) {
-                    if (FilerIO.bytesInt(bytes, LAST_ID_LENGTH) > 0) {
-                        int lastId = FilerIO.bytesInt(bytes, 0);
-                        DataInput dataInput = ByteStreams.newDataInput(bytes, LAST_ID_LENGTH);
-                        try {
-                            return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
-                        } catch (Exception e) {
-                            throw new IOException("Failed to deserialize", e);
-                        }
-                    } else {
-                        return new BitmapAndLastId<>(bitmaps.create(), -1);
-                    }
+                synchronized (lock) {
+                    filer.seek(0);
+                    byte[] bytes = new byte[(int) filer.length()];
+                    FilerIO.read(filer, bytes);
+                    return bytes;
                 }
             }
             return null;
         }
-    }
+    };
 
     private static class SetTransaction implements RewriteFilerTransaction<Filer, Void> {
 
