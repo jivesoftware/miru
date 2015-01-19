@@ -20,10 +20,12 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
@@ -31,6 +33,12 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginEndpoints;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
+import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
+import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
+import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.SetOfSortedMapsImplInitializer;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.hbase.HBaseSetOfSortedMapsImplInitializer;
@@ -85,14 +93,20 @@ public class MiruManageMain {
             registryConfig.getDefaultNumberOfReplicas(),
             registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
+        MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
+
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
+        MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
+        MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
+        MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
         MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
             clusterRegistry,
-            registryStore,
-            wal);
+            activityWALReader,
+            readTrackingWALReader,
+            activityLookupTable);
 
         ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper);
 
@@ -109,6 +123,8 @@ public class MiruManageMain {
         MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
             new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
 
+        MiruWALDirector walDirector = new MiruWALDirector(clusterRegistry, activityWALReader, activityWALWriter);
+
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
         Resource sourceTree = new Resource(staticResourceDir)
@@ -119,6 +135,7 @@ public class MiruManageMain {
         deployable.addEndpoints(MiruManageEndpoints.class);
         deployable.addInjectables(MiruManageService.class, miruManageService);
         deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
+        deployable.addInjectables(MiruWALDirector.class, walDirector);
 
         for (MiruManagePlugin plugin : plugins) {
             miruManageService.registerPlugin(plugin);

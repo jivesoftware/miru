@@ -1,48 +1,23 @@
 package com.jivesoftware.os.miru.api;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
  *
  */
 public class MiruTopologyStatus {
 
     public final MiruPartition partition;
+    public final long lastActiveTimestamp;
 
-    @JsonCreator
-    public MiruTopologyStatus(@JsonProperty("partition") MiruPartition partition) {
+    public MiruTopologyStatus(MiruPartition partition, long lastActiveTimestamp) {
         this.partition = partition;
+        this.lastActiveTimestamp = lastActiveTimestamp;
     }
 
     @Override
     public String toString() {
         return "MiruTopologyStatus{" +
             "partition=" + partition +
+            ", lastActiveTimestamp=" + lastActiveTimestamp +
             '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        MiruTopologyStatus that = (MiruTopologyStatus) o;
-
-        if (partition != null ? !partition.equals(that.partition) : that.partition != null) {
-            return false;
-        }
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = partition != null ? partition.hashCode() : 0;
-        return result;
     }
 }

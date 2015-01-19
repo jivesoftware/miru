@@ -395,7 +395,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                             MiruTopologyStatus status = new MiruTopologyStatus(
                                 new MiruPartition(
                                     new MiruPartitionCoord(tenantId, c.getColumn().partitionId, host),
-                                    new MiruPartitionCoordInfo(value.state, value.storage)));
+                                    new MiruPartitionCoordInfo(value.state, value.storage)), value.lastActiveTimestamp);
 
                             List<MiruTopologyStatus> statuses = topologies.get(tenantId, c.getColumn().partitionId);
                             if (statuses == null) {
@@ -519,7 +519,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 MiruPartitionState state = normalizeState(value.state, value.lastActiveTimestamp, topologyIsStaleAfterMillis);
                 MiruBackingStorage storage = value.storage;
                 MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(state, storage);
-                statuses.add(new MiruTopologyStatus(new MiruPartition(coord, coordInfo)));
+                statuses.add(new MiruTopologyStatus(new MiruPartition(coord, coordInfo), value.lastActiveTimestamp));
             }
         }
         return statuses;

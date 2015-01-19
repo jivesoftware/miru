@@ -147,13 +147,13 @@ public class HybridMiruContextAllocator implements MiruContextAllocator {
         ChunkStore[] fromChunkStores = from.chunkStores.get();
 
         File[] chunkDirs = hybridResourceLocator.getChunkDirectories(identifier, "chunks");
-        StripingLocksProvider<Long> locksProvider = new StripingLocksProvider<>(64);
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
+            int directoryOffset = Math.abs(coord.hashCode() + i) % chunkDirs.length;
             chunkStores[i] = chunkStoreInitializer.openOrCreate(
                 chunkDirs,
-                Math.abs(coord.hashCode() + i) % chunkDirs.length,
+                directoryOffset,
                 "chunk-" + i,
                 4_096, //TODO configure?
                 cacheByteBufferFactory,

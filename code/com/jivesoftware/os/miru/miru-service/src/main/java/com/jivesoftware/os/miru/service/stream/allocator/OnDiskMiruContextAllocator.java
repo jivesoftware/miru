@@ -93,7 +93,8 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
         File[] chunkDirs = resourceLocator.getChunkDirectories(identifier, "chunks");
         for (int i = 0; i < numberOfChunkStores; i++) {
-            if (!new ChunkStoreInitializer().checkExists(chunkDirs, i, "chunk-" + i)) {
+            int directoryOffset = Math.abs(coord.hashCode() + i) % chunkDirs.length;
+            if (!new ChunkStoreInitializer().checkExists(chunkDirs, directoryOffset, "chunk-" + i)) {
                 log.warn("Partition missing chunk {} for {}", i, coord);
                 return false;
             }
@@ -125,9 +126,10 @@ public class OnDiskMiruContextAllocator implements MiruContextAllocator {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
+            int directoryOffset = Math.abs(coord.hashCode() + i) % chunkDirs.length;
             chunkStores[i] = chunkStoreInitializer.openOrCreate(
                 chunkDirs,
-                Math.abs(coord.hashCode() + i) % chunkDirs.length,
+                directoryOffset,
                 "chunk-" + i,
                 4_096, //TODO configure?
                 cacheByteBufferFactory,

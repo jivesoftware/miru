@@ -2,8 +2,6 @@ package com.jivesoftware.os.miru.manage.deployable;
 
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruActivityWALRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruAdminRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruBalancerRegion;
@@ -15,23 +13,17 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruLookupRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruReadWALRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 
 public class MiruManageInitializer {
 
     public MiruManageService initialize(MiruSoyRenderer renderer,
         MiruClusterRegistry clusterRegistry,
-        MiruRegistryStore registryStore,
-        MiruWAL miruWAL)
+        MiruActivityWALReader activityWALReader,
+        MiruReadTrackingWALReader readTrackingWALReader,
+        MiruActivityLookupTable activityLookupTable)
         throws Exception {
-
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
-        MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
-        MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
 
         return new MiruManageService(
             renderer,

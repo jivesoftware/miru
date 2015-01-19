@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -80,7 +81,8 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                     partitionsMap.put(partitionId, partitionBean);
                 }
                 MiruPartitionState state = partition.info.state;
-                PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage);
+                String idle = timeAgo(System.currentTimeMillis() - topologyStatus.lastActiveTimestamp);
+                PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, idle);
                 if (state == MiruPartitionState.online) {
                     partitionBean.getOnline().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.rebuilding) {
@@ -99,6 +101,22 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         data.put("partitions", partitionsMap.values());
 
         return renderer.render(template, data);
+    }
+
+    private static String timeAgo(long millis) {
+        String suffix;
+        if (millis >= 0) {
+            suffix = "ago";
+        } else {
+            suffix = "from now";
+            millis = Math.abs(millis);
+        }
+
+        final long hr = TimeUnit.MILLISECONDS.toHours(millis);
+        final long min = TimeUnit.MILLISECONDS.toMinutes(millis - TimeUnit.HOURS.toMillis(hr));
+        final long sec = TimeUnit.MILLISECONDS.toSeconds(millis - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
+        final long ms = TimeUnit.MILLISECONDS.toMillis(millis - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
+        return String.format("%02d:%02d:%02d.%03d " + suffix, hr, min, sec, ms);
     }
 
 }
