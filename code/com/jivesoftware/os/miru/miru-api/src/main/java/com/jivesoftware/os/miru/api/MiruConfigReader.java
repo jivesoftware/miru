@@ -10,5 +10,7 @@ public interface MiruConfigReader {
 
     public static final String PARTITIONS_ENDPOINT = "/partitions";
 
+    public static final String PRIORITIZE_REBUILD_ENDPOINT = "/rebuild/prioritize";
+
     List<MiruPartition> getPartitionsForTenant(MiruTenantId tenantId);
 }

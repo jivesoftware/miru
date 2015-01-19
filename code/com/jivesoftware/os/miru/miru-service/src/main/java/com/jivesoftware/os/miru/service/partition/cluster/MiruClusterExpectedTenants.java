@@ -179,9 +179,14 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         Optional<MiruHostedPartition<?>> optionalPartition = topology.getPartition(coord);
         if (optionalPartition.isPresent()) {
             MiruHostedPartition<?> partition = optionalPartition.get();
-            if (partition.isLocal() && partition.getState() == MiruPartitionState.bootstrap) {
-                tenantTopologyFactory.prioritizeRebuild((MiruLocalHostedPartition<?>) partition);
-                return true;
+            if (partition.isLocal()) {
+                if (partition.getState() == MiruPartitionState.bootstrap) {
+                    tenantTopologyFactory.prioritizeRebuild((MiruLocalHostedPartition<?>) partition);
+                    return true;
+                } else if (partition.getState() == MiruPartitionState.offline) {
+                    topology.warm(coord);
+                    return true;
+                }
             }
         }
         return false;

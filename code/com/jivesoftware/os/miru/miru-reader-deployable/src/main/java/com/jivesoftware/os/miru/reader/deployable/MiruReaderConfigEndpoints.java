@@ -32,6 +32,7 @@ import javax.ws.rs.core.Response;
 
 import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX;
 import static com.jivesoftware.os.miru.api.MiruConfigReader.PARTITIONS_ENDPOINT;
+import static com.jivesoftware.os.miru.api.MiruConfigReader.PRIORITIZE_REBUILD_ENDPOINT;
 
 @Singleton
 @Path(CONFIG_SERVICE_ENDPOINT_PREFIX)
@@ -183,7 +184,7 @@ public class MiruReaderConfigEndpoints {
     }
 
     @POST
-    @Path("/rebuild/prioritize/{tenantId}/{partitionId}")
+    @Path(PRIORITIZE_REBUILD_ENDPOINT + "/{tenantId}/{partitionId}")
     public Response check(
         @PathParam("tenantId") String tenantId,
         @PathParam("partitionId") Integer partitionId) {

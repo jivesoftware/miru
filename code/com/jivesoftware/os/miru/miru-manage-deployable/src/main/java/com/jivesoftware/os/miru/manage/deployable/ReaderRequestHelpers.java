@@ -33,6 +33,18 @@ public class ReaderRequestHelpers {
         this.objectMapper = objectMapper;
     }
 
+    public RequestHelper get(MiruHost host) throws Exception {
+        RequestHelper requestHelper = hostToHelper.get(host);
+        if (requestHelper == null) {
+            requestHelper = new RequestHelper(httpClientFactory.createClient(host.getLogicalName(), host.getPort()), objectMapper);
+            RequestHelper existing = hostToHelper.putIfAbsent(host, requestHelper);
+            if (existing != null) {
+                requestHelper = existing;
+            }
+        }
+        return requestHelper;
+    }
+
     public List<RequestHelper> get(Optional<MiruHost> excludingHost) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
         for (MiruClusterRegistry.HostHeartbeat heartbeat : clusterRegistry.getAllHosts()) {
@@ -48,15 +60,7 @@ public class ReaderRequestHelpers {
 
         List<RequestHelper> requestHelpers = Lists.newArrayListWithCapacity(hosts.size());
         for (MiruHost host : hosts) {
-            RequestHelper requestHelper = hostToHelper.get(host);
-            if (requestHelper == null) {
-                requestHelper = new RequestHelper(httpClientFactory.createClient(host.getLogicalName(), host.getPort()), objectMapper);
-                RequestHelper existing = hostToHelper.putIfAbsent(host, requestHelper);
-                if (existing != null) {
-                    requestHelper = existing;
-                }
-            }
-            requestHelpers.add(requestHelper);
+            requestHelpers.add(get(host));
         }
 
         Collections.shuffle(requestHelpers, random);

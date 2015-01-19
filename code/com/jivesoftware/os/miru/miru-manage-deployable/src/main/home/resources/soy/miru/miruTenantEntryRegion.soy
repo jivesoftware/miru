@@ -45,34 +45,43 @@
                         <th>Idle</th>
                         <th>Logical name</th>
                         <th>Port</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {foreach $p in $partitions}
                         <tr>
-                            <td colspan="4" style="background-color: #eee; font-size:90%;">
+                            <td colspan="6" style="background-color: #eee; font-size:90%;">
                                 Partition {$p.partitionId} (size: {$p.activityCount}) {if $p.begins != $p.ends}({$p.begins} / {$p.ends}){/if}
                             </td>
                         </tr>
                         {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
                             {param type: 'online' /}
                             {param partitions: $p.online /}
                         {/call}
                         {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
                             {param type: 'rebuilding' /}
                             {param partitions: $p.rebuilding /}
                         {/call}
                         {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
                             {param type: 'bootstrap' /}
                             {param partitions: $p.bootstrap /}
                         {/call}
                         {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
                             {param type: 'offline' /}
                             {param partitions: $p.offline /}
                         {/call}
                     {ifempty}
                         <tr>
-                            <td colspan="4">There are no registered partitions for this tenant</td>
+                            <td colspan="6">There are no registered partitions for this tenant</td>
                         </tr>
                     {/foreach}
                 </tbody>
@@ -84,6 +93,8 @@
 /**
  * Render partition list
  *
+ * @param tenantId
+ * @param partitionId
  * @param type
  * @param partitions
  */
@@ -99,6 +110,14 @@
                 </a>
             </td>
             <td>{$partition.host.port}</td>
+            <td>
+                {if $type == 'offline'}
+                    <input type="button" value="Warm" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
+                {/if}
+                {if $type == 'bootstrap'}
+                    <input type="button" value="Rebuild" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
+                {/if}
+            </td>
         </tr>
     {/foreach}
 {/template}

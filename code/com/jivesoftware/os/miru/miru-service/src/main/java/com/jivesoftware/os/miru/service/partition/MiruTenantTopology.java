@@ -89,8 +89,26 @@ public class MiruTenantTopology<BM> {
     }
 
     public void warm() {
+        MiruPartitionId latestPartitionId = MiruPartitionId.of(0);
+        for (PartitionAndHost partitionAndHost : topology.keySet()) {
+            if (partitionAndHost.partitionId.compareTo(latestPartitionId) > 0) {
+                latestPartitionId = partitionAndHost.partitionId;
+            }
+        }
+
         for (MiruHostedPartition partition : topology.values()) {
-            partition.warm();
+            if (partition.getPartitionId().equals(latestPartitionId)) {
+                partition.warm();
+            }
+        }
+    }
+
+    public void warm(MiruPartitionCoord coord) {
+        for (MiruHostedPartition partition : topology.values()) {
+            if (partition.getCoord().equals(coord)) {
+                partition.warm();
+                break;
+            }
         }
     }
 

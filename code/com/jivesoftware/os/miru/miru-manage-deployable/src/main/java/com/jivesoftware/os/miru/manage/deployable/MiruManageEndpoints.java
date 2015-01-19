@@ -300,5 +300,22 @@ public class MiruManageEndpoints {
         }
     }
 
-
+    @POST
+    @Path("/tenants/rebuild")
+    @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response rebuildTenantPartition(@FormParam("host") String host,
+        @FormParam("port") int port,
+        @FormParam("tenantId") String tenantId,
+        @FormParam("int") int partitionId) {
+        try {
+            rebalanceDirector.rebuildTenantPartition(new MiruHost(host, port),
+                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId));
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /tenants/rebuild {} {} {} {}", new Object[] { host, port, tenantId, partitionId }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
 }

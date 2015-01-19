@@ -15,6 +15,7 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.logger.MetricLogger;
 import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.miru.api.MiruConfigReader;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -197,6 +198,11 @@ public class MiruRebalanceDirector {
         COLORS[MiruPartitionState.bootstrap.ordinal()] = Color.BLUE;
         COLORS[MiruPartitionState.rebuilding.ordinal()] = Color.MAGENTA;
         COLORS[MiruPartitionState.online.ordinal()] = Color.GREEN;
+    }
+
+    public void rebuildTenantPartition(MiruHost miruHost, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        readerRequestHelpers.get(miruHost).executeRequest("", MiruConfigReader.PRIORITIZE_REBUILD_ENDPOINT + "/" + tenantId + "/" + partitionId,
+            String.class, null);
     }
 
     private static class VisualizeContext {
