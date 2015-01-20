@@ -14,14 +14,13 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
-import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
 import java.util.List;
 import java.util.Map;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContextAllocator;
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContextAllocator;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 
@@ -54,12 +53,10 @@ public class MiruAuthzIndexTest {
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         // Create in-memory authz index
-        MiruContextAllocator hybridAllocator = buildHybridContextAllocator(4, 10, true);
-        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruHybridAuthzIndex = hybridAllocator.allocate(bitmaps, coord).authzIndex;
+        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruHybridAuthzIndex = buildHybridContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> largeHybridBitsIn = populateAuthzIndex(largeMiruHybridAuthzIndex, miruAuthzUtils, 2);
 
-        MiruContextAllocator onDiskAllocator = buildOnDiskContextAllocator(4, 10);
-        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruOnDiskAuthzIndex = onDiskAllocator.allocate(bitmaps, coord).authzIndex;
+        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> largeOnDiskBitsIn = populateAuthzIndex(largeMiruOnDiskAuthzIndex, miruAuthzUtils, 2);
 
         return new Object[][] {

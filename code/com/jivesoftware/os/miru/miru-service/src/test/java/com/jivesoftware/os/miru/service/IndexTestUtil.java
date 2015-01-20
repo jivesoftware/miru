@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
@@ -12,25 +13,26 @@ import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
+import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
-import com.jivesoftware.os.miru.service.stream.allocator.HybridMiruContextAllocator;
-import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
-import com.jivesoftware.os.miru.service.stream.allocator.OnDiskMiruContextAllocator;
+import com.jivesoftware.os.miru.service.stream.MiruContext;
+import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.allocator.HybridChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
-import com.jivesoftware.os.rcvs.inmemory.RowColumnValueStoreImpl;
 import java.io.File;
 import java.nio.file.Files;
 
@@ -42,67 +44,58 @@ public class IndexTestUtil {
     private IndexTestUtil() {
     }
 
-    public static MiruContextAllocator buildHybridContextAllocator(int numberOfChunkStores,
-        int partitionAuthzCacheSize,
-        boolean partitionDeleteChunkStoreOnClose) {
+    private static MiruContextFactory factory(int numberOfChunkStores) {
+        MiruReadTrackingWALReaderImpl readTrackingWALReader = null; // TODO FActor out!
+
+        StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(1024);
+        StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(1024);
+        StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(1024);
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS));
+        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
+            Interners.<MiruTermId>newWeakInterner(), Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
 
-        RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
-            new RowColumnValueStoreImpl<>();
-        RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> readTrackingSipWAL =
-            new RowColumnValueStoreImpl<>();
+        MiruChunkAllocator hybridChunkAllocator = new HybridChunkAllocator(
+            new HeapByteBufferFactory(),
+            new HeapByteBufferFactory(),
+            4_096,
+            numberOfChunkStores,
+            true);
 
-        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(
-            Interners.<MiruIBA>newWeakInterner(),
-            Interners.<MiruTermId>newWeakInterner(),
-            Interners.<MiruTenantId>newStrongInterner(),
-            Interners.<String>newWeakInterner());
+        final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
+        MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
+            new HeapByteBufferFactory(),
+            numberOfChunkStores);
 
-        MiruReadTrackingWALReaderImpl readTrackingWALReader = new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL);
-
-        return new HybridMiruContextAllocator(schemaProvider,
+        return new MiruContextFactory(schemaProvider,
             activityInternExtern,
             readTrackingWALReader,
+            ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
+            .put(MiruBackingStorage.hybrid, hybridChunkAllocator)
+            .put(MiruBackingStorage.mem_mapped, onDiskChunkAllocator)
+            .build(),
             new MiruTempDirectoryResourceLocator(),
-            new HeapByteBufferFactory(),
-            new HeapByteBufferFactory(),
-            numberOfChunkStores,
-            partitionAuthzCacheSize,
-            partitionDeleteChunkStoreOnClose,
-            new StripingLocksProvider<MiruTermId>(8),
-            new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8));
+            new MiruTempDirectoryResourceLocator(),
+            MiruBackingStorage.hybrid,
+            1024,
+            fieldIndexStripingLocksProvider,
+            streamStripingLocksProvider,
+            authzStripingLocksProvider
+        );
     }
 
-    public static MiruContextAllocator buildOnDiskContextAllocator(int numberOfChunkStores,
-        int partitionAuthzCacheSize) {
+    public static <BM> MiruContext<BM> buildHybridContext(int numberOfChunkStores,
+        MiruBitmaps<BM> bitmaps,
+        MiruPartitionCoord coord) throws Exception {
+        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.hybrid);
 
-        MiruSchemaProvider schemaProvider = new SingleSchemaProvider(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS));
+    }
 
-        RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> readTrackingWAL =
-            new RowColumnValueStoreImpl<>();
-        RowColumnValueStoreImpl<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> readTrackingSipWAL =
-            new RowColumnValueStoreImpl<>();
+    public static <BM> MiruContext<BM> buildOnDiskContext(int numberOfChunkStores,
+        MiruBitmaps<BM> bitmaps,
+        MiruPartitionCoord coord) throws Exception {
+        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.mem_mapped);
 
-        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(
-            Interners.<MiruIBA>newWeakInterner(),
-            Interners.<MiruTermId>newWeakInterner(),
-            Interners.<MiruTenantId>newStrongInterner(),
-            Interners.<String>newWeakInterner());
-
-        MiruReadTrackingWALReaderImpl readTrackingWALReader = new MiruReadTrackingWALReaderImpl(readTrackingWAL, readTrackingSipWAL);
-
-        return new OnDiskMiruContextAllocator(schemaProvider,
-            activityInternExtern,
-            readTrackingWALReader,
-            new MiruTempDirectoryResourceLocator(),
-            new HeapByteBufferFactory(),
-            numberOfChunkStores,
-            partitionAuthzCacheSize,
-            new StripingLocksProvider<MiruTermId>(8),
-            new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8));
     }
 
     public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name,

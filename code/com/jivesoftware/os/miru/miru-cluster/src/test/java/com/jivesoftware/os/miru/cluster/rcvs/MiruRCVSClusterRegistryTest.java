@@ -69,7 +69,7 @@ public class MiruRCVSClusterRegistryTest {
         assertEquals(electedHosts.size(), 1);
 
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
-        registry.updateTopology(coord, Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)),
+        registry.updateTopology(coord, Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.mem_mapped)),
             Optional.of(timestamper.get()));
 
         List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
@@ -83,7 +83,7 @@ public class MiruRCVSClusterRegistryTest {
 
         MiruTopologyStatus status = onlineStatus.get(0);
         assertEquals(status.partition.coord, coord);
-        assertEquals(status.partition.info.storage, MiruBackingStorage.disk);
+        assertEquals(status.partition.info.storage, MiruBackingStorage.mem_mapped);
     }
 
     @Test
@@ -111,7 +111,7 @@ public class MiruRCVSClusterRegistryTest {
 
         MiruTopologyStatus status = offlineStatus.get(0);
         assertEquals(status.partition.coord, coord);
-        assertEquals(status.partition.info.storage, MiruBackingStorage.memory);
+        assertEquals(status.partition.info.storage, MiruBackingStorage.hybrid);
     }
 
     @Test

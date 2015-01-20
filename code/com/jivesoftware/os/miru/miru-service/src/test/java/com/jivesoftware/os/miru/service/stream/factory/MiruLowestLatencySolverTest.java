@@ -59,7 +59,7 @@ public class MiruLowestLatencySolverTest {
                         return new MiruPartitionResponse<>(id, null);
                     }
                 }));
-            orderedPartitions.add(new MiruPartition(coord, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory)));
+            orderedPartitions.add(new MiruPartition(coord, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.hybrid)));
         }
 
         Collections.shuffle(solvables, new Random(1_234)); // randomize the solvers

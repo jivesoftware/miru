@@ -39,7 +39,7 @@ public class MiruClusterExpectedTenantsTest {
 
     private final MiruHost host = new MiruHost("localhost", 49600);
     private final MiruPartitionId partitionId = MiruPartitionId.of(0);
-    private final MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory);
+    private final MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.hybrid);
 
     private MiruPartitionInfoProvider partitionInfoProvider;
     private MiruExpectedTenants expectedTenants;

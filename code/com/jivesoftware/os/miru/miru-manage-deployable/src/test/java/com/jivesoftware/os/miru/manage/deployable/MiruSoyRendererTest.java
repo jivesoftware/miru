@@ -51,7 +51,7 @@ public class MiruSoyRendererTest {
         builder.add(soyFile);
         MiruSoyRenderer renderer = new MiruSoyRenderer(builder.build().compileToTofu(), new SoyDataUtils());
 
-        MiruBackingStorage storage = MiruBackingStorage.disk;
+        MiruBackingStorage storage = MiruBackingStorage.mem_mapped;
         Map<String, ?> data = ImmutableMap.of("storage", storage);
         String rendered = renderer.render("miru.test", data);
         assertEquals(rendered, storage.name());

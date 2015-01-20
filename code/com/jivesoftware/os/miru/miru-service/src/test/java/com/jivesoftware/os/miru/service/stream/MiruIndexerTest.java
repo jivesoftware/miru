@@ -20,8 +20,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -49,13 +47,13 @@ public class MiruIndexerTest {
         verifyFieldValues(tenantId, context, 2, 2);
         verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 2).authz, 2);
 
-        if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
+        if (miruBackingStorage.equals(MiruBackingStorage.mem_mapped)) {
             try {
                 miruIndexer.index(
                     context,
                     Arrays.asList(new MiruActivityAndId<>(
-                        buildMiruActivity(tenantId, 4, new String[0], ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")),
-                        4)),
+                            buildMiruActivity(tenantId, 4, new String[0], ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")),
+                            4)),
                     MoreExecutors.sameThreadExecutor());
                 fail("This index type is supposed to be readOnly");
             } catch (ExecutionException e) {
@@ -65,8 +63,8 @@ public class MiruIndexerTest {
             // Next add new data and check it
             miruIndexer.index(
                 context,
-                Arrays.asList(new MiruActivityAndId<>(buildMiruActivity(tenantId, 4, new String[] { "pqrst" },
-                    ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 3)),
+                Arrays.asList(new MiruActivityAndId<>(buildMiruActivity(tenantId, 4, new String[]{"pqrst"},
+                            ImmutableMap.of("field1", "field1Value2", "field2", "field2Value2")), 3)),
                 MoreExecutors.sameThreadExecutor());
             verifyFieldValues(tenantId, context, 3, 0);
             verifyFieldValues(tenantId, context, 3, 1);
@@ -75,8 +73,8 @@ public class MiruIndexerTest {
             miruIndexer.index(
                 context,
                 Arrays.asList(new MiruActivityAndId<>(
-                    buildMiruActivity(tenantId, 5, new String[] { "uvwxy" }, ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")),
-                    4)),
+                        buildMiruActivity(tenantId, 5, new String[]{"uvwxy"}, ImmutableMap.of("field1", "field1Value1", "field3", "field3Value2")),
+                        4)),
                 MoreExecutors.sameThreadExecutor());
             verifyFieldValues(tenantId, context, 4, 0);
             verifyFieldValues(tenantId, context, 4, 2);
@@ -115,17 +113,17 @@ public class MiruIndexerTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruIndexer<EWAHCompressedBitmap> miruIndexer = new MiruIndexer<>(bitmaps);
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContext(4, bitmaps, coord);
 
         // Build in-memory index stream object
-        MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[] { "abcde" },
+        MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[]{"abcde"},
             ImmutableMap.of(DefaultMiruSchemaDefinition.FIELDS[0].name, "value1"));
-        MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[] { "fghij" },
+        MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[]{"fghij"},
             ImmutableMap.of(DefaultMiruSchemaDefinition.FIELDS[1].name, "value2"));
-        MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "klmno" },
+        MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[]{"klmno"},
             ImmutableMap.of(DefaultMiruSchemaDefinition.FIELDS[2].name, "value3"));
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
 
         // Index initial activities
         miruIndexer.index(hybridContext,
@@ -135,19 +133,16 @@ public class MiruIndexerTest {
                 new MiruActivityAndId<>(miruActivity3, 2)),
             MoreExecutors.sameThreadExecutor());
 
-        ((BulkImport) onDiskContext.activityIndex).bulkImport(tenantId, (BulkExport) hybridContext.activityIndex);
+        miruIndexer.index(onDiskContext,
+            Arrays.asList(
+                new MiruActivityAndId<>(miruActivity1, 0),
+                new MiruActivityAndId<>(miruActivity2, 1),
+                new MiruActivityAndId<>(miruActivity3, 2)),
+            MoreExecutors.sameThreadExecutor());
 
-        // Miru on-disk fields
-        for (MiruFieldType fieldType : MiruFieldType.values()) {
-            ((BulkImport) onDiskContext.fieldIndexProvider.getFieldIndex(fieldType))
-                .bulkImport(tenantId, (BulkExport) hybridContext.fieldIndexProvider.getFieldIndex(fieldType));
-        }
-
-        ((BulkImport) onDiskContext.authzIndex).bulkImport(tenantId, (BulkExport) hybridContext.authzIndex);
-
-        return new Object[][] {
-            { tenantId, hybridContext, miruIndexer, MiruBackingStorage.memory },
-            { tenantId, onDiskContext, miruIndexer, MiruBackingStorage.disk }
+        return new Object[][]{
+            {tenantId, hybridContext, miruIndexer, MiruBackingStorage.hybrid},
+            {tenantId, onDiskContext, miruIndexer, MiruBackingStorage.mem_mapped}
         };
     }
 

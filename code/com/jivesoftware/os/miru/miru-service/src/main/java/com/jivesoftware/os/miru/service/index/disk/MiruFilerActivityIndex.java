@@ -11,13 +11,9 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
-import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.BulkImport;
-import com.jivesoftware.os.miru.service.index.BulkStream;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -26,9 +22,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Chunk-backed impl. Activity data lives in a keyed store, last index is an atomic integer backed by a filer.
  */
-public class MiruFilerActivityIndex implements MiruActivityIndex,
-    BulkImport<Void, BulkStream<MiruInternalActivity>>,
-    BulkExport<Void, BulkStream<MiruInternalActivity>> {
+public class MiruFilerActivityIndex implements MiruActivityIndex {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -179,44 +173,5 @@ public class MiruFilerActivityIndex implements MiruActivityIndex,
 
     @Override
     public void close() {
-    }
-
-    @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<Void, BulkStream<MiruInternalActivity>> export) throws Exception {
-        final int batchSize = 1_000; //TODO expose to config
-        final List<MiruActivityAndId<MiruInternalActivity>> batch = new ArrayList<>(batchSize);
-        final AtomicInteger index = new AtomicInteger(0);
-        export.bulkExport(tenantId, new BulkStream<MiruInternalActivity>() {
-            @Override
-            public boolean stream(MiruInternalActivity activity) throws Exception {
-                if (activity == null) {
-                    return false;
-                }
-                batch.add(new MiruActivityAndId<>(activity, index.get()));
-                if (batch.size() >= batchSize) {
-                    set(batch);
-                    batch.clear();
-                }
-                index.incrementAndGet();
-                return true;
-            }
-        });
-
-        if (!batch.isEmpty()) {
-            setAndReady(batch);
-        }
-
-        ready(index.get() - 1);
-    }
-
-    @Override
-    public Void bulkExport(MiruTenantId tenantId, BulkStream<MiruInternalActivity> callback) throws Exception {
-        int capacity = capacity();
-        for (int index = 0; index < capacity; index++) {
-            if (!callback.stream(get(tenantId, index))) {
-                break;
-            }
-        }
-        return null;
     }
 }

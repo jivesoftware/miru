@@ -8,13 +8,11 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
-import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.BulkImport;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContextAllocator;
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContextAllocator;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
@@ -98,17 +96,19 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
-        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
         for (long timestamp : timestamps) {
             miruInMemoryTimeIndex.nextId(timestamp);
         }
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        ((BulkImport) miruOnDiskTimeIndex).bulkImport(tenantId, (BulkExport) miruInMemoryTimeIndex);
+        for (long timestamp : timestamps) {
+            miruOnDiskTimeIndex.nextId(timestamp);
+        }
 
-        return new Object[][] {
-            { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
+        return new Object[][]{
+            {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
+            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndex}
         };
     }
 
@@ -121,47 +121,51 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
-        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
         for (long timestamp : timestamps) {
             miruInMemoryTimeIndex.nextId(timestamp);
         }
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        ((BulkImport) miruOnDiskTimeIndex).bulkImport(tenantId, (BulkExport) miruInMemoryTimeIndex);
+        for (long timestamp : timestamps) {
+            miruOnDiskTimeIndex.nextId(timestamp);
+        }
 
-        return new Object[][] {
-            { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
+        return new Object[][]{
+            {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
+            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndex}
         };
     }
 
     @DataProvider(name = "singleEntryTimeIndexDataProvider")
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
 
-        final long[] timestamps = new long[] { System.currentTimeMillis() };
-        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        final long[] timestamps = new long[]{System.currentTimeMillis()};
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
         for (long timestamp : timestamps) {
             miruInMemoryTimeIndex.nextId(timestamp);
         }
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        ((BulkImport) miruOnDiskTimeIndex).bulkImport(tenantId, (BulkExport) miruInMemoryTimeIndex);
+        for (long timestamp : timestamps) {
+            miruOnDiskTimeIndex.nextId(timestamp);
+        }
 
-        return new Object[][] {
-            { new MiruBitmapsEWAH(2), miruInMemoryTimeIndex },
-            { new MiruBitmapsEWAH(2), miruOnDiskTimeIndex }
+        return new Object[][]{
+            {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
+            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndex}
         };
     }
 
     private MiruTimeIndex buildInMemoryTimeIndex() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        return buildHybridContextAllocator(numberOfChunkStores, 10, true).allocate(bitmaps, coord).timeIndex;
+        return buildHybridContext(numberOfChunkStores, bitmaps, coord).timeIndex;
     }
 
     private MiruTimeIndex buildOnDiskTimeIndex() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        return buildOnDiskContextAllocator(numberOfChunkStores, 10).allocate(bitmaps, coord).timeIndex;
+        return buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
     }
 }

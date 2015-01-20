@@ -9,12 +9,9 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.FilerTransaction;
 import com.jivesoftware.os.filer.io.RewriteFilerTransaction;
 import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
-import com.jivesoftware.os.miru.service.index.BulkExport;
-import com.jivesoftware.os.miru.service.index.BulkImport;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.Arrays;
@@ -24,9 +21,7 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM>,
-    BulkImport<MiruInvertedIndex<BM>, Void>,
-    BulkExport<MiruInvertedIndex<BM>, Void> {
+public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
 
     private static final int LAST_ID_LENGTH = 4;
 
@@ -254,20 +249,6 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM>,
             bitmaps.orToSourceSize(or, index, mask);
             setIndex(or, lastId);
         }
-    }
-
-    @Override
-    public void bulkImport(MiruTenantId tenantId, BulkExport<MiruInvertedIndex<BM>, Void> export) throws Exception {
-        MiruInvertedIndex<BM> exportIndex = export.bulkExport(tenantId, null);
-        Optional<BM> optionalIndex = exportIndex.getIndex();
-        if (optionalIndex.isPresent()) {
-            setIndex(optionalIndex.get(), exportIndex.lastId());
-        }
-    }
-
-    @Override
-    public MiruInvertedIndex<BM> bulkExport(MiruTenantId tenantId, Void callback) throws Exception {
-        return this;
     }
 
     private static final FilerTransaction<Filer, Integer> lastIdTransaction = new FilerTransaction<Filer, Integer>() {

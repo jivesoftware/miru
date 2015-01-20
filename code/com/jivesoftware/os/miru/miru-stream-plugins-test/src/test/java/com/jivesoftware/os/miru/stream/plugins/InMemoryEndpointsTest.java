@@ -66,7 +66,7 @@ public class InMemoryEndpointsTest {
     @BeforeMethod
     public void setUp() throws Exception {
 
-        MiruBackingStorage desiredStorage = MiruBackingStorage.memory;
+        MiruBackingStorage desiredStorage = MiruBackingStorage.hybrid;
         MiruHost miruHost = new MiruHost("logicalName", 1_234);
         MiruSchema schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
 

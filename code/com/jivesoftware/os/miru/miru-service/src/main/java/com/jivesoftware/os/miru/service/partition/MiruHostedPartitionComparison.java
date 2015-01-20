@@ -50,12 +50,8 @@ public class MiruHostedPartitionComparison {
                 .compare(p2.getPartitionId(), p1.getPartitionId()) // flipped p1 and p2 so that we get descending order.
                 .compareTrueFirst(p1.isLocal(), p2.isLocal())
                 .compare(p1.getStorage(), p2.getStorage(), Ordering.explicit(
-                    MiruBackingStorage.memory_fixed,
-                    MiruBackingStorage.memory,
-                    MiruBackingStorage.hybrid_fixed,
                     MiruBackingStorage.hybrid,
                     MiruBackingStorage.mem_mapped,
-                    MiruBackingStorage.disk,
                     MiruBackingStorage.unknown))
                 .compare(t2, t1) // descending order
                 .result();

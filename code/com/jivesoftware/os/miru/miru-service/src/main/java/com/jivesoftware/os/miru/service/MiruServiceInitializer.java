@@ -44,9 +44,9 @@ import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
-import com.jivesoftware.os.miru.service.stream.allocator.HybridMiruContextAllocator;
-import com.jivesoftware.os.miru.service.stream.allocator.MiruContextAllocator;
-import com.jivesoftware.os.miru.service.stream.allocator.OnDiskMiruContextAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.HybridChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
@@ -123,43 +123,33 @@ public class MiruServiceInitializer {
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
 
         MiruHybridResourceLocator transientResourceLocator = resourceLocatorProvider.getTransientResourceLocator();
-        MiruContextAllocator hybridContextAllocator = new HybridMiruContextAllocator(schemaProvider,
-            internExtern,
-            readTrackingWALReader,
-            transientResourceLocator,
+        MiruChunkAllocator hybridChunkAllocator = new HybridChunkAllocator(
             byteBufferFactory,
             byteBufferFactory,
+            transientResourceLocator.getInitialChunkSize(),
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionAuthzCacheSize(),
-            config.getPartitionDeleteChunkStoreOnClose(),
-            fieldIndexStripingLocksProvider,
-            streamStripingLocksProvider,
-            authzStripingLocksProvider);
+            config.getPartitionDeleteChunkStoreOnClose());
 
         final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
-        MiruContextAllocator diskContextAllocator = new OnDiskMiruContextAllocator(schemaProvider,
+        MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
+            byteBufferFactory,
+            config.getPartitionNumberOfChunkStores());
+
+        MiruContextFactory streamFactory = new MiruContextFactory(schemaProvider,
             internExtern,
             readTrackingWALReader,
+            ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
+            .put(MiruBackingStorage.hybrid, hybridChunkAllocator)
+            .put(MiruBackingStorage.mem_mapped, onDiskChunkAllocator)
+            .build(),
             diskResourceLocator,
-            byteBufferFactory,
-            config.getPartitionNumberOfChunkStores(),
+            transientResourceLocator,
+            MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
-            authzStripingLocksProvider);
-
-        MiruContextFactory streamFactory = new MiruContextFactory(
-            ImmutableMap.<MiruBackingStorage, MiruContextAllocator>builder()
-                .put(MiruBackingStorage.memory, hybridContextAllocator)
-                .put(MiruBackingStorage.memory_fixed, hybridContextAllocator)
-                .put(MiruBackingStorage.hybrid, hybridContextAllocator)
-                .put(MiruBackingStorage.hybrid_fixed, hybridContextAllocator)
-                .put(MiruBackingStorage.mem_mapped, diskContextAllocator)
-                .put(MiruBackingStorage.disk, diskContextAllocator)
-                .build(),
-            diskResourceLocator,
-            transientResourceLocator,
-            MiruBackingStorage.valueOf(config.getDefaultStorage()));
+            authzStripingLocksProvider
+        );
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);

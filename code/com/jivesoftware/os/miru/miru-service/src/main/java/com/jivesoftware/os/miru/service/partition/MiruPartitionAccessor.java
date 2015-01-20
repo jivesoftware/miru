@@ -125,7 +125,7 @@ public class MiruPartitionAccessor<BM> {
     }
 
     boolean isOpenForWrites() {
-        return info.storage.isMemoryBacked() && info.state == MiruPartitionState.online;
+        return info.state == MiruPartitionState.online;
     }
 
     boolean isEligibleToBackfill() {
@@ -133,13 +133,7 @@ public class MiruPartitionAccessor<BM> {
     }
 
     boolean canAutoMigrate() {
-        return info.storage.isMemoryBacked() && !info.storage.isFixed() && isMemoryComplete();
-    }
-
-    boolean isMemoryComplete() {
-        return info.storage.isMemoryBacked()
-            && info.state == MiruPartitionState.online
-            && !beginWriters.isEmpty() && beginWriters.equals(endWriters);
+        return info.storage.isMemoryBacked() && info.state == MiruPartitionState.online;
     }
 
     void markForRefresh(Optional<Long> timestamp) {
@@ -227,12 +221,31 @@ public class MiruPartitionAccessor<BM> {
             MiruTimeIndex timeIndex = context.get().getTimeIndex();
 
             List<MiruActivityAndId<MiruActivity>> indexables = new ArrayList<>(partitionedActivities.size());
-
+            List<Long> activityTimes = new ArrayList<>();
             for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
                 MiruActivity activity = partitionedActivity.activity.get();
-                if (!timeIndex.contains(activity.time)) {
-                    int id = timeIndex.nextId(activity.time);
-                    indexables.add(new MiruActivityAndId<>(activity, id));
+                activityTimes.add(activity.time);
+//                if (!timeIndex.contains(activity.time)) {
+//                    passed.add(activity);
+//                }
+            }
+
+            List<MiruActivity> passed = new ArrayList<>();
+            boolean[] contains = timeIndex.contains(activityTimes);
+            for (int i = 0; i < contains.length; i++) {
+                if (!contains[i]) {
+                    passed.add(partitionedActivities.get(i).activity.get());
+                }
+            }
+
+            if (!passed.isEmpty()) {
+                long[] timestamps = new long[passed.size()];
+                for (int i = 0; i < timestamps.length; i++) {
+                    timestamps[i] = passed.get(i).time;
+                }
+                int[] ids = timeIndex.nextId(timestamps);
+                for (int i = 0; i < timestamps.length; i++) {
+                    indexables.add(new MiruActivityAndId<>(passed.get(i), ids[i]));
                 }
             }
 
@@ -263,11 +276,11 @@ public class MiruPartitionAccessor<BM> {
         log.debug("Handling removal type for {} with strategy {}", activity, strategy);
 
         int id;
-        if (strategy != IndexStrategy.rebuild || timeIndex.contains(activity.time)) {
+        if (strategy != IndexStrategy.rebuild || timeIndex.contains(Arrays.asList(activity.time))[0]) {
             id = timeIndex.getExactId(activity.time);
             log.trace("Removing activity for exact id {}", id);
         } else {
-            id = timeIndex.nextId(activity.time);
+            id = timeIndex.nextId(activity.time)[0];
             indexer.set(context.get(), Arrays.asList(new MiruActivityAndId<>(activity, id)));
             log.trace("Removing activity for next id {}", id);
         }
@@ -356,7 +369,10 @@ public class MiruPartitionAccessor<BM> {
 
             @Override
             public boolean canMigrateTo(MiruBackingStorage destinationStorage) {
-                return info.storage.isDiskBacked() || destinationStorage.isMemoryBacked() || isMemoryComplete();
+                if (info.storage.isDiskBacked() && destinationStorage.isDiskBacked()) {
+                    return false;
+                }
+                return info.state == MiruPartitionState.online;
             }
 
             @Override

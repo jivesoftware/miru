@@ -6,12 +6,14 @@
 
 package com.jivesoftware.os.miru.plugin.index;
 
+import java.util.List;
+
 /**
  * @author jonathan
  */
 public interface MiruTimeIndex {
 
-    boolean contains(long timestamp) throws Exception;
+    boolean[] contains(List<Long> timestamps) throws Exception;
 
     /**
      * Returns the actual index of the given timestamp if it appears in the index, or else where it would have been.
@@ -49,7 +51,7 @@ public interface MiruTimeIndex {
 
     int lastId();
 
-    int nextId(long timestamp) throws Exception;
+    int[] nextId(long... timestamps) throws Exception;
 
     void close();
 

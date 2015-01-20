@@ -95,10 +95,10 @@ public class MiruInboxIndexTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruHybridInboxIndex = hybridContext.inboxIndex;
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = onDiskContext.inboxIndex;
 
         return new Object[][] {
@@ -116,14 +116,14 @@ public class MiruInboxIndexTest {
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContextAllocator(4, 10, true).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruHybridInboxIndex = hybridContext.inboxIndex;
 
         miruHybridInboxIndex.index(streamId, 1);
         miruHybridInboxIndex.index(streamId, 2);
         miruHybridInboxIndex.index(streamId, 3);
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContextAllocator(4, 10).allocate(bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = onDiskContext.inboxIndex;
 
         miruOnDiskInboxIndex.index(streamId, 1);

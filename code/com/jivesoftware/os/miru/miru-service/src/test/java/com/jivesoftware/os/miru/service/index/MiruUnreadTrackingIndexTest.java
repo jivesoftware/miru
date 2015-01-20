@@ -19,8 +19,8 @@ import java.util.List;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContextAllocator;
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContextAllocator;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -146,8 +146,7 @@ public class MiruUnreadTrackingIndexTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruHybridUnreadTrackingIndex = buildHybridContextAllocator(4, 10, true)
-            .allocate(bitmaps, coord).unreadTrackingIndex;
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruHybridUnreadTrackingIndex = buildHybridContext(4, bitmaps, coord).unreadTrackingIndex;
 
         if (autoCreate) {
             for (int index : data) {
@@ -155,8 +154,7 @@ public class MiruUnreadTrackingIndexTest {
             }
         }
 
-        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = buildOnDiskContextAllocator(4, 10)
-            .allocate(bitmaps, coord).unreadTrackingIndex;
+        MiruUnreadTrackingIndex<EWAHCompressedBitmap> miruOnDiskUnreadTrackingIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
 
         if (autoCreate) {
             for (int index : data) {
