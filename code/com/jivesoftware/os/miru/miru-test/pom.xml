@@ -24,8 +24,8 @@
         <miru.perftest.numusers>100</miru.perftest.numusers>
         <miru.perftest.rampseconds>10</miru.perftest.rampseconds>
         <miru.perftest.batchsize>1000</miru.perftest.batchsize>
-        <miru.perftest.onlineopen>hybrid</miru.perftest.onlineopen>
-        <miru.perftest.onlineclosed>mem_mapped</miru.perftest.onlineclosed>
+        <miru.perftest.onlineopen>memory</miru.perftest.onlineopen>
+        <miru.perftest.onlineclosed>disk</miru.perftest.onlineclosed>
         <miru.perftest.queryloops>1</miru.perftest.queryloops>
         <miru.perftest.querypause>1000</miru.perftest.querypause>
         <miru.perftest.bgbatchsize>10</miru.perftest.bgbatchsize>

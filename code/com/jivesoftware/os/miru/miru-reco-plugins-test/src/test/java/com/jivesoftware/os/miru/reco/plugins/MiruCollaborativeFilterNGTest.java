@@ -82,7 +82,7 @@ public class MiruCollaborativeFilterNGTest {
         }
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.hybrid, new MiruBitmapsRoaring(), partitionedActivities);
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
         this.injectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil()));

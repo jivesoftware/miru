@@ -5,9 +5,10 @@ package com.jivesoftware.os.miru.api;
  */
 public enum MiruBackingStorage {
 
-    hybrid(true, false, 5, 0, 4, 6),
-    mem_mapped(false, true, 1, 2),
-    unknown(false, false, 3);
+    // includes legacy ordinals
+    memory(5, 0, 4, 6),
+    disk(1, 2),
+    unknown(3);
 
     private final static MiruBackingStorage[] storages;
 
@@ -21,12 +22,8 @@ public enum MiruBackingStorage {
     }
 
     private final int[] index;
-    private final boolean memoryBacked;
-    private final boolean diskBacked;
 
-    private MiruBackingStorage(boolean memoryBacked, boolean diskBacked, int... index) {
-        this.memoryBacked = memoryBacked;
-        this.diskBacked = diskBacked;
+    private MiruBackingStorage(int... index) {
         this.index = index;
     }
 
@@ -36,14 +33,6 @@ public enum MiruBackingStorage {
 
     public static MiruBackingStorage fromIndex(int index) {
         return storages[index];
-    }
-
-    public boolean isDiskBacked() {
-        return diskBacked;
-    }
-
-    public boolean isMemoryBacked() {
-        return memoryBacked;
     }
 
 }

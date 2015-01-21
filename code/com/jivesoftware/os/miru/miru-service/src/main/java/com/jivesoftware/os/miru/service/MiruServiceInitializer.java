@@ -25,9 +25,7 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.service.locator.MiruHybridResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
-import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
@@ -44,7 +42,7 @@ import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
-import com.jivesoftware.os.miru.service.stream.allocator.HybridChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
@@ -73,7 +71,7 @@ public class MiruServiceInitializer {
         MiruSchemaProvider schemaProvider,
         MiruWAL wal,
         HttpClientFactory httpClientFactory,
-        MiruResourceLocatorProvider resourceLocatorProvider,
+        MiruResourceLocator resourceLocator,
         MiruActivityInternExtern internExtern,
         MiruBitmapsProvider bitmapsProvider) throws IOException {
 
@@ -122,16 +120,14 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
 
-        MiruHybridResourceLocator transientResourceLocator = resourceLocatorProvider.getTransientResourceLocator();
-        MiruChunkAllocator hybridChunkAllocator = new HybridChunkAllocator(
+        MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
             byteBufferFactory,
             byteBufferFactory,
-            transientResourceLocator.getInitialChunkSize(),
+            resourceLocator.getInMemoryChunkSize(),
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionDeleteChunkStoreOnClose());
 
-        final MiruResourceLocator diskResourceLocator = resourceLocatorProvider.getDiskResourceLocator();
-        MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
+        MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(resourceLocator,
             byteBufferFactory,
             config.getPartitionNumberOfChunkStores());
 
@@ -139,11 +135,10 @@ public class MiruServiceInitializer {
             internExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.hybrid, hybridChunkAllocator)
-            .put(MiruBackingStorage.mem_mapped, onDiskChunkAllocator)
-            .build(),
-            diskResourceLocator,
-            transientResourceLocator,
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
+            resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
             fieldIndexStripingLocksProvider,

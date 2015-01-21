@@ -14,5 +14,5 @@ public interface MiruMigrationHandle<BM> extends AutoCloseable {
 
     Optional<MiruContext<BM>> getContext();
 
-    MiruPartitionAccessor<BM> migrated(MiruContext<BM> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state, long sipTimestamp);
+    MiruPartitionAccessor<BM> migrated(MiruContext<BM> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state);
 }

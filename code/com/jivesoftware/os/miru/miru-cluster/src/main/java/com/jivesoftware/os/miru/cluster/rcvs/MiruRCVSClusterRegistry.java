@@ -298,7 +298,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 if (valueAndTimestamp != null) {
                     coordInfo = new MiruPartitionCoordInfo(valueAndTimestamp.getValue().state, valueAndTimestamp.getValue().storage);
                 } else {
-                    coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.hybrid);
+                    coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
                 }
             }
 
@@ -576,7 +576,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         expectedTenantPartitionsRegistry.add(coord.tenantId, coord.host, coord.partitionId, MiruVoidByte.INSTANCE, null, timestamper);
         topologyRegistry.addIfNotExists(MiruVoidByte.INSTANCE, coord.tenantId,
             new MiruTopologyColumnKey(coord.partitionId, coord.host),
-            new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.hybrid, 0),
+            new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, 0),
             null, timestamper);
         log.debug("Expecting {}", coord);
     }

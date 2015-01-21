@@ -29,7 +29,7 @@ import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
-import com.jivesoftware.os.miru.service.stream.allocator.HybridChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
@@ -52,7 +52,7 @@ public class IndexTestUtil {
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(), Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
 
-        MiruChunkAllocator hybridChunkAllocator = new HybridChunkAllocator(
+        MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
             new HeapByteBufferFactory(),
             new HeapByteBufferFactory(),
             4_096,
@@ -68,12 +68,11 @@ public class IndexTestUtil {
             activityInternExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.hybrid, hybridChunkAllocator)
-            .put(MiruBackingStorage.mem_mapped, onDiskChunkAllocator)
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
             .build(),
             new MiruTempDirectoryResourceLocator(),
-            new MiruTempDirectoryResourceLocator(),
-            MiruBackingStorage.hybrid,
+            MiruBackingStorage.memory,
             1024,
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
@@ -81,13 +80,13 @@ public class IndexTestUtil {
         );
     }
 
-    public static <BM> MiruContext<BM> buildHybridContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.hybrid);
+    public static <BM> MiruContext<BM> buildInMemoryContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory);
 
     }
 
     public static <BM> MiruContext<BM> buildOnDiskContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.mem_mapped);
+        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk);
 
     }
 

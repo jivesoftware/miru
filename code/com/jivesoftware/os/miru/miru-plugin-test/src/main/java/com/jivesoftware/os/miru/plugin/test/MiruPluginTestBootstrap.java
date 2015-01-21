@@ -42,7 +42,7 @@ import com.jivesoftware.os.miru.service.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
-import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
+import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
@@ -130,8 +130,6 @@ public class MiruPluginTestBootstrap {
         backfillerizerLifecycle.start();
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
 
-        MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruTempResourceLocatorProviderInitializer().initialize();
-        miruResourceLocatorProviderLifecyle.start();
         final MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(), Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
@@ -141,7 +139,7 @@ public class MiruPluginTestBootstrap {
             new SingleSchemaProvider(miruSchema),
             wal,
             httpClientFactory,
-            miruResourceLocatorProviderLifecyle.getService(),
+            new MiruTempDirectoryResourceLocator(),
             activityInternExtern,
             new SingleBitmapsProvider<>(bitmaps));
 

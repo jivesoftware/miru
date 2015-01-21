@@ -19,7 +19,7 @@ import java.util.Map;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildInMemoryContext;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
@@ -53,7 +53,7 @@ public class MiruAuthzIndexTest {
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         // Create in-memory authz index
-        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruHybridAuthzIndex = buildHybridContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<EWAHCompressedBitmap> largeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> largeHybridBitsIn = populateAuthzIndex(largeMiruHybridAuthzIndex, miruAuthzUtils, 2);
 
         MiruAuthzIndex<EWAHCompressedBitmap> largeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;

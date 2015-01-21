@@ -11,7 +11,7 @@ import java.io.IOException;
 /**
  *
  */
-public class HybridChunkAllocator implements MiruChunkAllocator {
+public class InMemoryChunkAllocator implements MiruChunkAllocator {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -21,7 +21,7 @@ public class HybridChunkAllocator implements MiruChunkAllocator {
     private final int numberOfChunkStores;
     private final boolean partitionDeleteChunkStoreOnClose;
 
-    public HybridChunkAllocator(ByteBufferFactory rebuildByteBufferFactory,
+    public InMemoryChunkAllocator(ByteBufferFactory rebuildByteBufferFactory,
         ByteBufferFactory cacheByteBufferFactory,
         long initialChunkSize,
         int numberOfChunkStores,

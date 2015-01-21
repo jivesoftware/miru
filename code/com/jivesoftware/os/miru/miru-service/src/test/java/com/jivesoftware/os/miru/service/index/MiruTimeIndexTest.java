@@ -184,7 +184,7 @@ public class MiruTimeIndexTest {
             int capacity = 1_000;
 
             // Set up and import in-memory implementation
-            MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildHybridContext(numberOfChunkStores, bitmaps, coord).timeIndex;
+            MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
 
             final long[] importValues = new long[capacity];
             for (int i = 0; i < capacity; i++) {
@@ -215,7 +215,7 @@ public class MiruTimeIndexTest {
     public Object[][] miruTimeIndexDataProviderWithRangeData() throws Exception {
         try {
             // Set up and import in-memory implementation
-            MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildHybridContext(numberOfChunkStores, bitmaps, coord).timeIndex;
+            MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
 
             final long[] importValues = {1, 1, 1, 3, 3, 3, 5, 5, 5};
 

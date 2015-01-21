@@ -21,7 +21,7 @@ import java.util.List;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildInMemoryContext;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -43,9 +43,9 @@ public class MiruFieldIndexTest {
     @Test(dataProvider = "miruIndexDataProvider")
     public <BM> void testEmptyIndexSize(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
         long sizeInBytes = miruFieldIndex.sizeInMemory() + miruFieldIndex.sizeOnDisk();
-        if (miruBackingStorage.equals(MiruBackingStorage.hybrid)) {
+        if (miruBackingStorage.equals(MiruBackingStorage.memory)) {
             assertEquals(sizeInBytes, 0);
-        } else if (miruBackingStorage.equals(MiruBackingStorage.mem_mapped)) {
+        } else if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
             // Nothing added to MapStore, so nothing is allocated on disk
             long initialMapStoreSizeInBytes = 0;
 
@@ -85,15 +85,15 @@ public class MiruFieldIndexTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = buildHybridContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = buildInMemoryContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruInMemoryFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         MiruContext<EWAHCompressedBitmap> onDiskContext = buildOnDiskContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         return new Object[][]{
-            {bitmaps, miruInMemoryFieldIndex, MiruBackingStorage.hybrid},
-            {bitmaps, miruOnDiskFieldIndex, MiruBackingStorage.mem_mapped}
+            {bitmaps, miruInMemoryFieldIndex, MiruBackingStorage.memory },
+            {bitmaps, miruOnDiskFieldIndex, MiruBackingStorage.disk }
         };
     }
 
@@ -103,7 +103,7 @@ public class MiruFieldIndexTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = buildHybridContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = buildInMemoryContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruHybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
         miruHybridFieldIndex.index(0, new MiruTermId("term1".getBytes()), 1, 2, 3);
 
@@ -112,8 +112,8 @@ public class MiruFieldIndexTest {
         miruOnDiskFieldIndex.index(0, new MiruTermId("term1".getBytes()), 1, 2, 3);
 
         return new Object[][]{
-            {bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.hybrid},
-            {bitmaps, miruOnDiskFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.mem_mapped}
+            {bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory },
+            {bitmaps, miruOnDiskFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.disk }
         };
     }
 }

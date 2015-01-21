@@ -55,8 +55,8 @@ import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
-import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProvider;
-import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorProviderInitializer;
+import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
+import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorInitializer;
 import com.jivesoftware.os.miru.service.schema.RegistrySchemaProvider;
 import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
@@ -148,10 +148,7 @@ public class MiruReaderMain {
         backfillerizerLifecycle.start();
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
 
-        MiruLifecyle<MiruResourceLocatorProvider> miruResourceLocatorProviderLifecyle = new MiruResourceLocatorProviderInitializer()
-            .initialize(miruServiceConfig);
-
-        miruResourceLocatorProviderLifecyle.start();
+        MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
 
         final MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
             Interners.<MiruIBA>newWeakInterner(),
@@ -170,7 +167,7 @@ public class MiruReaderMain {
             registrySchemaProvider, //TODO configure
             wal,
             httpClientFactory,
-            miruResourceLocatorProviderLifecyle.getService(),
+            miruResourceLocator,
             internExtern,
             new SingleBitmapsProvider<>(bitmaps));
 

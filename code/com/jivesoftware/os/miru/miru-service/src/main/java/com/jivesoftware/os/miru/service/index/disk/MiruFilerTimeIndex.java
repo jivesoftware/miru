@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -55,6 +56,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     private void init() throws IOException {
+        final AtomicBoolean initialized = new AtomicBoolean(false);
+
+        //TODO consider using a custom CreateFiler in the KeyValueStore to handle the uninitialized case
         filerProvider.execute(-1, new FilerTransaction<Filer, Void>() {
             @Override
             public Void commit(Object lock, Filer filer) throws IOException {
@@ -68,19 +72,38 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                         MiruFilerTimeIndex.this.searchIndexLevels = FilerIO.readShort(filer, "searchIndexLevels");
                         MiruFilerTimeIndex.this.searchIndexSegments = FilerIO.readShort(filer, "searchIndexSegments");
                         MiruFilerTimeIndex.this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
+                        initialized.set(true);
                     }
-                } else {
-                    MiruFilerTimeIndex.this.id.set(-1);
-                    MiruFilerTimeIndex.this.smallestTimestamp = Long.MAX_VALUE;
-                    MiruFilerTimeIndex.this.largestTimestamp = Long.MIN_VALUE;
-                    MiruFilerTimeIndex.this.timestampsLength = 0;
-                    MiruFilerTimeIndex.this.searchIndexLevels = LEVELS;
-                    MiruFilerTimeIndex.this.searchIndexSegments = SEGMENTS;
-                    MiruFilerTimeIndex.this.searchIndexSizeInBytes = segmentWidth(LEVELS, SEGMENTS);
                 }
                 return null;
             }
         });
+
+        if (!initialized.get()) {
+            this.id.set(-1);
+            this.smallestTimestamp = Long.MAX_VALUE;
+            this.largestTimestamp = Long.MIN_VALUE;
+            this.timestampsLength = 0;
+            this.searchIndexLevels = LEVELS;
+            this.searchIndexSegments = SEGMENTS;
+            this.searchIndexSizeInBytes = segmentWidth(LEVELS, SEGMENTS);
+
+            filerProvider.execute(HEADER_SIZE_IN_BYTES, new FilerTransaction<Filer, Void>() {
+                @Override
+                public Void commit(Object o, Filer filer) throws IOException {
+
+                    filer.seek(0);
+                    FilerIO.writeInt(filer, MiruFilerTimeIndex.this.id.get(), "lastId");
+                    FilerIO.writeLong(filer, MiruFilerTimeIndex.this.smallestTimestamp, "smallestTimestamp");
+                    FilerIO.writeLong(filer, MiruFilerTimeIndex.this.largestTimestamp, "largestTimestamp");
+                    FilerIO.writeInt(filer, MiruFilerTimeIndex.this.timestampsLength, "timestampsLength");
+                    FilerIO.writeShort(filer, MiruFilerTimeIndex.this.searchIndexLevels, "searchIndexLevels");
+                    FilerIO.writeShort(filer, MiruFilerTimeIndex.this.searchIndexSegments, "searchIndexSegments");
+
+                    return null;
+                }
+            });
+        }
     }
 
     /**
@@ -294,6 +317,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
 
     private int readClosestId(Object lock, Filer filer, long timestamp) throws IOException {
         long fp = HEADER_SIZE_IN_BYTES;
+        if (id.get() < 0) {
+            return -1;
+        }
         synchronized (lock) {
             filer.seek(fp);
             for (int remainingLevels = searchIndexLevels - 1; remainingLevels >= 0; remainingLevels--) {
@@ -353,7 +379,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                 public Integer commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
                         int index = readClosestId(lock, filer, timestamp);
-                        if (index == 0) {
+                        if (index <= 0) {
                             return 0;
                         }
                         int lastId = lastId();
@@ -381,6 +407,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                 public Integer commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
                         int index = readClosestId(lock, filer, timestamp);
+                        if (index == -1) {
+                            return -1;
+                        }
                         if (index == timestampsLength) {
                             return timestampsLength - 1;
                         }

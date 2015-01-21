@@ -2,32 +2,17 @@ package com.jivesoftware.os.miru.service.locator;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
-import com.google.common.io.BaseEncoding;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 
 /**
  *
  */
-public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocator {
+public class MiruTempDirectoryResourceLocator implements MiruResourceLocator {
 
     private final ConcurrentMap<MiruResourcePartitionIdentifier, File> partitionPaths = Maps.newConcurrentMap();
-    private final Random random = new Random();
-
-    @Override
-    public MiruResourcePartitionIdentifier acquire() throws IOException {
-        byte[] bytes = new byte[12];
-        random.nextBytes(bytes);
-        return new MiruHybridTokenIdentifier(BaseEncoding.base64Url().omitPadding().encode(bytes));
-    }
-
-    @Override
-    public void release(MiruResourcePartitionIdentifier identifier) {
-        // ignore
-    }
 
     @Override
     public File getFilerFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
@@ -42,7 +27,12 @@ public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocat
     }
 
     @Override
-    public long getInitialChunkSize() {
+    public long getOnDiskInitialChunkSize() {
+        return 4_096;
+    }
+
+    @Override
+    public long getInMemoryChunkSize() {
         return 4_096;
     }
 
@@ -63,14 +53,6 @@ public class MiruTempDirectoryResourceLocator implements MiruHybridResourceLocat
             }
             return new File[] { partitionPath };
         }
-    }
-
-    private File[] getMapPaths(MiruResourcePartitionIdentifier identifier) throws IOException {
-        return makeSubDirectories(getPartitionPaths(identifier), "maps");
-    }
-
-    private File[] getSwapPaths(MiruResourcePartitionIdentifier identifier) throws IOException {
-        return makeSubDirectories(getPartitionPaths(identifier), "swaps");
     }
 
     private File[] makeSubDirectories(File[] baseDirectories, String subName) {

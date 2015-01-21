@@ -17,7 +17,7 @@ import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildInMemoryContext;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -75,7 +75,7 @@ public class MiruActivityIndexTest {
 
     @DataProvider(name = "miruActivityIndexDataProvider")
     public Object[][] miruActivityIndexDataProvider() throws Exception {
-        MiruActivityIndex hybridActivityIndex = buildHybridActivityIndex();
+        MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
         MiruActivityIndex onDiskActivityIndex = buildOnDiskActivityIndex();
 
         return new Object[][]{
@@ -92,7 +92,7 @@ public class MiruActivityIndexTest {
         final MiruInternalActivity[] miruActivities = new MiruInternalActivity[]{miruActivity1, miruActivity2, miruActivity3};
 
         // Add activities to in-memory index
-        MiruActivityIndex hybridActivityIndex = buildHybridActivityIndex();
+        MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
         hybridActivityIndex.setAndReady(Arrays.asList(
             new MiruActivityAndId<>(miruActivity1, 0),
             new MiruActivityAndId<>(miruActivity2, 1),
@@ -110,10 +110,10 @@ public class MiruActivityIndexTest {
         };
     }
 
-    private MiruActivityIndex buildHybridActivityIndex() throws Exception {
+    private MiruActivityIndex buildInMemoryActivityIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        MiruContext<RoaringBitmap> hybridContext = buildHybridContext(4, bitmaps, coord);
+        MiruContext<RoaringBitmap> hybridContext = buildInMemoryContext(4, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 

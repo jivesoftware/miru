@@ -23,13 +23,13 @@ public interface MiruServiceConfig extends Config {
     @StringDefault("var/lib/miru/transient")
     String getTransientResourceLocatorPaths();
 
-    // 32 MB
-    @LongDefault(33_554_432)
-    long getDiskResourceInitialChunkSize();
+    // 4 KB
+    @LongDefault(4_096)
+    long getOnDiskInitialChunkSize();
 
     // 32 MB
     @LongDefault(33_554_432)
-    long getTransientResourceInitialChunkSize();
+    long getInMemoryChunkSize();
 
     @LongDefault(5_000)
     long getHeartbeatIntervalInMillis();
@@ -101,7 +101,7 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(65_536)
     int getKeyedFilerNumberOfLocks();
 
-    @StringDefault("hybrid")
+    @StringDefault("memory")
     String getDefaultStorage();
 
     void setDefaultStorage(String storageType);

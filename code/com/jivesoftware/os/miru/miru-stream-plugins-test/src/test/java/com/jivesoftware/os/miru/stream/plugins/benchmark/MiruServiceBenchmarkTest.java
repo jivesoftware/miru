@@ -140,7 +140,7 @@ public class MiruServiceBenchmarkTest {
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         MiruSchema schema = new MiruSchema(FIELDS);
 
-        MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenantId, partitionId, miruHost, schema, MiruBackingStorage.hybrid,
+        MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenantId, partitionId, miruHost, schema, MiruBackingStorage.memory,
             new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
         this.miruService = miruProvider.getMiru(tenantId);
         this.injectable = new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider));

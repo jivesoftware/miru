@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
@@ -29,6 +30,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     public final MiruTimeIndex timeIndex;
     public final MiruActivityIndex activityIndex;
     public final MiruFieldIndexProvider<BM> fieldIndexProvider;
+    public final MiruSipIndex sipIndex;
     public final MiruAuthzIndex<BM> authzIndex;
     public final MiruRemovalIndex<BM> removalIndex;
     public final MiruUnreadTrackingIndex<BM> unreadTrackingIndex;
@@ -43,7 +45,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         MiruTimeIndex timeIndex,
         MiruActivityIndex activityIndex,
         MiruFieldIndexProvider<BM> fieldIndexProvider,
-        MiruAuthzIndex<BM> authzIndex,
+        MiruSipIndex sipIndex, MiruAuthzIndex<BM> authzIndex,
         MiruRemovalIndex<BM> removalIndex,
         MiruUnreadTrackingIndex<BM> unreadTrackingIndex,
         MiruInboxIndex<BM> inboxIndex,
@@ -56,6 +58,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         this.timeIndex = timeIndex;
         this.activityIndex = activityIndex;
         this.fieldIndexProvider = fieldIndexProvider;
+        this.sipIndex = sipIndex;
         this.authzIndex = authzIndex;
         this.removalIndex = removalIndex;
         this.unreadTrackingIndex = unreadTrackingIndex;
@@ -82,8 +85,14 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         return activityIndex;
     }
 
+    @Override
     public MiruFieldIndexProvider<BM> getFieldIndexProvider() {
         return fieldIndexProvider;
+    }
+
+    @Override
+    public MiruSipIndex getSipIndex() {
+        return sipIndex;
     }
 
     @Override

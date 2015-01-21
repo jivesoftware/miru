@@ -12,7 +12,9 @@ public interface MiruResourceLocator {
 
     File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
 
-    long getInitialChunkSize();
+    long getOnDiskInitialChunkSize();
+
+    long getInMemoryChunkSize();
 
     void clean(MiruResourcePartitionIdentifier identifier) throws IOException;
 

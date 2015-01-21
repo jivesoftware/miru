@@ -86,7 +86,7 @@ public class MiruHostedPartitionComparisonTest {
         when(partition.getCoord()).thenReturn(new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", port)));
         when(partition.getPartitionId()).thenReturn(partitionId);
         when(partition.isLocal()).thenReturn(true);
-        when(partition.getStorage()).thenReturn(MiruBackingStorage.hybrid);
+        when(partition.getStorage()).thenReturn(MiruBackingStorage.memory);
         return partition;
     }
 

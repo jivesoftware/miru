@@ -39,7 +39,7 @@ import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
-import com.jivesoftware.os.miru.service.stream.allocator.HybridChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
@@ -113,7 +113,7 @@ public class MiruLocalHostedPartitionTest {
         partitionId = MiruPartitionId.of(0);
         MiruHost host = new MiruHost("localhost", 49_600);
         coord = new MiruPartitionCoord(tenantId, partitionId, host);
-        defaultStorage = MiruBackingStorage.hybrid;
+        defaultStorage = MiruBackingStorage.memory;
 
         HealthFactory.initialize(
             new HealthCheckConfigBinder() {
@@ -158,7 +158,7 @@ public class MiruLocalHostedPartitionTest {
 
         MiruReadTrackingWALReaderImpl readTrackingWALReader = null; // TODO factor out of MiruContext
 
-        MiruChunkAllocator hybridContextAllocator = new HybridChunkAllocator(
+        MiruChunkAllocator hybridContextAllocator = new InMemoryChunkAllocator(
             new HeapByteBufferFactory(),
             new HeapByteBufferFactory(),
             4_096,
@@ -175,10 +175,9 @@ public class MiruLocalHostedPartitionTest {
             activityInternExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.hybrid, hybridContextAllocator)
-            .put(MiruBackingStorage.mem_mapped, diskContextAllocator)
+            .put(MiruBackingStorage.memory, hybridContextAllocator)
+            .put(MiruBackingStorage.disk, diskContextAllocator)
             .build(),
-            new MiruTempDirectoryResourceLocator(),
             new MiruTempDirectoryResourceLocator(),
             defaultStorage,
             config.getPartitionAuthzCacheSize(),
@@ -230,16 +229,16 @@ public class MiruLocalHostedPartitionTest {
         waitForRef(bootstrapRunnable).run();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.hybrid);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
 
         waitForRef(rebuildIndexRunnable).run();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.hybrid);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
         waitForRef(sipMigrateIndexRunnable).run();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.mem_mapped);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
 
     }
 
@@ -259,7 +258,7 @@ public class MiruLocalHostedPartitionTest {
         waitForRef(bootstrapRunnable).run();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.mem_mapped);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
     @Test
@@ -274,13 +273,13 @@ public class MiruLocalHostedPartitionTest {
         waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
         waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
         indexBoundaryActivity(localHostedPartition); // eligible for disk
-        waitForRef(sipMigrateIndexRunnable).run(); // enters online mem_mapped (hot deployable)
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online disk (hot deployable)
 
         setActive(false);
         waitForRef(bootstrapRunnable).run();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.mem_mapped);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
 
         try (MiruRequestHandle queryHandle = localHostedPartition.getQueryHandle()) {
             assertEquals(queryHandle.getCoord(), coord);
@@ -303,7 +302,7 @@ public class MiruLocalHostedPartitionTest {
         waitForRef(bootstrapRunnable).run();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.hybrid);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
 
         try (MiruRequestHandle queryHandle = localHostedPartition.getQueryHandle()) {
             queryHandle.getRequestContext(); // throws exception
@@ -325,7 +324,7 @@ public class MiruLocalHostedPartitionTest {
         localHostedPartition.remove();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.mem_mapped);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
     @Test
@@ -339,7 +338,7 @@ public class MiruLocalHostedPartitionTest {
         waitForRef(bootstrapRunnable).run(); // stays offline
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.hybrid);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
     }
 
     @Test
@@ -353,7 +352,7 @@ public class MiruLocalHostedPartitionTest {
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
-        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.hybrid);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
     }
 
     @Test

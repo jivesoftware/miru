@@ -11,7 +11,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildHybridContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.buildInMemoryContext;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
@@ -160,7 +160,7 @@ public class MiruBitmapsTimeRangeTest {
     private MiruTimeIndex buildInMemoryTimeIndex() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        return buildHybridContext(numberOfChunkStores, bitmaps, coord).timeIndex;
+        return buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
     }
 
     private MiruTimeIndex buildOnDiskTimeIndex() throws Exception {

@@ -47,7 +47,7 @@ public class MiruIndexerTest {
         verifyFieldValues(tenantId, context, 2, 2);
         verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 2).authz, 2);
 
-        if (miruBackingStorage.equals(MiruBackingStorage.mem_mapped)) {
+        if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
             try {
                 miruIndexer.index(
                     context,
@@ -113,7 +113,7 @@ public class MiruIndexerTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruIndexer<EWAHCompressedBitmap> miruIndexer = new MiruIndexer<>(bitmaps);
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildHybridContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
 
         // Build in-memory index stream object
         MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[]{"abcde"},
@@ -141,8 +141,8 @@ public class MiruIndexerTest {
             MoreExecutors.sameThreadExecutor());
 
         return new Object[][]{
-            {tenantId, hybridContext, miruIndexer, MiruBackingStorage.hybrid},
-            {tenantId, onDiskContext, miruIndexer, MiruBackingStorage.mem_mapped}
+            {tenantId, hybridContext, miruIndexer, MiruBackingStorage.memory },
+            {tenantId, onDiskContext, miruIndexer, MiruBackingStorage.disk }
         };
     }
 

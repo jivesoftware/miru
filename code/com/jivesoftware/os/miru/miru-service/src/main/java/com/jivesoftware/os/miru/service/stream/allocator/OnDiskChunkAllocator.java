@@ -18,8 +18,6 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final String DISK_FORMAT_VERSION = "version-12";
-
     private final MiruResourceLocator resourceLocator;
     private final ByteBufferFactory cacheByteBufferFactory;
     private final int numberOfChunkStores;
@@ -27,8 +25,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     public OnDiskChunkAllocator(
         MiruResourceLocator resourceLocator,
         ByteBufferFactory cacheByteBufferFactory,
-        int numberOfChunkStores
-    ) {
+        int numberOfChunkStores) {
         this.resourceLocator = resourceLocator;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
@@ -46,12 +43,6 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
             }
         }
 
-        File versionFile = resourceLocator.getFilerFile(new MiruPartitionCoordIdentifier(coord), DISK_FORMAT_VERSION);
-        if (!versionFile.exists()) {
-            log.warn("Partition missing version {} for {}", DISK_FORMAT_VERSION, coord);
-            return false;
-        }
-
         log.info("Partition is on disk for {}", coord);
         return true;
     }
@@ -60,9 +51,6 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception {
 
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
-
-        File versionFile = resourceLocator.getFilerFile(identifier, DISK_FORMAT_VERSION);
-        versionFile.createNewFile();
 
         File[] chunkDirs = resourceLocator.getChunkDirectories(identifier, "chunks");
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
@@ -73,16 +61,15 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 chunkDirs,
                 directoryOffset,
                 "chunk-" + i,
-                4_096, //TODO configure?
+                resourceLocator.getOnDiskInitialChunkSize(),
                 cacheByteBufferFactory,
                 5_000); //TODO configure?
         }
         return chunkStores;
     }
 
-
     @Override
-    public <BM> void close(ChunkStore[] chunkStores) {
+    public void close(ChunkStore[] chunkStores) {
     }
 
 }

@@ -47,8 +47,8 @@ object SimulationParams {
   val rampSeconds = System.getProperty("rampseconds", "10").toInt
   val walBatchSize = System.getProperty("batchsize", "100").toInt
 
-  val onlineOpen = System.getProperty("onlineopen", MiruBackingStorage.hybrid.name)
-  val onlineClosed = System.getProperty("onlineclosed", MiruBackingStorage.mem_mapped.name)
+  val onlineOpen = System.getProperty("onlineopen", MiruBackingStorage.memory.name)
+  val onlineClosed = System.getProperty("onlineclosed", MiruBackingStorage.disk.name)
 
   val queryLoops = System.getProperty("queryloops", "1").toInt
   val queryPause = System.getProperty("querypause", "1000").toInt
