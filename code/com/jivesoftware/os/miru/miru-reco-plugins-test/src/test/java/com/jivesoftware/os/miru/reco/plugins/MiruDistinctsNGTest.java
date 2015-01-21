@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -149,7 +150,7 @@ public class MiruDistinctsNGTest {
             MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
-                new DistinctsQuery(timeRange, fieldDefinition.name),
+                new DistinctsQuery(timeRange, MiruFilter.NO_FILTER, fieldDefinition.name),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
 
