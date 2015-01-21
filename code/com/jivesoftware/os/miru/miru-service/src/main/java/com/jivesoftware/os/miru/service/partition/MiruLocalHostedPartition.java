@@ -563,7 +563,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             queue.put(Collections.<MiruPartitionedActivity>emptyList());
                         } else {
                             log.info("Aborting rebuild end of stream from WAL for {}", coord);
-                            return;
                         }
                     } catch (Exception x) {
                         log.error("Failure while rebuilding {}", new Object[]{coord}, x);

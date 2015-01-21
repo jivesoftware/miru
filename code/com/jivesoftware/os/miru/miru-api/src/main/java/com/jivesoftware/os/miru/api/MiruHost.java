@@ -57,11 +57,7 @@ public class MiruHost implements Comparable<MiruHost> {
         if (port != miruHost.port) {
             return false;
         }
-        if (logicalName != null ? !logicalName.equals(miruHost.logicalName) : miruHost.logicalName != null) {
-            return false;
-        }
-
-        return true;
+        return !(logicalName != null ? !logicalName.equals(miruHost.logicalName) : miruHost.logicalName != null);
     }
 
     @Override

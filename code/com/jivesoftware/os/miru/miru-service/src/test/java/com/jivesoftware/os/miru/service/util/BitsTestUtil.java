@@ -37,4 +37,7 @@ public class BitsTestUtil {
         }
         return bits;
     }
+
+    private BitsTestUtil() {
+    }
 }

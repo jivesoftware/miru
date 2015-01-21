@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
+import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion.TrendingPluginRegionInput;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -11,8 +12,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
-import static com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion.TrendingPluginRegionInput;
 
 /**
  *

@@ -29,11 +29,7 @@ public class VersionedAuthz {
         if (version != that.version) {
             return false;
         }
-        if (authz != null ? !authz.equals(that.authz) : that.authz != null) {
-            return false;
-        }
-
-        return true;
+        return !(authz != null ? !authz.equals(that.authz) : that.authz != null);
     }
 
     @Override

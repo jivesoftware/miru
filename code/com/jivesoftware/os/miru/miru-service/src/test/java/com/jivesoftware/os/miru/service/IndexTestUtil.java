@@ -41,9 +41,6 @@ import java.nio.file.Files;
  */
 public class IndexTestUtil {
 
-    private IndexTestUtil() {
-    }
-
     private static MiruContextFactory factory(int numberOfChunkStores) {
         MiruReadTrackingWALReaderImpl readTrackingWALReader = null; // TODO FActor out!
 
@@ -84,27 +81,18 @@ public class IndexTestUtil {
         );
     }
 
-    public static <BM> MiruContext<BM> buildHybridContext(int numberOfChunkStores,
-        MiruBitmaps<BM> bitmaps,
-        MiruPartitionCoord coord) throws Exception {
+    public static <BM> MiruContext<BM> buildHybridContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.hybrid);
 
     }
 
-    public static <BM> MiruContext<BM> buildOnDiskContext(int numberOfChunkStores,
-        MiruBitmaps<BM> bitmaps,
-        MiruPartitionCoord coord) throws Exception {
+    public static <BM> MiruContext<BM> buildOnDiskContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.mem_mapped);
 
     }
 
-    public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name,
-        ChunkStore[] chunkStores,
-        KeyValueMarshaller<K, V> keyValueMarshaller,
-        int keySize,
-        boolean variableKeySize,
-        int payloadSize,
-        boolean variablePayloadSizes) {
+    public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name, ChunkStore[] chunkStores, KeyValueMarshaller<K, V> keyValueMarshaller,
+        int keySize, boolean variableKeySize, int payloadSize, boolean variablePayloadSizes) {
         return new TxKeyValueStore<>(chunkStores,
             keyValueMarshaller,
             keyBytes(name),
@@ -127,7 +115,8 @@ public class IndexTestUtil {
         return chunkStores;
     }
 
-    public static ChunkStore[] buildFileBackedChunkStores(int numberOfChunkStores) throws Exception {
+    public static ChunkStore[] buildFileBackedChunkStores(int numberOfChunkStores)
+        throws Exception {
         File[] pathsToPartitions = new File[numberOfChunkStores];
         for (int i = 0; i < numberOfChunkStores; i++) {
             pathsToPartitions[i] = Files.createTempDirectory("chunks").toFile();
@@ -144,5 +133,8 @@ public class IndexTestUtil {
 
     private static byte[] keyBytes(String key) {
         return key.getBytes(Charsets.UTF_8);
+    }
+
+    private IndexTestUtil() {
     }
 }

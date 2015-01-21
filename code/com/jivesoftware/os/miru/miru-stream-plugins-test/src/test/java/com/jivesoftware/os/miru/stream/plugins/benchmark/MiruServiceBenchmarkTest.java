@@ -286,11 +286,7 @@ public class MiruServiceBenchmarkTest {
             if (fieldCardinality != that.fieldCardinality) {
                 return false;
             }
-            if (followables != that.followables) {
-                return false;
-            }
-
-            return true;
+            return followables == that.followables;
         }
 
         @Override

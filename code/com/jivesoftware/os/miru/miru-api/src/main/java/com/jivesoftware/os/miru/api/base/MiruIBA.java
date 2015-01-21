@@ -82,10 +82,7 @@ public class MiruIBA implements Comparable, Serializable {
         if (this.hashCode() != other.hashCode()) {
             return false;
         }
-        if (!Arrays.equals(this.bytes, other.bytes)) {
-            return false;
-        }
-        return true;
+        return Arrays.equals(this.bytes, other.bytes);
     }
 
     @Override

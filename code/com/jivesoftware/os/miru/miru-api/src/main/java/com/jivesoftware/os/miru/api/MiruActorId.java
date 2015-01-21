@@ -50,10 +50,7 @@ public class MiruActorId {
             return false;
         }
         final MiruActorId other = (MiruActorId) obj;
-        if (!Objects.equals(this.actorId, other.actorId)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this.actorId, other.actorId);
     }
 
     @Override

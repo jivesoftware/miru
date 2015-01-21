@@ -22,11 +22,7 @@ public class MiruActivityWALRow implements Comparable<MiruActivityWALRow> {
 
         MiruActivityWALRow that = (MiruActivityWALRow) o;
 
-        if (partitionId != that.partitionId) {
-            return false;
-        }
-
-        return true;
+        return partitionId == that.partitionId;
     }
 
     @Override

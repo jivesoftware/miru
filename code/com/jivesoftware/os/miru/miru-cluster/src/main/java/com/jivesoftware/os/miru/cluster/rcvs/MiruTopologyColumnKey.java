@@ -39,11 +39,7 @@ public class MiruTopologyColumnKey implements Comparable<MiruTopologyColumnKey> 
         if (host != null ? !host.equals(that.host) : that.host != null) {
             return false;
         }
-        if (partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null) {
-            return false;
-        }
-
-        return true;
+        return !(partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null);
     }
 
     @Override

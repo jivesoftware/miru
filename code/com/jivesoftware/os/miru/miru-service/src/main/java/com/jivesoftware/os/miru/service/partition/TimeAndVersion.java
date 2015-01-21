@@ -27,11 +27,7 @@ class TimeAndVersion {
         if (timestamp != that.timestamp) {
             return false;
         }
-        if (version != that.version) {
-            return false;
-        }
-
-        return true;
+        return version == that.version;
     }
 
     @Override

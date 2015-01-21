@@ -48,11 +48,7 @@ public class DistinctCountAnswer {
         if (collectedDistincts != that.collectedDistincts) {
             return false;
         }
-        if (aggregateTerms != null ? !aggregateTerms.equals(that.aggregateTerms) : that.aggregateTerms != null) {
-            return false;
-        }
-
-        return true;
+        return !(aggregateTerms != null ? !aggregateTerms.equals(that.aggregateTerms) : that.aggregateTerms != null);
     }
 
     @Override

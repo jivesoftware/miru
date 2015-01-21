@@ -35,6 +35,7 @@ import java.util.PriorityQueue;
  * @author jonathan
  */
 public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
+    private static final EWAHCompressedBitmap EMPTY = new EWAHCompressedBitmap(); // Balls!!
 
     private final int bufferSize;
 
@@ -320,7 +321,6 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
         return mask;
     }
 
-    private static final EWAHCompressedBitmap EMPTY = new EWAHCompressedBitmap(); // Balls!!
 
     @Override
     public void copy(EWAHCompressedBitmap container, EWAHCompressedBitmap original) {

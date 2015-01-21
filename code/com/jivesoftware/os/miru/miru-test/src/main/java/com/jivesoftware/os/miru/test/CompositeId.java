@@ -27,4 +27,7 @@ public class CompositeId {
         }
         return new Id(hasher.hash().asLong() & Long.MAX_VALUE);
     }
+
+    private CompositeId() {
+    }
 }

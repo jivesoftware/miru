@@ -136,4 +136,7 @@ public class RoaringInspection {
     private static int containerMin(RoaringBitmap bitmap, int pos) {
         return Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
     }
+
+    private RoaringInspection() {
+    }
 }

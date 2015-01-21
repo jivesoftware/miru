@@ -82,11 +82,7 @@ public interface MiruClusterRegistry {
 
             HostHeartbeat that = (HostHeartbeat) o;
 
-            if (host != null ? !host.equals(that.host) : that.host != null) {
-                return false;
-            }
-
-            return true;
+            return !(host != null ? !host.equals(that.host) : that.host != null);
         }
 
         // only host contributes to hashCode()

@@ -45,11 +45,7 @@ public class MiruPartitionCoordInfo {
         if (state != that.state) {
             return false;
         }
-        if (storage != that.storage) {
-            return false;
-        }
-
-        return true;
+        return storage == that.storage;
     }
 
     @Override

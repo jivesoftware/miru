@@ -39,11 +39,7 @@ public class MiruReadTrackingSipWALColumnKey {
         if (sipId != that.sipId) {
             return false;
         }
-        if (eventId != null ? !eventId.equals(that.eventId) : that.eventId != null) {
-            return false;
-        }
-
-        return true;
+        return !(eventId != null ? !eventId.equals(that.eventId) : that.eventId != null);
     }
 
     @Override

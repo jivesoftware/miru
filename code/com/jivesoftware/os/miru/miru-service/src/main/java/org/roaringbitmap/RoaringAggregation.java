@@ -284,4 +284,7 @@ public class RoaringAggregation {
         }
     }
 
+    private RoaringAggregation() {
+    }
+
 }

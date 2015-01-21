@@ -39,11 +39,7 @@ public class MiruPartition {
         if (coord != null ? !coord.equals(that.coord) : that.coord != null) {
             return false;
         }
-        if (info != null ? !info.equals(that.info) : that.info != null) {
-            return false;
-        }
-
-        return true;
+        return !(info != null ? !info.equals(that.info) : that.info != null);
     }
 
     @Override

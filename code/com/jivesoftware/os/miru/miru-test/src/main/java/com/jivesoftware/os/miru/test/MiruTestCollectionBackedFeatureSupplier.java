@@ -26,7 +26,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  *
  */
-public final class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureSupplier {
+public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureSupplier {
 
     private final Random random;
     private final float publicContainerPercent;
@@ -139,7 +139,7 @@ public final class MiruTestCollectionBackedFeatureSupplier implements MiruTestFe
             }
             authzs.add(groupForContainer(containerId).toStringForm());
         }
-        return authzs.toArray(new String[0]);
+        return authzs.toArray(new String[authzs.size()]);
     }
 
     @Override

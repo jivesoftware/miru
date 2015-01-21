@@ -301,7 +301,7 @@ public class MiruRebalanceDirector {
             Color unhealthyColor = null;
             if (unhealthyPartitions > 0) {
                 int numReplicas = statuses.size();
-                float unhealthyPct = (float) unhealthyPartitions / (float) numReplicas;
+                float unhealthyPct = unhealthyPartitions / numReplicas;
                 if (unhealthyPct < 0.33f) {
                     unhealthyColor = Color.YELLOW;
                 } else if (unhealthyPct < 0.67f) {

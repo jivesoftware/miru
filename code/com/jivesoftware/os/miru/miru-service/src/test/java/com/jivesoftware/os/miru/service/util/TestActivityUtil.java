@@ -52,4 +52,7 @@ public class TestActivityUtil {
             .build();
     }
 
+    private TestActivityUtil() {
+    }
+
 }

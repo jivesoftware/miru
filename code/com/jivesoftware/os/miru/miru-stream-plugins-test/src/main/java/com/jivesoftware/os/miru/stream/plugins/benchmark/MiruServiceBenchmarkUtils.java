@@ -67,4 +67,7 @@ public class MiruServiceBenchmarkUtils {
         }
         return distincts;
     }
+
+    private MiruServiceBenchmarkUtils() {
+    }
 }

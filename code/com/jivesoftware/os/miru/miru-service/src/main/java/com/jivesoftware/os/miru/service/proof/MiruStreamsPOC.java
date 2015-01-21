@@ -203,11 +203,7 @@ public class MiruStreamsPOC {
             if (fieldId != that.fieldId) {
                 return false;
             }
-            if (termID != null ? !termID.equals(that.termID) : that.termID != null) {
-                return false;
-            }
-
-            return true;
+            return !(termID != null ? !termID.equals(that.termID) : that.termID != null);
         }
 
         @Override

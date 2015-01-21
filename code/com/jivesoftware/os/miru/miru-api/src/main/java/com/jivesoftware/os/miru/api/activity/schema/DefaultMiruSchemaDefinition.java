@@ -49,4 +49,7 @@ public class DefaultMiruSchemaDefinition {
         PROPERTIES = propDefinitions.toArray(new MiruPropertyDefinition[propDefinitions.size()]);
     }
 
+    private DefaultMiruSchemaDefinition() {
+    }
+
 }

@@ -185,11 +185,7 @@ public class MiruHostedPartitionComparison {
             if (queryClass != null ? !queryClass.equals(that.queryClass) : that.queryClass != null) {
                 return false;
             }
-            if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null) {
-                return false;
-            }
-
-            return true;
+            return !(tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null);
         }
 
         @Override

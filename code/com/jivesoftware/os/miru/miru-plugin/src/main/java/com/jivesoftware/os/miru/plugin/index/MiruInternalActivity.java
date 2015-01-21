@@ -110,10 +110,7 @@ public class MiruInternalActivity {
         if (!Arrays.deepEquals(this.fieldsValues, other.fieldsValues)) {
             return false;
         }
-        if (!Arrays.deepEquals(this.propsValues, other.propsValues)) {
-            return false;
-        }
-        return true;
+        return Arrays.deepEquals(this.propsValues, other.propsValues);
     }
 
     @Override

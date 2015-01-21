@@ -38,11 +38,7 @@ public class MiruAuthzExpression implements Serializable {
 
         MiruAuthzExpression that = (MiruAuthzExpression) o;
 
-        if (values != null ? !values.equals(that.values) : that.values != null) {
-            return false;
-        }
-
-        return true;
+        return !(values != null ? !values.equals(that.values) : that.values != null);
     }
 
     @Override

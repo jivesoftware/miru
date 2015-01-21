@@ -48,11 +48,7 @@ public class MiruActivityWALColumnKey implements Comparable<MiruActivityWALColum
         if (collisionId != that.collisionId) {
             return false;
         }
-        if (sort != that.sort) {
-            return false;
-        }
-
-        return true;
+        return sort == that.sort;
     }
 
     @Override

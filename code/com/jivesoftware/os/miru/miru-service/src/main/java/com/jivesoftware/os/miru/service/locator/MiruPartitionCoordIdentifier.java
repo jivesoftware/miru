@@ -29,11 +29,7 @@ public class MiruPartitionCoordIdentifier implements MiruResourcePartitionIdenti
 
         MiruPartitionCoordIdentifier that = (MiruPartitionCoordIdentifier) o;
 
-        if (coord != null ? !coord.equals(that.coord) : that.coord != null) {
-            return false;
-        }
-
-        return true;
+        return !(coord != null ? !coord.equals(that.coord) : that.coord != null);
     }
 
     @Override

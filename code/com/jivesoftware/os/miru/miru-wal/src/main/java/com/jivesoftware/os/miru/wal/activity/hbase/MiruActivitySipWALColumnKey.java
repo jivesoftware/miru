@@ -72,11 +72,7 @@ public class MiruActivitySipWALColumnKey implements Comparable<MiruActivitySipWA
         if (sort != that.sort) {
             return false;
         }
-        if (sipId != null ? !sipId.equals(that.sipId) : that.sipId != null) {
-            return false;
-        }
-
-        return true;
+        return !(sipId != null ? !sipId.equals(that.sipId) : that.sipId != null);
     }
 
     @Override

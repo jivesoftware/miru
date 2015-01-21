@@ -28,11 +28,7 @@ class WriteAggregateKey {
         if (aggregateFieldValue != null ? !aggregateFieldValue.equals(that.aggregateFieldValue) : that.aggregateFieldValue != null) {
             return false;
         }
-        if (fieldValue != null ? !fieldValue.equals(that.fieldValue) : that.fieldValue != null) {
-            return false;
-        }
-
-        return true;
+        return !(fieldValue != null ? !fieldValue.equals(that.fieldValue) : that.fieldValue != null);
     }
 
     @Override

@@ -22,4 +22,7 @@ package com.jivesoftware.os.miru.client.endpoints;
  */
 public class MiruClientConstants {
     public static final String CLIENT_SERVICE_ENDPOINT_PREFIX = "/miru/writer/client";
+
+    private MiruClientConstants() {
+    }
 }

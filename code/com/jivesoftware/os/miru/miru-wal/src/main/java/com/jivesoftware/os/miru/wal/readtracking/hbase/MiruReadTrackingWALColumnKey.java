@@ -22,11 +22,7 @@ public class MiruReadTrackingWALColumnKey {
 
         MiruReadTrackingWALColumnKey that = (MiruReadTrackingWALColumnKey) o;
 
-        if (eventId != that.eventId) {
-            return false;
-        }
-
-        return true;
+        return eventId == that.eventId;
     }
 
     @Override

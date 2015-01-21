@@ -10,7 +10,7 @@ public class WaveformRegression {
     public static SimpleRegression getRegression(long[] smooth) {
         double[] raw = new double[smooth.length];
         for (int i = 0; i < smooth.length; i++) {
-            raw[i] = (double) smooth[i];
+            raw[i] = smooth[i];
         }
         return getRegression(raw);
     }
@@ -23,5 +23,8 @@ public class WaveformRegression {
             r.addData(s, smooth[i]);
         }
         return r;
+    }
+
+    private WaveformRegression() {
     }
 }

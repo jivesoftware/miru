@@ -29,11 +29,7 @@ public class MiruReadTrackingWALRow implements Comparable<MiruReadTrackingWALRow
 
         MiruReadTrackingWALRow that = (MiruReadTrackingWALRow) o;
 
-        if (streamId != null ? !streamId.equals(that.streamId) : that.streamId != null) {
-            return false;
-        }
-
-        return true;
+        return !(streamId != null ? !streamId.equals(that.streamId) : that.streamId != null);
     }
 
     @Override

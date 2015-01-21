@@ -47,11 +47,7 @@ public class MiruPartitionId implements Comparable<MiruPartitionId> {
 
         MiruPartitionId that = (MiruPartitionId) o;
 
-        if (id != that.id) {
-            return false;
-        }
-
-        return true;
+        return id == that.id;
     }
 
     @Override

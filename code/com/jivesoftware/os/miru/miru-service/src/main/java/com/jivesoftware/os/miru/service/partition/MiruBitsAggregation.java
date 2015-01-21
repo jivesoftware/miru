@@ -98,6 +98,9 @@ public class MiruBitsAggregation {
         pq.poll().xorToContainer(pq.poll(), container);
     }
 
+    private MiruBitsAggregation() {
+    }
+
 
 
 

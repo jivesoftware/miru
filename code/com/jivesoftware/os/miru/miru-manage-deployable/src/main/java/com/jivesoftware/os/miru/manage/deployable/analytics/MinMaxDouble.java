@@ -63,10 +63,7 @@ public class MinMaxDouble {
         if (_p < min) {
             return false;
         }
-        if (_p > max) {
-            return false;
-        }
-        return true;
+        return _p <= max;
     }
 
     /**
@@ -187,7 +184,7 @@ public class MinMaxDouble {
      * @param _double
      * @return
      */
-    public static final double zeroToOne(double _min, double _max, double _double) {
+    public static double zeroToOne(double _min, double _max, double _double) {
         return (_double - _min) / (_max - _min);
     }
 
@@ -207,7 +204,7 @@ public class MinMaxDouble {
      * @param _double
      * @return
      */
-    public static final double unzeroToOne(double _min, double _max, double _double) {
+    public static double unzeroToOne(double _min, double _max, double _double) {
         return ((_max - _min) * _double) + _min;
     }
 

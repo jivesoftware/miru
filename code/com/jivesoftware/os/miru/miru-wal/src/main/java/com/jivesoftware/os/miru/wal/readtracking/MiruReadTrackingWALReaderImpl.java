@@ -130,11 +130,7 @@ public class MiruReadTrackingWALReaderImpl implements MiruReadTrackingWALReader 
             if (streamId != null ? !streamId.equals(that.streamId) : that.streamId != null) {
                 return false;
             }
-            if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null) {
-                return false;
-            }
-
-            return true;
+            return !(tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null);
         }
 
         @Override

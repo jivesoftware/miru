@@ -6,13 +6,14 @@ import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.apache.commons.lang.StringUtils;
 
 public class MiruBackfillerizerInitializer {
 
     public MiruLifecyle<MiruJustInTimeBackfillerizer> initialize(final MiruServiceConfig config, MiruHost miruHost) {
 
         String readStreamIdsPropName = config.getReadStreamIdsPropName();
-        if (readStreamIdsPropName != null && readStreamIdsPropName.isEmpty()) {
+        if (StringUtils.isEmpty(readStreamIdsPropName)) {
             readStreamIdsPropName = null;
         }
 

@@ -43,9 +43,9 @@ public enum MiruTestActivityType {
             List<Id> users = supplier.oldUsers(1 + Math.max(participants, userMentions));
             List<Id> containerIds = supplier.oldContainers(2);
             Id authorId = users.get(0);
-            Id contentItemId = supplier.newContentItem(authorId, containerIds.toArray(new Id[0]));
+            Id contentItemId = supplier.newContentItem(authorId, containerIds.toArray(new Id[containerIds.size()]));
             ObjectId verbSubject = new ObjectId("PostVersion", supplier.newContentVersion(contentItemId));
-            String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
+            String[] authz = supplier.authz(containerIds.toArray(new Id[containerIds.size()]));
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), contentItemId.toStringForm())
                     .putAllFieldValues(MiruFieldName.CONTAINER_IDS.getFieldName(), Lists.transform(containerIds, ID_TO_STRING_FORM))
@@ -73,7 +73,7 @@ public enum MiruTestActivityType {
             Id commentId = supplier.newComment(authorId, contentItemId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
             ObjectId verbSubject = new ObjectId("CommentVersion", supplier.newCommentVersion(commentId));
-            String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
+            String[] authz = supplier.authz(containerIds.toArray(new Id[containerIds.size()]));
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), contentItemId.toStringForm())
                     .putAllFieldValues(MiruFieldName.CONTAINER_IDS.getFieldName(), Collections2.transform(containerIds, ID_TO_STRING_FORM))
@@ -147,7 +147,7 @@ public enum MiruTestActivityType {
             Id likeId = CompositeId.createOrdered("Like", supplier.tenantId(), authorId.toStringForm(), contentItem.toStringForm());
             ObjectId verbSubject = new ObjectId("Like", likeId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
-            String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
+            String[] authz = supplier.authz(containerIds.toArray(new Id[containerIds.size()]));
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "AcclaimParent_ABC")
                     .putFieldValue(MiruFieldName.CONTAINER_IDS.getFieldName(), "AcclaimContainer_ABC")
@@ -172,7 +172,7 @@ public enum MiruTestActivityType {
             ObjectId verbSubject = new ObjectId("Like", likeId);
             Id contentItemId = supplier.contentItemForComment(commentId);
             Collection<Id> containerIds = supplier.containersForContentItem(contentItemId);
-            String[] authz = supplier.authz(containerIds.toArray(new Id[0]));
+            String[] authz = supplier.authz(containerIds.toArray(new Id[containerIds.size()]));
             MiruActivity activity = new MiruActivity.Builder(supplier.miruTenantId(), time, authz, 0)
                     .putFieldValue(MiruFieldName.ACTIVITY_PARENT.getFieldName(), "AcclaimParent_ABC")
                     .putFieldValue(MiruFieldName.CONTAINER_IDS.getFieldName(), "AcclaimContainer_ABC")

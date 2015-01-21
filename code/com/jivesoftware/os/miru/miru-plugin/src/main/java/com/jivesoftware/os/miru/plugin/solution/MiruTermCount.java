@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
+import java.util.Arrays;
 
 /**
 *
@@ -25,7 +26,7 @@ public class MiruTermCount implements BloomIndex.HasValue {
 
     @Override
     public String toString() {
-        return "TermCount{" + "termId=" + termId + ", mostRecent=" + mostRecent + ", count=" + count + '}';
+        return "TermCount{" + "termId=" + termId + ", mostRecent=" + Arrays.toString(mostRecent) + ", count=" + count + '}';
     }
 
 }

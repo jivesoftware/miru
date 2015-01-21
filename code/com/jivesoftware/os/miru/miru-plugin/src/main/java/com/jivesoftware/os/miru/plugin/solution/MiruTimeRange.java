@@ -41,11 +41,7 @@ public class MiruTimeRange implements Serializable {
         if (largestTimestamp != timeRange.largestTimestamp) {
             return false;
         }
-        if (smallestTimestamp != timeRange.smallestTimestamp) {
-            return false;
-        }
-
-        return true;
+        return smallestTimestamp == timeRange.smallestTimestamp;
     }
 
     @Override

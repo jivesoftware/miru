@@ -32,11 +32,7 @@ public class VersionedAuthzExpression {
 
         VersionedAuthzExpression that = (VersionedAuthzExpression) o;
 
-        if (versions != null ? !versions.equals(that.versions) : that.versions != null) {
-            return false;
-        }
-
-        return true;
+        return !(versions != null ? !versions.equals(that.versions) : that.versions != null);
     }
 
     @Override

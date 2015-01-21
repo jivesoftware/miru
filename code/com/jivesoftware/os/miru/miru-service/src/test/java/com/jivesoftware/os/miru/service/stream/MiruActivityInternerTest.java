@@ -32,6 +32,12 @@ public class MiruActivityInternerTest {
     private MiruActivityInternExtern interner;
     private MiruTenantId tenantId;
     private MiruSchema schema;
+    private final Comparator<Object> hashComparator = new Comparator<Object>() {
+        @Override
+        public int compare(Object o1, Object o2) {
+            return Integer.compare(o1.hashCode(), o2.hashCode());
+        }
+    };
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -107,10 +113,4 @@ public class MiruActivityInternerTest {
         }
     }
 
-    private final Comparator<Object> hashComparator = new Comparator<Object>() {
-        @Override
-        public int compare(Object o1, Object o2) {
-            return Integer.compare(o1.hashCode(), o2.hashCode());
-        }
-    };
 }

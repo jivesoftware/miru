@@ -71,11 +71,7 @@ public class AggregateCountsAnswer {
         if (aggregateTerms != null ? !aggregateTerms.equals(that.aggregateTerms) : that.aggregateTerms != null) {
             return false;
         }
-        if (results != null ? !results.equals(that.results) : that.results != null) {
-            return false;
-        }
-
-        return true;
+        return !(results != null ? !results.equals(that.results) : that.results != null);
     }
 
     @Override
@@ -143,11 +139,7 @@ public class AggregateCountsAnswer {
             if (!Arrays.equals(distinctValue, that.distinctValue)) {
                 return false;
             }
-            if (mostRecentActivity != null ? !mostRecentActivity.equals(that.mostRecentActivity) : that.mostRecentActivity != null) {
-                return false;
-            }
-
-            return true;
+            return !(mostRecentActivity != null ? !mostRecentActivity.equals(that.mostRecentActivity) : that.mostRecentActivity != null);
         }
 
         @Override

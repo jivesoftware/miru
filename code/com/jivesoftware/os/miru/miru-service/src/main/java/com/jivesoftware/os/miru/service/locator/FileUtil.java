@@ -19,4 +19,7 @@ public class FileUtil {
             return x;
         }
     }
+
+    private FileUtil() {
+    }
 }

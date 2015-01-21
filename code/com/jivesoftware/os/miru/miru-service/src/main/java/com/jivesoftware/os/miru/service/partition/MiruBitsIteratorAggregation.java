@@ -241,4 +241,7 @@ public class MiruBitsIteratorAggregation {
         return pos;
     }
 
+    private MiruBitsIteratorAggregation() {
+    }
+
 }

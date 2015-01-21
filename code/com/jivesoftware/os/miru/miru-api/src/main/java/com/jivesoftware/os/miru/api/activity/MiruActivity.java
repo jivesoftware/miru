@@ -96,10 +96,7 @@ public class MiruActivity {
         if (!Objects.equals(this.fieldsValues, other.fieldsValues)) {
             return false;
         }
-        if (!Objects.equals(this.propsValues, other.propsValues)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this.propsValues, other.propsValues);
     }
 
     @Override

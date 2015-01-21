@@ -47,11 +47,7 @@ public class MiruPartitionCoord {
         if (partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null) {
             return false;
         }
-        if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null) {
-            return false;
-        }
-
-        return true;
+        return !(tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null);
     }
 
     @Override

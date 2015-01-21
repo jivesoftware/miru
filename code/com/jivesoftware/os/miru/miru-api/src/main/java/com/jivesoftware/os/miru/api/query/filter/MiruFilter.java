@@ -75,11 +75,7 @@ public class MiruFilter implements Serializable {
         if (operation != that.operation) {
             return false;
         }
-        if (subFilter != null ? !subFilter.equals(that.subFilter) : that.subFilter != null) {
-            return false;
-        }
-
-        return true;
+        return !(subFilter != null ? !subFilter.equals(that.subFilter) : that.subFilter != null);
     }
 
     @Override

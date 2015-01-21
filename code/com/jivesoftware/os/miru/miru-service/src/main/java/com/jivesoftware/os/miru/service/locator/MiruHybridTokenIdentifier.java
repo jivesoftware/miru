@@ -31,11 +31,7 @@ public class MiruHybridTokenIdentifier implements MiruResourcePartitionIdentifie
 
         MiruHybridTokenIdentifier that = (MiruHybridTokenIdentifier) o;
 
-        if (token != null ? !token.equals(that.token) : that.token != null) {
-            return false;
-        }
-
-        return true;
+        return !(token != null ? !token.equals(that.token) : that.token != null);
     }
 
     @Override

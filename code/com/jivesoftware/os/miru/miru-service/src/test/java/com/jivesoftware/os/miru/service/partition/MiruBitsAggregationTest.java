@@ -288,10 +288,10 @@ public class MiruBitsAggregationTest {
     }
 
     void test(String functionName, long tt, long tf, long ft, long ff, BF bf) {
-        assertEquals("T " + functionName + " T expect " + ((tt == 0) ? false : true), tt, bf.bf(~0, ~0));
-        assertEquals("T " + functionName + " F expect " + ((tf == 0) ? false : true), tf, bf.bf(~0, 0));
-        assertEquals("F " + functionName + " T expect " + ((ft == 0) ? false : true), ft, bf.bf(0, ~0));
-        assertEquals("F " + functionName + " F expect " + ((ff == 0) ? false : true), ff, bf.bf(0, 0));
+        assertEquals("T " + functionName + " T expect " + (tt != 0), tt, bf.bf(~0, ~0));
+        assertEquals("T " + functionName + " F expect " + (tf != 0), tf, bf.bf(~0, 0));
+        assertEquals("F " + functionName + " T expect " + (ft != 0), ft, bf.bf(0, ~0));
+        assertEquals("F " + functionName + " F expect " + (ff != 0), ff, bf.bf(0, 0));
         System.out.println(functionName + " Passed");
     }
 
