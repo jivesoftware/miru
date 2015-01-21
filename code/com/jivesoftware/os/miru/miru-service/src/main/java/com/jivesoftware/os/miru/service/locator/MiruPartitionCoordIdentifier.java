@@ -7,6 +7,8 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
  */
 public class MiruPartitionCoordIdentifier implements MiruResourcePartitionIdentifier {
 
+    private static final int NUM_HASH_DIRS = 1024;
+
     private final MiruPartitionCoord coord;
 
     public MiruPartitionCoordIdentifier(MiruPartitionCoord coord) {
@@ -15,7 +17,8 @@ public class MiruPartitionCoordIdentifier implements MiruResourcePartitionIdenti
 
     @Override
     public String[] getParts() {
-        return new String[] { coord.tenantId.toString(), coord.partitionId.toString() };
+        String hashDir = "tenantHash-" + String.valueOf(Math.abs(coord.tenantId.hashCode()) % NUM_HASH_DIRS);
+        return new String[] { hashDir, coord.tenantId.toString(), coord.partitionId.toString() };
     }
 
     @Override
