@@ -79,7 +79,9 @@ public class TrendingInjectable {
                 new DistinctsAnswerMerger(request.query.timeRange),
                 DistinctsAnswer.EMPTY_RESULTS,
                 request.logLevel);
-            List<MiruTermId> distinctTerms = distinctsResponse.answer.results;
+            List<MiruTermId> distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
+                ? distinctsResponse.answer.results
+                : Collections.<MiruTermId>emptyList();
 
             Map<String, MiruFilter> constraintsFilters = Maps.newHashMap();
             for (MiruTermId termId : distinctTerms) {
@@ -106,7 +108,9 @@ public class TrendingInjectable {
                 AnalyticsAnswer.EMPTY_RESULTS,
                 request.logLevel);
 
-            Map<String, AnalyticsAnswer.Waveform> waveforms = analyticsResponse.answer.waveforms;
+            Map<String, AnalyticsAnswer.Waveform> waveforms = (analyticsResponse.answer != null && analyticsResponse.answer.waveforms != null)
+                ? analyticsResponse.answer.waveforms
+                : Collections.<String, AnalyticsAnswer.Waveform>emptyMap();
             MinMaxPriorityQueue<Trendy> trendies = MinMaxPriorityQueue
                 .maximumSize(request.query.desiredNumberOfDistincts)
                 .create();

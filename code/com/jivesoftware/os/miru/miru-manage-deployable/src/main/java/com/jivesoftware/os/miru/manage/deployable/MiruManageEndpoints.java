@@ -307,7 +307,7 @@ public class MiruManageEndpoints {
     public Response rebuildTenantPartition(@FormParam("host") String host,
         @FormParam("port") int port,
         @FormParam("tenantId") String tenantId,
-        @FormParam("int") int partitionId) {
+        @FormParam("partitionId") int partitionId) {
         try {
             rebalanceDirector.rebuildTenantPartition(new MiruHost(host, port),
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),

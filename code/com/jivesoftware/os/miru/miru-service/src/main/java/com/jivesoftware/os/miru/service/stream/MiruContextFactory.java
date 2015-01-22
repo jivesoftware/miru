@@ -205,21 +205,18 @@ public class MiruContextFactory {
             readTrackingWALReader,
             activityInternExtern,
             streamLocks,
-            Optional.of(chunkStores),
-            Optional.<MiruResourcePartitionIdentifier>absent());
+            chunkStores);
     }
 
     public <BM> MiruContext<BM> copy(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM> from, MiruBackingStorage toStorage) throws Exception {
 
+        ChunkStore[] fromChunks = from.chunkStores;
         ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord);
-        if (from.chunkStores.isPresent()) {
-            ChunkStore[] fromChunks = from.chunkStores.get();
-            if (fromChunks.length != toChunks.length) {
-                throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
-            }
-            for (int i = 0; i < fromChunks.length; i++) {
-                fromChunks[i].copyTo(toChunks[i]);
-            }
+        if (fromChunks.length != toChunks.length) {
+            throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
+        }
+        for (int i = 0; i < fromChunks.length; i++) {
+            fromChunks[i].copyTo(toChunks[i]);
         }
         return allocate(bitmaps, coord, toChunks);
     }
@@ -252,17 +249,12 @@ public class MiruContextFactory {
         context.unreadTrackingIndex.close();
         context.inboxIndex.close();
 
-        if (context.chunkStores.isPresent()) {
-            getAllocator(storage).close(context.chunkStores.get());
-        }
+        getAllocator(storage).close(context.chunkStores);
     }
 
     public <BM> void releaseCaches(MiruContext<BM> context, MiruBackingStorage storage) throws IOException {
-        if (context.chunkStores.isPresent()) {
-            ChunkStore[] chunkStores = context.chunkStores.get();
-            for (ChunkStore chunkStore : chunkStores) {
-                chunkStore.rollCache();
-            }
+        for (ChunkStore chunkStore : context.chunkStores) {
+            chunkStore.rollCache();
         }
     }
 
