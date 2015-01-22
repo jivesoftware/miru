@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.reco.plugins;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -48,9 +49,17 @@ import org.testng.annotations.Test;
  */
 public class MiruCollaborativeFilterNGTest {
 
-    MiruSchema miruSchema = new MiruSchema(
-        new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
-        new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
+    MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm)
+        })
+        .setPairedLatest(ImmutableMap.of(
+            "user", Arrays.asList("doc"),
+            "doc", Arrays.asList("user")))
+        .setBloom(ImmutableMap.of(
+            "doc", Arrays.asList("user")))
+        .build();
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);

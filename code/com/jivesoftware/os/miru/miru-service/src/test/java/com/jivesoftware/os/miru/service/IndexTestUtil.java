@@ -48,7 +48,10 @@ public class IndexTestUtil {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(1024);
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(1024);
 
-        MiruSchemaProvider schemaProvider = new SingleSchemaProvider(new MiruSchema(DefaultMiruSchemaDefinition.FIELDS));
+        MiruSchemaProvider schemaProvider = new SingleSchemaProvider(
+            new MiruSchema.Builder("test", 1)
+                .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+                .build());
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(), Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
 
@@ -68,9 +71,9 @@ public class IndexTestUtil {
             activityInternExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
             1024,

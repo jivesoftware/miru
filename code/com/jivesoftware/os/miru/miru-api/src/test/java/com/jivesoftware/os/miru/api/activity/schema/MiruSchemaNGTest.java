@@ -23,7 +23,6 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 /**
- *
  * @author jonathan.colt
  */
 public class MiruSchemaNGTest {
@@ -31,7 +30,10 @@ public class MiruSchemaNGTest {
     @Test
     public void testSerDes() throws IOException {
 
-        MiruSchema write = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS, DefaultMiruSchemaDefinition.PROPERTIES);
+        MiruSchema write = new MiruSchema.Builder("test", 1)
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .setPropertyDefinitions(DefaultMiruSchemaDefinition.PROPERTIES)
+            .build();
         ObjectMapper objectMapper = new ObjectMapper();
         File schemaFile = File.createTempFile("ser", "des");
         objectMapper.writeValue(schemaFile, write);

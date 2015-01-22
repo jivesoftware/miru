@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
@@ -47,8 +48,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
-
-import static com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition.FIELDS;
 
 public class MiruServiceBenchmarkTest {
 
@@ -138,7 +137,9 @@ public class MiruServiceBenchmarkTest {
         MiruHost miruHost = new MiruHost("logicalName", 1_234);
         MiruTenantId tenantId = new MiruTenantId("benchmark".getBytes());
         MiruPartitionId partitionId = MiruPartitionId.of(0);
-        MiruSchema schema = new MiruSchema(FIELDS);
+        MiruSchema schema = new MiruSchema.Builder("test", 1)
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .build();
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenantId, partitionId, miruHost, schema, MiruBackingStorage.memory,
             new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());

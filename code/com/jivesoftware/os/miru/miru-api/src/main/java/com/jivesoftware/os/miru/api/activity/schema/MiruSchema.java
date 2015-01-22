@@ -4,8 +4,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -16,40 +17,78 @@ public class MiruSchema {
 
     public static final String RESERVED_AGGREGATE = "~";
 
-    private final Map<String, Integer> fieldNameToId;
-    private final Map<String, Integer> propNameToId;
+    // Serializable fields
+    private final String name;
+    private final long version;
     private final MiruFieldDefinition[] fieldDefinitions;
     private final MiruPropertyDefinition[] propertyDefinitions;
-    private final List<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions;
-    private final List<MiruFieldDefinition>[] fieldToBloomFieldDefinitions;
+    private final Map<String, List<String>> pairedLatest;
+    private final Map<String, List<String>> bloom;
 
-    private ImmutableList<Integer> fieldIds; // lazy initialized
-    private ImmutableList<MiruFieldDefinition> fieldsWithLatest; // lazy initialized
-    private ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest; // lazy initialized
-    private ImmutableList<MiruFieldDefinition> fieldsWithBloom; // lazy initialized
+    // Lookup fields
+    private final Map<String, Integer> fieldNameToId;
+    private final Map<String, Integer> propNameToId;
+    private final ImmutableList<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions;
+    private final ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions;
 
-    public MiruSchema(MiruFieldDefinition... fieldDefinitions) {
-        this(fieldDefinitions, new MiruPropertyDefinition[0]);
+    // Traversal fields
+    private final ImmutableList<Integer> fieldIds;
+    private final ImmutableList<MiruFieldDefinition> fieldsWithLatest;
+    private final ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest;
+    private final ImmutableList<MiruFieldDefinition> fieldsWithBloom;
+
+    MiruSchema(String name,
+        long version,
+        MiruFieldDefinition[] fieldDefinitions,
+        MiruPropertyDefinition[] propertyDefinitions,
+        Map<String, List<String>> pairedLatest,
+        Map<String, List<String>> bloom,
+        ImmutableMap<String, Integer> fieldNameToId,
+        ImmutableMap<String, Integer> propNameToId,
+        ImmutableList<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions,
+        ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions,
+        ImmutableList<Integer> fieldIds,
+        ImmutableList<MiruFieldDefinition> fieldsWithLatest,
+        ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest,
+        ImmutableList<MiruFieldDefinition> fieldsWithBloom) {
+        this.name = name;
+        this.version = version;
+        this.fieldDefinitions = fieldDefinitions;
+        this.propertyDefinitions = propertyDefinitions;
+        this.pairedLatest = pairedLatest;
+        this.bloom = bloom;
+        this.fieldNameToId = fieldNameToId;
+        this.propNameToId = propNameToId;
+        this.fieldToPairedLatestFieldDefinitions = fieldToPairedLatestFieldDefinitions;
+        this.fieldToBloomFieldDefinitions = fieldToBloomFieldDefinitions;
+        this.fieldIds = fieldIds;
+        this.fieldsWithLatest = fieldsWithLatest;
+        this.fieldsWithPairedLatest = fieldsWithPairedLatest;
+        this.fieldsWithBloom = fieldsWithBloom;
     }
 
     @JsonCreator
-    public MiruSchema(@JsonProperty("fieldDefinitions") MiruFieldDefinition[] fieldDefinitions,
-        @JsonProperty("propertyDefinitions") MiruPropertyDefinition[] propertyDefinitions) {
+    public static MiruSchema fromJson(@JsonProperty("name") String name,
+        @JsonProperty("version") long version,
+        @JsonProperty("fieldDefinitions") MiruFieldDefinition[] fieldDefinitions,
+        @JsonProperty("propertyDefinitions") MiruPropertyDefinition[] propertyDefinitions,
+        @JsonProperty("pairedLatest") Map<String, List<String>> pairedLatest,
+        @JsonProperty("bloom") Map<String, List<String>> bloom) {
 
-        this.fieldDefinitions = fieldDefinitions;
-        this.fieldNameToId = Maps.newHashMap();
-        for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-            fieldNameToId.put(fieldDefinition.name, fieldDefinition.fieldId);
-        }
+        return new Builder(name, version)
+            .setFieldDefinitions(fieldDefinitions)
+            .setPropertyDefinitions(propertyDefinitions)
+            .setPairedLatest(pairedLatest)
+            .setBloom(bloom)
+            .build();
+    }
 
-        this.propertyDefinitions = propertyDefinitions;
-        this.propNameToId = Maps.newHashMap();
-        for (MiruPropertyDefinition propertyDefinition : propertyDefinitions) {
-            propNameToId.put(propertyDefinition.name, propertyDefinition.propId);
-        }
+    public String getName() {
+        return name;
+    }
 
-        this.fieldToPairedLatestFieldDefinitions = new List[fieldDefinitions.length];
-        this.fieldToBloomFieldDefinitions = new List[fieldDefinitions.length];
+    public long getVersion() {
+        return version;
     }
 
     public MiruFieldDefinition[] getFieldDefinitions() {
@@ -58,6 +97,14 @@ public class MiruSchema {
 
     public MiruPropertyDefinition[] getPropertyDefinitions() {
         return propertyDefinitions;
+    }
+
+    public Map<String, List<String>> getPairedLatest() {
+        return pairedLatest;
+    }
+
+    public Map<String, List<String>> getBloom() {
+        return bloom;
     }
 
     @JsonIgnore
@@ -100,91 +147,139 @@ public class MiruSchema {
 
     @JsonIgnore
     public ImmutableList<Integer> getFieldIds() {
-        if (fieldIds == null) {
-            ImmutableList.Builder<Integer> builder = ImmutableList.builder();
-            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-                builder.add(fieldDefinition.fieldId);
-            }
-            fieldIds = builder.build();
-        }
         return fieldIds;
     }
 
     @JsonIgnore
     public ImmutableList<MiruFieldDefinition> getFieldsWithLatest() {
-        if (fieldsWithLatest == null) {
-            ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
-            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-                if (fieldDefinition.indexLatest) {
-                    builder.add(fieldDefinition);
-                }
-            }
-            fieldsWithLatest = builder.build();
-        }
         return fieldsWithLatest;
     }
 
     @JsonIgnore
     public ImmutableList<MiruFieldDefinition> getFieldsWithPairedLatest() {
-        if (fieldsWithPairedLatest == null) {
-            ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
-            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-                if (!fieldDefinition.pairedLatestFieldNames.isEmpty()) {
-                    builder.add(fieldDefinition);
-                }
-            }
-            fieldsWithPairedLatest = builder.build();
-        }
         return fieldsWithPairedLatest;
     }
 
     @JsonIgnore
     public ImmutableList<MiruFieldDefinition> getFieldsWithBloom() {
-        if (fieldsWithBloom == null) {
-            ImmutableList.Builder<MiruFieldDefinition> builder = ImmutableList.builder();
-            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-                if (!fieldDefinition.bloomFieldNames.isEmpty()) {
-                    builder.add(fieldDefinition);
-                }
-            }
-            fieldsWithBloom = builder.build();
-        }
         return fieldsWithBloom;
     }
 
     @JsonIgnore
     public List<MiruFieldDefinition> getPairedLatestFieldDefinitions(int fieldId) {
-        List<MiruFieldDefinition> pairedLatestFieldDefinitions = fieldToPairedLatestFieldDefinitions[fieldId];
-        if (pairedLatestFieldDefinitions == null) {
-            pairedLatestFieldDefinitions = Lists.newArrayList();
-            List<String> pairedLatestFieldNames = fieldDefinitions[fieldId].pairedLatestFieldNames;
-            Lists.newArrayListWithCapacity(pairedLatestFieldNames.size());
-            for (String pairedLatestFieldName : pairedLatestFieldNames) {
-                int pairedLatestFieldId = getFieldId(pairedLatestFieldName);
-                if (pairedLatestFieldId >= 0) {
-                    pairedLatestFieldDefinitions.add(fieldDefinitions[pairedLatestFieldId]);
-                }
-            }
-            fieldToPairedLatestFieldDefinitions[fieldId] = pairedLatestFieldDefinitions;
-        }
-        return pairedLatestFieldDefinitions;
+        return fieldToPairedLatestFieldDefinitions[fieldId];
     }
 
     @JsonIgnore
     public List<MiruFieldDefinition> getBloomFieldDefinitions(int fieldId) {
-        List<MiruFieldDefinition> bloomFieldDefinitions = fieldToBloomFieldDefinitions[fieldId];
-        if (bloomFieldDefinitions == null) {
-            bloomFieldDefinitions = Lists.newArrayList();
-            List<String> bloomFieldNames = fieldDefinitions[fieldId].bloomFieldNames;
-            Lists.newArrayListWithCapacity(bloomFieldNames.size());
-            for (String bloomFieldName : bloomFieldNames) {
-                int bloomFieldId = getFieldId(bloomFieldName);
-                if (bloomFieldId >= 0) {
-                    bloomFieldDefinitions.add(fieldDefinitions[bloomFieldId]);
-                }
-            }
-            fieldToBloomFieldDefinitions[fieldId] = bloomFieldDefinitions;
+        return fieldToBloomFieldDefinitions[fieldId];
+    }
+
+    public static class Builder {
+
+        private static final MiruFieldDefinition[] NO_FIELDS = new MiruFieldDefinition[0];
+        private static final MiruPropertyDefinition[] NO_PROPERTIES = new MiruPropertyDefinition[0];
+        private static final Map<String, List<String>> NO_PAIRED_LATEST = Collections.emptyMap();
+        private static final Map<String, List<String>> NO_BLOOM = Collections.emptyMap();
+
+        private final String name;
+        private final long version;
+
+        private MiruFieldDefinition[] fieldDefinitions = NO_FIELDS;
+        private MiruPropertyDefinition[] propertyDefinitions = NO_PROPERTIES;
+        private Map<String, List<String>> pairedLatest = NO_PAIRED_LATEST;
+        private Map<String, List<String>> bloom = NO_BLOOM;
+
+        public Builder(String name, long version) {
+            this.name = name;
+            this.version = version;
         }
-        return bloomFieldDefinitions;
+
+        public Builder setFieldDefinitions(MiruFieldDefinition[] fieldDefinitions) {
+            this.fieldDefinitions = fieldDefinitions;
+            return this;
+        }
+
+        public Builder setPropertyDefinitions(MiruPropertyDefinition[] propertyDefinitions) {
+            this.propertyDefinitions = propertyDefinitions;
+            return this;
+        }
+
+        public Builder setPairedLatest(Map<String, List<String>> pairedLatest) {
+            this.pairedLatest = pairedLatest;
+            return this;
+        }
+
+        public Builder setBloom(Map<String, List<String>> bloom) {
+            this.bloom = bloom;
+            return this;
+        }
+
+        public MiruSchema build() {
+            int largestFieldId = -1;
+            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+                largestFieldId = Math.max(largestFieldId, fieldDefinition.fieldId);
+            }
+
+            Map<String, Integer> fieldNameToId = Maps.newHashMap();
+            Map<String, Integer> propNameToId = Maps.newHashMap();
+            ImmutableList<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions = new ImmutableList[fieldDefinitions.length];
+            ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions = new ImmutableList[fieldDefinitions.length];
+
+            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+                fieldNameToId.put(fieldDefinition.name, fieldDefinition.fieldId);
+            }
+
+            for (MiruPropertyDefinition propertyDefinition : propertyDefinitions) {
+                propNameToId.put(propertyDefinition.name, propertyDefinition.propId);
+            }
+
+            ImmutableList.Builder<Integer> fieldIdsBuilder = new ImmutableList.Builder<>();
+            ImmutableList.Builder<MiruFieldDefinition> fieldsWithLatestBuilder = new ImmutableList.Builder<>();
+            ImmutableList.Builder<MiruFieldDefinition> fieldsWithPairedLatestBuilder = new ImmutableList.Builder<>();
+            ImmutableList.Builder<MiruFieldDefinition> fieldsWithBloomBuilder = new ImmutableList.Builder<>();
+
+            for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+                fieldIdsBuilder.add(fieldDefinition.fieldId);
+
+                if (fieldDefinition.type == MiruFieldDefinition.Type.singleTermIndexLatest) {
+                    fieldsWithLatestBuilder.add(fieldDefinition);
+                }
+
+                ImmutableList.Builder<MiruFieldDefinition> pairedLatestFieldDefinitionsBuilder = new ImmutableList.Builder<>();
+                List<String> pairedLatestFieldNames = pairedLatest.get(fieldDefinition.name);
+                if (pairedLatestFieldNames != null) {
+                    fieldsWithPairedLatestBuilder.add(fieldDefinition);
+                    for (String pairedLatestFieldName : pairedLatestFieldNames) {
+                        MiruFieldDefinition pairedLatestFieldDefinition = fieldDefinitions[fieldNameToId.get(pairedLatestFieldName)];
+                        if (pairedLatestFieldDefinition.type == MiruFieldDefinition.Type.multiTerm) {
+                            throw new IllegalArgumentException("Paired latest cannot be applied to multi-term field: " +
+                                fieldDefinition.name + " -> " + pairedLatestFieldName);
+                        }
+                        pairedLatestFieldDefinitionsBuilder.add(pairedLatestFieldDefinition);
+                    }
+                }
+                fieldToPairedLatestFieldDefinitions[fieldDefinition.fieldId] = pairedLatestFieldDefinitionsBuilder.build();
+
+                ImmutableList.Builder<MiruFieldDefinition> bloomFieldDefinitionsBuilder = new ImmutableList.Builder<>();
+                List<String> bloomFieldNames = bloom.get(fieldDefinition.name);
+                if (bloomFieldNames != null) {
+                    fieldsWithBloomBuilder.add(fieldDefinition);
+                    for (String bloomFieldName : bloomFieldNames) {
+                        bloomFieldDefinitionsBuilder.add(fieldDefinitions[fieldNameToId.get(bloomFieldName)]);
+                    }
+                }
+                fieldToBloomFieldDefinitions[fieldDefinition.fieldId] = bloomFieldDefinitionsBuilder.build();
+            }
+
+            ImmutableList<Integer> fieldIds = fieldIdsBuilder.build();
+            ImmutableList<MiruFieldDefinition> fieldsWithLatest = fieldsWithLatestBuilder.build();
+            ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest = fieldsWithPairedLatestBuilder.build();
+            ImmutableList<MiruFieldDefinition> fieldsWithBloom = fieldsWithBloomBuilder.build();
+
+            return new MiruSchema(name, version, fieldDefinitions, propertyDefinitions, pairedLatest, bloom, ImmutableMap.copyOf(fieldNameToId),
+                ImmutableMap.copyOf(propNameToId), fieldToPairedLatestFieldDefinitions, fieldToBloomFieldDefinitions,
+                fieldIds, fieldsWithLatest, fieldsWithPairedLatest, fieldsWithBloom);
+        }
     }
 }

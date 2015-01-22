@@ -1,53 +1,37 @@
 package com.jivesoftware.os.miru.api.activity.schema;
 
-import com.google.common.collect.Lists;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import com.jivesoftware.os.miru.api.property.MiruPropertyName;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DefaultMiruSchemaDefinition {
 
-    public static final MiruFieldDefinition[] FIELDS;
+    public static final MiruFieldDefinition[] FIELDS = new MiruFieldDefinition[] {
+        new MiruFieldDefinition(0, MiruFieldName.OBJECT_ID.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(1, MiruFieldName.VIEW_CLASS_NAME.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(2, MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), Type.singleTerm),
 
-    static {
-        AtomicInteger fieldIndex = new AtomicInteger();
-        List<MiruFieldDefinition> fieldDefinitions = Lists.newArrayList();
+        new MiruFieldDefinition(3, MiruFieldName.META_CLASS_NAME.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(4, MiruFieldName.META_ID.getFieldName(), Type.singleTerm),
 
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.OBJECT_ID.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.VIEW_CLASS_NAME.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName()));
+        new MiruFieldDefinition(5, MiruFieldName.PARTICIPANT_IDS.getFieldName(), Type.singleTerm),
 
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.META_CLASS_NAME.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.META_ID.getFieldName()));
+        new MiruFieldDefinition(6, MiruFieldName.ACTIVITY_PARENT.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(7, MiruFieldName.CONTAINER_ID.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(8, MiruFieldName.AUTHOR_ID.getFieldName(), Type.singleTerm),
 
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.PARTICIPANT_IDS.getFieldName()));
+        new MiruFieldDefinition(9, MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(10, MiruFieldName.MENTIONED_USER_IDS.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(11, MiruFieldName.TAG_IDS.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(12, MiruFieldName.TAGS.getFieldName(), Type.singleTerm),
 
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.ACTIVITY_PARENT.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.CONTAINER_ID.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.AUTHOR_ID.getFieldName()));
+        new MiruFieldDefinition(13, MiruFieldName.STATUS.getFieldName(), Type.singleTerm),
+        new MiruFieldDefinition(14, MiruFieldName.CONTAINER_IDS.getFieldName(), Type.singleTerm)
+    };
 
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.MENTIONED_USER_IDS.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.TAG_IDS.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.TAGS.getFieldName()));
-
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.STATUS.getFieldName()));
-        fieldDefinitions.add(new MiruFieldDefinition(fieldIndex.getAndIncrement(), MiruFieldName.CONTAINER_IDS.getFieldName()));
-
-        FIELDS = fieldDefinitions.toArray(new MiruFieldDefinition[fieldDefinitions.size()]);
-    }
-
-    public static final MiruPropertyDefinition[] PROPERTIES;
-
-    static {
-        AtomicInteger propIndex = new AtomicInteger();
-        List<MiruPropertyDefinition> propDefinitions = Lists.newArrayList();
-
-        propDefinitions.add(new MiruPropertyDefinition(propIndex.getAndIncrement(), MiruPropertyName.READ_STREAMIDS.getPropertyName()));
-
-        PROPERTIES = propDefinitions.toArray(new MiruPropertyDefinition[propDefinitions.size()]);
-    }
+    public static final MiruPropertyDefinition[] PROPERTIES = new MiruPropertyDefinition[] {
+        new MiruPropertyDefinition(0, MiruPropertyName.READ_STREAMIDS.getPropertyName())
+    };
 
     private DefaultMiruSchemaDefinition() {
     }

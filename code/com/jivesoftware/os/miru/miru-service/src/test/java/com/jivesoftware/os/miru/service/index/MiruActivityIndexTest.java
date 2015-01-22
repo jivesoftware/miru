@@ -25,7 +25,9 @@ import static org.testng.Assert.fail;
 
 public class MiruActivityIndexTest {
 
-    MiruSchema schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
+    MiruSchema schema = new MiruSchema.Builder("test", 1)
+        .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+        .build();
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {

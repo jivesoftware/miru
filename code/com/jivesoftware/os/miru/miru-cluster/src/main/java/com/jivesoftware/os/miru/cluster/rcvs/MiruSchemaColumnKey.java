@@ -3,37 +3,22 @@ package com.jivesoftware.os.miru.cluster.rcvs;
 /**
 *
 */
-public enum MiruSchemaColumnKey {
+public class MiruSchemaColumnKey implements Comparable<MiruSchemaColumnKey> {
 
-    // explicit index is safer than ordinal and marshalls shorter than name
-    //TODO consider compacting index to a byte
-    schema(0);
+    public final String name;
+    public final long version;
 
-    private final static MiruSchemaColumnKey[] states;
+    public MiruSchemaColumnKey(String name, long version) {
+        this.name = name;
+        this.version = version;
+    }
 
-    static {
-        MiruSchemaColumnKey[] values = values();
-        int maxIndex = -1;
-        for (MiruSchemaColumnKey value : values) {
-            maxIndex = Math.max(maxIndex, value.index);
+    @Override
+    public int compareTo(MiruSchemaColumnKey o) {
+        int c = -Long.compare(version, o.version); // reverse version order
+        if (c == 0) {
+            c = name.compareTo(o.name);
         }
-        states = new MiruSchemaColumnKey[maxIndex + 1];
-        for (MiruSchemaColumnKey value : values) {
-            states[value.index] = value;
-        }
-    }
-
-    private final int index;
-
-    private MiruSchemaColumnKey(int index) {
-        this.index = index;
-    }
-
-    public int getIndex() {
-        return index;
-    }
-
-    public static MiruSchemaColumnKey fromIndex(int index) {
-        return states[index];
+        return c;
     }
 }

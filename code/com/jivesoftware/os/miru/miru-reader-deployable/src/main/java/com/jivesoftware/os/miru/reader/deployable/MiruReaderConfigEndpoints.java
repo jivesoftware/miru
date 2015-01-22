@@ -79,9 +79,7 @@ public class MiruReaderConfigEndpoints {
         try {
             registrySchemaProvider.register(
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                schema,
-                //TODO client specified version?
-                System.currentTimeMillis());
+                schema);
             return responseHelper.jsonResponse("Success");
         } catch (Throwable t) {
             log.error("Failed to set schema for tenant {}", new Object[] { tenantId }, t);

@@ -58,7 +58,7 @@ public class MiruFieldTest {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(2);
         MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1");
+        MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1", MiruFieldDefinition.Type.singleTerm);
 
         MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> hybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);

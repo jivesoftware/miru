@@ -92,13 +92,15 @@ public class MiruStreamServiceNGTest {
     public void setUpMethod() throws Exception {
 
         this.fieldDefinitions = new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "verb"),
-            new MiruFieldDefinition(1, "container"),
-            new MiruFieldDefinition(2, "target"),
-            new MiruFieldDefinition(3, "tag"),
-            new MiruFieldDefinition(4, "author")
+            new MiruFieldDefinition(0, "verb", MiruFieldDefinition.Type.singleTerm),
+            new MiruFieldDefinition(1, "container", MiruFieldDefinition.Type.singleTerm),
+            new MiruFieldDefinition(2, "target", MiruFieldDefinition.Type.singleTerm),
+            new MiruFieldDefinition(3, "tag", MiruFieldDefinition.Type.singleTerm),
+            new MiruFieldDefinition(4, "author", MiruFieldDefinition.Type.singleTerm)
         };
-        this.miruSchema = new MiruSchema(fieldDefinitions);
+        this.miruSchema = new MiruSchema.Builder("test", 1)
+            .setFieldDefinitions(fieldDefinitions)
+            .build();
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());

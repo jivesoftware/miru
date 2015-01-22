@@ -68,7 +68,9 @@ public class InMemoryEndpointsTest {
 
         MiruBackingStorage desiredStorage = MiruBackingStorage.memory;
         MiruHost miruHost = new MiruHost("logicalName", 1_234);
-        MiruSchema schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
+        MiruSchema schema = new MiruSchema.Builder("test", 1)
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .build();
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenantId, partitionId, miruHost, schema, desiredStorage,
             new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());

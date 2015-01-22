@@ -146,9 +146,9 @@ public class MiruContextFactory {
             KeyedFilerStore[] indexes = new KeyedFilerStore[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 int fieldId = fieldDefinition.fieldId;
-                if (fieldType == MiruFieldType.latest && !fieldDefinition.indexLatest
-                    || fieldType == MiruFieldType.pairedLatest && fieldDefinition.pairedLatestFieldNames.isEmpty()
-                    || fieldType == MiruFieldType.bloom && fieldDefinition.bloomFieldNames.isEmpty()) {
+                if (fieldType == MiruFieldType.latest && fieldDefinition.type != MiruFieldDefinition.Type.singleTermIndexLatest
+                    || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
+                    || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
                     indexes[fieldId] = null;
                 } else {
                     indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId));

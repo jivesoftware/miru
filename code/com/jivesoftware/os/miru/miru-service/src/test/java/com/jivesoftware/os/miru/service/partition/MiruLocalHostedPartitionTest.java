@@ -143,7 +143,9 @@ public class MiruLocalHostedPartitionTest {
         RowColumnValueStoreImpl<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity> activitySipWAL =
             new RowColumnValueStoreImpl<>();
 
-        schema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
+        schema = new MiruSchema.Builder("test", 1)
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .build();
         schemaProvider = mock(MiruSchemaProvider.class);
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenReturn(schema);
 

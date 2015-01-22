@@ -42,9 +42,12 @@ import org.testng.annotations.Test;
  */
 public class MiruDistinctsNGTest {
 
-    MiruSchema miruSchema = new MiruSchema(
-        new MiruFieldDefinition(0, "user"),
-        new MiruFieldDefinition(1, "doc"));
+    MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm)
+        })
+        .build();
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);

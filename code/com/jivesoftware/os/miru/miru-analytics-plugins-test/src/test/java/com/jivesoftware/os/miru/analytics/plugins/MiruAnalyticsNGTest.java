@@ -44,9 +44,17 @@ import org.testng.annotations.Test;
  */
 public class MiruAnalyticsNGTest {
 
-    MiruSchema miruSchema = new MiruSchema(
-        new MiruFieldDefinition(0, "user", false, ImmutableList.of("doc"), ImmutableList.<String>of()),
-        new MiruFieldDefinition(1, "doc", false, ImmutableList.of("user"), ImmutableList.of("user")));
+    MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm)
+        })
+        .setPairedLatest(ImmutableMap.of(
+            "user", Arrays.asList("doc"),
+            "doc", Arrays.asList("user")))
+        .setBloom(ImmutableMap.of(
+            "doc", Arrays.asList("user")))
+        .build();
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);

@@ -59,7 +59,9 @@ public class MiruTestCollectionBackedFeatureSupplier implements MiruTestFeatureS
         this.random = random;
         this.publicContainerPercent = publicContainerPercent;
 
-        this.miruSchema = new MiruSchema(DefaultMiruSchemaDefinition.FIELDS);
+        this.miruSchema = new MiruSchema.Builder("test", 1)
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .build();
         this.miruTenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
         this.tenantId = new TenantId(tenant);
 
