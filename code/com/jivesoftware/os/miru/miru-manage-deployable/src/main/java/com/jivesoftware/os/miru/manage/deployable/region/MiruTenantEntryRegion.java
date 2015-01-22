@@ -2,8 +2,6 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
@@ -17,6 +15,8 @@ import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionBean;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionCoordBean;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;

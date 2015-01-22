@@ -24,8 +24,8 @@
             <artifactId>http-client-rest</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>logger</artifactId>
+            <groupId>com.jivesoftware.os.mlogger</groupId>
+            <artifactId>core</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.ws.rs</groupId>

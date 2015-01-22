@@ -2,13 +2,13 @@ package com.jivesoftware.os.miru.reader;
 
 import com.google.common.base.Charsets;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.jive.utils.logger.EndPointMetrics;
-import com.jivesoftware.os.jive.utils.logger.MetricLogger;
-import com.jivesoftware.os.jive.utils.logger.MetricLoggerFactory;
 import com.jivesoftware.os.miru.api.MiruConfigReader;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.config.PartitionsForTenantResult;
+import com.jivesoftware.os.mlogger.core.EndPointMetrics;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
 
 public class MiruHttpClientConfigReader implements MiruConfigReader {
