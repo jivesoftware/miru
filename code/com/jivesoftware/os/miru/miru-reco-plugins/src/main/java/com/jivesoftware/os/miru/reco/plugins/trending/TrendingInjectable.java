@@ -39,6 +39,7 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswerMerger;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuestion;
 import com.jivesoftware.os.miru.reco.trending.WaveformRegression;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -68,12 +69,21 @@ public class TrendingInjectable {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
+            MiruFilter distinctsFilter;
+            if (request.query.aggregateCountWithTypeField != null) {
+                distinctsFilter = new MiruFilter(MiruFilterOperation.and,
+                    Optional.of(Arrays.asList(
+                        new MiruFieldFilter(MiruFieldType.primary, request.query.aggregateCountWithTypeField, request.query.allowedTypes))),
+                    Optional.<List<MiruFilter>>absent());
+            } else {
+                distinctsFilter = MiruFilter.NO_FILTER;
+            }
             MiruResponse<DistinctsAnswer> distinctsResponse = miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>("trendingDistincts", new DistinctsQuestion(distincts, new MiruRequest<>(
                     request.tenantId,
                     request.actorId,
                     request.authzExpression,
-                    new DistinctsQuery(request.query.timeRange, request.query.constraintsFilter, request.query.aggregateCountAroundField),
+                    new DistinctsQuery(request.query.timeRange, distinctsFilter, request.query.aggregateCountAroundField),
                     request.logLevel))),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(request.query.timeRange),

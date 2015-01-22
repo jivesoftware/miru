@@ -6,6 +6,7 @@ import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  *
@@ -16,21 +17,27 @@ public class TrendingQuery implements Serializable {
     public final int divideTimeRangeIntoNSegments;
     public final MiruFilter constraintsFilter;
     public final String aggregateCountAroundField;
+    public final String aggregateCountWithTypeField;
+    public final List<String> allowedTypes;
     public final int desiredNumberOfDistincts;
 
     @JsonCreator
     public TrendingQuery(
-            @JsonProperty("timeRange") MiruTimeRange timeRange,
-            @JsonProperty("divideTimeRangeIntoNSegments") int divideTimeRangeIntoNSegments,
-            @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
-            @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
-            @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
+        @JsonProperty("timeRange") MiruTimeRange timeRange,
+        @JsonProperty("divideTimeRangeIntoNSegments") int divideTimeRangeIntoNSegments,
+        @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
+        @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
+        @JsonProperty("aggregateCountWithTypeField") String aggregateCountWithTypeField,
+        @JsonProperty("allowedTypes") List<String> allowedTypes,
+        @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
         Preconditions.checkArgument(!MiruTimeRange.ALL_TIME.equals(timeRange), "Requires an explicit time range");
         this.timeRange = Preconditions.checkNotNull(timeRange);
         Preconditions.checkArgument(divideTimeRangeIntoNSegments > 0, "Segments must be at least 1");
         this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
+        this.aggregateCountWithTypeField = aggregateCountWithTypeField;
+        this.allowedTypes = allowedTypes;
         Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
@@ -38,11 +45,13 @@ public class TrendingQuery implements Serializable {
     @Override
     public String toString() {
         return "TrendingQuery{" +
-                "timeRange=" + timeRange +
-                ", divideTimeRangeIntoNSegments=" + divideTimeRangeIntoNSegments +
-                ", constraintsFilter=" + constraintsFilter +
-                ", aggregateCountAroundField='" + aggregateCountAroundField + '\'' +
-                ", desiredNumberOfDistincts=" + desiredNumberOfDistincts +
-                '}';
+            "timeRange=" + timeRange +
+            ", divideTimeRangeIntoNSegments=" + divideTimeRangeIntoNSegments +
+            ", constraintsFilter=" + constraintsFilter +
+            ", aggregateCountAroundField='" + aggregateCountAroundField + '\'' +
+            ", aggregateCountWithTypeField='" + aggregateCountWithTypeField + '\'' +
+            ", allowedTypes=" + allowedTypes +
+            ", desiredNumberOfDistincts=" + desiredNumberOfDistincts +
+            '}';
     }
 }

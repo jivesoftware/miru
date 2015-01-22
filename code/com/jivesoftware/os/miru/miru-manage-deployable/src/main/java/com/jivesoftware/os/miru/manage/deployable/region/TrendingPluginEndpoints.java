@@ -1,8 +1,10 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion.TrendingPluginRegionInput;
+import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -36,7 +38,17 @@ public class TrendingPluginEndpoints {
         @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("field") @DefaultValue("authors") String field,
+        @QueryParam("typeField") @DefaultValue("") String typeField,
+        @QueryParam("types") @DefaultValue("") String types,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
+
+        List<String> typesList = Lists.newArrayList();
+        if (types != null) {
+            for (String type : types.split(",")) {
+                typesList.add(type.trim());
+            }
+        }
+
         String rendered = miruManageService.renderPlugin(trendingPluginRegion,
             Optional.of(new TrendingPluginRegionInput(
                 tenantId,
@@ -44,6 +56,8 @@ public class TrendingPluginEndpoints {
                 toHoursAgo,
                 buckets,
                 field,
+                typeField,
+                typesList,
                 logLevel)));
         return Response.ok(rendered).build();
     }

@@ -68,14 +68,25 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
         final int toHoursAgo;
         final int buckets;
         final String field;
+        final String typeField;
+        final List<String> types;
         final String logLevel;
 
-        public TrendingPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String field, String logLevel) {
+        public TrendingPluginRegionInput(String tenant,
+            int fromHoursAgo,
+            int toHoursAgo,
+            int buckets,
+            String field,
+            String typeField,
+            List<String> types,
+            String logLevel) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
             this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
             this.field = field;
+            this.typeField = typeField;
+            this.types = types;
             this.logLevel = logLevel;
         }
     }
@@ -95,6 +106,8 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 data.put("toHoursAgo", String.valueOf(toHoursAgo));
                 data.put("buckets", String.valueOf(input.buckets));
                 data.put("field", input.field);
+                data.put("typeField", input.typeField);
+                data.put("types", input.types.toString());
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -125,6 +138,8 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                         input.buckets,
                                         constraintsFilter,
                                         input.field,
+                                        input.typeField.isEmpty() ? null : input.typeField,
+                                        input.types,
                                         100),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
