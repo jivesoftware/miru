@@ -3,8 +3,8 @@ package com.jivesoftware.os.miru.service.stream;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 
 /**
-*
-*/
+ *
+ */
 class IdAndTerm {
     final int id;
     final MiruTermId term;

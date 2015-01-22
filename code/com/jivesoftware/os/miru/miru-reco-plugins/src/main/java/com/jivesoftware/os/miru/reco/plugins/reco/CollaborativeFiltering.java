@@ -56,21 +56,27 @@ public class CollaborativeFiltering {
 
         log.debug("Get collaborative filtering for answer={} query={}", answer, request);
 
+        // answer: latest time I touched distinct parents <field1>
+
+        // contributors: all latest distinct users <field2> for the latest distinct parents <field1>
         BM contributors = possibleContributors(bitmaps, requestContext, request, answer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "contributors {}.", bitmaps.cardinality(contributors));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "contributors bitmap {}", contributors);
         }
 
+        // otherContributors: all *except me* of the latest distinct users <field2> against distinct parents <field1>
         BM otherContributors = bitmaps.create();
         bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
-        // at this point we have all activity for all my viewed documents in 'contributors', and all activity not my own in 'otherContributors'.
+
+        // contributorHeap: ranked users <field2> based on cardinality of interactions with distinct parents <field1>
         MinMaxPriorityQueue<MiruTermCount> contributorHeap = rankContributors(bitmaps, request, requestContext, otherContributors);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "not my self {}.", bitmaps.cardinality(otherContributors));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "not my self bitmap {}", otherContributors);
         }
 
+        // contributions: all latest distinct parents <field3> for each distinct user <field2>
         BM contributions = contributions(bitmaps, contributorHeap, requestContext, request.query);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "contributions {}.", bitmaps.cardinality(contributions));
@@ -81,8 +87,10 @@ public class CollaborativeFiltering {
         final BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
         final List<BloomIndex.Mights<MiruTermCount>> wantBits = bloomIndex.wantBits(mostLike);
         // TODO handle authz
+
+        // othersContributions: all latest distinct parents <field3> *except what I've touched* for each distinct user <field2>
         BM othersContributions = bitmaps.create();
-        bitmaps.andNot(othersContributions, contributions, Collections.singletonList(contributors)); // remove activity for my viewed documents
+        bitmaps.andNot(othersContributions, contributions, Collections.singletonList(contributors));
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "othersContributions {}.", bitmaps.cardinality(othersContributions));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "othersContributions bitmap {}", othersContributions);
@@ -206,7 +214,8 @@ public class CollaborativeFiltering {
                 return -Long.compare(o1.count, o2.count); // minus to reverse :)
             }
         }).maximumSize(request.query.desiredNumberOfDistincts).create();
-        // feeds us all recommended documents
+
+        // feeds us all recommended parents <field3>
         aggregateUtil.stream(bitmaps, request.tenantId, requestContext, join2, Optional.<BM>absent(), fieldId, request.query.retrieveFieldName3,
             new CallbackStream<MiruTermCount>() {
                 @Override

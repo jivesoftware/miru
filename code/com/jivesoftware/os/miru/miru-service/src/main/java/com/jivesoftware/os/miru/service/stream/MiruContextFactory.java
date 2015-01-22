@@ -205,7 +205,7 @@ public class MiruContextFactory {
             readTrackingWALReader,
             activityInternExtern,
             streamLocks,
-            Optional.<ChunkStore[]>absent(),
+            Optional.of(chunkStores),
             Optional.<MiruResourcePartitionIdentifier>absent());
     }
 

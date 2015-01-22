@@ -33,13 +33,14 @@ public class MiruActivityInternExtern {
     }
 
     /**
-     It is expected that activiyAndIds.size() == internedActivityAndIds.size();
-     @param activiyAndIds
-     @param fromOffset
-     @param length
-     @param internedActivityAndIds
-     @param schema
-     @return
+     * It is expected that activiyAndIds.size() == internedActivityAndIds.size();
+     *
+     * @param activiyAndIds
+     * @param fromOffset
+     * @param length
+     * @param internedActivityAndIds
+     * @param schema
+     * @return
      */
     public void intern(List<MiruActivityAndId<MiruActivity>> activiyAndIds,
         int fromOffset,
@@ -51,12 +52,16 @@ public class MiruActivityInternExtern {
             MiruActivityAndId<MiruActivity> activiyAndId = activiyAndIds.get(i);
 
             MiruActivity activity = activiyAndId.activity;
-            internedActivityAndIds.set(i, new MiruActivityAndId<>(new MiruInternalActivity.Builder(schema, tenantInterner
-                .intern(activity.tenantId), activity.time, internAuthz(activity.authz), activity.version)
-                .putFieldsValues(internFields(activity.fieldsValues, schema))
-                .putPropsValues(internProps(activity.propsValues, schema))
-                .build(), activiyAndId.id));
-
+            internedActivityAndIds.set(i, new MiruActivityAndId<>(
+                new MiruInternalActivity.Builder(schema,
+                    tenantInterner.intern(activity.tenantId),
+                    activity.time,
+                    internAuthz(activity.authz),
+                    activity.version)
+                    .putFieldsValues(internFields(activity.fieldsValues, schema))
+                    .putPropsValues(internProps(activity.propsValues, schema))
+                    .build(),
+                activiyAndId.id));
         }
     }
 
