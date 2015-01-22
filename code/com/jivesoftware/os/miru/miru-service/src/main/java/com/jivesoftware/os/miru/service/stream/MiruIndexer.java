@@ -264,17 +264,22 @@ public class MiruIndexer<BM> {
         ExecutorService indexExecutor)
         throws Exception {
 
-        List<Integer> fieldIds = context.schema.getFieldIds();
-        List<Future<List<FieldValuesWork>>> workFutures = new ArrayList<>(fieldIds.size());
-        for (final int fieldId : fieldIds) {
+        MiruFieldDefinition[] fieldDefinitions = context.schema.getFieldDefinitions();
+        List<Future<List<FieldValuesWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
+        for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
             workFutures.add(indexExecutor.submit(new Callable<List<FieldValuesWork>>() {
                 @Override
                 public List<FieldValuesWork> call() throws Exception {
                     Map<MiruTermId, TIntList> fieldWork = Maps.newHashMap();
                     for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                         MiruInternalActivity activity = internalActivityAndId.activity;
-                        if (activity.fieldsValues[fieldId] != null) {
-                            for (MiruTermId term : activity.fieldsValues[fieldId]) {
+                        MiruTermId[] fieldValues = activity.fieldsValues[fieldDefinition.fieldId];
+                        if (fieldValues != null) {
+                            if (fieldValues.length > 1 && fieldDefinition.type != MiruFieldDefinition.Type.multiTerm) {
+                                log.warn("Activity {} field {} type {} != {} but was given {} terms", internalActivityAndId.activity.time,
+                                    fieldDefinition.name, fieldDefinition.type, MiruFieldDefinition.Type.multiTerm, fieldValues.length);
+                            }
+                            for (MiruTermId term : fieldValues) {
                                 TIntList ids = fieldWork.get(term);
                                 if (ids == null) {
                                     ids = new TIntArrayList();
