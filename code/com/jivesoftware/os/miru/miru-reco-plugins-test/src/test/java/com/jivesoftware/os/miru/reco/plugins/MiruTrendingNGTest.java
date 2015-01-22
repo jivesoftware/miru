@@ -173,8 +173,6 @@ public class MiruTrendingNGTest {
                     32,
                     filter,
                     "doc",
-                    null,
-                    Collections.<String>emptyList(),
                     10),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);

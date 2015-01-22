@@ -20,7 +20,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -63,8 +62,6 @@ public class MiruTestRecoQueryDistributor {
                     Optional.of(Arrays.asList(viewClassesFilter())),
                     Optional.<List<MiruFilter>>absent()),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
-                null,
-                Collections.<String>emptyList(),
                 numResultsGlobalTrendy),
             MiruSolutionLogLevel.NONE);
     }
