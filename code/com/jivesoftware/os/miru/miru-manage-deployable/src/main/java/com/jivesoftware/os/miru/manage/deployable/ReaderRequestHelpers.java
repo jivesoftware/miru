@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -49,9 +48,7 @@ public class ReaderRequestHelpers {
     public List<RequestHelper> get(Optional<MiruHost> excludingHost) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
         for (MiruClusterRegistry.HostHeartbeat heartbeat : clusterRegistry.getAllHosts()) {
-            if (heartbeat.heartbeat > (System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1))) {
-                hosts.add(heartbeat.host);
-            }
+            hosts.add(heartbeat.host);
         }
         if (excludingHost.isPresent()) {
             hosts.remove(excludingHost.get());

@@ -73,7 +73,7 @@ public class TrendingInjectable {
                     request.tenantId,
                     request.actorId,
                     request.authzExpression,
-                    new DistinctsQuery(request.query.timeRange, request.query.constraintsFilter, request.query.aggregateCountAroundField),
+                    new DistinctsQuery(request.query.timeRange, request.query.aggregateCountAroundField),
                     request.logLevel))),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(request.query.timeRange),
@@ -110,12 +110,10 @@ public class TrendingInjectable {
             MinMaxPriorityQueue<Trendy> trendies = MinMaxPriorityQueue
                 .maximumSize(request.query.desiredNumberOfDistincts)
                 .create();
-            if (waveforms != null) {
-                for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
-                    long[] waveform = entry.getValue().waveform;
-                    SimpleRegression regression = WaveformRegression.getRegression(waveform);
-                    trendies.add(new Trendy(entry.getKey().getBytes(Charsets.UTF_8), regression.getSlope(), waveform));
-                }
+            for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
+                long[] waveform = entry.getValue().waveform;
+                SimpleRegression regression = WaveformRegression.getRegression(waveform);
+                trendies.add(new Trendy(entry.getKey().getBytes(Charsets.UTF_8), regression.getSlope(), waveform));
             }
 
             List<Trendy> sortedTrendies = Lists.newArrayList(trendies);
