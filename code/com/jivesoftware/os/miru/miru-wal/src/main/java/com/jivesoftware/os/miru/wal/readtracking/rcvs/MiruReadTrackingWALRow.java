@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.wal.readtracking.hbase;
+package com.jivesoftware.os.miru.wal.readtracking.rcvs;
 
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;

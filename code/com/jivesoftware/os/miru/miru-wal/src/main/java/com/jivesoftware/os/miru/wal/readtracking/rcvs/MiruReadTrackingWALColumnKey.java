@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.wal.readtracking.hbase;
+package com.jivesoftware.os.miru.wal.readtracking.rcvs;
 
 public class MiruReadTrackingWALColumnKey {
     private final long eventId;

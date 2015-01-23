@@ -20,7 +20,7 @@ import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
-import com.jivesoftware.os.rcvs.inmemory.RowColumnValueStoreImpl;
+import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -46,13 +46,13 @@ public class MiruRCVSClusterRegistryTest {
     public void setUp() throws Exception {
         registry = new MiruRCVSClusterRegistry(
             timestamper,
-            new RowColumnValueStoreImpl<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue>(),
-            new RowColumnValueStoreImpl<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte>(),
-            new RowColumnValueStoreImpl<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte>(),
-            new RowColumnValueStoreImpl<MiruTenantId, MiruPartitionId, Long, MiruHost>(),
-            new RowColumnValueStoreImpl<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue>(),
-            new RowColumnValueStoreImpl<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long>(),
-            new RowColumnValueStoreImpl<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId>(),
+            new InMemoryRowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue>(),
+            new InMemoryRowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte>(),
+            new InMemoryRowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte>(),
+            new InMemoryRowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost>(),
+            new InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue>(),
+            new InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long>(),
+            new InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId>(),
             numReplicas,
             TimeUnit.HOURS.toMillis(1));
         replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), registry);

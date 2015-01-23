@@ -47,7 +47,7 @@ import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
-import com.jivesoftware.os.rcvs.inmemory.InMemorySetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -96,8 +96,8 @@ public class MiruPluginTestBootstrap {
 
         ObjectMapper mapper = new ObjectMapper();
 
-        InMemorySetOfSortedMapsImplInitializer inMemorySetOfSortedMapsImplInitializer = new InMemorySetOfSortedMapsImplInitializer();
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
+        InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(
             new CurrentTimestamper(),
             registryStore.getHostsRegistry(),
@@ -119,7 +119,7 @@ public class MiruPluginTestBootstrap {
         clusterRegistry.updateTopology(new MiruPartitionCoord(tenantId, partitionId, miruHost), Optional.<MiruPartitionCoordInfo>absent(),
             Optional.of(System.currentTimeMillis()));
 
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemorySetOfSortedMapsImplInitializer, mapper);
+        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
         if (!partitionedActivities.isEmpty()) {
             MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
             activityWALWriter.write(tenantId, partitionedActivities);

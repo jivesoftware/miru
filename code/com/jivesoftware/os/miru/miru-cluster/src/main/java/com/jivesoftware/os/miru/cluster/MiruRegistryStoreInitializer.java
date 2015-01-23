@@ -26,7 +26,7 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnValue;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
 import com.jivesoftware.os.rcvs.api.DefaultRowColumnValueStoreMarshaller;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
-import com.jivesoftware.os.rcvs.api.SetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.marshall.id.SaltingDelegatingMarshaller;
 import com.jivesoftware.os.rcvs.marshall.primatives.IntegerTypeMarshaller;
@@ -76,12 +76,12 @@ import com.jivesoftware.os.rcvs.marshall.primatives.LongTypeMarshaller;
 public class MiruRegistryStoreInitializer {
 
     public MiruRegistryStore initialize(String tableNameSpace,
-        SetOfSortedMapsImplInitializer<? extends Exception> setOfSortedMapsImplInitializer,
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer,
         ObjectMapper objectMapper) throws Exception {
 
         // Miru Hosts Registry
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.reg.h", // Host
                 "h",
@@ -96,7 +96,7 @@ public class MiruRegistryStoreInitializer {
 
         // Miru Expected Tenants Registry
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.reg.h", // Host
                 "e",
@@ -111,7 +111,7 @@ public class MiruRegistryStoreInitializer {
 
         // Miru Expected Tenant Partitions Registry
         RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.reg.th", // Tenant+Host
                 "e",
@@ -124,7 +124,7 @@ public class MiruRegistryStoreInitializer {
             );
 
         // Miru Replica Registry
-        RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry = setOfSortedMapsImplInitializer.initialize(
+        RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry = rowColumnValueStoreInitializer.initialize(
             tableNameSpace,
             "miru.reg.tp", // Tenant+Partition
             "r",
@@ -139,7 +139,7 @@ public class MiruRegistryStoreInitializer {
 
         // Miru Topology Registry
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.reg.t", // Tenant
                 "t",
@@ -154,7 +154,7 @@ public class MiruRegistryStoreInitializer {
 
         // Miru Config Registry
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.reg.t", // Tenant
                 "c",
@@ -169,7 +169,7 @@ public class MiruRegistryStoreInitializer {
 
         // Miru Writer + PartitionId Registry
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.reg.t", // Tenant
                 "p",
@@ -184,7 +184,7 @@ public class MiruRegistryStoreInitializer {
 
         // Miru Schema Registry
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema, ? extends Exception> schemaRegistry =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.reg.t", // Tenant
                 "s",
@@ -199,7 +199,7 @@ public class MiruRegistryStoreInitializer {
 
         // Miru Activity Lookup Table
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.lookup.t", // Tenant
                 "a",

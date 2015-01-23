@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.wal.readtracking.hbase;
+package com.jivesoftware.os.miru.wal.readtracking.rcvs;
 
 import com.google.common.base.Optional;
 
@@ -6,7 +6,7 @@ public class MiruReadTrackingSipWALColumnKey {
     private final long sipId;
     private final Optional<Long> eventId;
 
-    /** Used for reading from HBase with a ColumnRangeFilter */
+    /** Used for reading from RCVS with a ColumnRangeFilter */
     public MiruReadTrackingSipWALColumnKey(long sipId) {
         this.sipId = sipId;
         this.eventId = Optional.absent();

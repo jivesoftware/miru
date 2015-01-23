@@ -5,7 +5,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
-import com.jivesoftware.os.rcvs.inmemory.RowColumnValueStoreImpl;
+import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -29,7 +29,7 @@ public class RegistrySchemaProviderTest {
             })
             .build();
 
-        RowColumnValueStoreImpl<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema> schemaRegistry = new RowColumnValueStoreImpl<>();
+        InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema> schemaRegistry = new InMemoryRowColumnValueStore<>();
         RegistrySchemaProvider schemaProvider = new RegistrySchemaProvider(schemaRegistry, 10);
 
         schemaProvider.register(tenantId1, schema1);
@@ -64,7 +64,7 @@ public class RegistrySchemaProviderTest {
             })
             .build();
 
-        RowColumnValueStoreImpl<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema> schemaRegistry = new RowColumnValueStoreImpl<>();
+        InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema> schemaRegistry = new InMemoryRowColumnValueStore<>();
         RegistrySchemaProvider schemaProvider = new RegistrySchemaProvider(schemaRegistry, 10);
 
         schemaProvider.register(tenantId1, schema1);

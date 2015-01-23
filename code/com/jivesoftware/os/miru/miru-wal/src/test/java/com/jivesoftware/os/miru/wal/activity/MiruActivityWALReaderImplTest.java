@@ -6,11 +6,11 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
-import com.jivesoftware.os.rcvs.inmemory.RowColumnValueStoreImpl;
+import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -29,9 +29,9 @@ public class MiruActivityWALReaderImplTest {
         final long startingTimestamp = 1000;
 
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL =
-            new RowColumnValueStoreImpl<>();
+            new InMemoryRowColumnValueStore<>();
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
-            new RowColumnValueStoreImpl<>();
+            new InMemoryRowColumnValueStore<>();
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
@@ -65,9 +65,9 @@ public class MiruActivityWALReaderImplTest {
         final long startingTimestamp = 1000;
 
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL =
-            new RowColumnValueStoreImpl<>();
+            new InMemoryRowColumnValueStore<>();
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
-            new RowColumnValueStoreImpl<>();
+            new InMemoryRowColumnValueStore<>();
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);

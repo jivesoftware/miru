@@ -5,9 +5,9 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriterImpl.CollisionId;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriterImpl.ColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriterImpl.ColumnValue;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingSipWALColumnKey;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALColumnKey;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALRow;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.wal.activity.hbase;
+package com.jivesoftware.os.miru.wal.activity.rcvs;
 
 import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;

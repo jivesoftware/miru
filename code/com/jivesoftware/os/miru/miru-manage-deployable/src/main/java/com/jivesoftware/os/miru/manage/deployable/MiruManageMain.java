@@ -39,15 +39,15 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
-import com.jivesoftware.os.rcvs.api.SetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
-import com.jivesoftware.os.rcvs.hbase.HBaseSetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.rcvs.hbase.HBaseSetOfSortedMapsImplInitializer.HBaseSetOfSortedMapsConfig;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
 import java.util.List;
+import org.merlin.config.Config;
 
 public class MiruManageMain {
 
@@ -71,17 +71,22 @@ public class MiruManageMain {
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class); //config(DevInstanceConfig.class);
 
-        HBaseSetOfSortedMapsConfig hbaseConfig = deployable.config(HBaseSetOfSortedMapsConfig.class);
-        //hbaseConfig.setHBaseZookeeperQuorum("soa-prime-data1.phx1.jivehosted.com");
-        SetOfSortedMapsImplInitializer<Exception> setOfSortedMapsInitializer = new HBaseSetOfSortedMapsImplInitializer(hbaseConfig);
+        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+
+        RowColumnValueStoreProvider<? extends Config, ? extends Exception> rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+            .newInstance();
+        Config rowColumnValueStoreConfig = deployable.config(rowColumnValueStoreProvider.getConfigurationClass());
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider.getInitializerClass()
+            .getConstructor(rowColumnValueStoreConfig.getClass())
+            .newInstance(rowColumnValueStoreConfig);
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
 
         MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
-        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
+            .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
             registryStore.getHostsRegistry(),
             registryStore.getExpectedTenantsRegistry(),
@@ -93,7 +98,7 @@ public class MiruManageMain {
             registryConfig.getDefaultNumberOfReplicas(),
             registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
-        MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
+        MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());

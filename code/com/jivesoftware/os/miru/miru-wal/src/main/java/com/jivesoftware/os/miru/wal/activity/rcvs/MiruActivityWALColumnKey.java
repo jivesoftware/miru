@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.wal.activity.hbase;
+package com.jivesoftware.os.miru.wal.activity.rcvs;
 
 public class MiruActivityWALColumnKey implements Comparable<MiruActivityWALColumnKey> {
     private final byte sort;

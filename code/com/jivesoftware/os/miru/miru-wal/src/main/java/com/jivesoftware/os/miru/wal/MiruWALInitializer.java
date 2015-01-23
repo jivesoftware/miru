@@ -5,21 +5,21 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.marshaller.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruTenantIdMarshaller;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKeyMarshaller;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKeyMarshaller;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRowMarshaller;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKey;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingSipWALColumnKeyMarshaller;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKey;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALColumnKeyMarshaller;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRowMarshaller;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKeyMarshaller;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRowMarshaller;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingSipWALColumnKey;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingSipWALColumnKeyMarshaller;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALColumnKey;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALColumnKeyMarshaller;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALRow;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALRowMarshaller;
 import com.jivesoftware.os.rcvs.api.DefaultRowColumnValueStoreMarshaller;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
-import com.jivesoftware.os.rcvs.api.SetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.marshall.id.SaltingDelegatingMarshaller;
 import com.jivesoftware.os.rcvs.marshall.primatives.LongTypeMarshaller;
@@ -27,13 +27,13 @@ import com.jivesoftware.os.rcvs.marshall.primatives.LongTypeMarshaller;
 public class MiruWALInitializer {
 
     public MiruWAL initialize(String tableNameSpace,
-        SetOfSortedMapsImplInitializer<? extends Exception> setOfSortedMapsImplInitializer,
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer,
         ObjectMapper objectMapper)
         throws Exception {
 
         // Miru ActivityWAL
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity,
-            ? extends Exception> activityWAL = setOfSortedMapsImplInitializer.initialize(
+            ? extends Exception> activityWAL = rowColumnValueStoreInitializer.initialize(
             tableNameSpace,
             "miru.activity.wal", "a", new String[] { "s" }, new DefaultRowColumnValueStoreMarshaller<>(
                 new MiruTenantIdMarshaller(),
@@ -44,7 +44,7 @@ public class MiruWALInitializer {
 
         // Miru ActivitySipWAL
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity,
-            ? extends Exception> activitySipWAL = setOfSortedMapsImplInitializer.initialize(
+            ? extends Exception> activitySipWAL = rowColumnValueStoreInitializer.initialize(
             tableNameSpace,
             "miru.activity.wal", "s", new DefaultRowColumnValueStoreMarshaller<>(
                 new MiruTenantIdMarshaller(),
@@ -55,7 +55,7 @@ public class MiruWALInitializer {
 
         // Miru ReadTrackingWAL
         RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity,
-            ? extends Exception> readTrackingWAL = setOfSortedMapsImplInitializer.initialize(
+            ? extends Exception> readTrackingWAL = rowColumnValueStoreInitializer.initialize(
             tableNameSpace,
             "miru.readtracking.wal", "r", new String[] { "s" }, new DefaultRowColumnValueStoreMarshaller<>(
                 new MiruTenantIdMarshaller(),
@@ -66,7 +66,7 @@ public class MiruWALInitializer {
 
         // Miru ReadTrackingSipWAL
         RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL =
-            setOfSortedMapsImplInitializer.initialize(
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.readtracking.wal", "s", new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruTenantIdMarshaller(),

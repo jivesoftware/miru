@@ -63,7 +63,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final Collection<ScheduledFuture<?>> futures;
     private final ScheduledExecutorService scheduledRebuildExecutor;
     private final ScheduledExecutorService scheduledSipExecutor;
-    private final ExecutorService hbaseRebuildExecutors;
+    private final ExecutorService rebuildWALExecutors;
     private final ExecutorService sipIndexExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
@@ -113,7 +113,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         ScheduledExecutorService scheduledBootstrapExecutor,
         ScheduledExecutorService scheduledRebuildExecutor,
         ScheduledExecutorService scheduledSipExecutor,
-        ExecutorService hbaseRebuildExecutors,
+        ExecutorService rebuildWALExecutors,
         ExecutorService sipIndexExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
@@ -136,7 +136,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.rebuildDirector = rebuildDirector;
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
         this.scheduledSipExecutor = scheduledSipExecutor;
-        this.hbaseRebuildExecutors = hbaseRebuildExecutors;
+        this.rebuildWALExecutors = rebuildWALExecutors;
         this.sipIndexExecutor = sipIndexExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
@@ -510,7 +510,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             final ExecutorService rebuildIndexExecutor = Executors.newFixedThreadPool(rebuildIndexerThreads,
                 new NamedThreadFactory(Thread.currentThread().getThreadGroup(), "rebuild_index_" + coord.tenantId + "_" + coord.partitionId));
 
-            hbaseRebuildExecutors.submit(new Runnable() {
+            rebuildWALExecutors.submit(new Runnable() {
 
                 @Override
                 public void run() {
@@ -607,13 +607,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 } catch (Exception e) {
                     log.error("Failure during rebuild index for {}", coord);
                     rebuilding.set(false);
-                    // clear the queue to free up hbase_rebuild thread
+                    // clear the queue to free up rebuild_wal_consumer thread
                     while (streaming.get()) {
                         queue.clear();
                         try {
                             Thread.sleep(10);
                         } catch (InterruptedException ie) {
-                            log.error("Prevent interruption, we have to clear the hbase rebuild thread");
+                            log.error("Preventing thread interruption, we have to clear the WAL rebuild thread");
                         }
                     }
                     throw e;

@@ -34,10 +34,9 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import com.jivesoftware.os.rcvs.api.SetOfSortedMapsImplInitializer;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
-import com.jivesoftware.os.rcvs.hbase.HBaseSetOfSortedMapsImplInitializer;
-import com.jivesoftware.os.rcvs.hbase.HBaseSetOfSortedMapsImplInitializer.HBaseSetOfSortedMapsConfig;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import org.merlin.config.Config;
@@ -76,16 +75,22 @@ public class MiruWriterMain {
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
-        HBaseSetOfSortedMapsConfig hbaseConfig = deployable.config(HBaseSetOfSortedMapsConfig.class);
-        SetOfSortedMapsImplInitializer<Exception> setOfSortedMapsInitializer = new HBaseSetOfSortedMapsImplInitializer(hbaseConfig);
+        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+
+        RowColumnValueStoreProvider<? extends Config, ? extends Exception> rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+            .newInstance();
+        Config rowColumnValueStoreConfig = deployable.config(rowColumnValueStoreProvider.getConfigurationClass());
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider.getInitializerClass()
+            .getConstructor(rowColumnValueStoreConfig.getClass())
+            .newInstance(rowColumnValueStoreConfig);
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
 
         MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
-        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
+            .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
             registryStore.getHostsRegistry(),
             registryStore.getExpectedTenantsRegistry(),
@@ -101,7 +106,7 @@ public class MiruWriterMain {
             new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
             clusterRegistry);
 
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), setOfSortedMapsInitializer, mapper);
+        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
         MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig,
             clusterRegistry,

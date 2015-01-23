@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.wal.readtracking.hbase;
+package com.jivesoftware.os.miru.wal.readtracking.rcvs;
 
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;

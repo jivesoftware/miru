@@ -43,12 +43,12 @@ import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivitySipWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.hbase.MiruActivityWALRow;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
-import com.jivesoftware.os.rcvs.inmemory.RowColumnValueStoreImpl;
+import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -138,10 +138,10 @@ public class MiruLocalHostedPartitionTest {
         when(config.getPartitionNumberOfChunkStores()).thenReturn(1);
         when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
 
-        RowColumnValueStoreImpl<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity> activityWAL =
-            new RowColumnValueStoreImpl<>();
-        RowColumnValueStoreImpl<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity> activitySipWAL =
-            new RowColumnValueStoreImpl<>();
+        InMemoryRowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity> activityWAL =
+            new InMemoryRowColumnValueStore<>();
+        InMemoryRowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity> activitySipWAL =
+            new InMemoryRowColumnValueStore<>();
 
         schema = new MiruSchema.Builder("test", 1)
             .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
@@ -189,13 +189,13 @@ public class MiruLocalHostedPartitionTest {
 
         clusterRegistry = new MiruRCVSClusterRegistry(
             timestamper,
-            new RowColumnValueStoreImpl(),
-            new RowColumnValueStoreImpl(),
-            new RowColumnValueStoreImpl(),
-            new RowColumnValueStoreImpl(),
-            new RowColumnValueStoreImpl(),
-            new RowColumnValueStoreImpl(),
-            new RowColumnValueStoreImpl(),
+            new InMemoryRowColumnValueStore(),
+            new InMemoryRowColumnValueStore(),
+            new InMemoryRowColumnValueStore(),
+            new InMemoryRowColumnValueStore(),
+            new InMemoryRowColumnValueStore(),
+            new InMemoryRowColumnValueStore(),
+            new InMemoryRowColumnValueStore(),
             3,
             TimeUnit.HOURS.toMillis(1));
 

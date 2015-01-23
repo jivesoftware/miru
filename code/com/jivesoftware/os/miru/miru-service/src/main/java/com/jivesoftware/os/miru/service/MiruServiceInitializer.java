@@ -95,7 +95,7 @@ public class MiruServiceInitializer {
             new NamedThreadFactory(threadGroup, "solver"));
 
         final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
-            new NamedThreadFactory(threadGroup, "hbase_rebuild_consumer"));
+            new NamedThreadFactory(threadGroup, "rebuild_wal_consumer"));
 
         final ExecutorService sipIndexExecutor = Executors.newFixedThreadPool(config.getSipIndexerThreads(),
             new NamedThreadFactory(threadGroup, "sip_index"));

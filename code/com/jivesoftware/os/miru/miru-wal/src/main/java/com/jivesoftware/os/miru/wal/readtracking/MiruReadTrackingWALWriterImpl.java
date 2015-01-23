@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.wal.readtracking;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.wal.readtracking.hbase.MiruReadTrackingWALRow;
+import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALRow;
 import com.jivesoftware.os.rcvs.api.MultiAdd;
 import com.jivesoftware.os.rcvs.api.RowColumValueTimestampAdd;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
