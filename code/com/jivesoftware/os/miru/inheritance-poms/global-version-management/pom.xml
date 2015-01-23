@@ -10,11 +10,11 @@
     <artifactId>global-version-management</artifactId>
     <packaging>pom</packaging>
     <properties>
-        <mlogger-version>0.4</mlogger-version>
-        <jive-utils-version>0.63</jive-utils-version>
+        <mlogger-version>0.5</mlogger-version>
+        <jive-utils-version>0.64</jive-utils-version>
         <rcvs-version>0.6</rcvs-version>
         <filer-version>0.51</filer-version>
-        <upena-version>0.23</upena-version>
+        <upena-version>0.24</upena-version>
     </properties>
     <dependencyManagement>
         <dependencies>
