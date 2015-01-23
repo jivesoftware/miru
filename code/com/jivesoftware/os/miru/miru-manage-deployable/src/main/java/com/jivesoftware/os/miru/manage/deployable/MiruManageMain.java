@@ -47,7 +47,6 @@ import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
 import java.util.List;
-import org.merlin.config.Config;
 
 public class MiruManageMain {
 
@@ -73,12 +72,11 @@ public class MiruManageMain {
 
         MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
-        RowColumnValueStoreProvider<? extends Config, ? extends Exception> rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+        RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
             .newInstance();
-        Config rowColumnValueStoreConfig = deployable.config(rowColumnValueStoreProvider.getConfigurationClass());
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider.getInitializerClass()
-            .getConstructor(rowColumnValueStoreConfig.getClass())
-            .newInstance(rowColumnValueStoreConfig);
+        @SuppressWarnings("unchecked")
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());

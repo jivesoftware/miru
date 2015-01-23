@@ -7,7 +7,7 @@ import org.merlin.config.Config;
 /**
  *
  */
-public class ThrowsExceptionRowColumnValueStoreProvider implements RowColumnValueStoreProvider<Config, Exception> {
+public class ThrowsExceptionRowColumnValueStoreProvider implements RowColumnValueStoreProvider<Config, RowColumnValueStoreInitializer<Exception>, Exception> {
 
     @Override
     public Class<Config> getConfigurationClass() {
@@ -15,7 +15,7 @@ public class ThrowsExceptionRowColumnValueStoreProvider implements RowColumnValu
     }
 
     @Override
-    public Class<? extends RowColumnValueStoreInitializer<Exception>> getInitializerClass() {
+    public RowColumnValueStoreInitializer<Exception> create(Config config) {
         throw new UnsupportedOperationException("RowColumnValueStoreProvider is not configured");
     }
 }
