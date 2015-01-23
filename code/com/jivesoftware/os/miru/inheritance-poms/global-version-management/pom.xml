@@ -12,7 +12,7 @@
     <properties>
         <mlogger-version>0.4</mlogger-version>
         <jive-utils-version>0.63</jive-utils-version>
-        <rcvs-version>0.8</rcvs-version>
+        <rcvs-version>0.6</rcvs-version>
         <filer-version>0.51</filer-version>
         <upena-version>0.23</upena-version>
     </properties>
