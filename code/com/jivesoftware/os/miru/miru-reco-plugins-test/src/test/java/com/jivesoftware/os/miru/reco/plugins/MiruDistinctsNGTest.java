@@ -44,8 +44,11 @@ public class MiruDistinctsNGTest {
 
     MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
         .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm),
-            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm)
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(2, "obj", MiruFieldDefinition.Type.multiTerm,
+                new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' ')),
+            new MiruFieldDefinition(3, "text", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
         })
         .build();
 
@@ -71,7 +74,7 @@ public class MiruDistinctsNGTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new DistinctsInjectable(miruProvider, new Distincts());
+        this.injectable = new DistinctsInjectable(miruProvider, new Distincts(miruProvider.getTermComposer()));
     }
 
     @Test(enabled = true)
@@ -84,62 +87,70 @@ public class MiruDistinctsNGTest {
         AtomicLong time = new AtomicLong(snowflakeIdPacker.pack(System.currentTimeMillis(), 0, 0) - timespan);
         System.out.println("Building activities....");
 
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0",
-            Arrays.asList("1", "2"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "1",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0",
-            Arrays.asList("2", "3"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "2",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0",
-            Arrays.asList("3", "4"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "2",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0",
-            Arrays.asList("4", "5"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "3",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0",
-            Arrays.asList("9"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "3",
             walIndex.incrementAndGet())));
-
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank",
-            Arrays.asList("1", "2"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "4",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank",
-            Arrays.asList("2", "3"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "4",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank",
-            Arrays.asList("3", "4"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "5",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank",
-            Arrays.asList("4", "5"),
-            walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank",
-            Arrays.asList("10"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob0", "9",
             walIndex.incrementAndGet())));
 
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane",
-            Arrays.asList("2", "3"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "1",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane",
-            Arrays.asList("3", "4"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "2",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane",
-            Arrays.asList("4", "5"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "2",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane",
-            Arrays.asList("11"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "3",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "3",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "5",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "frank", "10",
             walIndex.incrementAndGet())));
 
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz",
-            Arrays.asList("3", "4"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "2",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz",
-            Arrays.asList("4", "5"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "3",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz",
-            Arrays.asList("12"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "3",
             walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz",
-            Arrays.asList("12"),
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "5",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "jane", "11",
+            walIndex.incrementAndGet())));
+
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "3",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "4",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "5",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "12",
+            walIndex.incrementAndGet())));
+        service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "liz", "12",
             walIndex.incrementAndGet())));
 
         System.out.println("Running queries...");
@@ -152,7 +163,7 @@ public class MiruDistinctsNGTest {
             MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
-                new DistinctsQuery(timeRange, fieldDefinition.name),
+                new DistinctsQuery(timeRange, fieldDefinition.name, null),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
 
@@ -160,6 +171,78 @@ public class MiruDistinctsNGTest {
             System.out.println("Took:" + (System.currentTimeMillis() - s));
         }
 
+    }
+
+    @Test(enabled = true)
+    public void rangeTest() throws Exception {
+
+        SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
+        long timespan = numberOfBuckets * snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(3), 0, 0);
+        long intervalPerActivity = timespan / numberOfActivities;
+        AtomicLong time = new AtomicLong(snowflakeIdPacker.pack(System.currentTimeMillis(), 0, 0) - timespan);
+        System.out.println("Building activities....");
+
+        for (int i = 0; i < 100; i++) {
+            service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob",
+                String.valueOf(i + 1), walIndex.incrementAndGet())));
+        }
+
+        System.out.println("Running queries...");
+
+        long lastTime = time.get();
+        final MiruTimeRange timeRange = new MiruTimeRange(lastTime - timespan, lastTime);
+        MiruFieldDefinition fieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("obj"));
+
+        long s = System.currentTimeMillis();
+        MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+            new MiruActorId(new Id(1)),
+            MiruAuthzExpression.NOT_PROVIDED,
+            new DistinctsQuery(timeRange, fieldDefinition.name, Arrays.asList("0", "1", "2", "3", "8", "-1")),
+            MiruSolutionLogLevel.INFO);
+        MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
+        for (String result : distinctsResult.answer.results) {
+            System.out.println("Got " + result);
+        }
+
+        System.out.println("distinctsResult:" + distinctsResult);
+        System.out.println("count:" + distinctsResult.answer.results.size());
+        System.out.println("Took:" + (System.currentTimeMillis() - s));
+    }
+
+    @Test(enabled = true)
+    public void wildcardTest() throws Exception {
+
+        SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
+        long timespan = numberOfBuckets * snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(3), 0, 0);
+        long intervalPerActivity = timespan / numberOfActivities;
+        AtomicLong time = new AtomicLong(snowflakeIdPacker.pack(System.currentTimeMillis(), 0, 0) - timespan);
+        System.out.println("Building activities....");
+
+        for (int i = 0; i < 100; i++) {
+            service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity), "bob",
+                String.valueOf(i + 1), walIndex.incrementAndGet())));
+        }
+
+        System.out.println("Running queries...");
+
+        long lastTime = time.get();
+        final MiruTimeRange timeRange = new MiruTimeRange(lastTime - timespan, lastTime);
+        MiruFieldDefinition fieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("text"));
+
+        long s = System.currentTimeMillis();
+        MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+            new MiruActorId(new Id(1)),
+            MiruAuthzExpression.NOT_PROVIDED,
+            new DistinctsQuery(timeRange, fieldDefinition.name, Arrays.asList("ca", "do", "el", "mo")),
+            MiruSolutionLogLevel.INFO);
+        MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
+        for (String result : distinctsResult.answer.results) {
+            System.out.println("Got " + result);
+        }
+
+        System.out.println("distinctsResult:" + distinctsResult);
+        System.out.println("count:" + distinctsResult.answer.results.size());
+        System.out.println("Took:" + (System.currentTimeMillis() - s));
     }
 
 }

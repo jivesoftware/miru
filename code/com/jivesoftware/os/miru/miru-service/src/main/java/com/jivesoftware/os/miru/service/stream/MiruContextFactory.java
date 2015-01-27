@@ -7,9 +7,9 @@ import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
-import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
+import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -17,12 +17,13 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.index.KeyedFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
@@ -59,6 +60,7 @@ public class MiruContextFactory {
     private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[] { 1 };
 
     private final MiruSchemaProvider schemaProvider;
+    private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
     private final MiruReadTrackingWALReader readTrackingWALReader;
     private final Map<MiruBackingStorage, MiruChunkAllocator> allocators;
@@ -70,6 +72,7 @@ public class MiruContextFactory {
     private final StripingLocksProvider<String> authzStripingLocksProvider;
 
     public MiruContextFactory(MiruSchemaProvider schemaProvider,
+        MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
         MiruReadTrackingWALReader readTrackingWALReader,
         Map<MiruBackingStorage, MiruChunkAllocator> allocators,
@@ -80,6 +83,7 @@ public class MiruContextFactory {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
         StripingLocksProvider<String> authzStripingLocksProvider) {
         this.schemaProvider = schemaProvider;
+        this.termComposer = termComposer;
         this.activityInternExtern = activityInternExtern;
         this.readTrackingWALReader = readTrackingWALReader;
         this.allocators = allocators;
@@ -124,7 +128,7 @@ public class MiruContextFactory {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
-        KeyedFilerStore genericFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("generic"));
+        KeyedFilerStore genericFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("generic"), false);
 
         MiruFilerTimeIndex timeIndex = new MiruFilerTimeIndex(
             Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
@@ -134,7 +138,7 @@ public class MiruContextFactory {
                 keyBytes("timeIndex-timestamps"),
                 8, false, 4, false));
 
-        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"));
+        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"), false);
         MiruFilerActivityIndex activityIndex = new MiruFilerActivityIndex(
             activityFilerStore,
             new MiruInternalActivityMarshaller(),
@@ -151,7 +155,8 @@ public class MiruContextFactory {
                     || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
                     indexes[fieldId] = null;
                 } else {
-                    indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId));
+                    boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
+                    indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys);
                 }
             }
             fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps, indexes, fieldIndexStripingLocksProvider);
@@ -170,30 +175,31 @@ public class MiruContextFactory {
 
         MiruFilerAuthzIndex<BM> authzIndex = new MiruFilerAuthzIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex")),
+            new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex"), false),
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils),
             authzStripingLocksProvider);
 
         MiruFilerRemovalIndex<BM> removalIndex = new MiruFilerRemovalIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex")),
+            new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), false),
             new byte[] { 0 },
             -1,
             new Object());
 
         MiruFilerUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex")),
+            new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex"), false),
             streamStripingLocksProvider);
 
         MiruFilerInboxIndex<BM> inboxIndex = new MiruFilerInboxIndex<>(
             bitmaps,
-            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex")),
+            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex"), false),
             streamStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
         return new MiruContext<>(schema,
+            termComposer,
             timeIndex,
             activityIndex,
             fieldIndexProvider,

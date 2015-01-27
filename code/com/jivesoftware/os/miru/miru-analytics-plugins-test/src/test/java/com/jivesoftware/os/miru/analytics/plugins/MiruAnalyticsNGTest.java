@@ -46,8 +46,8 @@ public class MiruAnalyticsNGTest {
 
     MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
         .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm),
-            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm)
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
         })
         .setPairedLatest(ImmutableMap.of(
             "user", Arrays.asList("doc"),

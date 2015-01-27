@@ -9,7 +9,6 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -87,10 +86,10 @@ public class MiruIndexerTest {
         MiruInternalActivity miruActivity = context.getActivityIndex().get(tenantId, activityId);
 
         MiruTermId[] fieldValues = miruActivity.fieldsValues[fieldId];
-        for (MiruIBA fieldValue : fieldValues) {
+        for (MiruTermId fieldValue : fieldValues) {
             MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex = context.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
-                .get(fieldId, new MiruTermId(fieldValue.getBytes()));
+                .get(fieldId, fieldValue);
             assertNotNull(invertedIndex);
             EWAHCompressedBitmap bitmap = invertedIndex.getIndex().get();
             assertNotNull(bitmap);

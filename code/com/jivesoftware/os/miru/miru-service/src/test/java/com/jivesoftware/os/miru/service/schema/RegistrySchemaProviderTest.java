@@ -5,6 +5,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
+import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import org.testng.annotations.Test;
 
@@ -17,15 +18,15 @@ public class RegistrySchemaProviderTest {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
-                new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm),
-                new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm)
+                new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+                new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
         MiruTenantId tenantId2 = new MiruTenantId("tenant2".getBytes());
         MiruSchema schema2 = new MiruSchema.Builder("test2", 2)
             .setFieldDefinitions(new MiruFieldDefinition[] {
-                new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm),
-                new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm)
+                new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+                new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
 
@@ -53,14 +54,14 @@ public class RegistrySchemaProviderTest {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
-                new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm),
-                new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm)
+                new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+                new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
         MiruSchema schema2 = new MiruSchema.Builder("test1", 2)
             .setFieldDefinitions(new MiruFieldDefinition[] {
-                new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm),
-                new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm)
+                new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+                new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
 

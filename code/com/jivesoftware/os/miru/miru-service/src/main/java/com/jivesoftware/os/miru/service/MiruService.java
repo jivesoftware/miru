@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
@@ -13,10 +12,12 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -24,8 +25,6 @@ import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -245,9 +244,10 @@ public class MiruService implements Miru {
         try (MiruRequestHandle<BM> handle = partition.getQueryHandle()) {
             MiruRequestContext<BM> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
+            MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
             Optional<BM> index = requestContext.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
-                .get(fieldId, new MiruTermId(termValue.getBytes(Charsets.UTF_8)))
+                .get(fieldId, requestContext.getTermComposer().compose(fieldDefinition, termValue))
                 .getIndex();
             if (index.isPresent()) {
                 return bitmapsDebug.toString(handle.getBitmaps(), index.get());

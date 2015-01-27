@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
@@ -14,6 +15,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,12 +47,17 @@ public class MiruActivityInternerTest {
         Interner<MiruTermId> termInterner = Interners.<MiruTermId>newWeakInterner();
         Interner<MiruTenantId> tenantInterner = Interners.<MiruTenantId>newWeakInterner();
         Interner<String> stringInterner = Interners.<String>newWeakInterner();
+        MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
 
         schema = new MiruSchema.Builder("test", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[] { new MiruFieldDefinition(0, "f", MiruFieldDefinition.Type.singleTerm) })
-            .setPropertyDefinitions(new MiruPropertyDefinition[] { new MiruPropertyDefinition(0, "p") })
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "f", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+            })
+            .setPropertyDefinitions(new MiruPropertyDefinition[] {
+                new MiruPropertyDefinition(0, "p")
+            })
             .build();
-        interner = new MiruActivityInternExtern(ibaInterner, termInterner, tenantInterner, stringInterner);
+        interner = new MiruActivityInternExtern(ibaInterner, termInterner, tenantInterner, stringInterner, termComposer);
         tenantId = new MiruTenantId("testIntern".getBytes());
     }
 

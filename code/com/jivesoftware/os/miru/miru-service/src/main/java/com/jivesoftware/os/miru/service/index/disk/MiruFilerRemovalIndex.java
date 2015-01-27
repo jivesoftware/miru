@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
-import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
+import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 

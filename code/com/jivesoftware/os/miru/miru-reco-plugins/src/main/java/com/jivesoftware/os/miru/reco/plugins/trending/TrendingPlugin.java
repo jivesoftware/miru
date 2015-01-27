@@ -22,11 +22,11 @@ public class TrendingPlugin implements MiruPlugin<TrendingEndpoints, TrendingInj
     @Override
     public Collection<MiruEndpointInjectable<TrendingInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
         Trending trending = new Trending();
-        Distincts distincts = new Distincts();
+        Distincts distincts = new Distincts(miruProvider.getTermComposer());
         Analytics analytics = new Analytics();
         return Collections.singletonList(new MiruEndpointInjectable<>(
-                TrendingInjectable.class,
-                new TrendingInjectable(miruProvider, trending, distincts, analytics)
+            TrendingInjectable.class,
+            new TrendingInjectable(miruProvider, trending, distincts, analytics)
         ));
     }
 }

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.plugin.schema;
+package com.jivesoftware.os.miru.cluster.schema;
 
 /**
  *

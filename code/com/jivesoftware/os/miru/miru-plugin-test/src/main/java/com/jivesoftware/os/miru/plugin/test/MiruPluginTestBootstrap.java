@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
@@ -37,6 +38,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.service.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.service.MiruService;
@@ -130,8 +132,12 @@ public class MiruPluginTestBootstrap {
         backfillerizerLifecycle.start();
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
 
+        final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
         final MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
-            Interners.<MiruTermId>newWeakInterner(), Interners.<MiruTenantId>newWeakInterner(), Interners.<String>newWeakInterner());
+            Interners.<MiruTermId>newWeakInterner(),
+            Interners.<MiruTenantId>newWeakInterner(),
+            Interners.<String>newWeakInterner(),
+            termComposer);
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
             registryStore,
             clusterRegistry,
@@ -140,6 +146,7 @@ public class MiruPluginTestBootstrap {
             wal,
             httpClientFactory,
             new MiruTempDirectoryResourceLocator(),
+            termComposer,
             activityInternExtern,
             new SingleBitmapsProvider<>(bitmaps));
 
@@ -169,6 +176,11 @@ public class MiruPluginTestBootstrap {
             @Override
             public MiruJustInTimeBackfillerizer getBackfillerizer(MiruTenantId tenantId) {
                 return backfillerizer;
+            }
+
+            @Override
+            public MiruTermComposer getTermComposer() {
+                return termComposer;
             }
         };
     }

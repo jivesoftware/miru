@@ -312,8 +312,7 @@ public class MiruIndexer<BM> {
                 futures.add(indexExecutor.submit(new Callable<Void>() {
                     @Override
                     public Void call() throws Exception {
-                        fieldIndex.index(finalFieldId, fieldValuesWork.fieldValue, fieldValuesWork.ids
-                            .toArray());
+                        fieldIndex.index(finalFieldId, fieldValuesWork.fieldValue, fieldValuesWork.ids.toArray());
                         return null;
                     }
                 }));

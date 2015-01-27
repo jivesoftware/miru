@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuestion;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -56,7 +55,10 @@ public class TrendingInjectable {
     private final Distincts distincts;
     private final Analytics analytics;
 
-    public TrendingInjectable(MiruProvider<? extends Miru> miruProvider, Trending trending, Distincts distincts, Analytics analytics) {
+    public TrendingInjectable(MiruProvider<? extends Miru> miruProvider,
+        Trending trending,
+        Distincts distincts,
+        Analytics analytics) {
         this.miruProvider = miruProvider;
         this.trending = trending;
         this.distincts = distincts;
@@ -73,23 +75,23 @@ public class TrendingInjectable {
                     request.tenantId,
                     request.actorId,
                     request.authzExpression,
-                    new DistinctsQuery(request.query.timeRange, request.query.aggregateCountAroundField),
+                    new DistinctsQuery(request.query.timeRange, request.query.aggregateCountAroundField, request.query.fieldPrefixes),
                     request.logLevel))),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(request.query.timeRange),
                 DistinctsAnswer.EMPTY_RESULTS,
                 request.logLevel);
-            List<MiruTermId> distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
+            List<String> distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
                 ? distinctsResponse.answer.results
-                : Collections.<MiruTermId>emptyList();
+                : Collections.<String>emptyList();
 
             Map<String, MiruFilter> constraintsFilters = Maps.newHashMap();
-            for (MiruTermId termId : distinctTerms) {
-                constraintsFilters.put(new String(termId.getBytes(), Charsets.UTF_8),
+            for (String term : distinctTerms) {
+                constraintsFilters.put(term,
                     new MiruFilter(MiruFilterOperation.and,
                         Optional.of(Collections.singletonList(new MiruFieldFilter(
                             MiruFieldType.primary, request.query.aggregateCountAroundField,
-                            Collections.singletonList(new String(termId.getBytes(), Charsets.UTF_8))))),
+                            Collections.singletonList(term)))),
                         Optional.<List<MiruFilter>>absent()));
             }
 

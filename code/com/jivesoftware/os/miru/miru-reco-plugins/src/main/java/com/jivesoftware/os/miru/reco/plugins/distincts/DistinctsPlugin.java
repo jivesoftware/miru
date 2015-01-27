@@ -19,7 +19,7 @@ public class DistinctsPlugin implements MiruPlugin<DistinctsEndpoints, Distincts
 
     @Override
     public Collection<MiruEndpointInjectable<DistinctsInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
-        Distincts distincts = new Distincts();
+        Distincts distincts = new Distincts(miruProvider.getTermComposer());
         return Collections.singletonList(new MiruEndpointInjectable<>(
                 DistinctsInjectable.class,
                 new DistinctsInjectable(miruProvider, distincts)

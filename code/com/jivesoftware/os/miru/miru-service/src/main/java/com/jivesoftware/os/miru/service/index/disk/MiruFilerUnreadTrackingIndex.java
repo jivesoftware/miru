@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
+import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -17,7 +17,9 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
-    public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, KeyedFilerStore store, StripingLocksProvider<MiruStreamId> stripingLocksProvider)
+    public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
+        KeyedFilerStore store,
+        StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
         this.store = store;

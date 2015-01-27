@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.filer.map.store.api.KeyRange;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import java.util.List;
 
 /**
  *
@@ -18,7 +20,7 @@ public interface MiruFieldIndex<BM> {
 
     void remove(int fieldId, MiruTermId termId, int id) throws Exception;
 
-    void streamTermIdsForField(int fieldId, TermIdStream termIdStream) throws Exception;
+    void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream) throws Exception;
 
     long sizeInMemory() throws Exception;
 

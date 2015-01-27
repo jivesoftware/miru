@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
@@ -23,6 +22,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -51,8 +51,8 @@ public class MiruCollaborativeFilterNGTest {
 
     MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
         .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm),
-            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm)
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
         })
         .setPairedLatest(ImmutableMap.of(
             "user", Arrays.asList("doc"),
@@ -61,6 +61,7 @@ public class MiruCollaborativeFilterNGTest {
             "doc", Arrays.asList("user")))
         .build();
 
+    MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
     MiruHost miruHost = new MiruHost("logicalName", 1_234);
@@ -172,10 +173,11 @@ public class MiruCollaborativeFilterNGTest {
 
         System.out.println("Running queries...");
 
+        MiruFieldDefinition userFieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("user"));
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + i;
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.pairedLatest, "user", ImmutableList.of(
-                indexUtil.makePairedLatestTerm(new MiruTermId(user.getBytes(Charsets.UTF_8)), "doc").toString()));
+                indexUtil.makePairedLatestTerm(termComposer.compose(userFieldDefinition, user), "doc").toString()));
             MiruFilter filter = new MiruFilter(
                 MiruFilterOperation.or,
                 Optional.of(Arrays.asList(miruFieldFilter)),

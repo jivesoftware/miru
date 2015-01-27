@@ -24,6 +24,7 @@ public class MiruManageService {
     private final MiruPageRegion<Void> adminRegion;
     private final MiruPageRegion<Optional<MiruHost>> hostsRegion;
     private final MiruPageRegion<Void> balancerRegion;
+    private final MiruPageRegion<Optional<String>> schemaRegion;
     private final MiruPageRegion<Optional<MiruTenantId>> tenantsRegion;
     private final MiruPageRegion<MiruLookupRegionInput> lookupRegion;
     private final MiruPageRegion<MiruActivityWALRegionInput> activityWALRegion;
@@ -37,6 +38,7 @@ public class MiruManageService {
         MiruPageRegion<Void> adminRegion,
         MiruPageRegion<Optional<MiruHost>> hostsRegion,
         MiruPageRegion<Void> balancerRegion,
+        MiruPageRegion<Optional<String>> schemaRegion,
         MiruPageRegion<Optional<MiruTenantId>> tenantsRegion,
         MiruPageRegion<MiruLookupRegionInput> lookupRegion,
         MiruPageRegion<MiruActivityWALRegionInput> activityWALRegion,
@@ -46,6 +48,7 @@ public class MiruManageService {
         this.adminRegion = adminRegion;
         this.hostsRegion = hostsRegion;
         this.balancerRegion = balancerRegion;
+        this.schemaRegion = schemaRegion;
         this.tenantsRegion = tenantsRegion;
         this.lookupRegion = lookupRegion;
         this.activityWALRegion = activityWALRegion;
@@ -74,6 +77,14 @@ public class MiruManageService {
 
     public String renderBalancer() {
         return chrome(balancerRegion).render(null);
+    }
+
+    public String renderSchema() {
+        return chrome(schemaRegion).render(Optional.<String>absent());
+    }
+
+    public String renderSchemaWithLookup(String lookupJSON) {
+        return chrome(schemaRegion).render(Optional.of(lookupJSON));
     }
 
     public String renderTenants() {

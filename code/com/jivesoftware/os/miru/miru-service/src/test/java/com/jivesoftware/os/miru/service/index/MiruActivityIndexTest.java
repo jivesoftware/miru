@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index;
 
+import com.google.common.base.Charsets;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -9,6 +10,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import java.util.Arrays;
@@ -28,6 +30,7 @@ public class MiruActivityIndexTest {
     MiruSchema schema = new MiruSchema.Builder("test", 1)
         .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
         .build();
+    MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
@@ -128,7 +131,7 @@ public class MiruActivityIndexTest {
 
     private MiruInternalActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfRandomFields) {
         assertTrue(numberOfRandomFields <= schema.fieldCount());
-        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, authz, 0);
+        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, termComposer, time, authz, 0);
 
         for (int i = 0; i < numberOfRandomFields; i++) {
             builder.putFieldValue(schema.getFieldDefinition(i).name, RandomStringUtils.randomAlphanumeric(5));

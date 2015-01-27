@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -16,12 +17,12 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.io.Charsets;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -127,6 +128,7 @@ public class MiruAggregateUtil {
 
     public <BM> void filter(MiruBitmaps<BM> bitmaps,
         MiruSchema schema,
+        MiruTermComposer termComposer,
         MiruFieldIndexProvider<BM> fieldIndexProvider,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
@@ -138,13 +140,14 @@ public class MiruAggregateUtil {
         if (filter.fieldFilters.isPresent()) {
             for (MiruFieldFilter fieldFilter : filter.fieldFilters.get()) {
                 int fieldId = schema.getFieldId(fieldFilter.fieldName);
+                MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
                 if (fieldId >= 0) {
                     List<BM> fieldBitmaps = new ArrayList<>();
                     long start = System.currentTimeMillis();
                     for (String term : fieldFilter.values) {
                         MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
                             fieldId,
-                            new MiruTermId(term.getBytes(Charsets.UTF_8)),
+                            termComposer.compose(fieldDefinition, term),
                             considerIfIndexIdGreaterThanN);
                         Optional<BM> index = got.getIndex();
                         if (index.isPresent()) {
@@ -170,7 +173,7 @@ public class MiruAggregateUtil {
         if (filter.subFilter.isPresent()) {
             for (MiruFilter subFilter : filter.subFilter.get()) {
                 BM subStorage = bitmaps.create();
-                filter(bitmaps, schema, fieldIndexProvider, subFilter, solutionLog, subStorage, considerIfIndexIdGreaterThanN);
+                filter(bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog, subStorage, considerIfIndexIdGreaterThanN);
                 filterBitmaps.add(subStorage);
             }
         }

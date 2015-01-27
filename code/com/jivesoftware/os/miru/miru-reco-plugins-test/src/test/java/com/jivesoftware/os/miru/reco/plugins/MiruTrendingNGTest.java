@@ -54,8 +54,10 @@ public class MiruTrendingNGTest {
 
     MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
         .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm),
-            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm)
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(2, "obj", MiruFieldDefinition.Type.singleTerm,
+                new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' '))
         })
         .setPairedLatest(ImmutableMap.of(
             "user", Arrays.asList("doc"),
@@ -86,7 +88,7 @@ public class MiruTrendingNGTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new TrendingInjectable(miruProvider, new Trending(), new Distincts(), new Analytics());
+        this.injectable = new TrendingInjectable(miruProvider, new Trending(), new Distincts(miruProvider.getTermComposer()), new Analytics());
     }
 
     @Test(enabled = true)
@@ -181,7 +183,8 @@ public class MiruTrendingNGTest {
                     timeRange,
                     32,
                     filter,
-                    "doc",
+                    "obj",
+                    Arrays.asList("0", "2", "8", "-1"),
                     10),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);

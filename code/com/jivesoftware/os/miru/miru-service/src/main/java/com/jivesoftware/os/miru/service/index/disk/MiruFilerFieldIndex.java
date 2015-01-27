@@ -2,14 +2,16 @@ package com.jivesoftware.os.miru.service.index.disk;
 
 import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
+import com.jivesoftware.os.filer.map.store.api.KeyRange;
 import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
+import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * @author jonathan
@@ -52,8 +54,8 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
     }
 
     @Override
-    public void streamTermIdsForField(int fieldId, final TermIdStream termIdStream) throws Exception {
-        indexes[fieldId].streamKeys(new KeyValueStore.KeyStream<IBA>() {
+    public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream) throws Exception {
+        indexes[fieldId].streamKeys(ranges, new KeyValueStore.KeyStream<IBA>() {
             @Override
             public boolean stream(IBA iba) throws IOException {
                 return termIdStream.stream(new MiruTermId(iba.getBytes()));

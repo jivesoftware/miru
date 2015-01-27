@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
@@ -25,6 +26,7 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 public class MiruContext<BM> implements MiruRequestContext<BM> {
 
     public final MiruSchema schema;
+    public final MiruTermComposer termComposer;
     public final MiruTimeIndex timeIndex;
     public final MiruActivityIndex activityIndex;
     public final MiruFieldIndexProvider<BM> fieldIndexProvider;
@@ -39,6 +41,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     public final ChunkStore[] chunkStores;
 
     public MiruContext(MiruSchema schema,
+        MiruTermComposer termComposer,
         MiruTimeIndex timeIndex,
         MiruActivityIndex activityIndex,
         MiruFieldIndexProvider<BM> fieldIndexProvider,
@@ -51,6 +54,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         StripingLocksProvider<MiruStreamId> streamLocks,
         ChunkStore[] chunkStores) {
         this.schema = schema;
+        this.termComposer = termComposer;
         this.timeIndex = timeIndex;
         this.activityIndex = activityIndex;
         this.fieldIndexProvider = fieldIndexProvider;
@@ -68,6 +72,11 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     @Override
     public MiruSchema getSchema() {
         return schema;
+    }
+
+    @Override
+    public MiruTermComposer getTermComposer() {
+        return termComposer;
     }
 
     @Override

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.schema;
+package com.jivesoftware.os.miru.cluster.rcvs;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -6,10 +6,8 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;

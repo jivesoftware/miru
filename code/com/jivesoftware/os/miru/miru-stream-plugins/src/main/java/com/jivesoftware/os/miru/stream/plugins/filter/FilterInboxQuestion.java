@@ -103,7 +103,8 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndexProvider(), request.query.constraintsFilter, solutionLog, filtered, -1);
+            aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), request.query.constraintsFilter,
+                solutionLog, filtered, -1);
             ands.add(filtered);
         }
 

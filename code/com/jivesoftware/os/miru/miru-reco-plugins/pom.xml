@@ -34,6 +34,10 @@
             <artifactId>io</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>map-store</artifactId>
+        </dependency>
+        <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>javax.ws.rs-api</artifactId>
         </dependency>

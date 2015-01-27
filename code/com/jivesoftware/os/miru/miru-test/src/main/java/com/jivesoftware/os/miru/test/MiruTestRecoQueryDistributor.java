@@ -62,6 +62,7 @@ public class MiruTestRecoQueryDistributor {
                     Optional.of(Arrays.asList(viewClassesFilter())),
                     Optional.<List<MiruFilter>>absent()),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
+                null,
                 numResultsGlobalTrendy),
             MiruSolutionLogLevel.NONE);
     }

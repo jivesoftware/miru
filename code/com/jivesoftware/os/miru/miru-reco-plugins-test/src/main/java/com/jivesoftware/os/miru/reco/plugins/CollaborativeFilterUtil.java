@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
  *
@@ -17,26 +18,23 @@ import java.util.Map;
 public class CollaborativeFilterUtil {
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
-
-    public MiruPartitionedActivity viewActivity(MiruTenantId tenantId, MiruPartitionId partitionId, long time, String user, String doc, int index) {
-        Map<String, List<String>> fieldsValues = Maps.newHashMap();
-        fieldsValues.put("user", Arrays.asList(user));
-        fieldsValues.put("doc", Arrays.asList(doc));
-
-        MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
-        return partitionedActivityFactory.activity(1, partitionId, index, activity);
-    }
+    private final Random random = new Random();
+    private static final String[] animals = new String[] { "cat", "dog", "elephant", "aardvark", "camel", "moose", "mouse", "rabbit", "dingo", "eel" };
 
     public MiruPartitionedActivity viewActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         long time,
         String user,
-        List<String> docs,
+        String doc,
         int index) {
 
+        int hash = Math.abs(doc.hashCode());
         Map<String, List<String>> fieldsValues = Maps.newHashMap();
         fieldsValues.put("user", Arrays.asList(user));
-        fieldsValues.put("doc", docs);
+        fieldsValues.put("doc", Arrays.asList(doc));
+        fieldsValues.put("obj", Arrays.asList((hash % 4) + " " + doc));
+        fieldsValues.put("text", Arrays.asList(
+            animals[hash % animals.length], animals[Math.abs(hash * 3) % animals.length], animals[Math.abs(hash * 7) % animals.length]));
 
         MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, index, activity);

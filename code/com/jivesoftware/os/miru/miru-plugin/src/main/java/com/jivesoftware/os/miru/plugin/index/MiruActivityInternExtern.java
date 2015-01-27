@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interner;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -21,40 +22,44 @@ public class MiruActivityInternExtern {
     private final Interner<MiruTermId> termInterner;
     private final Interner<MiruTenantId> tenantInterner;
     private final Interner<String> stringInterner;
+    private final MiruTermComposer termComposer;
 
     public MiruActivityInternExtern(Interner<MiruIBA> ibaInterner,
         Interner<MiruTermId> termInterner,
         Interner<MiruTenantId> tenantInterner,
-        Interner<String> stringInterner) {
+        Interner<String> stringInterner,
+        MiruTermComposer termComposer) {
         this.ibaInterner = ibaInterner;
         this.termInterner = termInterner;
         this.tenantInterner = tenantInterner;
         this.stringInterner = stringInterner;
+        this.termComposer = termComposer;
     }
 
     /**
-     * It is expected that activiyAndIds.size() == internedActivityAndIds.size();
+     * It is expected that activityAndIds.size() == internedActivityAndIds.size();
      *
-     * @param activiyAndIds
+     * @param activityAndIds
      * @param fromOffset
      * @param length
      * @param internedActivityAndIds
      * @param schema
      * @return
      */
-    public void intern(List<MiruActivityAndId<MiruActivity>> activiyAndIds,
+    public void intern(List<MiruActivityAndId<MiruActivity>> activityAndIds,
         int fromOffset,
         int length,
         List<MiruActivityAndId<MiruInternalActivity>> internedActivityAndIds,
         final MiruSchema schema) {
 
-        for (int i = fromOffset; i < fromOffset + length && i < activiyAndIds.size(); i++) {
-            MiruActivityAndId<MiruActivity> activiyAndId = activiyAndIds.get(i);
+        for (int i = fromOffset; i < fromOffset + length && i < activityAndIds.size(); i++) {
+            MiruActivityAndId<MiruActivity> activiyAndId = activityAndIds.get(i);
 
             MiruActivity activity = activiyAndId.activity;
             internedActivityAndIds.set(i, new MiruActivityAndId<>(
                 new MiruInternalActivity.Builder(schema,
                     tenantInterner.intern(activity.tenantId),
+                    termComposer,
                     activity.time,
                     internAuthz(activity.authz),
                     activity.version)
@@ -79,12 +84,15 @@ public class MiruActivityInternExtern {
         MiruTermId[][] fieldsValues = new MiruTermId[schema.fieldCount()][];
         for (String fieldName : fields.keySet()) {
             int fieldId = schema.getFieldId(fieldName);
-            List<String> fieldValues = fields.get(fieldName);
-            MiruTermId[] values = new MiruTermId[fieldValues.size()];
-            for (int i = 0; i < values.length; i++) {
-                values[i] = termInterner.intern(new MiruTermId(fieldValues.get(i).getBytes(Charsets.UTF_8)));
+            if (fieldId >= 0) {
+                MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
+                List<String> fieldValues = fields.get(fieldName);
+                MiruTermId[] values = new MiruTermId[fieldValues.size()];
+                for (int i = 0; i < values.length; i++) {
+                    values[i] = termInterner.intern(termComposer.compose(fieldDefinition, fieldValues.get(i)));
+                }
+                fieldsValues[fieldId] = values;
             }
-            fieldsValues[fieldId] = values;
         }
         return fieldsValues;
     }
@@ -125,11 +133,12 @@ public class MiruActivityInternExtern {
         for (int i = 0; i < fields.length; i++) {
             MiruTermId[] values = fields[i];
             if (values != null) {
+                MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(i);
                 List<String> externValues = new ArrayList<>();
                 for (MiruTermId value : values) {
-                    externValues.add(new String(value.getBytes(), Charsets.UTF_8));
+                    externValues.add(termComposer.decompose(fieldDefinition, value));
                 }
-                externFields.put(schema.getFieldDefinition(i).name, externValues);
+                externFields.put(fieldDefinition.name, externValues);
             }
         }
         return externFields;

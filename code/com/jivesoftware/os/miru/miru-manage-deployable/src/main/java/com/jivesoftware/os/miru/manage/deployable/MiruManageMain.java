@@ -27,6 +27,8 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
@@ -102,11 +104,13 @@ public class MiruManageMain {
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
         MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
+        MiruSchemaProvider schemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
         MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
             clusterRegistry,
+            schemaProvider,
             activityWALReader,
             readTrackingWALReader,
             activityLookupTable);

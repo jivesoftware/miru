@@ -92,11 +92,11 @@ public class MiruStreamServiceNGTest {
     public void setUpMethod() throws Exception {
 
         this.fieldDefinitions = new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "verb", MiruFieldDefinition.Type.singleTerm),
-            new MiruFieldDefinition(1, "container", MiruFieldDefinition.Type.singleTerm),
-            new MiruFieldDefinition(2, "target", MiruFieldDefinition.Type.singleTerm),
-            new MiruFieldDefinition(3, "tag", MiruFieldDefinition.Type.singleTerm),
-            new MiruFieldDefinition(4, "author", MiruFieldDefinition.Type.singleTerm)
+            new MiruFieldDefinition(0, "verb", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "container", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(2, "target", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(3, "tag", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(4, "author", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
         };
         this.miruSchema = new MiruSchema.Builder("test", 1)
             .setFieldDefinitions(fieldDefinitions)

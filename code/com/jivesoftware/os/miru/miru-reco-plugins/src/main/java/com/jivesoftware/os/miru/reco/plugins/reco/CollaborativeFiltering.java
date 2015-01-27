@@ -100,7 +100,7 @@ public class CollaborativeFiltering {
         MiruFilter constrainScorableFilter = request.query.constrainResults;
         if (!MiruFilter.NO_FILTER.equals(constrainScorableFilter)) {
             BM possible = bitmaps.create();
-            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getFieldIndexProvider(),
+            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
                 constrainScorableFilter, solutionLog, possible, -1);
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "possible {}.", bitmaps.cardinality(possible));

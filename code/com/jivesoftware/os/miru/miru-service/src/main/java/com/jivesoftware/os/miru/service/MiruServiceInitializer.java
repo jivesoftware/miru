@@ -20,9 +20,10 @@ import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
@@ -72,6 +73,7 @@ public class MiruServiceInitializer {
         MiruWAL wal,
         HttpClientFactory httpClientFactory,
         MiruResourceLocator resourceLocator,
+        MiruTermComposer termComposer,
         MiruActivityInternExtern internExtern,
         MiruBitmapsProvider bitmapsProvider) throws IOException {
 
@@ -132,6 +134,7 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores());
 
         MiruContextFactory streamFactory = new MiruContextFactory(schemaProvider,
+            termComposer,
             internExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()

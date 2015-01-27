@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerTransaction;
-import com.jivesoftware.os.filer.keyed.store.KeyedFilerStore;
+import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import java.io.IOException;
 
 /**

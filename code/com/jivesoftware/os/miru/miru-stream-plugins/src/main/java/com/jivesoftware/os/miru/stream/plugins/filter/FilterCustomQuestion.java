@@ -55,7 +55,7 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
         List<BM> ands = new ArrayList<>();
 
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getFieldIndexProvider(), combinedFilter, solutionLog, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), combinedFilter, solutionLog, filtered, -1);
         ands.add(filtered);
 
         ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex()));

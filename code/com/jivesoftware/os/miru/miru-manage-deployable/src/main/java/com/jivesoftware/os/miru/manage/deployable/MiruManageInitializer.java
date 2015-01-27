@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.manage.deployable;
 
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruActivityWALRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruAdminRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruBalancerRegion;
@@ -11,6 +12,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruHostFocusRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruHostsRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruLookupRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruReadWALRegion;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
@@ -20,6 +22,7 @@ public class MiruManageInitializer {
 
     public MiruManageService initialize(MiruSoyRenderer renderer,
         MiruClusterRegistry clusterRegistry,
+        MiruSchemaProvider schemaProvider,
         MiruActivityWALReader activityWALReader,
         MiruReadTrackingWALReader readTrackingWALReader,
         MiruActivityLookupTable activityLookupTable)
@@ -33,6 +36,7 @@ public class MiruManageInitializer {
                 new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer),
                 new MiruHostFocusRegion("soy.miru.section.hostFocusRegion", renderer, clusterRegistry)),
             new MiruBalancerRegion("soy.miru.page.balancerRegion", renderer, clusterRegistry),
+            new MiruSchemaRegion("soy.miru.page.schemaRegion", renderer, clusterRegistry, schemaProvider),
             new MiruTenantsRegion("soy.miru.page.tenantsRegion", renderer,
                 new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry, activityWALReader)),
             new MiruLookupRegion("soy.miru.page.lookupRegion", renderer, activityLookupTable),

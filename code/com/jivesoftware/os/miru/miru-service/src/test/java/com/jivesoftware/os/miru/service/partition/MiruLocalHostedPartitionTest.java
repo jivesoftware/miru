@@ -28,10 +28,11 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.plugin.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
@@ -151,12 +152,14 @@ public class MiruLocalHostedPartitionTest {
 
         bitmaps = new MiruBitmapsEWAH(2);
 
+        MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(
             Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(),
             Interners.<MiruTenantId>newStrongInterner(),
             // makes sense to share string internment as this is authz in both cases
-            Interners.<String>newWeakInterner());
+            Interners.<String>newWeakInterner(),
+            termComposer);
 
         MiruReadTrackingWALReaderImpl readTrackingWALReader = null; // TODO factor out of MiruContext
 
@@ -174,12 +177,13 @@ public class MiruLocalHostedPartitionTest {
         );
 
         contextFactory = new MiruContextFactory(schemaProvider,
+            termComposer,
             activityInternExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, hybridContextAllocator)
-            .put(MiruBackingStorage.disk, diskContextAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
             new MiruTempDirectoryResourceLocator(),
             defaultStorage,
             config.getPartitionAuthzCacheSize(),
@@ -387,9 +391,9 @@ public class MiruLocalHostedPartitionTest {
     private void indexNormalActivity(MiruLocalHostedPartition localHostedPartition) throws Exception {
         localHostedPartition.index(Lists.newArrayList(
             factory.activity(1, partitionId, 0, new MiruActivity(
-                    tenantId, System.currentTimeMillis(), new String[0], 0,
-                    Collections.<String, List<String>>emptyMap(),
-                    Collections.<String, List<String>>emptyMap()))
+                tenantId, System.currentTimeMillis(), new String[0], 0,
+                Collections.<String, List<String>>emptyMap(),
+                Collections.<String, List<String>>emptyMap()))
         ).iterator());
     }
 

@@ -8,6 +8,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -41,37 +42,18 @@ public class MiruInternalActivity {
 
     @JsonCreator
     public static MiruInternalActivity fromJson(
-            @JsonProperty("tenantId") byte[] tenantId,
-            @JsonProperty("time") long time,
-            @JsonProperty("authz") String[] authz,
-            @JsonProperty("version") long version,
-            @JsonProperty("fieldsValues") MiruTermId[][] fieldsValues,
-            @JsonProperty("propsValues") MiruIBA[][] propsValues) {
+        @JsonProperty("tenantId") byte[] tenantId,
+        @JsonProperty("time") long time,
+        @JsonProperty("authz") String[] authz,
+        @JsonProperty("version") long version,
+        @JsonProperty("fieldsValues") MiruTermId[][] fieldsValues,
+        @JsonProperty("propsValues") MiruIBA[][] propsValues) {
         return new MiruInternalActivity(new MiruTenantId(tenantId), time, authz, version, fieldsValues, propsValues);
     }
 
     @JsonGetter("tenantId")
     public byte[] getTenantIdAsBytes() {
         return tenantId.getBytes();
-    }
-
-    public long sizeInBytes() {
-        long sizeInBytes = tenantId.getBytes().length + 8 + 8;
-        if (authz != null) {
-            for (String a : authz) {
-                sizeInBytes += a.getBytes(Charsets.UTF_8).length;
-            }
-        }
-
-        // terms are interned and counted by field index
-        sizeInBytes += fieldsValues.length * 8;
-        for (MiruTermId[] fieldValues : fieldsValues) {
-            if (fieldValues != null) {
-                sizeInBytes += fieldValues.length * 8;
-            }
-        }
-
-        return sizeInBytes;
     }
 
     @Override
@@ -116,13 +98,13 @@ public class MiruInternalActivity {
     @Override
     public String toString() {
         return "MiruActivity{" +
-                "tenantId=" + tenantId +
-                ", time=" + time +
-                ", authz=" + Arrays.toString(authz) +
-                ", version=" + version +
-                ", fieldsValues=" + valuesAsString(fieldsValues) +
-                ", propsValues=" + valuesAsString(propsValues) +
-                '}';
+            "tenantId=" + tenantId +
+            ", time=" + time +
+            ", authz=" + Arrays.toString(authz) +
+            ", version=" + version +
+            ", fieldsValues=" + valuesAsString(fieldsValues) +
+            ", propsValues=" + valuesAsString(propsValues) +
+            '}';
     }
 
     public <T extends MiruIBA> String valuesAsString(T[][] values) {
@@ -136,8 +118,8 @@ public class MiruInternalActivity {
             for (MiruIBA value : values[i]) {
                 byte[] byteValue = value.getBytes();
                 String v = (byteValue.length == 4)
-                        ? String.valueOf(FilerIO.bytesInt(byteValue)) : (byteValue.length == 8)
-                        ? String.valueOf(FilerIO.bytesLong(byteValue)) : new String(byteValue, Charsets.UTF_8);
+                    ? String.valueOf(FilerIO.bytesInt(byteValue)) : (byteValue.length == 8)
+                    ? String.valueOf(FilerIO.bytesLong(byteValue)) : new String(byteValue, Charsets.UTF_8);
                 sb.append(v).append(", ");
             }
             sb.append("], ");
@@ -150,15 +132,17 @@ public class MiruInternalActivity {
 
         private final MiruSchema schema;
         private final MiruTenantId tenantId;
+        private final MiruTermComposer composer;
         private final long time;
         private final String[] authz;
         private final long version;
         private final MiruTermId[][] fieldsValues;
         private final MiruIBA[][] propsValues;
 
-        public Builder(MiruSchema schema, MiruTenantId tenantId, long time, String[] authz, long version) {
+        public Builder(MiruSchema schema, MiruTenantId tenantId, MiruTermComposer composer, long time, String[] authz, long version) {
             this.schema = schema;
             this.tenantId = tenantId;
+            this.composer = composer;
             this.time = time;
             this.authz = authz;
             this.version = version;
@@ -168,13 +152,14 @@ public class MiruInternalActivity {
 
         public Builder putFieldValue(String field, String value) {
             int fieldId = schema.getFieldId(field);
+            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
             MiruTermId[] oldValues = this.fieldsValues[fieldId];
             if (oldValues == null || oldValues.length == 0) {
-                this.fieldsValues[fieldId] = new MiruTermId[]{STRING_TO_TERMID.apply(value)};
+                this.fieldsValues[fieldId] = new MiruTermId[] { composer.compose(fieldDefinition, value) };
             } else {
                 MiruTermId[] newValues = new MiruTermId[oldValues.length + 1];
                 System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
-                newValues[newValues.length - 1] = STRING_TO_TERMID.apply(value);
+                newValues[newValues.length - 1] = composer.compose(fieldDefinition, value);
                 this.fieldsValues[fieldId] = newValues;
             }
             return this;
@@ -195,7 +180,8 @@ public class MiruInternalActivity {
         }
 
         public Builder putAllFieldValues(String field, Collection<String> values) {
-            return putAllFieldValues(field, Collections2.transform(values, STRING_TO_TERMID).toArray(new MiruTermId[values.size()]));
+            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(schema.getFieldId(field));
+            return putAllFieldValues(field, composer.composeAll(fieldDefinition, values));
         }
 
         public Builder putFieldsValues(MiruTermId[][] fieldsValues) {
@@ -214,7 +200,7 @@ public class MiruInternalActivity {
             int propId = schema.getPropertyId(prop);
             MiruIBA[] oldValues = this.propsValues[propId];
             if (oldValues == null || oldValues.length == 0) {
-                this.propsValues[propId] = new MiruIBA[]{STRING_TO_IBA.apply(value)};
+                this.propsValues[propId] = new MiruIBA[] { STRING_TO_IBA.apply(value) };
             } else {
                 MiruIBA[] newValues = new MiruIBA[oldValues.length + 1];
                 System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
@@ -257,13 +243,6 @@ public class MiruInternalActivity {
         public MiruInternalActivity build() {
             return new MiruInternalActivity(tenantId, time, authz, version, fieldsValues, propsValues);
         }
-
-        private static final Function<String, MiruTermId> STRING_TO_TERMID = new Function<String, MiruTermId>() {
-            @Override
-            public MiruTermId apply(String input) {
-                return input != null ? new MiruTermId(input.getBytes(Charsets.UTF_8)) : null;
-            }
-        };
 
         private static final Function<String, MiruIBA> STRING_TO_IBA = new Function<String, MiruIBA>() {
             @Override

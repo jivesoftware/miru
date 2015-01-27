@@ -19,7 +19,7 @@ public class MiruSchema {
 
     // Serializable fields
     private final String name;
-    private final long version;
+    private final int version; // int for JSON compatibility
     private final MiruFieldDefinition[] fieldDefinitions;
     private final MiruPropertyDefinition[] propertyDefinitions;
     private final Map<String, List<String>> pairedLatest;
@@ -38,7 +38,7 @@ public class MiruSchema {
     private final ImmutableList<MiruFieldDefinition> fieldsWithBloom;
 
     MiruSchema(String name,
-        long version,
+        int version,
         MiruFieldDefinition[] fieldDefinitions,
         MiruPropertyDefinition[] propertyDefinitions,
         Map<String, List<String>> pairedLatest,
@@ -69,7 +69,7 @@ public class MiruSchema {
 
     @JsonCreator
     public static MiruSchema fromJson(@JsonProperty("name") String name,
-        @JsonProperty("version") long version,
+        @JsonProperty("version") int version,
         @JsonProperty("fieldDefinitions") MiruFieldDefinition[] fieldDefinitions,
         @JsonProperty("propertyDefinitions") MiruPropertyDefinition[] propertyDefinitions,
         @JsonProperty("pairedLatest") Map<String, List<String>> pairedLatest,
@@ -87,7 +87,7 @@ public class MiruSchema {
         return name;
     }
 
-    public long getVersion() {
+    public int getVersion() {
         return version;
     }
 
@@ -183,14 +183,14 @@ public class MiruSchema {
         private static final Map<String, List<String>> NO_BLOOM = Collections.emptyMap();
 
         private final String name;
-        private final long version;
+        private final int version;
 
         private MiruFieldDefinition[] fieldDefinitions = NO_FIELDS;
         private MiruPropertyDefinition[] propertyDefinitions = NO_PROPERTIES;
         private Map<String, List<String>> pairedLatest = NO_PAIRED_LATEST;
         private Map<String, List<String>> bloom = NO_BLOOM;
 
-        public Builder(String name, long version) {
+        public Builder(String name, int version) {
             this.name = name;
             this.version = version;
         }

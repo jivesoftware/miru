@@ -86,6 +86,27 @@ public class MiruManageEndpoints {
     }
 
     @GET
+    @Path("/schema")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getSchema() {
+        String rendered = miruManageService.renderSchema();
+        return Response.ok(rendered).build();
+    }
+
+    @GET
+    @Path("/schema")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getSchemaWithLookup(@FormParam("lookupJSON") @DefaultValue("") String lookupJSON) {
+        String rendered;
+        if (lookupJSON.trim().isEmpty()) {
+            rendered = miruManageService.renderSchema();
+        } else {
+            rendered = miruManageService.renderSchemaWithLookup(lookupJSON);
+        }
+        return Response.ok(rendered).build();
+    }
+
+    @GET
     @Path("/tenants")
     @Produces(MediaType.TEXT_HTML)
     public Response getTenants() {

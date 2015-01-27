@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.manage.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -10,6 +11,8 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
@@ -20,6 +23,7 @@ import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
+import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
@@ -29,6 +33,7 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -44,6 +49,18 @@ public class MiruManageServiceTest {
     private MiruTenantId tenantId;
     private List<MiruHost> hosts;
     private MiruPartitionId partitionId;
+
+    private MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+        })
+        .setPairedLatest(ImmutableMap.of(
+            "user", Arrays.asList("doc"),
+            "doc", Arrays.asList("user")))
+        .setBloom(ImmutableMap.of(
+            "doc", Arrays.asList("user")))
+        .build();
 
     @BeforeClass
     public void before() throws Exception {
@@ -76,8 +93,11 @@ public class MiruManageServiceTest {
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
         MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
 
+        RegistrySchemaProvider schemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
+        schemaProvider.register(tenantId, miruSchema);
+
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        miruManageService = new MiruManageInitializer().initialize(renderer, clusterRegistry, activityWALReader, readTrackingWALReader,
+        miruManageService = new MiruManageInitializer().initialize(renderer, clusterRegistry, schemaProvider, activityWALReader, readTrackingWALReader,
             activityLookupTable);
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
@@ -116,6 +136,15 @@ public class MiruManageServiceTest {
         for (MiruHost host : hosts) {
             assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "/" + host.getPort() + "#focus"));
         }
+    }
+
+    @Test
+    public void testRenderSchemaWithLookup() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        String lookupJSON = objectMapper.writeValueAsString(miruSchema);
+        String rendered = miruManageService.renderSchemaWithLookup(lookupJSON);
+        System.out.println(rendered);
+        assertTrue(rendered.contains("<td>" + tenantId.toString() + "</td>"));
     }
 
     @Test

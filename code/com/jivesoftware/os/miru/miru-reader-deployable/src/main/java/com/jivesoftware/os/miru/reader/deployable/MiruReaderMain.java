@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.reader.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.base.Charsets;
 import com.google.common.collect.Interners;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
@@ -39,11 +40,13 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.service.MiruBackfillerizerInitializer;
@@ -55,7 +58,6 @@ import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorInitializer;
-import com.jivesoftware.os.miru.service.schema.RegistrySchemaProvider;
 import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -153,12 +155,14 @@ public class MiruReaderMain {
 
         MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
 
+        final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
         final MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
             Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(),
             Interners.<MiruTenantId>newStrongInterner(),
             // makes sense to share string internment as this is authz in both cases
-            Interners.<String>newWeakInterner());
+            Interners.<String>newWeakInterner(),
+            termComposer);
 
         final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         RegistrySchemaProvider registrySchemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
@@ -171,6 +175,7 @@ public class MiruReaderMain {
             wal,
             httpClientFactory,
             miruResourceLocator,
+            termComposer,
             internExtern,
             new SingleBitmapsProvider<>(bitmaps));
 
@@ -197,6 +202,11 @@ public class MiruReaderMain {
             @Override
             public MiruJustInTimeBackfillerizer getBackfillerizer(MiruTenantId tenantId) {
                 return backfillerizer;
+            }
+
+            @Override
+            public MiruTermComposer getTermComposer() {
+                return termComposer;
             }
         };
 
