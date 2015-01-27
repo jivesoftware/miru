@@ -93,9 +93,10 @@ public class MiruManageEndpoints {
         return Response.ok(rendered).build();
     }
 
-    @GET
+    @POST
     @Path("/schema")
     @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response getSchemaWithLookup(@FormParam("lookupJSON") @DefaultValue("") String lookupJSON) {
         String rendered;
         if (lookupJSON.trim().isEmpty()) {
