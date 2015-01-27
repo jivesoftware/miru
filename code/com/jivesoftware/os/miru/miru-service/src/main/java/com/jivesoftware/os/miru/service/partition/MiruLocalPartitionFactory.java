@@ -73,11 +73,14 @@ public class MiruLocalPartitionFactory {
             config.getPartitionWakeOnIndex(),
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),
-            config.getPartitionRebuildFailureSleepMillis(),
-            config.getPartitionBootstrapIntervalInMillis(),
-            config.getPartitionRunnableIntervalInMillis(),
-            config.getPartitionBanUnregisteredSchemaMillis(),
-            config.getPartitionReleaseContextCacheAfterMillis());
+            new MiruLocalHostedPartition.Timings(
+                config.getPartitionRebuildFailureSleepMillis(),
+                config.getPartitionBootstrapIntervalInMillis(),
+                config.getPartitionRebuildIntervalInMillis(),
+                config.getPartitionSipMigrateIntervalInMillis(),
+                config.getPartitionBanUnregisteredSchemaMillis(),
+                config.getPartitionReleaseContextCacheAfterMillis(),
+                config.getPartitionMigrationWaitInMillis()));
     }
 
     public void prioritizeRebuild(MiruLocalHostedPartition<?> partition) {

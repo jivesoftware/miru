@@ -67,13 +67,19 @@ public interface MiruServiceConfig extends Config {
     long getPartitionBootstrapIntervalInMillis();
 
     @LongDefault(5_000)
-    long getPartitionRunnableIntervalInMillis();
+    long getPartitionRebuildIntervalInMillis();
+
+    @LongDefault(5_000)
+    long getPartitionSipMigrateIntervalInMillis();
 
     @LongDefault(30_000)
     long getPartitionBanUnregisteredSchemaMillis();
 
     @LongDefault(600_000)
     long getPartitionReleaseContextCacheAfterMillis();
+
+    @LongDefault(3_000)
+    long getPartitionMigrationWaitInMillis();
 
     @IntDefault(3)
     int getPartitionNumberOfChunkStores();

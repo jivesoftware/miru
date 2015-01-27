@@ -176,6 +176,11 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     @Override
     public boolean prioritizeRebuild(MiruPartitionCoord coord) {
         MiruTenantTopology<?> topology = expectedTopologies.get(coord.tenantId);
+        if (topology == null) {
+            LOG.warn("Attempted to prioritize for unknown tenant {} (temporary = {})",
+                coord.tenantId, temporaryTopologies.getIfPresent(coord.tenantId) != null);
+            return false;
+        }
         Optional<MiruHostedPartition<?>> optionalPartition = topology.getPartition(coord);
         if (optionalPartition.isPresent()) {
             MiruHostedPartition<?> partition = optionalPartition.get();
