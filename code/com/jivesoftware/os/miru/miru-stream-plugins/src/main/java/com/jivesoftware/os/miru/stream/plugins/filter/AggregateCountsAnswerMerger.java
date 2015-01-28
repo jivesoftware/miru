@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -32,14 +31,14 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
 
         AggregateCountsAnswer lastAnswer = last.get();
 
-        Map<MiruIBA, AggregateCount> carryOverCounts = new HashMap<>();
+        Map<String, AggregateCount> carryOverCounts = new HashMap<>();
         for (AggregateCount aggregateCount : currentAnswer.results) {
-            carryOverCounts.put(new MiruIBA(aggregateCount.distinctValue), aggregateCount);
+            carryOverCounts.put(aggregateCount.distinctValue, aggregateCount);
         }
 
         List<AggregateCount> mergedResults = Lists.newLinkedList();
         for (AggregateCount aggregateCount : lastAnswer.results) {
-            AggregateCount had = carryOverCounts.remove(new MiruIBA(aggregateCount.distinctValue));
+            AggregateCount had = carryOverCounts.remove(aggregateCount.distinctValue);
             if (had == null) {
                 mergedResults.add(aggregateCount);
             } else {
@@ -48,7 +47,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
             }
         }
         for (AggregateCount aggregateCount : currentAnswer.results) {
-            if (carryOverCounts.containsKey(new MiruIBA(aggregateCount.distinctValue)) && aggregateCount.mostRecentActivity != null) {
+            if (carryOverCounts.containsKey(aggregateCount.distinctValue) && aggregateCount.mostRecentActivity != null) {
                 mergedResults.add(aggregateCount);
             }
         }

@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -14,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -50,7 +52,7 @@ public class AggregateCounts {
 
         int collectedDistincts = 0;
         int skippedDistincts = 0;
-        Set<MiruTermId> aggregateTerms;
+        Set<String> aggregateTerms;
         if (lastReport.isPresent()) {
             collectedDistincts = lastReport.get().collectedDistincts;
             skippedDistincts = lastReport.get().skippedDistincts;
@@ -60,8 +62,10 @@ public class AggregateCounts {
         }
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
+        MiruTermComposer termComposer = requestContext.getTermComposer();
         MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
+        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             BM unreadIndex = null;
@@ -78,7 +82,8 @@ public class AggregateCounts {
 
             long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
             CardinalityAndLastSetBit answerCollector = null;
-            for (MiruTermId aggregateTermId : aggregateTerms) { // Consider
+            for (String aggregateTerm : aggregateTerms) { // Consider
+                MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
                 Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
                 if (!optionalTermIndex.isPresent()) {
                     continue;
@@ -108,7 +113,7 @@ public class AggregateCounts {
                     }
                 }
 
-                aggregateCounts.add(new AggregateCount(null, aggregateTermId.getBytes(), beforeCount - afterCount, unread));
+                aggregateCounts.add(new AggregateCount(null, aggregateTerm, beforeCount - afterCount, unread));
                 beforeCount = afterCount;
             }
 
@@ -133,8 +138,8 @@ public class AggregateCounts {
 
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
-                    byte[] aggregateValue = aggregateTermId.getBytes();
-                    aggregateTerms.add(aggregateTermId);
+                    String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
+                    aggregateTerms.add(aggregateTerm);
 
                     Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
@@ -168,7 +173,7 @@ public class AggregateCounts {
 
                         AggregateCount aggregateCount = new AggregateCount(
                             miruProvider.getActivityInternExtern(request.tenantId).extern(activity, requestContext.getSchema()),
-                            aggregateValue,
+                            aggregateTerm,
                             beforeCount - afterCount,
                             unread);
                         aggregateCounts.add(aggregateCount);

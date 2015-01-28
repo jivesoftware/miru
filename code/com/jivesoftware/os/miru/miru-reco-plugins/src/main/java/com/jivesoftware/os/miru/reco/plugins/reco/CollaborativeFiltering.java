@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.hash.Hashing;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -13,6 +14,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -204,6 +206,7 @@ public class CollaborativeFiltering {
         final BloomIndex<BM> bloomIndex, final List<BloomIndex.Mights<MiruTermCount>> wantBits) throws Exception {
 
         final int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName3);
+        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("score: fieldId={}", fieldId);
 
         final MiruFieldIndex<BM> bloomFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
@@ -249,9 +252,11 @@ public class CollaborativeFiltering {
                 }
             });
 
+        MiruTermComposer termComposer = requestContext.getTermComposer();
         List<Recommendation> results = new ArrayList<>();
         for (MiruTermCount result : heap) {
-            results.add(new Recommendation(result.termId, result.count));
+            String term = termComposer.decompose(fieldDefinition, result.termId);
+            results.add(new Recommendation(term, result.count));
         }
         log.debug("score: results.size={}", results.size());
         return new RecoAnswer(results, 1);

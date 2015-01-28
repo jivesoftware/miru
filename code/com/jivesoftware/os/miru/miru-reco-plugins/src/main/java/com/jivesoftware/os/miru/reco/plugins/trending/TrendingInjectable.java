@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -119,7 +118,7 @@ public class TrendingInjectable {
             for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
                 long[] waveform = entry.getValue().waveform;
                 SimpleRegression regression = WaveformRegression.getRegression(waveform);
-                trendies.add(new Trendy(entry.getKey().getBytes(Charsets.UTF_8), regression.getSlope(), waveform));
+                trendies.add(new Trendy(entry.getKey(), regression.getSlope(), waveform));
             }
 
             List<Trendy> sortedTrendies = Lists.newArrayList(trendies);

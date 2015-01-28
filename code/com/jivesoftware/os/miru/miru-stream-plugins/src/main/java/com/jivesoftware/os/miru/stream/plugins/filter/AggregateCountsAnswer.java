@@ -4,10 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -15,16 +12,16 @@ import java.util.Set;
 public class AggregateCountsAnswer {
 
     public static final AggregateCountsAnswer EMPTY_RESULTS = new AggregateCountsAnswer(ImmutableList.<AggregateCount>of(),
-            ImmutableSet.<MiruTermId>of(), 0, 0);
+            ImmutableSet.<String>of(), 0, 0);
 
     public final ImmutableList<AggregateCount> results;
-    public final ImmutableSet<MiruTermId> aggregateTerms;
+    public final ImmutableSet<String> aggregateTerms;
     public final int skippedDistincts;
     public final int collectedDistincts;
 
     public AggregateCountsAnswer(
             ImmutableList<AggregateCount> results,
-            ImmutableSet<MiruTermId> aggregateTerms,
+            ImmutableSet<String> aggregateTerms,
             int skippedDistincts, int collectedDistincts) {
         this.results = results;
         this.aggregateTerms = aggregateTerms;
@@ -35,7 +32,7 @@ public class AggregateCountsAnswer {
     @JsonCreator
     public static AggregateCountsAnswer fromJson(
         @JsonProperty("results") List<AggregateCount> results,
-        @JsonProperty("aggregateTerms") Set<MiruTermId> aggregateTerms,
+        @JsonProperty("aggregateTerms") Set<String> aggregateTerms,
         @JsonProperty("skippedDistincts") int skippedDistincts,
         @JsonProperty("collectedDistincts") int collectedDistincts) {
         return new AggregateCountsAnswer(ImmutableList.copyOf(results), ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
@@ -86,14 +83,14 @@ public class AggregateCountsAnswer {
     public static class AggregateCount {
 
         public final MiruActivity mostRecentActivity;
-        public final byte[] distinctValue;
+        public final String distinctValue;
         public final long count;
         public boolean unread;
 
         @JsonCreator
         public AggregateCount(
             @JsonProperty("mostRecentActivity") MiruActivity mostRecentActivity,
-            @JsonProperty("distinctValue") byte[] distinctValue,
+            @JsonProperty("distinctValue") String distinctValue,
             @JsonProperty("count") long count,
             @JsonProperty("unread") boolean unread) {
             this.mostRecentActivity = mostRecentActivity;
@@ -108,12 +105,9 @@ public class AggregateCountsAnswer {
 
         @Override
         public String toString() {
-            String v = (distinctValue.length == 4)
-                ? String.valueOf(FilerIO.bytesInt(distinctValue)) : (distinctValue.length == 8)
-                ? String.valueOf(FilerIO.bytesLong(distinctValue)) : Arrays.toString(distinctValue);
             return "AggregateCount{" +
                 "mostRecentActivity=" + mostRecentActivity +
-                ", distinctValue=" + v +
+                ", distinctValue=" + distinctValue +
                 ", count=" + count +
                 ", unread=" + unread +
                 '}';
@@ -136,16 +130,20 @@ public class AggregateCountsAnswer {
             if (unread != that.unread) {
                 return false;
             }
-            if (!Arrays.equals(distinctValue, that.distinctValue)) {
+            if (distinctValue != null ? !distinctValue.equals(that.distinctValue) : that.distinctValue != null) {
                 return false;
             }
-            return !(mostRecentActivity != null ? !mostRecentActivity.equals(that.mostRecentActivity) : that.mostRecentActivity != null);
+            if (mostRecentActivity != null ? !mostRecentActivity.equals(that.mostRecentActivity) : that.mostRecentActivity != null) {
+                return false;
+            }
+
+            return true;
         }
 
         @Override
         public int hashCode() {
             int result = mostRecentActivity != null ? mostRecentActivity.hashCode() : 0;
-            result = 31 * result + (distinctValue != null ? Arrays.hashCode(distinctValue) : 0);
+            result = 31 * result + (distinctValue != null ? distinctValue.hashCode() : 0);
             result = 31 * result + (int) (count ^ (count >>> 32));
             result = 31 * result + (unread ? 1 : 0);
             return result;

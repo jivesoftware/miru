@@ -4,7 +4,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -40,7 +39,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
 
         RecoAnswer lastAnswer = last.get();
 
-        Map<MiruTermId, RecoAnswer.Recommendation> ongoing = new HashMap<>();
+        Map<String, RecoAnswer.Recommendation> ongoing = new HashMap<>();
         for (RecoAnswer.Recommendation recommendation : currentAnswer.results) {
             ongoing.put(recommendation.distinctValue, recommendation);
         }

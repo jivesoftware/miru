@@ -173,13 +173,12 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                     data.put("results", Lists.transform(results, new Function<Trendy, Map<String, String>>() {
                         @Override
                         public Map<String, String> apply(Trendy input) {
-                            String name = new String(input.distinctValue, Charsets.UTF_8);
                             return ImmutableMap.of(
-                                "name", name,
+                                "name", input.distinctValue,
                                 "rank", String.valueOf(input.rank),
                                 "waveform", "data:image/png;base64," + new PNGWaveforms()
                                 .hitsToBase64PNGWaveform(600, 128, 10,
-                                    ImmutableMap.of(name, new AnalyticsAnswer.Waveform(input.waveform)),
+                                    ImmutableMap.of(input.distinctValue, new AnalyticsAnswer.Waveform(input.waveform)),
                                     Optional.of(mmd)));
                         }
                     }));

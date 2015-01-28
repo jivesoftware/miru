@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.List;
 
 /**
@@ -11,13 +10,13 @@ import java.util.List;
  */
 public class RecoAnswer {
 
-    public static final RecoAnswer EMPTY_RESULTS = new RecoAnswer(ImmutableList.<Recommendation>of() , 0);
+    public static final RecoAnswer EMPTY_RESULTS = new RecoAnswer(ImmutableList.<Recommendation>of(), 0);
 
     public final ImmutableList<Recommendation> results;
     public final int partitionsVisited;
 
     @JsonCreator
-    public RecoAnswer(@JsonProperty("results")List<Recommendation> results,
+    public RecoAnswer(@JsonProperty("results") List<Recommendation> results,
         @JsonProperty("partitionsVisited") int partitionsVisited) {
         this.results = ImmutableList.copyOf(results);
         this.partitionsVisited = partitionsVisited;
@@ -31,19 +30,19 @@ public class RecoAnswer {
 
     public static class Recommendation implements Comparable<Recommendation> {
 
-        public final MiruTermId distinctValue;
+        public final String distinctValue;
         public final float rank;
 
-        public Recommendation(MiruTermId distinctValue, float rank) {
+        public Recommendation(String distinctValue, float rank) {
             this.distinctValue = distinctValue;
             this.rank = rank;
         }
 
         @JsonCreator
         public static Recommendation fromJson(
-                @JsonProperty("distinctValue") MiruTermId distinctValue,
-                @JsonProperty("rank") float rank)
-                throws Exception {
+            @JsonProperty("distinctValue") String distinctValue,
+            @JsonProperty("rank") float rank)
+            throws Exception {
             return new Recommendation(distinctValue, rank);
         }
 
@@ -56,9 +55,9 @@ public class RecoAnswer {
         @Override
         public String toString() {
             return "Recommendation{"
-                    + ", distinctValue=" + distinctValue
-                    + ", rank=" + rank
-                    + '}';
+                + ", distinctValue=" + distinctValue
+                + ", rank=" + rank
+                + '}';
         }
     }
 

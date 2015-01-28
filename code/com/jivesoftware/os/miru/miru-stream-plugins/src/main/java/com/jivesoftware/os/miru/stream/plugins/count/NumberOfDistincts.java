@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
@@ -10,6 +11,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -35,7 +37,7 @@ public class NumberOfDistincts {
         log.debug("Get number of distincts for answer={} query={}", answer, request);
 
         int collectedDistincts = 0;
-        Set<MiruTermId> aggregateTerms;
+        Set<String> aggregateTerms;
         if (lastReport.isPresent()) {
             collectedDistincts = lastReport.get().collectedDistincts;
             aggregateTerms = Sets.newHashSet(lastReport.get().aggregateTerms);
@@ -43,13 +45,16 @@ public class NumberOfDistincts {
             aggregateTerms = Sets.newHashSet();
         }
 
+        MiruTermComposer termComposer = requestContext.getTermComposer();
         int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
+        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
             ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
 
-            for (MiruTermId aggregateTermId : aggregateTerms) {
+            for (String aggregateTerm : aggregateTerms) {
+                MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
                 Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
                 if (!optionalTermIndex.isPresent()) {
                     continue;
@@ -81,8 +86,9 @@ public class NumberOfDistincts {
 
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0];
+                    String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
 
-                    aggregateTerms.add(aggregateTermId);
+                    aggregateTerms.add(aggregateTerm);
                     Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
