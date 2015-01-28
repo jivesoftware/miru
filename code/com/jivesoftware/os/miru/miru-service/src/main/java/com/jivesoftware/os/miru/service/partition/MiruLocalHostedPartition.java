@@ -415,12 +415,19 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             MiruPartitionActiveTimestamp activeTimestamp = partitionEventHandler.isCoordActive(coord);
             if (activeTimestamp.active) {
                 if (accessor.info.state == MiruPartitionState.offline) {
-                    try {
-                        open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap));
-                    } catch (MiruPartitionUnavailableException e) {
-                        log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
-                            coord.tenantId, timings.partitionBanUnregisteredSchemaMillis);
-                        banUnregisteredSchema.set(System.currentTimeMillis() + timings.partitionBanUnregisteredSchemaMillis);
+                    if (accessor.info.storage == MiruBackingStorage.memory) {
+                        try {
+                            open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap));
+                        } catch (MiruPartitionUnavailableException e) {
+                            log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
+                                coord.tenantId, timings.partitionBanUnregisteredSchemaMillis);
+                            banUnregisteredSchema.set(System.currentTimeMillis() + timings.partitionBanUnregisteredSchemaMillis);
+                        }
+                    } else if (accessor.info.storage == MiruBackingStorage.disk) {
+                        if (!removed.get() && accessor.canHotDeploy()) {
+                            log.info("Hot deploying for checkActive: {}", coord);
+                            open(accessor, accessor.info.copyToState(MiruPartitionState.online));
+                        }
                     }
                 } else if (accessor.context.isPresent()
                     && activeTimestamp.timestamp < (System.currentTimeMillis() - timings.partitionReleaseContextCacheAfterMillis)) {
