@@ -1,0 +1,253 @@
+package com.jivesoftware.os.miru.reco.plugins;
+
+import com.google.common.base.Charsets;
+import com.google.common.base.Optional;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
+import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
+import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
+import com.jivesoftware.os.miru.service.MiruService;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+import static com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type.multiTerm;
+import static com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type.singleTerm;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+
+/**
+ * @author jonathan
+ */
+public class CollaborativeFilteringCorrectnessTest {
+
+    final MiruFieldDefinition.Prefix TYPED_PREFIX = new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' ');
+
+    MiruSchema miruSchema = new MiruSchema.Builder("reco", 1)
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "locale", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "mode", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(2, "activityType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(3, "contextType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(4, "context", singleTerm, TYPED_PREFIX),
+            new MiruFieldDefinition(5, "objectType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(6, "object", singleTerm, TYPED_PREFIX),
+            new MiruFieldDefinition(7, "parentType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(8, "parent", singleTerm, TYPED_PREFIX),
+            new MiruFieldDefinition(9, "user", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(10, "authors", multiTerm, MiruFieldDefinition.Prefix.NONE)
+        })
+        .setPairedLatest(ImmutableMap.of(
+            "parent", Arrays.asList("user"),
+            "user", Arrays.asList("parent", "context", "user")))
+        .setBloom(ImmutableMap.of(
+            "context", Arrays.asList("user"),
+            "parent", Arrays.asList("user"),
+            "user", Arrays.asList("user")))
+        .build();
+
+    MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
+    MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
+    MiruPartitionId partitionId = MiruPartitionId.of(1);
+    MiruHost miruHost = new MiruHost("logicalName", 1_234);
+    CollaborativeFilterUtil util = new CollaborativeFilterUtil();
+    MiruIndexUtil indexUtil = new MiruIndexUtil();
+    AtomicInteger time = new AtomicInteger();
+    AtomicInteger walIndex = new AtomicInteger();
+
+    int numqueries = 1_000;
+    int numberOfUsers = 100;
+    int numberOfDocument = 10_000;
+    int numberOfViewsPerUser = 1_000;
+
+    MiruService service;
+    RecoInjectable injectable;
+
+    @BeforeMethod
+    public void setUpMethod() throws Exception {
+        MiruPartitionedActivityFactory factory = new MiruPartitionedActivityFactory();
+        List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList();
+        int writerId = 1;
+        partitionedActivities.add(factory.begin(writerId, partitionId, tenant1, 0));
+
+        MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), partitionedActivities);
+
+        this.service = miruProvider.getMiru(tenant1);
+        this.injectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil()));
+    }
+
+    @Test(enabled = false)
+    public void basicTest() throws Exception {
+        System.out.println("Building activities....");
+        long start = System.currentTimeMillis();
+        int count = 0;
+        int numGroups = 10;
+        List<MiruPartitionedActivity> batch = new ArrayList<>();
+        SetMultimap<String, String> authorToParents = HashMultimap.create();
+        SetMultimap<String, String> userToParents = HashMultimap.create();
+        for (int i = 0; i < numberOfUsers; i++) {
+            String user = "bob" + i;
+            int randSeed = i % numGroups;
+            Random userRand = new Random(randSeed * 137);
+            for (int r = 0; r < 2 * (i / numGroups); r++) {
+                userRand.nextInt(numberOfDocument);
+            }
+
+            for (int d = 0; d < numberOfViewsPerUser; d++) {
+                int docId = userRand.nextInt(numberOfDocument);
+                long activityTime = time.incrementAndGet();
+
+                int contextType = 100 + docId % 3;
+                String context = contextType + " place-" + (docId % 10);
+
+                int parentType = 50 + docId % 6;
+                String parent = parentType + " doc-" + docId;
+
+                Random authorRand = new Random(docId * 137);
+                String author1 = "bob" + authorRand.nextInt(numberOfUsers);
+                String author2 = "bob" + authorRand.nextInt(numberOfUsers);
+                String author3 = "bob" + authorRand.nextInt(numberOfUsers);
+                List<String> authors = Arrays.asList(author1, author2, author3);
+
+                batch.add(viewActivity(tenant1, partitionId, activityTime, user, contextType, context, parentType, parent,
+                    authors, walIndex.incrementAndGet()));
+
+                userToParents.put(user, parent);
+                authorToParents.put(author1, parent);
+                authorToParents.put(author2, parent);
+                authorToParents.put(author3, parent);
+
+                if (++count % 10_000 == 0) {
+                    service.writeToIndex(batch);
+                    batch.clear();
+                    System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
+                }
+            }
+        }
+        if (!batch.isEmpty()) {
+            service.writeToIndex(batch);
+            batch.clear();
+        }
+
+        System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
+        System.out.println("Running queries...");
+
+        Set<String> docTypes = Sets.newHashSet("50", "51", "52");
+        MiruFieldDefinition userFieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("user"));
+        for (int i = 0; i < numqueries; i++) {
+            String user = "bob" + i;
+            MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.pairedLatest, "user", ImmutableList.of(
+                indexUtil.makePairedLatestTerm(termComposer.compose(userFieldDefinition, user), "parent").toString()));
+            MiruFilter filter = new MiruFilter(
+                MiruFilterOperation.or,
+                Optional.of(Arrays.asList(miruFieldFilter)),
+                Optional.<List<MiruFilter>>absent());
+
+            long s = System.currentTimeMillis();
+            MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(new MiruRequest<>(
+                tenant1,
+                new MiruActorId(new Id(1)),
+                MiruAuthzExpression.NOT_PROVIDED,
+                new RecoQuery(
+                    filter,
+                    "parent", "parent", "parent",
+                    "user", "user", "user",
+                    "parent", "parent",
+                    new MiruFilter(MiruFilterOperation.pButNotQ,
+                        Optional.<List<MiruFieldFilter>>absent(),
+                        Optional.of(Arrays.asList(
+                            new MiruFilter(MiruFilterOperation.and,
+                                Optional.of(Arrays.asList(
+                                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "11", "65")),
+                                    new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes))
+                                )),
+                                Optional.<List<MiruFilter>>absent()),
+                            new MiruFilter(MiruFilterOperation.and,
+                                Optional.of(Arrays.asList(
+                                    new MiruFieldFilter(MiruFieldType.primary, "authors", Arrays.asList(user)))),
+                                Optional.<List<MiruFilter>>absent())))),
+                    10),
+                MiruSolutionLogLevel.INFO));
+
+            System.out.println("recoResult:" + response.answer.results);
+            System.out.println("Took:" + (System.currentTimeMillis() - s));
+            //assertTrue(response.answer.results.size() > 0, response.toString());
+            for (RecoAnswer.Recommendation result : response.answer.results) {
+                assertTrue(docTypes.contains(result.distinctValue.substring(0, result.distinctValue.indexOf(' '))), "Didn't expect " + result.distinctValue);
+                assertFalse(authorToParents.containsEntry(user, result.distinctValue));
+                assertFalse(userToParents.containsEntry(user, result.distinctValue));
+            }
+        }
+    }
+
+    private MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
+
+    private MiruPartitionedActivity viewActivity(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        long time,
+        String user,
+        int contextType,
+        String context,
+        int parentType,
+        String parent,
+        List<String> authors,
+        int index) {
+
+        Map<String, List<String>> fieldsValues = Maps.newHashMap();
+        fieldsValues.put("locale", Arrays.asList("en"));
+        fieldsValues.put("mode", Arrays.asList("LIVE"));
+        fieldsValues.put("activityType", Arrays.asList("0"));
+        fieldsValues.put("contextType", Arrays.asList(String.valueOf(contextType)));
+        fieldsValues.put("context", Arrays.asList(context));
+        fieldsValues.put("objectType", Arrays.asList(String.valueOf(parentType)));
+        fieldsValues.put("object", Arrays.asList(parent));
+        fieldsValues.put("parentType", Arrays.asList(String.valueOf(parentType)));
+        fieldsValues.put("parent", Arrays.asList(parent));
+        fieldsValues.put("user", Arrays.asList(user));
+        fieldsValues.put("authors", authors);
+
+        MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        return partitionedActivityFactory.activity(1, partitionId, index, activity);
+    }
+
+}

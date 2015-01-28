@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 /**
  *
@@ -18,7 +17,6 @@ import java.util.Random;
 public class CollaborativeFilterUtil {
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
-    private final Random random = new Random();
     private static final String[] animals = new String[] { "cat", "dog", "elephant", "aardvark", "camel", "moose", "mouse", "rabbit", "dingo", "eel" };
 
     public MiruPartitionedActivity viewActivity(MiruTenantId tenantId,
