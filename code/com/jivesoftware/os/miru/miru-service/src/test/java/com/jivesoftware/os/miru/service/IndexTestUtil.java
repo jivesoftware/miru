@@ -36,6 +36,7 @@ import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import java.io.File;
 import java.nio.file.Files;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -83,6 +84,8 @@ public class IndexTestUtil {
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
             1024,
+            null,
+            new AtomicLong(0),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
             authzStripingLocksProvider

@@ -24,14 +24,12 @@ public class RoaringInspectionTest {
     public void testBoundary() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
 
-        RoaringBitmap bitmap = bitmaps.create();
-        bitmaps.set(bitmap, 0);
+        RoaringBitmap bitmap = bitmaps.createWithBits(0);
         CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(bitmap);
 
         System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
 
-        RoaringBitmap remove = bitmaps.create();
-        bitmaps.set(remove, 0);
+        RoaringBitmap remove = bitmaps.createWithBits(0);
 
         RoaringBitmap answer = bitmaps.create();
         bitmaps.andNot(answer, bitmap, Arrays.asList(remove));

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.filer.map.store.api.KeyRange;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -25,4 +26,42 @@ public interface MiruFieldIndex<BM> {
     long sizeInMemory() throws Exception;
 
     long sizeOnDisk() throws Exception;
+
+    class IndexKey {
+        public final long id;
+        public final byte[] keyBytes;
+
+        public IndexKey(long id, byte[] keyBytes) {
+            this.id = id;
+            this.keyBytes = keyBytes;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            IndexKey indexKey = (IndexKey) o;
+
+            if (id != indexKey.id) {
+                return false;
+            }
+            if (!Arrays.equals(keyBytes, indexKey.keyBytes)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = (int) (id ^ (id >>> 32));
+            result = 31 * result + (keyBytes != null ? Arrays.hashCode(keyBytes) : 0);
+            return result;
+        }
+    }
 }

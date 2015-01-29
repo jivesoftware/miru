@@ -75,8 +75,7 @@ public class MiruAggregateUtil {
             }
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
-                BM removeUnknownField = bitmaps.create();
-                bitmaps.set(removeUnknownField, lastSetBit);
+                BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
                 if (debugEnabled) {
                     bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(removeUnknownField)));
                 }

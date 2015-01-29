@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -48,6 +49,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan
@@ -67,6 +69,8 @@ public class MiruContextFactory {
     private final MiruResourceLocator diskResourceLocator;
     private final MiruBackingStorage defaultStorage;
     private final int partitionAuthzCacheSize;
+    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
+    private final AtomicLong fieldIndexIdProvider;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
@@ -79,6 +83,8 @@ public class MiruContextFactory {
         MiruResourceLocator diskResourceLocator,
         MiruBackingStorage defaultStorage,
         int partitionAuthzCacheSize,
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        AtomicLong fieldIndexIdProvider,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
         StripingLocksProvider<String> authzStripingLocksProvider) {
@@ -90,6 +96,8 @@ public class MiruContextFactory {
         this.diskResourceLocator = diskResourceLocator;
         this.defaultStorage = defaultStorage;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
+        this.fieldIndexCache = fieldIndexCache;
+        this.fieldIndexIdProvider = fieldIndexIdProvider;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
         this.streamStripingLocksProvider = streamStripingLocksProvider;
         this.authzStripingLocksProvider = authzStripingLocksProvider;
@@ -148,6 +156,7 @@ public class MiruContextFactory {
         MiruFilerFieldIndex<BM>[] fieldIndexes = new MiruFilerFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
             KeyedFilerStore[] indexes = new KeyedFilerStore[schema.fieldCount()];
+            long[] indexIds = new long[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 int fieldId = fieldDefinition.fieldId;
                 if (fieldType == MiruFieldType.latest && fieldDefinition.type != MiruFieldDefinition.Type.singleTermIndexLatest
@@ -158,8 +167,9 @@ public class MiruContextFactory {
                     boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
                     indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys);
                 }
+                indexIds[fieldId] = fieldIndexIdProvider.incrementAndGet();
             }
-            fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps, indexes, fieldIndexStripingLocksProvider);
+            fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps, fieldIndexCache, indexIds, indexes, fieldIndexStripingLocksProvider);
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -175,12 +185,16 @@ public class MiruContextFactory {
 
         MiruFilerAuthzIndex<BM> authzIndex = new MiruFilerAuthzIndex<>(
             bitmaps,
+            fieldIndexCache,
+            fieldIndexIdProvider.incrementAndGet(),
             new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex"), false),
             new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils),
             authzStripingLocksProvider);
 
         MiruFilerRemovalIndex<BM> removalIndex = new MiruFilerRemovalIndex<>(
             bitmaps,
+            fieldIndexCache,
+            fieldIndexIdProvider.incrementAndGet(),
             new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), false),
             new byte[] { 0 },
             -1,
@@ -188,11 +202,15 @@ public class MiruContextFactory {
 
         MiruFilerUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
             bitmaps,
+            fieldIndexCache,
+            fieldIndexIdProvider.incrementAndGet(),
             new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex"), false),
             streamStripingLocksProvider);
 
         MiruFilerInboxIndex<BM> inboxIndex = new MiruFilerInboxIndex<>(
             bitmaps,
+            fieldIndexCache,
+            fieldIndexIdProvider.incrementAndGet(),
             new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex"), false),
             streamStripingLocksProvider);
 

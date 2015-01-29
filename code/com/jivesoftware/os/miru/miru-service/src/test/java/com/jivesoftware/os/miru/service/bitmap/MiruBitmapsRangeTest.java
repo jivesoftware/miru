@@ -14,9 +14,8 @@ public class MiruBitmapsRangeTest {
 
     @Test(dataProvider = "bitmapsProvider")
     public <BM> void testRanges(MiruBitmaps<BM> bitmaps) {
-        BM bitmap = bitmaps.create();
         int[] indexes = { 3, 4, 5, 8, 9, 10, 13, 15, 17, 18, 19, 20, 105 };
-        bitmaps.set(bitmap, indexes);
+        BM bitmap = bitmaps.createWithBits(indexes);
         MiruIntIterator intIterator = bitmaps.intIterator(bitmap);
 
         assertEquals(bitmaps.cardinality(bitmap), indexes.length);

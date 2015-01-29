@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
+import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
 import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.map.store.api.KeyRange;
@@ -19,15 +21,21 @@ import java.util.List;
 public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
+    private final Cache<IndexKey, Optional<?>> fieldIndexCache;
+    private final long[] indexIds;
     private final KeyedFilerStore[] indexes;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
 
     public MiruFilerFieldIndex(MiruBitmaps<BM> bitmaps,
+        Cache<IndexKey, Optional<?>> fieldIndexCache,
+        long[] indexIds,
         KeyedFilerStore[] indexes,
         StripingLocksProvider<MiruTermId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
+        this.fieldIndexCache = fieldIndexCache;
+        this.indexIds = indexIds;
         this.indexes = indexes;
         this.stripingLocksProvider = stripingLocksProvider;
     }
@@ -65,13 +73,14 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
 
     @Override
     public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, stripingLocksProvider.lock(termId));
+        return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new IndexKey(indexIds[fieldId], termId.getBytes()), indexes[fieldId], -1,
+            stripingLocksProvider.lock(termId));
     }
 
     @Override
     public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), considerIfIndexIdGreaterThanN,
-            stripingLocksProvider.lock(termId));
+        return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new IndexKey(indexIds[fieldId], termId.getBytes()), indexes[fieldId],
+            considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId));
     }
 
     @Override
@@ -80,6 +89,7 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
     }
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, indexes[fieldId], termId.getBytes(), -1, stripingLocksProvider.lock(termId));
+        return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new IndexKey(indexIds[fieldId], termId.getBytes()), indexes[fieldId], -1,
+            stripingLocksProvider.lock(termId));
     }
 }

@@ -3,6 +3,9 @@ package com.jivesoftware.os.miru.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
@@ -23,6 +26,7 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
@@ -60,6 +64,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MiruServiceInitializer {
 
@@ -133,6 +138,12 @@ public class MiruServiceInitializer {
             byteBufferFactory,
             config.getPartitionNumberOfChunkStores());
 
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache = CacheBuilder.newBuilder()
+            .expireAfterAccess(config.getFieldIndexCacheExpireAfterMillis(), TimeUnit.MILLISECONDS)
+            .maximumSize(config.getFieldIndexCacheMaxSize())
+            .concurrencyLevel(config.getFieldIndexCacheConcurrencyLevel())
+            .softValues()
+            .build();
         MiruContextFactory streamFactory = new MiruContextFactory(schemaProvider,
             termComposer,
             internExtern,
@@ -144,6 +155,8 @@ public class MiruServiceInitializer {
             resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
+            fieldIndexCache,
+            new AtomicLong(0),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
             authzStripingLocksProvider

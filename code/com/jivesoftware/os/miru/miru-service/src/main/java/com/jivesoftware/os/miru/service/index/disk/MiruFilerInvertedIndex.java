@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.Filer;
@@ -10,6 +11,7 @@ import com.jivesoftware.os.filer.io.FilerTransaction;
 import com.jivesoftware.os.filer.io.RewriteFilerTransaction;
 import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import java.io.DataInput;
@@ -17,6 +19,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * @author jonathan
@@ -26,39 +29,54 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     private static final int LAST_ID_LENGTH = 4;
 
     private final MiruBitmaps<BM> bitmaps;
+    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
+    private final MiruFieldIndex.IndexKey indexKey;
     private final KeyedFilerStore keyedFilerStore;
-    private final byte[] keyBytes;
     private final int considerIfIndexIdGreaterThanN;
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
     public MiruFilerInvertedIndex(MiruBitmaps<BM> bitmaps,
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        MiruFieldIndex.IndexKey indexKey,
         KeyedFilerStore keyedFilerStore,
-        byte[] keyBytes,
         int considerIfIndexIdGreaterThanN,
         Object mutationLock) {
         this.bitmaps = bitmaps;
+        this.fieldIndexCache = fieldIndexCache;
+        this.indexKey = Preconditions.checkNotNull(indexKey);
         this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
-        this.keyBytes = Preconditions.checkNotNull(keyBytes);
         this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
         this.mutationLock = mutationLock;
     }
+
+    private final Callable<Optional<BM>> indexLoader = new Callable<Optional<BM>>() {
+        @Override
+        public Optional<BM> call() throws Exception {
+            byte[] rawBytes = keyedFilerStore.execute(indexKey.keyBytes, -1, getTransaction);
+            BitmapAndLastId<BM> bitmapAndLastId = deser(rawBytes);
+            if (bitmapAndLastId != null) {
+                if (lastId == Integer.MIN_VALUE) {
+                    lastId = bitmapAndLastId.lastId;
+                }
+                return Optional.of(bitmapAndLastId.bitmap);
+            } else {
+                lastId = -1;
+                return Optional.absent();
+            }
+        }
+    };
 
     @Override
     public Optional<BM> getIndex() throws Exception {
         if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
             return Optional.absent();
         }
-        byte[] rawBytes = keyedFilerStore.execute(keyBytes, -1, getTransaction);
-        BitmapAndLastId<BM> bitmapAndLastId = deser(rawBytes);
-        if (bitmapAndLastId != null) {
-            if (lastId == Integer.MIN_VALUE) {
-                lastId = bitmapAndLastId.lastId;
-            }
-            return Optional.of(bitmapAndLastId.bitmap);
+
+        if (fieldIndexCache != null) {
+            return (Optional<BM>) fieldIndexCache.get(indexKey, indexLoader);
         } else {
-            lastId = -1;
-            return Optional.absent();
+            return indexLoader.call();
         }
     }
 
@@ -95,7 +113,10 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         dataOutput.write(FilerIO.intBytes(setLastId));
         bitmaps.serialize(index, dataOutput);
         final byte[] bytes = dataOutput.toByteArray();
-        keyedFilerStore.executeRewrite(keyBytes, filerSizeInBytes, new SetTransaction(bytes));
+        keyedFilerStore.executeRewrite(indexKey.keyBytes, filerSizeInBytes, new SetTransaction(bytes));
+        if (fieldIndexCache != null) {
+            fieldIndexCache.put(indexKey, Optional.of(index));
+        }
     }
 
     @Override
@@ -110,7 +131,8 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
         synchronized (mutationLock) {
             BM index = getOrCreateIndex();
-            if (!bitmaps.set(index, ids)) {
+            BM r = bitmaps.create();
+            if (!bitmaps.append(r, index, ids)) {
                 throw new RuntimeException("ids must be in increasing order"
                     + ", ids = " + Arrays.toString(ids)
                     + ", cardinality = " + bitmaps.cardinality(index)
@@ -122,7 +144,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
                 lastId = appendLastId;
             }
 
-            setIndex(index, lastId);
+            setIndex(r, lastId);
         }
     }
 
@@ -130,7 +152,8 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     public void appendAndExtend(List<Integer> ids, int extendToId) throws Exception {
         synchronized (mutationLock) {
             BM index = getOrCreateIndex();
-            bitmaps.extend(index, ids, extendToId + 1);
+            BM r = bitmaps.create();
+            bitmaps.extend(r, index, ids, extendToId + 1);
 
             if (!ids.isEmpty()) {
                 int appendLastId = ids.get(ids.size() - 1);
@@ -139,14 +162,13 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
                 }
             }
 
-            setIndex(index, lastId);
+            setIndex(r, lastId);
         }
     }
 
     @Override
     public void remove(int id) throws Exception { // Kinda crazy expensive way to remove an intermediary bit.
-        BM remove = bitmaps.create();
-        bitmaps.set(remove, id);
+        BM remove = bitmaps.createWithBits(id);
         synchronized (mutationLock) {
             BM index = getOrCreateIndex();
             BM r = bitmaps.create();
@@ -160,8 +182,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         if (ids.length == 0) {
             return;
         }
-        BM set = bitmaps.create();
-        bitmaps.set(set, ids);
+        BM set = bitmaps.createWithBits(ids);
         synchronized (mutationLock) {
             BM index = getOrCreateIndex();
             BM r = bitmaps.create();
@@ -183,7 +204,8 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
         synchronized (mutationLock) {
             BM index = getOrCreateIndex();
-            BM r = bitmaps.setIntermediate(index, ids);
+            BM r = bitmaps.create();
+            bitmaps.setIntermediate(r, index, ids);
 
             int setLastId = ids[ids.length - 1];
             if (setLastId > lastId) {
@@ -198,7 +220,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     public int lastId() throws Exception {
         if (lastId == Integer.MIN_VALUE) {
             synchronized (mutationLock) {
-                lastId = keyedFilerStore.execute(keyBytes, -1, lastIdTransaction);
+                lastId = keyedFilerStore.execute(indexKey.keyBytes, -1, lastIdTransaction);
             }
         }
         return lastId;

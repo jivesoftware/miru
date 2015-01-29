@@ -1,10 +1,12 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
 import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
@@ -14,14 +16,20 @@ import java.util.Collections;
 public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
+    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
+    private final long indexId;
     private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        long indexId,
         KeyedFilerStore store,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
+        this.fieldIndexCache = fieldIndexCache;
+        this.indexId = indexId;
         this.store = store;
         this.stripingLocksProvider = stripingLocksProvider;
     }
@@ -33,7 +41,8 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
 
     @Override
     public Optional<BM> getUnread(MiruStreamId streamId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, stripingLocksProvider.lock(streamId)).getIndex();
+        return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), store, -1,
+            stripingLocksProvider.lock(streamId)).getIndex();
     }
 
     @Override
@@ -42,7 +51,8 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     private MiruInvertedIndex<BM> getOrCreateUnread(MiruStreamId streamId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, store, streamId.getBytes(), -1, stripingLocksProvider.lock(streamId));
+        return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), store, -1,
+            stripingLocksProvider.lock(streamId));
     }
 
     @Override

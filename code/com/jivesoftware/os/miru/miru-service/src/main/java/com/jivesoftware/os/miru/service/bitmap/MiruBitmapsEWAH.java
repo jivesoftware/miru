@@ -44,10 +44,12 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public boolean set(EWAHCompressedBitmap bitmap, int... indexes) {
+    public boolean append(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int... indexes) {
+        copy(container, bitmap);
+
         //TODO we could optimize by adding ranges via streams of words
         for (int index : indexes) {
-            if (!bitmap.set(index)) {
+            if (!container.set(index)) {
                 return false;
             }
         }
@@ -55,11 +57,12 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public EWAHCompressedBitmap setIntermediate(EWAHCompressedBitmap bitmap, int... indexes) {
+    public void setIntermediate(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int... indexes) {
+        copy(container, bitmap);
+
         for (int index : indexes) {
-            bitmap.set(index);
+            container.set(index);
         }
-        return bitmap;
     }
 
     @Override
@@ -68,19 +71,21 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public void extend(EWAHCompressedBitmap bitmap, List<Integer> indexes, int extendToIndex) {
-        if (indexes.isEmpty() && bitmap.sizeInBits() == extendToIndex + 1) {
+    public void extend(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, List<Integer> indexes, int extendToIndex) {
+        copy(container, bitmap);
+
+        if (indexes.isEmpty() && container.sizeInBits() == extendToIndex + 1) {
             return;
         }
         for (int index : indexes) {
-            if (!bitmap.set(index)) {
+            if (!container.set(index)) {
                 throw new RuntimeException("id must be in increasing order"
                     + ", index = " + index
-                    + ", cardinality = " + bitmap.cardinality()
-                    + ", size in bits = " + bitmap.sizeInBits());
+                    + ", cardinality = " + container.cardinality()
+                    + ", size in bits = " + container.sizeInBits());
             }
         }
-        bitmap.setSizeInBits(extendToIndex, false);
+        container.setSizeInBits(extendToIndex, false);
     }
 
     @Override
@@ -102,6 +107,15 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     @Override
     public EWAHCompressedBitmap create() {
         return new EWAHCompressedBitmap();
+    }
+
+    @Override
+    public EWAHCompressedBitmap createWithBits(int... indexes) {
+        EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
+        for (int index : indexes) {
+            bitmap.set(index);
+        }
+        return bitmap;
     }
 
     @Override

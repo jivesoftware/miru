@@ -97,8 +97,7 @@ public class Trending {
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
-                    BM removeUnknownField = bitmaps.create();
-                    bitmaps.set(removeUnknownField, lastSetBit);
+                    BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
                     BM revisedAnswer = reusable.next();
                     answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
                     answer = revisedAnswer;

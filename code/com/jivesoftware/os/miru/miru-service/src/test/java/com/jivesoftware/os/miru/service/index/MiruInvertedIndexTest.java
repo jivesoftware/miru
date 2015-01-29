@@ -7,6 +7,7 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.bitmap.AnswerCardinalityLastSetBitmapStorage;
@@ -197,9 +198,10 @@ public class MiruInvertedIndexTest {
 
     private <BM> MiruFilerInvertedIndex<BM> buildOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps,
+            null,
+            new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
             IndexTestUtil.buildKeyedFilerStore("index",
                 IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096)),
-            new byte[] { 0 },
             -1,
             new Object());
     }

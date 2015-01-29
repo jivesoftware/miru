@@ -1,10 +1,13 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
+import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
@@ -13,17 +16,23 @@ import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
+    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
+    private final long indexId;
     private final KeyedFilerStore keyedStore;
     private final MiruAuthzCache<BM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
 
     public MiruFilerAuthzIndex(MiruBitmaps<BM> bitmaps,
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        long indexId,
         KeyedFilerStore keyedStore,
         MiruAuthzCache<BM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
         throws Exception {
 
         this.bitmaps = bitmaps;
+        this.fieldIndexCache = fieldIndexCache;
+        this.indexId = indexId;
         this.keyedStore = keyedStore;
         this.cache = cache;
         this.stripingLocksProvider = stripingLocksProvider;
@@ -53,7 +62,8 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
     }
 
     private MiruInvertedIndex<BM> get(String authz) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, keyedStore, MiruAuthzUtils.key(authz), -1, stripingLocksProvider.lock(authz));
+        return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), keyedStore, -1,
+            stripingLocksProvider.lock(authz));
     }
 
     @Override
