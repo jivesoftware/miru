@@ -277,6 +277,7 @@ public class RecoCorrectnessTest {
                     27,
                     constraintsFilter,
                     "parent",
+                    MiruFilter.NO_FILTER,
                     Lists.newArrayList(docTypes),
                     10),
                 MiruSolutionLogLevel.INFO));

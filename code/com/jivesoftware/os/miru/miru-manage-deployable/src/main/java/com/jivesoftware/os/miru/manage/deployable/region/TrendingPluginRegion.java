@@ -134,6 +134,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                         input.buckets,
                                         constraintsFilter,
                                         input.field,
+                                        MiruFilter.NO_FILTER,
                                         input.fieldPrefixes,
                                         100),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),

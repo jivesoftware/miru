@@ -17,7 +17,8 @@ public class TrendingQuery implements Serializable {
     public final int divideTimeRangeIntoNSegments;
     public final MiruFilter constraintsFilter;
     public final String aggregateCountAroundField;
-    public final List<String> fieldPrefixes;
+    public final MiruFilter distinctsFilter;
+    public final List<String> distinctPrefixes;
     public final int desiredNumberOfDistincts;
 
     @JsonCreator
@@ -26,7 +27,8 @@ public class TrendingQuery implements Serializable {
         @JsonProperty("divideTimeRangeIntoNSegments") int divideTimeRangeIntoNSegments,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
-        @JsonProperty("fieldPrefixes") List<String> fieldPrefixes,
+        @JsonProperty("distinctsFilter") MiruFilter distinctsFilter,
+        @JsonProperty("distinctPrefixes") List<String> distinctPrefixes,
         @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
         Preconditions.checkArgument(!MiruTimeRange.ALL_TIME.equals(timeRange), "Requires an explicit time range");
         this.timeRange = Preconditions.checkNotNull(timeRange);
@@ -34,7 +36,8 @@ public class TrendingQuery implements Serializable {
         this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
-        this.fieldPrefixes = fieldPrefixes;
+        this.distinctsFilter = Preconditions.checkNotNull(distinctsFilter);
+        this.distinctPrefixes = distinctPrefixes;
         Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
@@ -46,7 +49,8 @@ public class TrendingQuery implements Serializable {
             ", divideTimeRangeIntoNSegments=" + divideTimeRangeIntoNSegments +
             ", constraintsFilter=" + constraintsFilter +
             ", aggregateCountAroundField='" + aggregateCountAroundField + '\'' +
-            ", fieldPrefixes=" + fieldPrefixes +
+            ", distinctsFilter=" + distinctsFilter +
+            ", distinctPrefixes=" + distinctPrefixes +
             ", desiredNumberOfDistincts=" + desiredNumberOfDistincts +
             '}';
     }

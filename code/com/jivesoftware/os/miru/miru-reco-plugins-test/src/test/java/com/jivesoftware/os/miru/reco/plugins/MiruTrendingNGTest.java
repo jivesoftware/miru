@@ -184,6 +184,7 @@ public class MiruTrendingNGTest {
                     32,
                     filter,
                     "obj",
+                    MiruFilter.NO_FILTER,
                     Arrays.asList("0", "2", "8", "-1"),
                     10),
                 MiruSolutionLogLevel.INFO);

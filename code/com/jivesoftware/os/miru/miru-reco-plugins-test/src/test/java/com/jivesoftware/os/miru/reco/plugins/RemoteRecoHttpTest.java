@@ -214,6 +214,7 @@ public class RemoteRecoHttpTest {
                             32,
                             constraintsFilter,
                             "parent",
+                            MiruFilter.NO_FILTER,
                             Arrays.asList("102", "2", "38"),
                             100),
                         MiruSolutionLogLevel.INFO);
