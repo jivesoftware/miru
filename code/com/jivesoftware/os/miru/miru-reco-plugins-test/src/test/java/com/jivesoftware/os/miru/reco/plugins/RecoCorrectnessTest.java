@@ -10,9 +10,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -32,11 +34,18 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
+import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.Trending;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.ArrayList;
@@ -47,6 +56,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -58,7 +68,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * @author jonathan
  */
-public class CollaborativeFilteringCorrectnessTest {
+public class RecoCorrectnessTest {
 
     final MiruFieldDefinition.Prefix TYPED_PREFIX = new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' ');
 
@@ -90,8 +100,9 @@ public class CollaborativeFilteringCorrectnessTest {
     MiruPartitionId partitionId = MiruPartitionId.of(1);
     MiruHost miruHost = new MiruHost("logicalName", 1_234);
     CollaborativeFilterUtil util = new CollaborativeFilterUtil();
+    MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     MiruIndexUtil indexUtil = new MiruIndexUtil();
-    AtomicInteger time = new AtomicInteger();
+    AtomicLong time = new AtomicLong();
     AtomicInteger walIndex = new AtomicInteger();
 
     int numqueries = 1_000;
@@ -99,8 +110,12 @@ public class CollaborativeFilteringCorrectnessTest {
     int numberOfDocument = 10_000;
     int numberOfViewsPerUser = 1_000;
 
+    boolean doSystemRecommendedContent = false;
+    boolean doContainerTrendingContent = true;
+
     MiruService service;
-    RecoInjectable injectable;
+    RecoInjectable recoInjectable;
+    TrendingInjectable trendingInjectable;
 
     @BeforeMethod
     public void setUpMethod() throws Exception {
@@ -113,7 +128,8 @@ public class CollaborativeFilteringCorrectnessTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil()));
+        this.recoInjectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(aggregateUtil, indexUtil));
+        this.trendingInjectable = new TrendingInjectable(miruProvider, new Trending(), new Distincts(termComposer), new Analytics());
     }
 
     @Test(enabled = false)
@@ -125,6 +141,7 @@ public class CollaborativeFilteringCorrectnessTest {
         List<MiruPartitionedActivity> batch = new ArrayList<>();
         SetMultimap<String, String> authorToParents = HashMultimap.create();
         SetMultimap<String, String> userToParents = HashMultimap.create();
+        SetMultimap<String, String> contextToParents = HashMultimap.create();
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
             int randSeed = i % numGroups;
@@ -156,6 +173,7 @@ public class CollaborativeFilteringCorrectnessTest {
                 authorToParents.put(author1, parent);
                 authorToParents.put(author2, parent);
                 authorToParents.put(author3, parent);
+                contextToParents.put(context, parent);
 
                 if (++count % 10_000 == 0) {
                     service.writeToIndex(batch);
@@ -169,8 +187,22 @@ public class CollaborativeFilteringCorrectnessTest {
             batch.clear();
         }
 
+        MiruTimeRange timeRange = new MiruTimeRange(0, time.get() + 1);
+
         System.out.println("Built and indexed " + count + " in " + (System.currentTimeMillis() - start) + "millis");
-        System.out.println("Running queries...");
+
+        if (doSystemRecommendedContent) {
+            System.out.println("Running system recommended content...");
+            testSystemRecommendedContent(authorToParents, userToParents);
+        }
+        if (doContainerTrendingContent) {
+            System.out.println("Running container trending content...");
+            testContainerTrendingContent(contextToParents, timeRange);
+        }
+    }
+
+    private void testSystemRecommendedContent(SetMultimap<String, String> authorToParents, SetMultimap<String, String> userToParents)
+        throws MiruQueryServiceException {
 
         Set<String> docTypes = Sets.newHashSet("50", "51", "52");
         MiruFieldDefinition userFieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("user"));
@@ -184,7 +216,7 @@ public class CollaborativeFilteringCorrectnessTest {
                 Optional.<List<MiruFilter>>absent());
 
             long s = System.currentTimeMillis();
-            MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(new MiruRequest<>(
+            MiruResponse<RecoAnswer> response = recoInjectable.collaborativeFilteringRecommendations(new MiruRequest<>(
                 tenant1,
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
@@ -216,6 +248,45 @@ public class CollaborativeFilteringCorrectnessTest {
                 assertTrue(docTypes.contains(result.distinctValue.substring(0, result.distinctValue.indexOf(' '))), "Didn't expect " + result.distinctValue);
                 assertFalse(authorToParents.containsEntry(user, result.distinctValue));
                 assertFalse(userToParents.containsEntry(user, result.distinctValue));
+            }
+        }
+    }
+
+    private void testContainerTrendingContent(SetMultimap<String, String> contextToParents, MiruTimeRange timeRange) throws MiruQueryServiceException {
+
+        Random rand = new Random(1_234);
+        Set<String> docTypes = Sets.newHashSet("50", "51", "52");
+        String[] contexts = contextToParents.keySet().toArray(new String[contextToParents.keySet().size()]);
+        for (int i = 0; i < numqueries; i++) {
+            String context = contexts[rand.nextInt(contexts.length)];
+            MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
+                Optional.of(Arrays.asList(
+                    new MiruFieldFilter(MiruFieldType.primary, "context", Arrays.asList(context)),
+                    new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes)),
+                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "11", "65"))
+                )),
+                Optional.<ImmutableList<MiruFilter>>absent());
+
+            long s = System.currentTimeMillis();
+            MiruResponse<TrendingAnswer> response = trendingInjectable.scoreTrending(new MiruRequest<>(
+                tenant1,
+                new MiruActorId(new Id(1)),
+                MiruAuthzExpression.NOT_PROVIDED,
+                new TrendingQuery(
+                    timeRange,
+                    27,
+                    constraintsFilter,
+                    "parent",
+                    Lists.newArrayList(docTypes),
+                    10),
+                MiruSolutionLogLevel.INFO));
+
+            System.out.println("trendingResult:" + response.answer.results);
+            System.out.println("Took:" + (System.currentTimeMillis() - s));
+            //assertTrue(response.answer.results.size() > 0, response.toString());
+            for (Trendy result : response.answer.results) {
+                assertTrue(docTypes.contains(result.distinctValue.substring(0, result.distinctValue.indexOf(' '))), "Didn't expect " + result.distinctValue);
+                assertTrue(contextToParents.get(context).contains(result.distinctValue));
             }
         }
     }

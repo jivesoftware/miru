@@ -36,7 +36,6 @@ public class DistinctsQuestion implements Question<DistinctsAnswer, DistinctsRep
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         return new MiruPartitionResponse<>(distincts.gather(bitmaps, stream, request, report, solutionLog), solutionLog.asList());
-
     }
 
     @Override

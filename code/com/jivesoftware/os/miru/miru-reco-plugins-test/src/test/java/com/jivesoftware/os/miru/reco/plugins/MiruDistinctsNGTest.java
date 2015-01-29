@@ -5,6 +5,8 @@
  */
 package com.jivesoftware.os.miru.reco.plugins;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -16,6 +18,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -28,14 +31,16 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsInjectable;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertTrue;
 
 /**
  * @author jonathan
@@ -163,7 +168,7 @@ public class MiruDistinctsNGTest {
             MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
-                new DistinctsQuery(timeRange, fieldDefinition.name, null),
+                new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, null),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
 
@@ -194,14 +199,17 @@ public class MiruDistinctsNGTest {
         MiruFieldDefinition fieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("obj"));
 
         long s = System.currentTimeMillis();
+        Set<String> types = Sets.newHashSet("0", "1", "2", "3", "8", "-1");
         MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
             new MiruActorId(new Id(1)),
             MiruAuthzExpression.NOT_PROVIDED,
-            new DistinctsQuery(timeRange, fieldDefinition.name, Arrays.asList("0", "1", "2", "3", "8", "-1")),
+            new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(types)),
             MiruSolutionLogLevel.INFO);
         MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
         for (String result : distinctsResult.answer.results) {
-            System.out.println("Got " + result);
+            //System.out.println("Got " + result);
+            String type = result.substring(0, result.indexOf(' '));
+            assertTrue(types.contains(type), "Unexpected type " + type);
         }
 
         System.out.println("distinctsResult:" + distinctsResult);
@@ -230,14 +238,17 @@ public class MiruDistinctsNGTest {
         MiruFieldDefinition fieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("text"));
 
         long s = System.currentTimeMillis();
+        Set<String> wildcards = Sets.newHashSet("ca", "do", "el", "mo");
         MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
             new MiruActorId(new Id(1)),
             MiruAuthzExpression.NOT_PROVIDED,
-            new DistinctsQuery(timeRange, fieldDefinition.name, Arrays.asList("ca", "do", "el", "mo")),
+            new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(wildcards)),
             MiruSolutionLogLevel.INFO);
         MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
         for (String result : distinctsResult.answer.results) {
-            System.out.println("Got " + result);
+            //System.out.println("Got " + result);
+            String wildcard = result.substring(0, 2);
+            assertTrue(wildcards.contains(wildcard), "Unexpected wildcard " + wildcard);
         }
 
         System.out.println("distinctsResult:" + distinctsResult);

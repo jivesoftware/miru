@@ -3,9 +3,11 @@ package com.jivesoftware.os.miru.reco.plugins.distincts;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.map.store.api.KeyRange;
+import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -13,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruTermCount;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -42,25 +45,62 @@ public class Distincts {
 
         int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
         final MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
-        List<String> prefixes = request.query.prefixes;
-        List<KeyRange> ranges = null;
-        if (prefixes != null) {
-            ranges = Lists.newArrayListWithCapacity(prefixes.size());
-            for (String prefix : prefixes) {
-                ranges.add(new KeyRange(
-                    termComposer.prefixLowerInclusive(fieldDefinition.prefix, prefix),
-                    termComposer.prefixUpperExclusive(fieldDefinition.prefix, prefix)));
-            }
-        }
 
         final List<String> results = Lists.newArrayList();
-        requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).streamTermIdsForField(fieldId, ranges, new TermIdStream() {
-            @Override
-            public boolean stream(MiruTermId termId) {
-                results.add(termComposer.decompose(fieldDefinition, termId));
-                return true;
+        if (MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
+            List<KeyRange> ranges = null;
+            if (request.query.prefixes != null) {
+                ranges = Lists.newArrayListWithCapacity(request.query.prefixes.size());
+                for (String prefix : request.query.prefixes) {
+                    ranges.add(new KeyRange(
+                        termComposer.prefixLowerInclusive(fieldDefinition.prefix, prefix),
+                        termComposer.prefixUpperExclusive(fieldDefinition.prefix, prefix)));
+                }
             }
-        });
+
+            requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).streamTermIdsForField(fieldId, ranges, new TermIdStream() {
+                @Override
+                public boolean stream(MiruTermId termId) {
+                    results.add(termComposer.decompose(fieldDefinition, termId));
+                    return true;
+                }
+            });
+        } else {
+            final byte[][] prefixesAsBytes;
+            if (request.query.prefixes != null) {
+                prefixesAsBytes = new byte[request.query.prefixes.size()][];
+                int i = 0;
+                for (String prefix : request.query.prefixes) {
+                    prefixesAsBytes[i++] = termComposer.prefixLowerInclusive(fieldDefinition.prefix, prefix);
+                }
+            } else {
+                prefixesAsBytes = new byte[0][];
+            }
+
+            BM result = bitmaps.create();
+            aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), request.query.constraintsFilter,
+                solutionLog, result, -1);
+            aggregateUtil.stream(bitmaps, request.tenantId, requestContext, result, Optional.<BM>absent(), fieldId, request.query.aggregateCountAroundField,
+                new CallbackStream<MiruTermCount>() {
+                    @Override
+                    public MiruTermCount callback(MiruTermCount termCount) throws Exception {
+                        if (termCount != null) {
+                            if (prefixesAsBytes.length == 0) {
+                                results.add(termComposer.decompose(fieldDefinition, termCount.termId));
+                            } else {
+                                byte[] termBytes = termCount.termId.getBytes();
+                                for (byte[] prefixAsBytes : prefixesAsBytes) {
+                                    if (arrayStartsWith(termBytes, prefixAsBytes)) {
+                                        results.add(termComposer.decompose(fieldDefinition, termCount.termId));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        return termCount;
+                    }
+                });
+        }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         int collectedDistincts = results.size();
@@ -69,4 +109,15 @@ public class Distincts {
         return result;
     }
 
+    private boolean arrayStartsWith(byte[] termBytes, byte[] prefixAsBytes) {
+        if (termBytes.length < prefixAsBytes.length) {
+            return false;
+        }
+        for (int i = 0; i < prefixAsBytes.length; i++) {
+            if (termBytes[i] != prefixAsBytes[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

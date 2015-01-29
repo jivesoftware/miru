@@ -34,7 +34,7 @@ public class BloomIndex<BM> {
 
     static public interface HasValue {
 
-        byte[] getValue();
+        byte[] getBloomValue();
     }
 
     static public interface MightContain<V> {
@@ -86,7 +86,7 @@ public class BloomIndex<BM> {
         for (V key : keys) {
             Might<V> might = new Might<>(key, numHashFunctions);
             int[] bitIndexes = new int[numHashFunctions];
-            createBitIndexesForValue(key.getValue(), numHashFunctions, bitIndexes, 0);
+            createBitIndexesForValue(key.getBloomValue(), numHashFunctions, bitIndexes, 0);
             Arrays.sort(bitIndexes);
             for (Integer bitIndex : bitIndexes) {
                 valueBitIndexes.put(bitIndex, might);

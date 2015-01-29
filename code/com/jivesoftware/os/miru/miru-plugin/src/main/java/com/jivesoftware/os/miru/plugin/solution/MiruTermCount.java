@@ -5,8 +5,8 @@ import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import java.util.Arrays;
 
 /**
-*
-*/
+ *
+ */
 public class MiruTermCount implements BloomIndex.HasValue {
 
     public final MiruTermId termId;
@@ -20,7 +20,7 @@ public class MiruTermCount implements BloomIndex.HasValue {
     }
 
     @Override
-    public byte[] getValue() {
+    public byte[] getBloomValue() {
         return termId.getBytes();
     }
 

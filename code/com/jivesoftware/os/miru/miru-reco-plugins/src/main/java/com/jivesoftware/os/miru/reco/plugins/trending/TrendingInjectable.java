@@ -74,7 +74,10 @@ public class TrendingInjectable {
                     request.tenantId,
                     request.actorId,
                     request.authzExpression,
-                    new DistinctsQuery(request.query.timeRange, request.query.aggregateCountAroundField, request.query.fieldPrefixes),
+                    new DistinctsQuery(request.query.timeRange,
+                        request.query.aggregateCountAroundField,
+                        request.query.constraintsFilter,
+                        request.query.fieldPrefixes),
                     request.logLevel))),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(request.query.timeRange),
@@ -89,8 +92,7 @@ public class TrendingInjectable {
                 constraintsFilters.put(term,
                     new MiruFilter(MiruFilterOperation.and,
                         Optional.of(Collections.singletonList(new MiruFieldFilter(
-                            MiruFieldType.primary, request.query.aggregateCountAroundField,
-                            Collections.singletonList(term)))),
+                            MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(term)))),
                         Optional.<List<MiruFilter>>absent()));
             }
 

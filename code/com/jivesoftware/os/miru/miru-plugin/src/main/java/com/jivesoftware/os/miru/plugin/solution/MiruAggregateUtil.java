@@ -53,9 +53,9 @@ public class MiruAggregateUtil {
         CardinalityAndLastSetBit answerCollector = null;
         ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
         MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        int fieldId = requestContext.getSchema().getFieldId(streamField);
+        int streamFieldId = requestContext.getSchema().getFieldId(streamField);
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
-        LOG.debug("stream: field={} fieldId={} beforeCount={}", streamField, fieldId, beforeCount);
+        LOG.debug("stream: streamField={} streamFieldId={} pivotFieldId={} beforeCount={}", streamField, streamFieldId, pivotFieldId, beforeCount);
         int priorLastSetBit = Integer.MAX_VALUE;
         while (true) {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
@@ -69,7 +69,7 @@ public class MiruAggregateUtil {
                 break;
             }
 
-            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(tenantId, lastSetBit, fieldId);
+            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(tenantId, lastSetBit, streamFieldId);
             if (traceEnabled) {
                 LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
             }
@@ -85,10 +85,9 @@ public class MiruAggregateUtil {
                 answer = revisedAnswer;
 
             } else {
-                MiruTermId pivotTerm = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
-                //And by "for now" we mean IT DOESN'T FUCKING WORK.
-                //Because each andNot iteration can potentially mask/remove other distincts further along in the answer.
-                //Instead, you need to use write-time aggregation to record the latest occurrence of each distinct value, and traverse the aggregate bitmap.
+                //TODO Ideally we should prohibit streaming of multi-term fields because the operation is inherently lossy/ambiguous.
+                //TODO Each andNot iteration can potentially mask/remove other distincts which will therefore never be streamed.
+                MiruTermId pivotTerm = fieldValues[0];
 
                 MiruInvertedIndex<BM> invertedIndex = fieldIndex.get(pivotFieldId, pivotTerm);
                 Optional<BM> optionalTermIndex = invertedIndex.getIndex();
