@@ -91,9 +91,10 @@ public class TrendingInjectable {
             for (String term : distinctTerms) {
                 constraintsFilters.put(term,
                     new MiruFilter(MiruFilterOperation.and,
-                        Optional.of(Collections.singletonList(new MiruFieldFilter(
-                            MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(term)))),
-                        Optional.<List<MiruFilter>>absent()));
+                        false,
+                        Collections.singletonList(new MiruFieldFilter(
+                            MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(term))),
+                        null));
             }
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,

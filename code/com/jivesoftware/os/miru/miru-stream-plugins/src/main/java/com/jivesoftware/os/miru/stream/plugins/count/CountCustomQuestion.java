@@ -4,7 +4,6 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -36,7 +35,7 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public CountCustomQuestion(NumberOfDistincts numberOfDistincts,
-            MiruRequest<DistinctCountQuery> request) {
+        MiruRequest<DistinctCountQuery> request) {
         this.numberOfDistincts = numberOfDistincts;
         this.request = request;
     }
@@ -52,8 +51,8 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
 
         // If we have a constraints filter grab that as well and AND it to the stream filter
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            combinedFilter = new MiruFilter(MiruFilterOperation.and, Optional.<List<MiruFieldFilter>>absent(),
-                    Optional.of(Arrays.asList(request.query.streamFilter, request.query.constraintsFilter)));
+            combinedFilter = new MiruFilter(MiruFilterOperation.and, false, null,
+                Arrays.asList(request.query.streamFilter, request.query.constraintsFilter));
         }
 
         // Start building up list of bitmap operations to run
@@ -61,7 +60,8 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), combinedFilter, solutionLog, filtered, -1);
+        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), combinedFilter, solutionLog, filtered,
+            stream.getActivityIndex().lastId(), -1);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
@@ -88,7 +88,7 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
 
     @Override
     public MiruPartitionResponse<DistinctCountAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountReport> report)
-            throws Exception {
+        throws Exception {
         return new DistinctCountRemotePartitionReader(requestHelper).countCustomStream(partitionId, request, report);
     }
 
@@ -97,8 +97,8 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
         Optional<DistinctCountReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new DistinctCountReport(
-                    answer.get().aggregateTerms,
-                    answer.get().collectedDistincts));
+                answer.get().aggregateTerms,
+                answer.get().collectedDistincts));
         }
         return report;
     }

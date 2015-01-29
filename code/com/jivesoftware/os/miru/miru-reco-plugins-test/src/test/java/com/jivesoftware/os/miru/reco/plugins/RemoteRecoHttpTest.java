@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.reco.plugins;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Functions;
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
@@ -31,7 +30,6 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -180,18 +178,15 @@ public class RemoteRecoHttpTest {
         }
 
         final MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
-            Optional.of(Arrays.asList(
-                new MiruFieldFilter(MiruFieldType.primary, "objectType", Lists.transform(
-                    Arrays.asList(102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
-                    Functions.toStringFunction())),
-                new MiruFieldFilter(MiruFieldType.primary, "activityType", Lists.transform(Arrays.asList(
-                    0, //viewed
-                    11, //liked
-                    1, //created
-                    65 //outcome_set
-                ), Functions.toStringFunction()))
-            )),
-            Optional.<List<MiruFilter>>absent());
+            false,
+            Arrays.asList(
+                new MiruFieldFilter(MiruFieldType.primary, "objectType",
+                    Lists.transform(
+                        Arrays.asList(102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
+                        Functions.toStringFunction())),
+                new MiruFieldFilter(MiruFieldType.primary, "activityType",
+                    Lists.transform(Arrays.asList(0, 1, 11, 65), Functions.toStringFunction()))),
+            null);
 
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
         long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -261,7 +256,8 @@ public class RemoteRecoHttpTest {
         }
 
         MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
-            Optional.of(Arrays.asList(
+            false,
+            Arrays.asList(
                 new MiruFieldFilter(MiruFieldType.primary, "user", Arrays.asList(String.valueOf(3_181))), //   3765  2902 3251 3816 3181 5723
                     /*new MiruFieldFilter("objectType", Lists.transform(
                             Arrays.asList(102, 1, 18, 38, 801, 1464927464, -960826044),
@@ -273,13 +269,14 @@ public class RemoteRecoHttpTest {
                         //65 //outcome_set
                     ),
                     Functions.toStringFunction()))
-            )),
-            Optional.<List<MiruFilter>>absent());
+            ),
+            null);
 
         MiruFilter resultConstraintFilter = new MiruFilter(MiruFilterOperation.and,
-            Optional.of(Arrays.asList(
-                new MiruFieldFilter(MiruFieldType.primary, "objectType", Lists.transform(Arrays.asList(102), Functions.toStringFunction())))),
-            Optional.<List<MiruFilter>>absent());
+            false,
+            Arrays.asList(
+                new MiruFieldFilter(MiruFieldType.primary, "objectType", Lists.transform(Arrays.asList(102), Functions.toStringFunction()))),
+            null);
 
 
         MiruRequest<RecoQuery> request = new MiruRequest<>(tenantId,

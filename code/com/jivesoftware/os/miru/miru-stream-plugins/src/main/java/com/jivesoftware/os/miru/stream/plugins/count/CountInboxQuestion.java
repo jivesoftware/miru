@@ -40,9 +40,9 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public CountInboxQuestion(NumberOfDistincts numberOfDistincts,
-            MiruJustInTimeBackfillerizer backfillerizer,
-            MiruRequest<DistinctCountQuery> request,
-            boolean unreadOnly) {
+        MiruJustInTimeBackfillerizer backfillerizer,
+        MiruRequest<DistinctCountQuery> request,
+        boolean unreadOnly) {
 
         Preconditions.checkArgument(!MiruStreamId.NULL.equals(request.query.streamId), "Inbox queries require a streamId");
         this.numberOfDistincts = numberOfDistincts;
@@ -54,11 +54,11 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
     @Override
     public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM> stream = handle.getRequestContext();
+        MiruRequestContext<BM> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
-            backfillerizer.backfill(bitmaps, stream, request.query.streamFilter, solutionLog, request.tenantId,
+            backfillerizer.backfill(bitmaps, context, request.query.streamFilter, solutionLog, request.tenantId,
                 handle.getCoord().partitionId, request.query.streamId);
         }
 
@@ -67,50 +67,50 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
             MiruTimeRange timeRange = request.query.timeRange;
 
             // Short-circuit if the time range doesn't live here
-            if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
+            if (!timeIndexIntersectsTimeRange(context.getTimeIndex(), timeRange)) {
                 LOG.debug("No time index intersection");
                 return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(
-                        bitmaps, stream, request, report, bitmaps.create()), solutionLog.asList());
+                    bitmaps, context, request, report, bitmaps.create()), solutionLog.asList());
             }
-            ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
-        Optional<BM> inbox = stream.getInboxIndex().getInbox(request.query.streamId);
+        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
-            return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, bitmaps.create()), solutionLog.asList());
+            return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, context, request, report, bitmaps.create()), solutionLog.asList());
         }
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, -1);
+            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
+                solutionLog, filtered, context.getActivityIndex().lastId(), -1);
             ands.add(filtered);
         }
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
         if (unreadOnly) {
-            Optional<BM> unreadIndex = stream.getUnreadTrackingIndex().getUnread(request.query.streamId);
+            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
         }
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
 
         BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());
+        return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, context, request, report, answer), solutionLog.asList());
     }
 
     @Override
     public MiruPartitionResponse<DistinctCountAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountReport> report)
-            throws Exception {
+        throws Exception {
         DistinctCountRemotePartitionReader reader = new DistinctCountRemotePartitionReader(requestHelper);
         if (unreadOnly) {
             return reader.countInboxStreamUnread(partitionId, request, report);
@@ -123,14 +123,14 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
         Optional<DistinctCountReport> report = Optional.absent();
         if (answer.isPresent()) {
             report = Optional.of(new DistinctCountReport(
-                    answer.get().aggregateTerms,
-                    answer.get().collectedDistincts));
+                answer.get().aggregateTerms,
+                answer.get().collectedDistincts));
         }
         return report;
     }
 
     private boolean timeIndexIntersectsTimeRange(MiruTimeIndex timeIndex, MiruTimeRange timeRange) {
         return timeRange.smallestTimestamp <= timeIndex.getLargestTimestamp() &&
-                timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
+            timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
     }
 }

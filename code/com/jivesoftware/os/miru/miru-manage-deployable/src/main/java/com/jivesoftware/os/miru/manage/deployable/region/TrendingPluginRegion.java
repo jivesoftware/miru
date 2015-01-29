@@ -116,9 +116,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         Arrays.asList(0, 1, 11, 65),
                         Functions.toStringFunction())));
 
-                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
-                    Optional.of(fieldFilters),
-                    Optional.<List<MiruFilter>>absent());
+                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);
 
                 List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<TrendingAnswer> response = null;

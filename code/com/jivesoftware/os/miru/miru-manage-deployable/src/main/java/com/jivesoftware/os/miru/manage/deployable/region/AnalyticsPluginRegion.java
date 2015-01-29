@@ -120,9 +120,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "locale", Collections.singletonList("en")));
 
-                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
-                    Optional.of(fieldFilters),
-                    Optional.<List<MiruFilter>>absent());
+                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);
 
                 List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<AnalyticsAnswer> response = null;
@@ -136,25 +134,27 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                     analyticsFiltersBuilder.put(
                                         activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name(),
                                         new MiruFilter(MiruFilterOperation.and,
-                                            Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Collections.singletonList(activityType)))),
-                                            Optional.<List<MiruFilter>>absent()));
+                                            false,
+                                            Collections.singletonList(
+                                                new MiruFieldFilter(MiruFieldType.primary,
+                                                    "activityType",
+                                                    Collections.singletonList(activityType))),
+                                            null));
                                 } else {
                                     for (String user : users) {
                                         analyticsFiltersBuilder.put(
                                             activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name() + ", user=" + user,
                                             new MiruFilter(MiruFilterOperation.and,
-                                                Optional.of(Arrays.asList(
-                                                        new MiruFieldFilter(MiruFieldType.primary,
-                                                            "activityType",
-                                                            Collections.singletonList(activityType)),
-                                                        new MiruFieldFilter(MiruFieldType.primary,
-                                                            "user",
-                                                            Collections.singletonList("3 " + user))
-                                                    )),
-                                                Optional.<List<MiruFilter>>absent()));
+                                                false,
+                                                Arrays.asList(
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
+                                                        Collections.singletonList(activityType)),
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "user",
+                                                        Collections.singletonList("3 " + user))
+                                                ),
+                                                null));
                                     }
                                 }
                             }
@@ -170,7 +170,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         analyticsFilters),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                                new Class[]{AnalyticsAnswer.class},
+                                new Class[] { AnalyticsAnswer.class },
                                 null);
                             response = analyticsResponse;
                             if (response != null && response.answer != null) {
@@ -179,7 +179,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                 log.warn("Empty analytics response from {}, trying another", requestHelper);
                             }
                         } catch (Exception e) {
-                            log.warn("Failed analytics request to {}, trying another", new Object[]{requestHelper}, e);
+                            log.warn("Failed analytics request to {}, trying another", new Object[] { requestHelper }, e);
                         }
                     }
                 }

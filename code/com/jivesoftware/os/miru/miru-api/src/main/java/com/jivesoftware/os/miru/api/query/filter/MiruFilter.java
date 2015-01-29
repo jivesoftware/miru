@@ -1,9 +1,7 @@
 package com.jivesoftware.os.miru.api.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import java.io.Serializable;
 import java.util.List;
 
@@ -12,49 +10,33 @@ public class MiruFilter implements Serializable {
 
     public static final MiruFilter NO_FILTER = new MiruFilter(
         MiruFilterOperation.or,
-        Optional.<List<MiruFieldFilter>>absent(),
-        Optional.<List<MiruFilter>>absent());
+        false,
+        null,
+        null);
 
     public final MiruFilterOperation operation;
-    public final Optional<? extends List<MiruFieldFilter>> fieldFilters;
-    public final Optional<? extends List<MiruFilter>> subFilter;
-
-    public MiruFilter(
-        MiruFilterOperation operation,
-        Optional<? extends List<MiruFieldFilter>> fieldFilters,
-        Optional<? extends List<MiruFilter>> subFilter) {
-        this.operation = operation;
-        this.fieldFilters = fieldFilters;
-        this.subFilter = subFilter;
-    }
+    public final boolean inclusiveFilter;
+    public final List<MiruFieldFilter> fieldFilters;
+    public final List<MiruFilter> subFilters;
 
     @JsonCreator
-    public static MiruFilter fromJson(
-        @JsonProperty("operation") MiruFilterOperation operation,
+    public MiruFilter(@JsonProperty("operation") MiruFilterOperation operation,
+        @JsonProperty("inclusiveFilter") boolean inclusiveFilter,
         @JsonProperty("fieldFilters") List<MiruFieldFilter> fieldFilters,
-        @JsonProperty("subFilter") List<MiruFilter> subFilter) {
-        return new MiruFilter(
-            operation,
-            Optional.fromNullable(fieldFilters),
-            Optional.fromNullable(subFilter));
-    }
-
-    @JsonGetter("fieldFilters")
-    public List<MiruFieldFilter> getFieldFiltersNullable() {
-        return fieldFilters.orNull();
-    }
-
-    @JsonGetter("subFilter")
-    public List<MiruFilter> getSubFilterNullable() {
-        return subFilter.orNull();
+        @JsonProperty("subFilters") List<MiruFilter> subFilters) {
+        this.operation = operation;
+        this.inclusiveFilter = inclusiveFilter;
+        this.fieldFilters = fieldFilters;
+        this.subFilters = subFilters;
     }
 
     @Override
     public String toString() {
         return "MiruFilter{" +
             "operation=" + operation +
+            ", inclusiveFilter=" + inclusiveFilter +
             ", fieldFilters=" + fieldFilters +
-            ", subFilter=" + subFilter +
+            ", subFilters=" + subFilters +
             '}';
     }
 
@@ -69,21 +51,28 @@ public class MiruFilter implements Serializable {
 
         MiruFilter that = (MiruFilter) o;
 
+        if (inclusiveFilter != that.inclusiveFilter) {
+            return false;
+        }
         if (fieldFilters != null ? !fieldFilters.equals(that.fieldFilters) : that.fieldFilters != null) {
             return false;
         }
         if (operation != that.operation) {
             return false;
         }
-        return !(subFilter != null ? !subFilter.equals(that.subFilter) : that.subFilter != null);
+        if (subFilters != null ? !subFilters.equals(that.subFilters) : that.subFilters != null) {
+            return false;
+        }
+
+        return true;
     }
 
     @Override
     public int hashCode() {
         int result = operation != null ? operation.hashCode() : 0;
+        result = 31 * result + (inclusiveFilter ? 1 : 0);
         result = 31 * result + (fieldFilters != null ? fieldFilters.hashCode() : 0);
-        result = 31 * result + (subFilter != null ? subFilter.hashCode() : 0);
+        result = 31 * result + (subFilters != null ? subFilters.hashCode() : 0);
         return result;
     }
-
 }

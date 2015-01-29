@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.stream.plugins;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.id.Id;
@@ -123,9 +122,10 @@ public class InMemoryEndpointsTest {
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
-                    Optional.of(Arrays.asList(
-                        new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2")))),
-                    Optional.<List<MiruFilter>>absent()),
+                    false,
+                    Arrays.asList(
+                        new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2"))),
+                    null),
                 MiruFilter.NO_FILTER,
                 OBJECT_ID.getFieldName(),
                 0,
@@ -144,10 +144,11 @@ public class InMemoryEndpointsTest {
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
-                    Optional.of(Arrays.asList(
+                    false,
+                    Arrays.asList(
                         new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
-                        new MiruFieldFilter(MiruFieldType.primary, AUTHOR_ID.getFieldName(), ImmutableList.of("value2")))),
-                    Optional.<List<MiruFilter>>absent()),
+                        new MiruFieldFilter(MiruFieldType.primary, AUTHOR_ID.getFieldName(), ImmutableList.of("value2"))),
+                    null),
                 MiruFilter.NO_FILTER,
                 OBJECT_ID.getFieldName(),
                 0,

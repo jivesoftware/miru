@@ -5,7 +5,6 @@
  */
 package com.jivesoftware.os.miru.reco.plugins;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.jive.utils.id.Id;
@@ -39,7 +38,6 @@ import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -170,10 +168,7 @@ public class MiruTrendingNGTest {
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + rand.nextInt(numberOfUsers);
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.primary, "user", ImmutableList.of(user));
-            MiruFilter filter = new MiruFilter(
-                MiruFilterOperation.or,
-                Optional.of(Arrays.asList(miruFieldFilter)),
-                Optional.<List<MiruFilter>>absent());
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
             MiruRequest<TrendingQuery> request = new MiruRequest<>(tenant1,

@@ -84,12 +84,9 @@ public class MiruTestStreamQueryDistributor {
                 countTimeRange,
                 new MiruFilter(
                     MiruFilterOperation.and,
-                    Optional.of(Arrays.asList(viewClassesFilter())),
-                    Optional.of(Arrays.asList(
-                        new MiruFilter(
-                            MiruFilterOperation.or,
-                            Optional.of(buildFieldFilters(inbox, userId)),
-                            Optional.<List<MiruFilter>>absent())))),
+                    false,
+                    Arrays.asList(viewClassesFilter()),
+                    Arrays.asList(new MiruFilter(MiruFilterOperation.or, false, buildFieldFilters(inbox, userId), null))),
                 constraintsFilter.orNull(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 startFromDistinctN,
@@ -117,12 +114,9 @@ public class MiruTestStreamQueryDistributor {
                 timeRange,
                 new MiruFilter(
                     MiruFilterOperation.and,
-                    Optional.of(Arrays.asList(viewClassesFilter())),
-                    Optional.of(Arrays.asList(
-                        new MiruFilter(
-                            MiruFilterOperation.or,
-                            Optional.of(buildFieldFilters(inbox, userId)),
-                            Optional.<List<MiruFilter>>absent())))),
+                    false,
+                    Arrays.asList(viewClassesFilter()),
+                    Arrays.asList(new MiruFilter(MiruFilterOperation.or, false, buildFieldFilters(inbox, userId), null))),
                 constraintsFilter.or(MiruFilter.NO_FILTER),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 numResultsDistinctCount + 1), // we usually add 1 for "hasMore"
@@ -190,10 +184,7 @@ public class MiruTestStreamQueryDistributor {
         if (fieldFilters.isEmpty()) {
             return Optional.absent();
         } else {
-            return Optional.of(new MiruFilter(
-                MiruFilterOperation.and,
-                Optional.of(fieldFilters),
-                Optional.<List<MiruFilter>>absent()));
+            return Optional.of(new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null));
         }
     }
 

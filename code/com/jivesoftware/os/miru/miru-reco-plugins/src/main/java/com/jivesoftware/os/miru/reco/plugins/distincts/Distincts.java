@@ -79,7 +79,7 @@ public class Distincts {
 
             BM result = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, result, -1);
+                solutionLog, result, requestContext.getActivityIndex().lastId(), -1);
             aggregateUtil.stream(bitmaps, request.tenantId, requestContext, result, Optional.<BM>absent(), fieldId, request.query.aggregateCountAroundField,
                 new CallbackStream<MiruTermCount>() {
                     @Override

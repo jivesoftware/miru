@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -210,10 +209,7 @@ public class RecoCorrectnessTest {
             String user = "bob" + i;
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.pairedLatest, "user", ImmutableList.of(
                 indexUtil.makePairedLatestTerm(termComposer.compose(userFieldDefinition, user), "parent").toString()));
-            MiruFilter filter = new MiruFilter(
-                MiruFilterOperation.or,
-                Optional.of(Arrays.asList(miruFieldFilter)),
-                Optional.<List<MiruFilter>>absent());
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
             MiruResponse<RecoAnswer> response = recoInjectable.collaborativeFilteringRecommendations(new MiruRequest<>(
@@ -226,18 +222,20 @@ public class RecoCorrectnessTest {
                     "user", "user", "user",
                     "parent", "parent",
                     new MiruFilter(MiruFilterOperation.pButNotQ,
-                        Optional.<List<MiruFieldFilter>>absent(),
-                        Optional.of(Arrays.asList(
+                        false,
+                        null,
+                        Arrays.asList(
                             new MiruFilter(MiruFilterOperation.and,
-                                Optional.of(Arrays.asList(
+                                false,
+                                Arrays.asList(
                                     new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "11", "65")),
-                                    new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes))
-                                )),
-                                Optional.<List<MiruFilter>>absent()),
+                                    new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes))),
+                                null),
                             new MiruFilter(MiruFilterOperation.and,
-                                Optional.of(Arrays.asList(
-                                    new MiruFieldFilter(MiruFieldType.primary, "authors", Arrays.asList(user)))),
-                                Optional.<List<MiruFilter>>absent())))),
+                                false,
+                                Arrays.asList(
+                                    new MiruFieldFilter(MiruFieldType.primary, "authors", Arrays.asList(user))),
+                                null))),
                     10),
                 MiruSolutionLogLevel.INFO));
 
@@ -260,12 +258,13 @@ public class RecoCorrectnessTest {
         for (int i = 0; i < numqueries; i++) {
             String context = contexts[rand.nextInt(contexts.length)];
             MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
-                Optional.of(Arrays.asList(
+                false,
+                Arrays.asList(
                     new MiruFieldFilter(MiruFieldType.primary, "context", Arrays.asList(context)),
                     new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes)),
                     new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "11", "65"))
-                )),
-                Optional.<ImmutableList<MiruFilter>>absent());
+                ),
+                null);
 
             long s = System.currentTimeMillis();
             MiruResponse<TrendingAnswer> response = trendingInjectable.scoreTrending(new MiruRequest<>(

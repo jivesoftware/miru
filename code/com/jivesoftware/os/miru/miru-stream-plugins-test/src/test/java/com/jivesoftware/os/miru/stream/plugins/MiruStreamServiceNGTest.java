@@ -5,7 +5,6 @@
  */
 package com.jivesoftware.os.miru.stream.plugins;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -159,9 +158,7 @@ public class MiruStreamServiceNGTest {
                 //System.out.println("Following:"+new MiruFieldFilter("target", ImmutableList.copyOf(following)));
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "target", ImmutableList.copyOf(following)));
 
-                MiruFilter filter = new MiruFilter(MiruFilterOperation.or,
-                    Optional.of(fieldFilters),
-                    Optional.<List<MiruFilter>>absent());
+                MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, fieldFilters, null);
                 MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
                     tenant1,
                     new MiruActorId(Id.NULL),
@@ -257,21 +254,15 @@ public class MiruStreamServiceNGTest {
         List<String> following = new ArrayList<>();
         following.add(String.valueOf(container1));
         fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "container", ImmutableList.copyOf(following)));
-        MiruFilter followingFilter = new MiruFilter(MiruFilterOperation.or,
-            Optional.of(fieldFilters),
-            Optional.<List<MiruFilter>>absent());
+        MiruFilter followingFilter = new MiruFilter(MiruFilterOperation.or, false, fieldFilters, null);
 
         fieldFilters = new ArrayList<>();
         List<String> authors = new ArrayList<>();
         authors.add(String.valueOf(author1));
         fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "author", ImmutableList.copyOf(authors)));
-        MiruFilter authoredByFilter = new MiruFilter(MiruFilterOperation.or,
-            Optional.of(fieldFilters),
-            Optional.<List<MiruFilter>>absent());
+        MiruFilter authoredByFilter = new MiruFilter(MiruFilterOperation.or, false, fieldFilters, null);
 
-        MiruFilter filter = new MiruFilter(MiruFilterOperation.and,
-            Optional.<List<MiruFieldFilter>>absent(),
-            Optional.of(Arrays.asList(followingFilter, authoredByFilter)));
+        MiruFilter filter = new MiruFilter(MiruFilterOperation.and, false, null, Arrays.asList(followingFilter, authoredByFilter));
 
         //aggregateQuery:
         {

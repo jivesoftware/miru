@@ -131,12 +131,16 @@ public class MiruAggregateUtil {
         MiruFilter filter,
         MiruSolutionLog solutionLog,
         BM bitmapStorage,
+        int largestIndex,
         int considerIfIndexIdGreaterThanN)
         throws Exception {
 
         List<BM> filterBitmaps = new ArrayList<>();
-        if (filter.fieldFilters.isPresent()) {
-            for (MiruFieldFilter fieldFilter : filter.fieldFilters.get()) {
+        if (filter.inclusiveFilter) {
+            filterBitmaps.add(bitmaps.buildIndexMask(largestIndex, Optional.<BM>absent()));
+        }
+        if (filter.fieldFilters != null) {
+            for (MiruFieldFilter fieldFilter : filter.fieldFilters) {
                 int fieldId = schema.getFieldId(fieldFilter.fieldName);
                 MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
                 if (fieldId >= 0) {
@@ -168,31 +172,31 @@ public class MiruAggregateUtil {
                 }
             }
         }
-        if (filter.subFilter.isPresent()) {
-            for (MiruFilter subFilter : filter.subFilter.get()) {
+        if (filter.subFilters != null) {
+            for (MiruFilter subFilter : filter.subFilters) {
                 BM subStorage = bitmaps.create();
-                filter(bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog, subStorage, considerIfIndexIdGreaterThanN);
+                filter(bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog, subStorage, largestIndex, considerIfIndexIdGreaterThanN);
                 filterBitmaps.add(subStorage);
             }
         }
-        executeFilter(bitmaps, filter, solutionLog, bitmapStorage, filterBitmaps);
+        executeFilter(bitmaps, filter.operation, solutionLog, bitmapStorage, filterBitmaps);
     }
 
     private <BM> void executeFilter(MiruBitmaps<BM> bitmaps,
-        MiruFilter filter,
+        MiruFilterOperation operation,
         MiruSolutionLog solutionLog,
         BM bitmapStorage,
         List<BM> filterBitmaps) {
 
         long start = System.currentTimeMillis();
-        if (filter.operation == MiruFilterOperation.and) {
+        if (operation == MiruFilterOperation.and) {
             bitmaps.and(bitmapStorage, filterBitmaps);
-        } else if (filter.operation == MiruFilterOperation.or) {
+        } else if (operation == MiruFilterOperation.or) {
             bitmaps.or(bitmapStorage, filterBitmaps);
-        } else if (filter.operation == MiruFilterOperation.pButNotQ) {
+        } else if (operation == MiruFilterOperation.pButNotQ) {
             bitmaps.andNot(bitmapStorage, filterBitmaps.get(0), filterBitmaps.subList(1, filterBitmaps.size()));
         } else {
-            throw new UnsupportedOperationException(filter.operation + " isn't currently supported.");
+            throw new UnsupportedOperationException(operation + " isn't currently supported.");
         }
         solutionLog.log(MiruSolutionLogLevel.DEBUG, "executeFilter: aggregate took {} millis.", System.currentTimeMillis() - start);
     }

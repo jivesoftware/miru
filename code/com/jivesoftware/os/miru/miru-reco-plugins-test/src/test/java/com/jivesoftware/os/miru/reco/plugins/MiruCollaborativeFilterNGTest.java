@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -178,10 +177,7 @@ public class MiruCollaborativeFilterNGTest {
             String user = "bob" + i;
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.pairedLatest, "user", ImmutableList.of(
                 indexUtil.makePairedLatestTerm(termComposer.compose(userFieldDefinition, user), "doc").toString()));
-            MiruFilter filter = new MiruFilter(
-                MiruFilterOperation.or,
-                Optional.of(Arrays.asList(miruFieldFilter)),
-                Optional.<List<MiruFilter>>absent());
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
             MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(new MiruRequest<>(

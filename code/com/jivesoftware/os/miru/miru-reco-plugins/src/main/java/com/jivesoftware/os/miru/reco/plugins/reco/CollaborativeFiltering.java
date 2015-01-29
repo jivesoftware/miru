@@ -103,7 +103,7 @@ public class CollaborativeFiltering {
         if (!MiruFilter.NO_FILTER.equals(constrainScorableFilter)) {
             BM possible = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                constrainScorableFilter, solutionLog, possible, -1);
+                constrainScorableFilter, solutionLog, possible, requestContext.getActivityIndex().lastId(), -1);
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "possible {}.", bitmaps.cardinality(possible));
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "possible bitmap {}", possible);
@@ -231,7 +231,7 @@ public class CollaborativeFiltering {
                                 fieldId,
                                 indexUtil.makeBloomTerm(fieldValues[0], request.query.retrieveFieldName2))
                                 .getIndex();
-                                final MutableInt count = new MutableInt(0);
+                            final MutableInt count = new MutableInt(0);
                             if (index.isPresent()) {
                                 bloomIndex.mightContain(index.get(), wantBits, new BloomIndex.MightContain<MiruTermCount>() {
 

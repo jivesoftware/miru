@@ -38,7 +38,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
     @Override
     public <BM> MiruPartitionResponse<OldTrendingAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM> stream = handle.getRequestContext();
+        MiruRequestContext<BM> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run
@@ -47,27 +47,27 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
         MiruTimeRange timeRange = request.query.timeRange;
 
         // Short-circuit if the time range doesn't live here
-        if (!timeIndexIntersectsTimeRange(stream.getTimeIndex(), timeRange)) {
+        if (!timeIndexIntersectsTimeRange(context.getTimeIndex(), timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
-            return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, bitmaps.create(), solutionLog),
+            return new MiruPartitionResponse<>(trending.trending(bitmaps, context, request, report, bitmaps.create(), solutionLog),
                 solutionLog.asList());
         }
-        ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+        ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
 
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), request.query.constraintsFilter,
-            solutionLog, filtered, -1);
+        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
+            solutionLog, filtered, context.getActivityIndex().lastId(), -1);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
 
         // AND it all together and return the results
         BM answer = bitmaps.create();
@@ -78,7 +78,7 @@ public class TrendingQuestion implements Question<OldTrendingAnswer, TrendingRep
             solutionLog.log(MiruSolutionLogLevel.INFO, "trending {} items.", bitmaps.cardinality(answer));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "trending bitmap {}", answer);
         }
-        return new MiruPartitionResponse<>(trending.trending(bitmaps, stream, request, report, answer, solutionLog), solutionLog.asList());
+        return new MiruPartitionResponse<>(trending.trending(bitmaps, context, request, report, answer, solutionLog), solutionLog.asList());
 
     }
 

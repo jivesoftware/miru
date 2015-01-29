@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.stream.plugins.benchmark;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -200,9 +199,7 @@ public enum MiruCustomerSize {
 
         MiruStreamId streamId = new MiruStreamId(FilerIO.longBytes(1));
         for (int i = 0; i < distinctQueries; i++) {
-            MiruFilter filter = new MiruFilter(MiruFilterOperation.or,
-                Optional.of(followables.getFieldFilters(random, miruCustomerSize)),
-                Optional.<List<MiruFilter>>absent());
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, followables.getFieldFilters(random, miruCustomerSize), null);
 
             MiruRequest<AggregateCountsQuery> aggregateCountsQuery = new MiruRequest<>(
                 miruTenantId,

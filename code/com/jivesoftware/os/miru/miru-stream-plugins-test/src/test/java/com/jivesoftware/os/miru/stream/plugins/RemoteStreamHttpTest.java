@@ -3,8 +3,6 @@ package com.jivesoftware.os.miru.stream.plugins;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Functions;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
@@ -68,12 +66,11 @@ public class RemoteStreamHttpTest {
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
-                    Optional.of(ImmutableList.of(
-                        new MiruFieldFilter(MiruFieldType.primary, "activityType", Lists.transform(Arrays.asList(
-                            0 //viewed
-                        ), Functions.toStringFunction()))
-                    )),
-                    Optional.<ImmutableList<MiruFilter>>absent()),
+                    false,
+                    Arrays.asList(
+                        new MiruFieldFilter(MiruFieldType.primary, "activityType",
+                            Lists.transform(Arrays.asList(0), Functions.toStringFunction()))),
+                    null),
                 MiruFilter.NO_FILTER,
                 "parent",
                 0,
