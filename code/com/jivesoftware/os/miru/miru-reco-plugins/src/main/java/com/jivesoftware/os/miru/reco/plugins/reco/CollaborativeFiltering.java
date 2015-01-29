@@ -99,7 +99,7 @@ public class CollaborativeFiltering {
         }
 
         BM scorable = othersContributions;
-        MiruFilter constrainScorableFilter = request.query.constrainResults;
+        MiruFilter constrainScorableFilter = request.query.scorableFilter;
         if (!MiruFilter.NO_FILTER.equals(constrainScorableFilter)) {
             BM possible = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
@@ -118,7 +118,6 @@ public class CollaborativeFiltering {
         }
 
         return score(bitmaps, request, scorable, requestContext, bloomIndex, wantBits);
-
     }
 
     private <BM> BM contributions(MiruBitmaps<BM> bitmaps, MinMaxPriorityQueue<MiruTermCount> userHeap, MiruRequestContext<BM> requestContext, RecoQuery query)
