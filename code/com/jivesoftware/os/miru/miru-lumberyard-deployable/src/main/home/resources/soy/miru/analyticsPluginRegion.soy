@@ -1,0 +1,108 @@
+{namespace soy.miru.page}
+
+/**
+ * Analytics plugin page
+ *
+ * @param? logLevel
+ * @param? tenant
+ * @param? fromHoursAgo
+ * @param? toHoursAgo
+ * @param? buckets
+ * @param? activityTypes
+ * @param? users
+ * @param? waveform
+ * @param? summary
+ * @param? elapse
+ */
+{template .analyticsPluginRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Analytics</div>
+        <div class="panel-body">
+            <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td>Log Level</td>
+                        <td>
+                            <select style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Log Level"
+                                name="logLevel" id="logLevelPicker" data-original-title="" title="">
+                                <option value="TRACE" {if $logLevel == 'TRACE'}selected="selected"{/if}>TRACE</option>
+                                <option value="DEBUG" {if $logLevel == 'DEBUG'}selected="selected"{/if}>DEBUG</option>
+                                <option value="INFO" {if $logLevel == 'INFO'}selected="selected"{/if}>INFO</option>
+                                <option value="WARN" {if $logLevel == 'WARN'}selected="selected"{/if}>WARN</option>
+                                <option value="ERROR" {if $logLevel == 'ERROR'}selected="selected"{/if}>ERROR</option>
+                                <option value="NONE" {if $logLevel == 'NONE'}selected="selected"{/if}>NONE</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Tenant</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                                name="tenantId" id="tenantPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>From Hours Ago</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromHoursAgo?:''}"
+                            name="fromHoursAgo" id="fromHoursPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>To Hours Ago</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toHoursAgo?:''}"
+                            name="toHoursAgo" id="toHoursPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Buckets</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
+                            name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Activity Types</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Activity Types" value="{$activityTypes?:''}"
+                            name="activityTypes" id="activityTypesPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>User IDs</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="User IDs" value="{$users?:''}"
+                            name="users" id="usersPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <input type="submit" value="Run"/>
+            </form>
+        </div>
+    </div>
+    {if $waveform}
+        <div class="panel panel-default">
+            <div class="panel-heading">Waveform</div>
+            <div class="panel-body">
+                <img alt="waveform" src="{$waveform}">
+            </div>
+        </div>
+    {/if}
+    {if $summary}
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Summary {$elapse}</div>
+            <div class="panel-body">
+                <pre>{$summary}</pre>
+            </div>
+        </div>
+    {/if}
+{/template}
