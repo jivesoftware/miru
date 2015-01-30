@@ -18,6 +18,11 @@ package com.jivesoftware.os.miru.lumberyard.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
+import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
+import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardIntakeInitializer.MiruLumberyardIntakeConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -29,6 +34,7 @@ import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
 import java.util.List;
+import org.merlin.config.Config;
 
 public class MiruLumberyardMain {
 
@@ -38,8 +44,29 @@ public class MiruLumberyardMain {
 
     public void run(String[] args) throws Exception {
 
-        Deployable deployable = new Deployable(args);
+        final Deployable deployable = new Deployable(args);
+
+        HealthFactory.initialize(new HealthCheckConfigBinder() {
+
+            @Override
+            public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                return deployable.config(configurationInterfaceClass);
+            }
+        }, new HealthCheckRegistry() {
+
+            @Override
+            public void register(HealthChecker healthChecker) {
+                deployable.addHealthCheck(healthChecker);
+            }
+
+            @Override
+            public void unregister(HealthChecker healthChecker) {
+                throw new UnsupportedOperationException("Not supported yet.");
+            }
+        });
+
         deployable.buildStatusReporter(null).start();
+        deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
         deployable.buildManageServer().start();
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
