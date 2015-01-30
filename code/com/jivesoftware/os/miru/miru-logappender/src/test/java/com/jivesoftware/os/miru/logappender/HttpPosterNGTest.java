@@ -27,7 +27,7 @@ public class HttpPosterNGTest {
     public HttpPosterNGTest() {
     }
 
-    @Test
+    @Test(enabled = false)
     public void testSend() throws Exception {
 
         HttpPoster httpPoster = new HttpPoster("soa-prime-data7.phx1.jivehosted.com", 10000, 30000);
