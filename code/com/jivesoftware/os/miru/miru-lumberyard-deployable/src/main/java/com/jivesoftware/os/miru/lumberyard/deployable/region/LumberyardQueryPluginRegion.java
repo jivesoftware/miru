@@ -39,8 +39,8 @@ import java.util.concurrent.TimeUnit;
 /**
  *
  */
-// soy.miru.page.lumberyardsPluginRegion
-public class LumberyardPluginRegion implements MiruPageRegion<Optional<LumberyardPluginRegion.LumberyardPluginRegionInput>> {
+// soy.miru.page.lumberyardQueryPluginRegion
+public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<LumberyardQueryPluginRegion.LumberyardPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -48,7 +48,7 @@ public class LumberyardPluginRegion implements MiruPageRegion<Optional<Lumberyar
     private final MiruSoyRenderer renderer;
     private final RequestHelper[] miruReaders;
 
-    public LumberyardPluginRegion(String template,
+    public LumberyardQueryPluginRegion(String template,
         MiruSoyRenderer renderer,
         RequestHelper[] miruReaders) {
         this.template = template;
@@ -58,23 +58,67 @@ public class LumberyardPluginRegion implements MiruPageRegion<Optional<Lumberyar
 
     public static class LumberyardPluginRegionInput {
 
-        final String tenant;
-        final int fromHoursAgo;
-        final int toHoursAgo;
-        final int buckets;
-        final String activityTypes;
-        final String users;
-        final String logLevel;
+        final String cluster;
+        final String host;
+        final String version;
+        final String service;
+        final String instance;
 
-        public LumberyardPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String users, String logLevel) {
+        final String logLevel;
+        final int fromAgo;
+        final int toAgo;
+        final String timeUnit;
+
+        final String thread;
+        final String logger;
+        final String message;
+
+        //@Deprecated
+        final String tenant;
+        final int buckets;
+        final int messageCount;
+        //@Deprecated
+        final String activityTypes;
+        //@Deprecated
+        final String users;
+
+        public LumberyardPluginRegionInput(String cluster,
+            String host,
+            String version,
+            String service,
+            String instance,
+            String logLevel,
+            int fromAgo,
+            int toAgo,
+            String timeUnit,
+            String thread,
+            String logger,
+            String message,
+            String tenant,
+            int buckets,
+            int messageCount,
+            String activityTypes,
+            String users) {
+
+            this.cluster = cluster;
+            this.host = host;
+            this.version = version;
+            this.service = service;
+            this.instance = instance;
+            this.logLevel = logLevel;
+            this.fromAgo = fromAgo;
+            this.toAgo = toAgo;
+            this.timeUnit = timeUnit;
+            this.thread = thread;
+            this.logger = logger;
+            this.message = message;
             this.tenant = tenant;
-            this.fromHoursAgo = fromHoursAgo;
-            this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
+            this.messageCount = messageCount;
             this.activityTypes = activityTypes;
             this.users = users;
-            this.logLevel = logLevel;
         }
+
     }
 
     @Override
@@ -83,14 +127,26 @@ public class LumberyardPluginRegion implements MiruPageRegion<Optional<Lumberyar
         try {
             if (optionalInput.isPresent()) {
                 LumberyardPluginRegionInput input = optionalInput.get();
-                int fromHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.fromHoursAgo : input.toHoursAgo;
-                int toHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.toHoursAgo : input.fromHoursAgo;
+                int fromAgo = input.fromAgo > input.toAgo ? input.fromAgo : input.toAgo;
+                int toAgo = input.fromAgo > input.toAgo ? input.toAgo : input.fromAgo;
+
+                data.put("cluster", input.cluster);
+                data.put("host", input.host);
+                data.put("version", input.version);
+                data.put("service", input.service);
+                data.put("instance", input.instance);
+                data.put("timeUnit", input.timeUnit);
+                data.put("thread", input.thread);
+                data.put("logger", input.logger);
+                data.put("message", input.message);
 
                 data.put("logLevel", input.logLevel);
                 data.put("tenant", input.tenant);
-                data.put("fromHoursAgo", String.valueOf(fromHoursAgo));
-                data.put("toHoursAgo", String.valueOf(toHoursAgo));
+                data.put("fromAgo", String.valueOf(fromAgo));
+                data.put("toAgo", String.valueOf(toAgo));
                 data.put("buckets", String.valueOf(input.buckets));
+                data.put("messageCount", String.valueOf(input.messageCount));
+
                 data.put("activityTypes", input.activityTypes);
                 data.put("users", input.users);
 
@@ -113,8 +169,8 @@ public class LumberyardPluginRegion implements MiruPageRegion<Optional<Lumberyar
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
-                final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
-                final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
+                final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.valueOf(input.timeUnit).toMillis(fromAgo), 0, 0);
+                final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.valueOf(input.timeUnit).toMillis(toAgo), 0, 0);
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "locale", Collections.singletonList("en")));
 
@@ -197,6 +253,10 @@ public class LumberyardPluginRegion implements MiruPageRegion<Optional<Lumberyar
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
+                    data.put("evetns", Arrays.asList(new String[]{
+                        "Event1",
+                        "Event2"
+                    }));
                 }
             }
         } catch (Exception e) {

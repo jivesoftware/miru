@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.lumberyard.deployable;
 
-import com.jivesoftware.os.miru.lumberyard.deployable.region.MiruAdminRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.MiruHeaderRegion;
+import com.jivesoftware.os.miru.lumberyard.deployable.region.MiruHomeRegion;
 
 public class MiruQueryLumberyardInitializer {
 
@@ -10,7 +10,7 @@ public class MiruQueryLumberyardInitializer {
         return new MiruQueryLumberyardService(
             renderer,
             new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer),
-            new MiruAdminRegion("soy.miru.page.adminRegion", renderer)
+            new MiruHomeRegion("soy.miru.page.homeRegion", renderer)
         );
     }
 

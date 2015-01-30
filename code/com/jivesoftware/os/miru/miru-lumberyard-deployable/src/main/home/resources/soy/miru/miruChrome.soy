@@ -4,7 +4,6 @@
  * @param title
  * @param header
  * @param region
- * @param version
  * @param plugins
  */
 {template .chromeRegion}
@@ -31,9 +30,6 @@
                 </div>
             </div>
         </div>
-        {call .footer}
-            {param version: $version /}
-        {/call}
 	</body>
 </html>
 {/template}
@@ -72,7 +68,7 @@
 {template .headerRegion}
 	<div class="navbar navbar-default" role="navigation">
 	    <div class="navbar-header">
-            <a class="navbar-brand" href="/miru/lumberyard">
+            <a class="navbar-brand" href="/">
                 Miru Lumberyard
             </a>
 	    </div>

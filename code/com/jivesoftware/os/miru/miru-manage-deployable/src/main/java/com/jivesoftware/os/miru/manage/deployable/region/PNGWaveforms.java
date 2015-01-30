@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.manage.deployable.analytics.MinMaxDouble;
 import com.jivesoftware.os.miru.manage.deployable.analytics.PaintWaveform;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,6 +34,14 @@ public class PNGWaveforms {
         BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 
         Graphics2D g = bi.createGraphics();
+        g.setRenderingHint(
+            RenderingHints.KEY_TEXT_ANTIALIASING,
+            RenderingHints.VALUE_TEXT_ANTIALIAS_ON
+        );
+        g.setRenderingHint(
+            RenderingHints.KEY_ANTIALIASING,
+            RenderingHints.VALUE_ANTIALIAS_ON
+        );
         PaintWaveform pw = new PaintWaveform();
 
         int padLeft = padding;

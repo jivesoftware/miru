@@ -27,7 +27,9 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardIntakeInitializer.MiruLumberyardIntakeConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.analytics.QueryLumberyardPluginEndpoints;
-import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardPluginRegion;
+import com.jivesoftware.os.miru.lumberyard.deployable.analytics.StatusLumberyardPluginEndpoints;
+import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardQueryPluginRegion;
+import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardStatusPluginRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
@@ -45,6 +47,9 @@ public class MiruLumberyardMain {
     public void run(String[] args) throws Exception {
 
         final Deployable deployable = new Deployable(args);
+
+        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+        //InstanceConfig instanceConfig = deployable.config(DevInstanceConfig.class);
 
         HealthFactory.initialize(new HealthCheckConfigBinder() {
 
@@ -69,8 +74,6 @@ public class MiruLumberyardMain {
         deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
         deployable.buildManageServer().start();
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-
         ObjectMapper schemaMapper = new ObjectMapper();
         schemaMapper.registerModule(new GuavaModule());
         MiruLumberyardServiceConfig lumberyardServiceConfig = deployable.config(MiruLumberyardServiceConfig.class);
@@ -87,10 +90,14 @@ public class MiruLumberyardMain {
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
         MiruQueryLumberyardService queryService = new MiruQueryLumberyardInitializer().initialize(renderer);
 
-        List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("Lumberyard",
-                "/lumberyard/query",
-                QueryLumberyardPluginEndpoints.class,
-                new LumberyardPluginRegion("soy.miru.page.lumberyardPluginRegion", renderer, miruReaders)));
+        List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("Query",
+            "/lumberyard/query",
+            QueryLumberyardPluginEndpoints.class,
+            new LumberyardQueryPluginRegion("soy.miru.page.lumberyardQueryPluginRegion", renderer, miruReaders)),
+            new MiruManagePlugin("Status",
+            "/lumberyard/status",
+            StatusLumberyardPluginEndpoints.class,
+            new LumberyardStatusPluginRegion("soy.miru.page.lumberyardStatusPluginRegion", renderer)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

@@ -1,0 +1,29 @@
+{namespace soy.miru.page}
+
+/**
+ * Lumberyard Status plugin page
+ * 
+ * @param? status
+ */
+{template .lumberyardStatusPluginRegion}
+    {if $status}
+        <table class="table table-condensed">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {foreach $s in $status}
+                    <tr>
+                        <td>{$s}</td>
+                    </tr>
+                {ifempty}
+                    <tr>
+                        <td colspan="9">No read events found</td>
+                    </tr>
+                {/foreach}
+            </tbody>
+        </table>
+    {/if}
+{/template}

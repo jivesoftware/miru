@@ -1,0 +1,237 @@
+{namespace soy.miru.page}
+
+/**
+ * Lumberyard Query plugin page
+ * 
+ * @param? cluster
+ * @param? host
+ * @param? version
+ * @param? service
+ * @param? instance
+ * @param? logLevel
+ * @param? tenant
+ * @param? fromAgo
+ * @param? toAgo
+ * @param? timeUnit
+ * @param? thread
+ * @param? logger
+ * @param? message
+ * @param? waveform
+ * @param? events
+ * @param? buckets
+ * @param? messageCount
+ * @param? activityTypes
+ * @param? users
+ * @param? summary
+ * @param? elapse
+ */
+{template .lumberyardQueryPluginRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Query Lumberyard</div>
+        <div class="panel-body">
+            <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td>Cluster</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Cluster" value="{$cluster?:''}"
+                                name="cluster" id="clusterPicker" data-original-title="" title="">
+                        </td>
+                        <td>Host</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-host-autocomplete j-autocomplete-input j-ui-elem" placeholder="Host" value="{$host?:''}"
+                                name="host" id="hostPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Service</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-service-autocomplete j-autocomplete-input j-ui-elem" placeholder="Service" value="{$service?:''}"
+                                name="service" id="servicePicker" data-original-title="" title="">
+                        </td>
+                        <td>Instance</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-host-autocomplete j-autocomplete-input j-ui-elem" placeholder="Instance" value="{$instance?:''}"
+                                name="instance" id="instancePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <table>
+                    <tr>
+                        <td>Version</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:560px; padding-left:10px;"
+                                class="j-version-autocomplete j-autocomplete-input j-ui-elem" placeholder="Version" value="{$version?:''}"
+                                name="version" id="versionPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <br>
+                <table>
+                    <tr>
+                        <td>Level</td>
+                        <td>
+                            <select style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Log Level"
+                                name="logLevel" id="logLevelPicker" data-original-title="" title="">
+                                <option value="TRACE" {if $logLevel == 'TRACE'}selected="selected"{/if}>TRACE</option>
+                                <option value="DEBUG" {if $logLevel == 'DEBUG'}selected="selected"{/if}>DEBUG</option>
+                                <option value="INFO" {if $logLevel == 'INFO'}selected="selected"{/if}>INFO</option>
+                                <option value="WARN" {if $logLevel == 'WARN'}selected="selected"{/if}>WARN</option>
+                                <option value="ERROR" {if $logLevel == 'ERROR'}selected="selected"{/if}>ERROR</option>
+                                <option value="NONE" {if $logLevel == 'NONE'}selected="selected"{/if}>NONE</option>
+                            </select>
+                        </td>
+                        <td>From</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromAgo?:''}"
+                            name="fromAgo" id="fromHoursPicker" data-original-title="" title="">
+                        </td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="TimeUnit"
+                                name="timeUnit" id="timeunitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $timeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $timeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $timeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $timeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td>
+                        <td>ago to</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="TimeUnit"
+                                name="timeUnit" id="timeunitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $timeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $timeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $timeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $timeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toAgo?:''}"
+                            name="toAgo" id="toHoursPicker" data-original-title="" title="">
+                        </td>
+                        <td>ago.</td>
+                    </tr>
+                    </table>
+                <table>
+                    <tr>
+                        <td>Thread</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-thread-autocomplete j-autocomplete-input j-ui-elem" placeholder="Thread" value="{$thread?:''}"
+                                name="thread" id="threadPicker" data-original-title="" title="">
+                        </td>
+                        <td>Logger</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-logger-autocomplete j-autocomplete-input j-ui-elem" placeholder="Logger" value="{$logger?:''}"
+                                name="logger" id="loggerPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <table>
+                    <tr>
+                        <td>Message</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$message?:''}"
+                                name="message" id="messagePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <br>
+                <table>
+                    <tr>
+                        <td>Buckets</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
+                            name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                        <td>MessageCount</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-messageCount-autocomplete j-autocomplete-input j-ui-elem" placeholder="Message Count" value="{$messageCount?:''}"
+                            name="messageCount" id="messageCountPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    </table>
+                    <input type="submit" value="Refresh"/>
+                    <table>
+                    <tr>
+                        <td>Tenant</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                                name="tenantId" id="tenantPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                   
+                    <tr>
+                        <td>Activity Types</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Activity Types" value="{$activityTypes?:''}"
+                            name="activityTypes" id="activityTypesPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>User IDs</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="User IDs" value="{$users?:''}"
+                            name="users" id="usersPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                
+            </form>
+        </div>
+    </div>
+    {if $waveform}
+        <div class="panel panel-default">
+            <div class="panel-heading">Waveform</div>
+            <div class="panel-body">
+                <img alt="waveform" src="{$waveform}">
+            </div>
+        </div>
+    {/if}
+    {if $events}
+        <table class="table table-condensed">
+            <thead>
+                <tr>
+                    <th>Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                {foreach $event in $events}
+                    <tr>
+                        <td>{$event}</td>
+                    </tr>
+                {ifempty}
+                    <tr>
+                        <td colspan="9">No read events found</td>
+                    </tr>
+                {/foreach}
+            </tbody>
+        </table>
+    {/if}
+    {if $summary}
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Summary {$elapse}</div>
+            <div class="panel-body">
+                <pre>{$summary}</pre>
+            </div>
+        </div>
+    {/if}
+{/template}

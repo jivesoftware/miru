@@ -14,23 +14,23 @@ public class MiruQueryLumberyardService {
 
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
-    private final MiruPageRegion<Void> adminRegion;
+    private final MiruPageRegion<Void> homeRegion;
 
     private final List<MiruManagePlugin> plugins = Lists.newCopyOnWriteArrayList();
 
     public MiruQueryLumberyardService(
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
-        MiruPageRegion<Void> adminRegion
+        MiruPageRegion<Void> homeRegion
     ) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
-        this.adminRegion = adminRegion;
+        this.homeRegion = homeRegion;
 
     }
 
     public String render() {
-        return chrome(adminRegion).render(null);
+        return chrome(homeRegion).render(null);
     }
 
     public void registerPlugin(MiruManagePlugin plugin) {

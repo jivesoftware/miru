@@ -6,12 +6,12 @@ import java.util.Collections;
 /**
  *
  */
-public class MiruAdminRegion implements MiruPageRegion<Void> {
+public class MiruHomeRegion implements MiruPageRegion<Void> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
 
-    public MiruAdminRegion(String template, MiruSoyRenderer renderer) {
+    public MiruHomeRegion(String template, MiruSoyRenderer renderer) {
         this.template = template;
         this.renderer = renderer;
     }
@@ -23,6 +23,6 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
 
     @Override
     public String getTitle() {
-        return "Admin";
+        return "Home";
     }
 }
