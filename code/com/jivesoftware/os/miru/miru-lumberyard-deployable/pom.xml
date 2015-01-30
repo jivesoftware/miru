@@ -12,7 +12,7 @@
     <artifactId>miru-lumberyard-deployable</artifactId>
     <version>0.223-SNAPSHOT</version>
     <properties>
-        <java.main>com.jivesoftware.os.miru.lumberyard.deployable.MiruManageMain</java.main>
+        <java.main>com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
     <dependencies>
