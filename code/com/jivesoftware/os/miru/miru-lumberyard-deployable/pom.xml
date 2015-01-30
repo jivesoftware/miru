@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>upena-deployable-management</artifactId>
-        <version>0.230</version>
+        <version>0.231-SNAPSHOT</version>
         <relativePath>../inheritance-poms/upena-deployable-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-lumberyard-deployable</artifactId>
-    <version>0.230</version>
+    <version>0.231-SNAPSHOT</version>
     <properties>
         <java.main>com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
@@ -91,23 +91,23 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.230</version>
+            <version>0.231-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-lumberyard-plugins</artifactId>
-            <version>0.230</version>
+            <version>0.231-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.230</version>
+            <version>0.231-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-logappender</artifactId>
-            <version>0.230</version>
+            <version>0.231-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
