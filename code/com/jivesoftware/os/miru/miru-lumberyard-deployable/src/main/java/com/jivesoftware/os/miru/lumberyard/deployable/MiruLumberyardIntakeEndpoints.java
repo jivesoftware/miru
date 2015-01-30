@@ -29,7 +29,7 @@ public class MiruLumberyardIntakeEndpoints {
     }
 
     @POST
-    @Path("intake")
+    @Path("/intake")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_HTML)
     public Response intake(List<MiruLogEvent> logEvents) throws Exception {

@@ -19,7 +19,6 @@ import java.util.TimeZone;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.Level;
@@ -60,7 +59,7 @@ public class MiruLogAppender implements Appender {
 
     private final AtomicBoolean installed = new AtomicBoolean(false);
     private final AtomicBoolean started = new AtomicBoolean(false);
-    private final AtomicInteger helperIndex = new AtomicInteger(0);
+    private final AtomicLong helperIndex = new AtomicLong(0);
     private final AtomicLong appendCount = new AtomicLong(0);
     private final AtomicReference<QueueConsumer> queueConsumer = new AtomicReference<>();
     private final Layout<?> layout = new EmptyLayout();
@@ -255,7 +254,8 @@ public class MiruLogAppender implements Appender {
                     while (true) {
                         for (int tries = 0; tries < requestHelpers.length; tries++) {
                             try {
-                                requestHelpers[helperIndex.get()].executeRequest(events, "/miru/lumberyard/intake", String.class, null);
+                                requestHelpers[(int) (helperIndex.get() % requestHelpers.length)].executeRequest(events,
+                                    "/miru/lumberyard/intake", String.class, null);
                                 METRICS.inc("consume>delivered");
                                 break deliver;
                             } catch (Exception e) {
