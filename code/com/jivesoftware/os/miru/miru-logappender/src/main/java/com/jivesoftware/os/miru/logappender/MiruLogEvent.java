@@ -18,6 +18,9 @@ public class MiruLogEvent {
     public String timestamp;
     public String[] thrownStackTrace;
 
+    public MiruLogEvent() {
+    }
+
     public MiruLogEvent(String datacenter,
         String cluster,
         String host,
