@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.lumberyard.deployable.analytics;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruQueryLumberyardService;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardPluginRegion;
-import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardPluginRegion.AnalyticsPluginRegionInput;
+import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardPluginRegion.LumberyardPluginRegionInput;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -18,15 +18,15 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/lumberyard/query")
+@Path("/lumberyard/query")
 public class QueryLumberyardPluginEndpoints {
 
     private final MiruQueryLumberyardService lumberyardService;
-    private final LumberyardPluginRegion analyticsPluginRegion;
+    private final LumberyardPluginRegion pluginRegion;
 
-    public QueryLumberyardPluginEndpoints(@Context MiruQueryLumberyardService lumberyardService, @Context LumberyardPluginRegion analyticsPluginRegion) {
+    public QueryLumberyardPluginEndpoints(@Context MiruQueryLumberyardService lumberyardService, @Context LumberyardPluginRegion pluginRegion) {
         this.lumberyardService = lumberyardService;
-        this.analyticsPluginRegion = analyticsPluginRegion;
+        this.pluginRegion = pluginRegion;
     }
 
 
@@ -40,8 +40,8 @@ public class QueryLumberyardPluginEndpoints {
         @QueryParam("activityTypes") @DefaultValue("0, 1, 11, 65") String activityTypes,
         @QueryParam("users") @DefaultValue("") String users,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
-        String rendered = lumberyardService.renderPlugin(analyticsPluginRegion,
-            Optional.of(new AnalyticsPluginRegionInput(
+        String rendered = lumberyardService.renderPlugin(pluginRegion,
+            Optional.of(new LumberyardPluginRegionInput(
                 tenantId,
                 fromHoursAgo,
                 toHoursAgo,

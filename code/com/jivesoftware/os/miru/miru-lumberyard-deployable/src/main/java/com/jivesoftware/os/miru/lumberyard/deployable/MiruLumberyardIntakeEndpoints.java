@@ -15,7 +15,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/lumberyard/intake")
+@Path("/miru/lumberyard")
 public class MiruLumberyardIntakeEndpoints {
 
     private final MiruLumberyardIntakeService intakeService;
@@ -25,7 +25,7 @@ public class MiruLumberyardIntakeEndpoints {
     }
 
     @POST
-    @Path("/")
+    @Path("intake")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_HTML)
     public Response intake(List<MiruLogEvent> logEvents) throws Exception {

@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
  *
  */
 // soy.miru.page.lumberyardsPluginRegion
-public class LumberyardPluginRegion implements MiruPageRegion<Optional<LumberyardPluginRegion.AnalyticsPluginRegionInput>> {
+public class LumberyardPluginRegion implements MiruPageRegion<Optional<LumberyardPluginRegion.LumberyardPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -56,7 +56,7 @@ public class LumberyardPluginRegion implements MiruPageRegion<Optional<Lumberyar
         this.miruReaders = miruReaders;
     }
 
-    public static class AnalyticsPluginRegionInput {
+    public static class LumberyardPluginRegionInput {
 
         final String tenant;
         final int fromHoursAgo;
@@ -66,7 +66,7 @@ public class LumberyardPluginRegion implements MiruPageRegion<Optional<Lumberyar
         final String users;
         final String logLevel;
 
-        public AnalyticsPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String users, String logLevel) {
+        public LumberyardPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String users, String logLevel) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
             this.toHoursAgo = toHoursAgo;
@@ -78,11 +78,11 @@ public class LumberyardPluginRegion implements MiruPageRegion<Optional<Lumberyar
     }
 
     @Override
-    public String render(Optional<AnalyticsPluginRegionInput> optionalInput) {
+    public String render(Optional<LumberyardPluginRegionInput> optionalInput) {
         Map<String, Object> data = Maps.newHashMap();
         try {
             if (optionalInput.isPresent()) {
-                AnalyticsPluginRegionInput input = optionalInput.get();
+                LumberyardPluginRegionInput input = optionalInput.get();
                 int fromHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.fromHoursAgo : input.toHoursAgo;
                 int toHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.toHoursAgo : input.fromHoursAgo;
 

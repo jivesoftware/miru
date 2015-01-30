@@ -88,7 +88,7 @@ public class MiruLumberyardMain {
         MiruQueryLumberyardService queryService = new MiruQueryLumberyardInitializer().initialize(renderer);
 
         List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("Lumberyard",
-                "/miru/lumberyard/query",
+                "/lumberyard/query",
                 QueryLumberyardPluginEndpoints.class,
                 new LumberyardPluginRegion("soy.miru.page.lumberyardPluginRegion", renderer, miruReaders)));
 
