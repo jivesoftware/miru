@@ -19,12 +19,12 @@ import javax.ws.rs.core.Response;
  */
 @Singleton
 @Path("/miru/lumberyard/analytics")
-public class AnalyticsPluginEndpoints {
+public class QueryLumberyardPluginEndpoints {
 
     private final MiruQueryLumberyardService lumberyardService;
     private final AnalyticsPluginRegion analyticsPluginRegion;
 
-    public AnalyticsPluginEndpoints(@Context MiruQueryLumberyardService lumberyardService, @Context AnalyticsPluginRegion analyticsPluginRegion) {
+    public QueryLumberyardPluginEndpoints(@Context MiruQueryLumberyardService lumberyardService, @Context AnalyticsPluginRegion analyticsPluginRegion) {
         this.lumberyardService = lumberyardService;
         this.analyticsPluginRegion = analyticsPluginRegion;
     }

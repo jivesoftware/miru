@@ -26,7 +26,7 @@ import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardIntakeInitializer.MiruLumberyardIntakeConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.lumberyard.deployable.analytics.AnalyticsPluginEndpoints;
+import com.jivesoftware.os.miru.lumberyard.deployable.analytics.QueryLumberyardPluginEndpoints;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
@@ -87,10 +87,9 @@ public class MiruLumberyardMain {
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
         MiruQueryLumberyardService queryService = new MiruQueryLumberyardInitializer().initialize(renderer);
 
-        List<MiruManagePlugin> plugins = Lists.newArrayList(
-            new MiruManagePlugin("Lumberyard",
+        List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("Lumberyard",
                 "/miru/lumberyard/analytics",
-                AnalyticsPluginEndpoints.class,
+                QueryLumberyardPluginEndpoints.class,
                 new AnalyticsPluginRegion("soy.miru.page.lumberyardPluginRegion", renderer, miruReaders)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
