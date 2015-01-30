@@ -10,9 +10,11 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.Serializable;
 import java.text.DateFormat;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -30,7 +32,6 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.DefaultErrorHandler;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
-import org.apache.logging.log4j.core.layout.JsonLayout;
 
 /**
  *
@@ -62,7 +63,7 @@ public class MiruLogAppender implements Appender {
     private final AtomicInteger helperIndex = new AtomicInteger(0);
     private final AtomicLong appendCount = new AtomicLong(0);
     private final AtomicReference<QueueConsumer> queueConsumer = new AtomicReference<>();
-    private final Layout<?> layout = JsonLayout.createDefaultLayout();
+    private final Layout<?> layout = new EmptyLayout();
 
     private ErrorHandler errorHandler = new DefaultErrorHandler(this);
 
@@ -361,6 +362,39 @@ public class MiruLogAppender implements Appender {
 
         @Override
         public void clear() {
+        }
+    }
+
+    private static class EmptyLayout implements Layout<Serializable> {
+
+        @Override
+        public byte[] getFooter() {
+            return new byte[0];
+        }
+
+        @Override
+        public byte[] getHeader() {
+            return new byte[0];
+        }
+
+        @Override
+        public byte[] toByteArray(LogEvent logEvent) {
+            return new byte[0];
+        }
+
+        @Override
+        public Serializable toSerializable(LogEvent logEvent) {
+            return logEvent;
+        }
+
+        @Override
+        public String getContentType() {
+            return "empty";
+        }
+
+        @Override
+        public Map<String, String> getContentFormat() {
+            return Collections.emptyMap();
         }
     }
 }
