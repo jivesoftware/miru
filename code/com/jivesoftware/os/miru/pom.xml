@@ -33,5 +33,7 @@
         <module>miru-reco-plugins-test</module>
         <module>miru-analytics-plugins</module>
         <module>miru-analytics-plugins-test</module>
+        <module>miru-lumberyard-plugins</module>
+        <module>miru-lumberyard-plugins-test</module>
   </modules>
 </project>
