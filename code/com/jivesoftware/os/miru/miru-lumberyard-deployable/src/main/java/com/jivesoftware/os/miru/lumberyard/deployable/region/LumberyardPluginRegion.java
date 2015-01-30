@@ -39,8 +39,8 @@ import java.util.concurrent.TimeUnit;
 /**
  *
  */
-// soy.miru.page.analyticsPluginRegion
-public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsPluginRegion.AnalyticsPluginRegionInput>> {
+// soy.miru.page.lumberyardsPluginRegion
+public class LumberyardPluginRegion implements MiruPageRegion<Optional<LumberyardPluginRegion.AnalyticsPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -48,7 +48,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
     private final MiruSoyRenderer renderer;
     private final RequestHelper[] miruReaders;
 
-    public AnalyticsPluginRegion(String template,
+    public LumberyardPluginRegion(String template,
         MiruSoyRenderer renderer,
         RequestHelper[] miruReaders) {
         this.template = template;

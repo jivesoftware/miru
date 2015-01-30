@@ -27,7 +27,7 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardIntakeInitializer.MiruLumberyardIntakeConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.analytics.QueryLumberyardPluginEndpoints;
-import com.jivesoftware.os.miru.lumberyard.deployable.region.AnalyticsPluginRegion;
+import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardPluginRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
@@ -88,9 +88,9 @@ public class MiruLumberyardMain {
         MiruQueryLumberyardService queryService = new MiruQueryLumberyardInitializer().initialize(renderer);
 
         List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("Lumberyard",
-                "/miru/lumberyard/analytics",
+                "/miru/lumberyard/query",
                 QueryLumberyardPluginEndpoints.class,
-                new AnalyticsPluginRegion("soy.miru.page.lumberyardPluginRegion", renderer, miruReaders)));
+                new LumberyardPluginRegion("soy.miru.page.lumberyardPluginRegion", renderer, miruReaders)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

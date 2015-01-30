@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.lumberyard.deployable.analytics;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruQueryLumberyardService;
-import com.jivesoftware.os.miru.lumberyard.deployable.region.AnalyticsPluginRegion;
-import com.jivesoftware.os.miru.lumberyard.deployable.region.AnalyticsPluginRegion.AnalyticsPluginRegionInput;
+import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardPluginRegion;
+import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardPluginRegion.AnalyticsPluginRegionInput;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -18,13 +18,13 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/lumberyard/analytics")
+@Path("/miru/lumberyard/query")
 public class QueryLumberyardPluginEndpoints {
 
     private final MiruQueryLumberyardService lumberyardService;
-    private final AnalyticsPluginRegion analyticsPluginRegion;
+    private final LumberyardPluginRegion analyticsPluginRegion;
 
-    public QueryLumberyardPluginEndpoints(@Context MiruQueryLumberyardService lumberyardService, @Context AnalyticsPluginRegion analyticsPluginRegion) {
+    public QueryLumberyardPluginEndpoints(@Context MiruQueryLumberyardService lumberyardService, @Context LumberyardPluginRegion analyticsPluginRegion) {
         this.lumberyardService = lumberyardService;
         this.analyticsPluginRegion = analyticsPluginRegion;
     }
