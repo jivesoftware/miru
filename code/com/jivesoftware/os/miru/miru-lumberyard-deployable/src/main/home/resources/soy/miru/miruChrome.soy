@@ -72,8 +72,8 @@
 {template .headerRegion}
 	<div class="navbar navbar-default" role="navigation">
 	    <div class="navbar-header">
-            <a class="navbar-brand" href="/miru/manage">
-                Miru
+            <a class="navbar-brand" href="/miru/lumberyard">
+                Miru Lumberyard
             </a>
 	    </div>
 	</div>
@@ -83,34 +83,6 @@
  * @param plugins
  */
 {template .nav}
-    <a class="list-group-item" href="/miru/manage/hosts">
-        <span class="glyphicon glyphicon-bookmark"></span>{sp}
-        Hosts
-    </a>
-    <a class="list-group-item" href="/miru/manage/balancer">
-        <span class="glyphicon glyphicon-bookmark"></span>{sp}
-        Balancer
-    </a>
-    <a class="list-group-item" href="/miru/manage/schema">
-        <span class="glyphicon glyphicon-bookmark"></span>{sp}
-        Schema
-    </a>
-    <a class="list-group-item" href="/miru/manage/tenants">
-        <span class="glyphicon glyphicon-bookmark"></span>{sp}
-        Tenants
-    </a>
-    <a class="list-group-item" href="/miru/manage/lookup">
-        <span class="glyphicon glyphicon-bookmark"></span>{sp}
-        Activity Lookup
-    </a>
-    <a class="list-group-item" href="/miru/manage/wal/activity">
-        <span class="glyphicon glyphicon-bookmark"></span>{sp}
-        Activity WAL
-    </a>
-    <a class="list-group-item" href="/miru/manage/wal/read">
-        <span class="glyphicon glyphicon-bookmark"></span>{sp}
-        Read WAL
-    </a>
     {foreach $plugin in $plugins}
         <a class="list-group-item" href="{$plugin.path}">
             <span class="glyphicon glyphicon-bookmark"></span>{sp}

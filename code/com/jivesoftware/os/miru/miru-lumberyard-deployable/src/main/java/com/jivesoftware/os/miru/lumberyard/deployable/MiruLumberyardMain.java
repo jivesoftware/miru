@@ -88,10 +88,10 @@ public class MiruLumberyardMain {
         MiruQueryLumberyardService queryService = new MiruQueryLumberyardInitializer().initialize(renderer);
 
         List<MiruManagePlugin> plugins = Lists.newArrayList(
-            new MiruManagePlugin("Analytics",
+            new MiruManagePlugin("Lumberyard",
                 "/miru/lumberyard/analytics",
                 AnalyticsPluginEndpoints.class,
-                new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, miruReaders)));
+                new AnalyticsPluginRegion("soy.miru.page.lumberyardPluginRegion", renderer, miruReaders)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
