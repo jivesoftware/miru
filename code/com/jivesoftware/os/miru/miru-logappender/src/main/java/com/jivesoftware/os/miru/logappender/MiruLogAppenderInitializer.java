@@ -1,14 +1,6 @@
 package com.jivesoftware.os.miru.logappender;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.http.client.HttpClient;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import java.util.Collection;
+import java.io.IOException;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
@@ -65,27 +57,14 @@ public class MiruLogAppenderInitializer {
         String service,
         String instance,
         String version,
-        MiruLogAppenderConfig config,
-        ObjectMapper objectMapper) {
+        MiruLogAppenderConfig config) throws IOException {
 
         String[] hostPorts = config.getMiruLumberyardHostPorts().split("\\s*,\\s*");
-        RequestHelper[] requestHelpers = new RequestHelper[hostPorts.length];
+        MiruLogSender[] logSenders = new MiruLogSender[hostPorts.length];
 
-        // MiruConfigReader client configuration
-        Collection<HttpClientConfiguration> httpClientConfigurations = Lists.newArrayList();
-        HttpClientConfig httpClientConfig = HttpClientConfig.newBuilder()
-            .setSocketTimeoutInMillis(config.getSocketTimeoutInMillis())
-            .setMaxConnections(config.getMaxConnections())
-            .setMaxConnectionsPerHost(config.getMaxConnectionsPerHost())
-            .build();
-        httpClientConfigurations.add(httpClientConfig);
-
-        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(httpClientConfigurations);
-
-        for (int i = 0; i < requestHelpers.length; i++) {
+        for (int i = 0; i < logSenders.length; i++) {
             String[] parts = hostPorts[i].split(":");
-            HttpClient httpClient = httpClientFactory.createClient(parts[0], Integer.parseInt(parts[1]));
-            requestHelpers[i] = new RequestHelper(httpClient, objectMapper);
+            logSenders[i] = new HttpPoster(parts[0], Integer.parseInt(parts[1]), config.getSocketTimeoutInMillis());
         }
 
         return new MiruLogAppender(datacenter,
@@ -94,7 +73,7 @@ public class MiruLogAppenderInitializer {
             service,
             instance,
             version,
-            requestHelpers,
+            logSenders,
             config.getQueueMaxDepth(),
             config.getQueueIsBlocking(),
             config.getIfSuccessPauseMillis(),

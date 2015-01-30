@@ -104,8 +104,7 @@ public class MiruReaderMain {
             instanceConfig.getServiceName(),
             String.valueOf(instanceConfig.getInstanceName()),
             instanceConfig.getVersion(),
-            miruLogAppenderConfig,
-            mapper);
+            miruLogAppenderConfig);
         miruLogAppender.install();
 
         HealthFactory.initialize(

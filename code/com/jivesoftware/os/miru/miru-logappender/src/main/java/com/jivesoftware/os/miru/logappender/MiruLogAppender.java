@@ -1,21 +1,12 @@
 package com.jivesoftware.os.miru.logappender;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
-import com.jivesoftware.os.mlogger.core.MetricLogger;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.Serializable;
-import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,17 +28,13 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
  */
 public class MiruLogAppender implements Appender {
 
-    private static final MetricLogger METRICS = MetricLoggerFactory.getLogger();
-
-    private static final DateFormat DATE_FORMAT = new ISO8601DateFormat(TimeZone.getTimeZone("UTC"));
-
     private final String datacenter;
     private final String cluster;
     private final String host;
     private final String service;
     private final String instance;
     private final String version;
-    private final RequestHelper[] requestHelpers;
+    private final MiruLogSender[] logSenders;
     private final BlockingQueue<MiruLogEvent> queue;
     private final boolean blocking;
     private final long ifSuccessPauseMillis;
@@ -72,7 +59,7 @@ public class MiruLogAppender implements Appender {
         String service,
         String instance,
         String version,
-        RequestHelper[] requestHelpers,
+        MiruLogSender[] logSenders,
         int queueSize,
         boolean blocking,
         long ifSuccessPauseMillis,
@@ -86,7 +73,7 @@ public class MiruLogAppender implements Appender {
         this.service = service;
         this.instance = instance;
         this.version = version;
-        this.requestHelpers = requestHelpers;
+        this.logSenders = logSenders;
         this.cluster = cluster;
         this.queue = new ArrayBlockingQueue<>(queueSize);
         this.blocking = blocking;
@@ -105,7 +92,7 @@ public class MiruLogAppender implements Appender {
             config.addAppender(this);
 
             for (LoggerConfig loggerConfig : config.getLoggers().values()) {
-                loggerConfig.addAppender(this, Level.DEBUG, null);
+                loggerConfig.addAppender(this, Level.INFO, null); // TODO expose to config
             }
         }
 
@@ -115,7 +102,6 @@ public class MiruLogAppender implements Appender {
     @Override
     public void append(LogEvent logEvent) {
         if (!isStarted()) {
-            METRICS.inc("append>ignored");
             throw new IllegalStateException("MiruLogAppender " + getName() + " is not active");
         } else {
             MiruLogEvent miruLogEvent = new MiruLogEvent(datacenter,
@@ -128,39 +114,32 @@ public class MiruLogAppender implements Appender {
                 logEvent.getThreadName(),
                 logEvent.getLoggerName(),
                 logEvent.getMessage().getFormattedMessage(),
-                DATE_FORMAT.format(new Date(logEvent.getTimeMillis())),
+                String.valueOf(logEvent.getTimeMillis()),
                 toStackTrace(logEvent.getThrown()));
 
             if (blocking) {
                 try {
                     queue.put(miruLogEvent);
-                    METRICS.inc("append>blocking>success");
                 } catch (InterruptedException ie) {
                     System.err.println("Interrupted while waiting for a free slot in the MiruLogAppender MiruLogEvent-queue " + getName());
-                    METRICS.inc("append>blocking>interrupted");
                 }
             } else {
                 if (queue.remainingCapacity() < nonBlockingDrainThreshold) {
                     System.err.println("Draining to create space in the MiruLogAppender MiruLogEvent-queue " + getName());
                     queue.drainTo(DEV_NULL_COLLECTION, nonBlockingDrainCount);
-                    METRICS.inc("append>nonblocking>dropped", nonBlockingDrainCount);
                 }
                 boolean appendSuccessful = queue.offer(miruLogEvent);
                 if (appendSuccessful) {
-                    METRICS.inc("append>nonblocking>success");
                 } else {
                     System.err.println("MiruLogAppender " + getName() + " is unable to write. Queue is full!");
-                    METRICS.inc("append>nonblocking>full");
                 }
             }
 
             long count = appendCount.incrementAndGet();
             if (count % cycleReceiverAfterAppendCount == 0) {
                 helperIndex.incrementAndGet();
-                METRICS.inc("append>cycle");
             }
 
-            METRICS.inc("append>count");
         }
     }
 
@@ -179,7 +158,7 @@ public class MiruLogAppender implements Appender {
 
     @Override
     public String getName() {
-        return Joiner.on(',').join(cluster, host, instance, service, version);
+        return cluster + "," + host + "," + instance + "," + service + "," + version;
     }
 
     @Override
@@ -238,7 +217,7 @@ public class MiruLogAppender implements Appender {
 
         @Override
         public void run() {
-            List<MiruLogEvent> events = Lists.newArrayList();
+            List<MiruLogEvent> events = new ArrayList<>();
             while (running.get()) {
                 queue.drainTo(events);
                 if (events.isEmpty()) {
@@ -248,20 +227,16 @@ public class MiruLogAppender implements Appender {
                         System.err.println("QueueConsumer was interrupted while sleeping due to empty queue");
                         Thread.interrupted();
                     }
-                    METRICS.inc("consume>empty");
                 } else {
                     deliver:
                     while (true) {
-                        for (int tries = 0; tries < requestHelpers.length; tries++) {
+                        for (int tries = 0; tries < logSenders.length; tries++) {
                             try {
-                                requestHelpers[(int) (helperIndex.get() % requestHelpers.length)].executeRequest(events,
-                                    "/miru/lumberyard/intake", String.class, null);
-                                METRICS.inc("consume>delivered");
+                                logSenders[(int) (helperIndex.get() % logSenders.length)].send(events);
                                 break deliver;
                             } catch (Exception e) {
                                 System.err.println("Append failed for a logger");
                                 helperIndex.incrementAndGet();
-                                METRICS.inc("consume>error");
                             }
                         }
 
@@ -274,8 +249,6 @@ public class MiruLogAppender implements Appender {
                         }
                     }
 
-                    METRICS.inc("consume>batch");
-                    METRICS.inc("consume>count", events.size());
                     events.clear();
 
                     try {
@@ -317,7 +290,7 @@ public class MiruLogAppender implements Appender {
 
         @Override
         public Iterator<E> iterator() {
-            return Iterators.emptyIterator();
+            return Collections.EMPTY_LIST.iterator();
         }
 
         @Override

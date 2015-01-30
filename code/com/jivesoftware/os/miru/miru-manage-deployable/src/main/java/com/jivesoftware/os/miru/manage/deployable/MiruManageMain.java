@@ -86,8 +86,7 @@ public class MiruManageMain {
             instanceConfig.getServiceName(),
             String.valueOf(instanceConfig.getInstanceName()),
             instanceConfig.getVersion(),
-            miruLogAppenderConfig,
-            mapper);
+            miruLogAppenderConfig);
         miruLogAppender.install();
 
         MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
