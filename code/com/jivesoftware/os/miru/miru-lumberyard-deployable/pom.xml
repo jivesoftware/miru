@@ -95,13 +95,18 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-analytics-plugins</artifactId>
+            <artifactId>miru-lumberyard-plugins</artifactId>
             <version>0.229-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
+            <version>0.229-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-logappender</artifactId>
             <version>0.229-SNAPSHOT</version>
         </dependency>
         <dependency>

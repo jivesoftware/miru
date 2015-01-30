@@ -15,7 +15,6 @@
  */
 package com.jivesoftware.os.miru.lumberyard.deployable;
 
-import com.google.common.base.Charsets;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.api.HealthTimer;
 import com.jivesoftware.os.jive.utils.health.api.TimerHealthCheckConfig;
@@ -23,6 +22,7 @@ import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.StringDefault;
 
 /**
- *
  * @author jonathan.colt
  */
 public class MiruLumberyardIntakeService {
@@ -74,15 +73,14 @@ public class MiruLumberyardIntakeService {
     void ingressLogEvents(List<MiruLogEvent> logEvents) throws Exception {
         List<MiruActivity> miruActivites = new ArrayList<>();
         for (MiruLogEvent logEvent : logEvents) {
-            lumberyardSchemaService.ensureSchema(new MiruTenantId(logEvent.getServiceId().getBytes(Charsets.UTF_8)), LumberyardSchemaConstants.SCHEMA);
-            miruActivites.add(logMill.mill(logEvent));
+            MiruTenantId tenantId = LumberyardSchemaConstants.TENANT_ID;
+            lumberyardSchemaService.ensureSchema(tenantId, LumberyardSchemaConstants.SCHEMA);
+            miruActivites.add(logMill.mill(tenantId, logEvent));
         }
         ingress(miruActivites);
         log.inc("ingressed", miruActivites.size());
         log.info("Ingressed " + miruActivites.size());
     }
-
-
 
     void ingress(List<MiruActivity> miruActivites) {
         int index = 0;
@@ -109,10 +107,5 @@ public class MiruLumberyardIntakeService {
             ingressLatency.stopTimer("Ingress " + miruActivites.size(), "Add more lumberyard services or fix down stream issue.");
         }
 
-    }
-
-    public static interface MiruLogEvent {
-
-        String getServiceId();
     }
 }

@@ -41,6 +41,8 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
+import com.jivesoftware.os.miru.logappender.MiruLogAppender;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
@@ -89,6 +91,23 @@ public class MiruReaderMain {
 
         final Deployable deployable = new Deployable(args);
 
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        mapper.registerModule(new GuavaModule());
+
+        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+
+        MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+        MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+            instanceConfig.getClusterName(),
+            instanceConfig.getHost(),
+            instanceConfig.getServiceName(),
+            String.valueOf(instanceConfig.getInstanceName()),
+            instanceConfig.getVersion(),
+            miruLogAppenderConfig,
+            mapper);
+        miruLogAppender.install();
+
         HealthFactory.initialize(
             new HealthCheckConfigBinder() {
                 @Override
@@ -113,7 +132,6 @@ public class MiruReaderMain {
         deployable.addHealthCheck(new DirectBufferHealthChecker(deployable.config(DirectBufferHealthChecker.DirectBufferHealthCheckerConfig.class)));
         deployable.buildManageServer().start();
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
         MiruHost miruHost = new MiruHost(instanceConfig.getHost(), instanceConfig.getMainPort());
 
         MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
@@ -128,10 +146,6 @@ public class MiruReaderMain {
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
-
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        mapper.registerModule(new GuavaModule());
 
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
             rowColumnValueStoreInitializer, mapper);
@@ -165,13 +179,14 @@ public class MiruReaderMain {
             termComposer);
 
         final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-        RegistrySchemaProvider registrySchemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
+        RegistrySchemaProvider registrySchemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(),
+            10_000); //TODO configure
 
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
             registryStore,
             clusterRegistry,
             miruHost,
-            registrySchemaProvider, //TODO configure
+            registrySchemaProvider,
             wal,
             httpClientFactory,
             miruResourceLocator,

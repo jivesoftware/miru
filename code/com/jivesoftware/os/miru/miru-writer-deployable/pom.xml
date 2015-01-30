@@ -34,11 +34,6 @@
             <artifactId>jackson-datatype-guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-wal</artifactId>
-            <version>0.229-SNAPSHOT</version>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-api</artifactId>
         </dependency>
@@ -50,6 +45,21 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-api</artifactId>
+            <version>0.229-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-logappender</artifactId>
+            <version>0.229-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-wal</artifactId>
+            <version>0.229-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
@@ -84,11 +94,6 @@
         <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>javax.ws.rs-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-api</artifactId>
-            <version>0.229-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>

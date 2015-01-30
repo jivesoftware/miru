@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.lumberyard.deployable;
 
-import com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardIntakeService.MiruLogEvent;
+import com.jivesoftware.os.miru.logappender.MiruLogEvent;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -18,6 +20,8 @@ import javax.ws.rs.core.Response;
 @Path("/miru/lumberyard")
 public class MiruLumberyardIntakeEndpoints {
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final MiruLumberyardIntakeService intakeService;
 
     public MiruLumberyardIntakeEndpoints(@Context MiruLumberyardIntakeService intakeService) {
@@ -29,8 +33,13 @@ public class MiruLumberyardIntakeEndpoints {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_HTML)
     public Response intake(List<MiruLogEvent> logEvents) throws Exception {
-        intakeService.ingressLogEvents(logEvents);
-        return Response.ok().build();
+        try {
+            intakeService.ingressLogEvents(logEvents);
+            return Response.ok().build();
+        } catch (Throwable t) {
+            LOG.error("Error on intake for {} events", new Object[] { logEvents.size() }, t);
+            return Response.serverError().build();
+        }
     }
 
 }

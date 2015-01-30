@@ -24,6 +24,9 @@ import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardIntakeInitializer.MiruLumberyardIntakeConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.analytics.QueryLumberyardPluginEndpoints;
@@ -78,26 +81,29 @@ public class MiruLumberyardMain {
         schemaMapper.registerModule(new GuavaModule());
         MiruLumberyardServiceConfig lumberyardServiceConfig = deployable.config(MiruLumberyardServiceConfig.class);
 
+        OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
+
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
         RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(lumberyardServiceConfig.getMiruReaderHosts(), mapper);
         RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(lumberyardServiceConfig.getMiruWriterHosts(), mapper);
 
         MiruLumberyardIntakeConfig intakeConfig = deployable.config(MiruLumberyardIntakeConfig.class);
-        MiruLumberyardIntakeService inTakeService = new MiruLumberyardIntakeInitializer().initialize(intakeConfig, miruWrites, miruReaders);
+        MiruLumberyardIntakeService inTakeService = new MiruLumberyardIntakeInitializer().initialize(intakeConfig, orderIdProvider, miruWrites, miruReaders);
 
         MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
         MiruQueryLumberyardService queryService = new MiruQueryLumberyardInitializer().initialize(renderer);
 
-        List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("Query",
-            "/lumberyard/query",
-            QueryLumberyardPluginEndpoints.class,
-            new LumberyardQueryPluginRegion("soy.miru.page.lumberyardQueryPluginRegion", renderer, miruReaders)),
+        List<MiruManagePlugin> plugins = Lists.newArrayList(
+            new MiruManagePlugin("Query",
+                "/lumberyard/query",
+                QueryLumberyardPluginEndpoints.class,
+                new LumberyardQueryPluginRegion("soy.miru.page.lumberyardQueryPluginRegion", renderer, miruReaders)),
             new MiruManagePlugin("Status",
-            "/lumberyard/status",
-            StatusLumberyardPluginEndpoints.class,
-            new LumberyardStatusPluginRegion("soy.miru.page.lumberyardStatusPluginRegion", renderer)));
+                "/lumberyard/status",
+                StatusLumberyardPluginEndpoints.class,
+                new LumberyardStatusPluginRegion("soy.miru.page.lumberyardStatusPluginRegion", renderer)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

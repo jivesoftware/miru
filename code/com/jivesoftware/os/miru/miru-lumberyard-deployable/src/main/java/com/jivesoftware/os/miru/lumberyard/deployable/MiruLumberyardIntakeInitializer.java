@@ -16,11 +16,11 @@
 package com.jivesoftware.os.miru.lumberyard.deployable;
 
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.StringDefault;
 
 /**
- *
  * @author jonathan.colt
  */
 public class MiruLumberyardIntakeInitializer {
@@ -32,9 +32,12 @@ public class MiruLumberyardIntakeInitializer {
 
     }
 
-    MiruLumberyardIntakeService initialize(MiruLumberyardIntakeConfig config, RequestHelper[] miruWrites, RequestHelper[] miruReaders) {
+    MiruLumberyardIntakeService initialize(MiruLumberyardIntakeConfig config,
+        OrderIdProvider orderIdProvider,
+        RequestHelper[] miruWrites,
+        RequestHelper[] miruReaders) {
         LumberyardSchemaService lumberyardSchemaService = new LumberyardSchemaService(miruReaders);
-        LogMill logMill = new LogMill();
+        LogMill logMill = new LogMill(orderIdProvider);
         return new MiruLumberyardIntakeService(lumberyardSchemaService, logMill, config.getMiruIngressEndpoint(), miruWrites);
     }
 }

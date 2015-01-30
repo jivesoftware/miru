@@ -9,19 +9,18 @@
  * @param? service
  * @param? instance
  * @param? logLevel
- * @param? tenant
  * @param? fromAgo
  * @param? toAgo
- * @param? timeUnit
+ * @param? fromTimeUnit
+ * @param? toTimeUnit
  * @param? thread
  * @param? logger
  * @param? message
+ * @param? thrown
  * @param? waveform
  * @param? events
  * @param? buckets
  * @param? messageCount
- * @param? activityTypes
- * @param? users
  * @param? summary
  * @param? elapse
  */
@@ -75,11 +74,52 @@
                 <br>
                 <table>
                     <tr>
+                        <td>From</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$fromAgo?:''}"
+                                name="fromAgo" id="fromTimePicker" data-original-title="" title="">
+                        </td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="FromTimeUnit"
+                                name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td>
+                        <td>ago</td>
+                    </tr>
+                    <tr>
+                        <td>To</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Time Ago" value="{$toAgo?:''}"
+                                name="toAgo" id="toTimePicker" data-original-title="" title="">
+                        </td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="ToTimeUnit"
+                                name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td>
+                        <td>ago</td>
+                    </tr>
+                </table>
+                <br>
+                <table>
+                    <tr>
                         <td>Level</td>
                         <td>
                             <select style="width:280px; padding-left:10px;"
                                 class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Log Level"
-                                name="logLevel" id="logLevelPicker" data-original-title="" title="">
+                                name="logLevel" id="logLevelPicker" data-original-title="" title="" multiple>
                                 <option value="TRACE" {if $logLevel == 'TRACE'}selected="selected"{/if}>TRACE</option>
                                 <option value="DEBUG" {if $logLevel == 'DEBUG'}selected="selected"{/if}>DEBUG</option>
                                 <option value="INFO" {if $logLevel == 'INFO'}selected="selected"{/if}>INFO</option>
@@ -88,41 +128,8 @@
                                 <option value="NONE" {if $logLevel == 'NONE'}selected="selected"{/if}>NONE</option>
                             </select>
                         </td>
-                        <td>From</td>
-                        <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
-                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromAgo?:''}"
-                            name="fromAgo" id="fromHoursPicker" data-original-title="" title="">
-                        </td>
-                        <td>
-                            <select style="width:120px; padding-left:10px;"
-                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="TimeUnit"
-                                name="timeUnit" id="timeunitPicker" data-original-title="" title="">
-                                <option value="DAYS" {if $timeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
-                                <option value="HOURS" {if $timeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
-                                <option value="MINUTES" {if $timeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
-                                <option value="SECONDS" {if $timeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
-                            </select>
-                        </td>
-                        <td>ago to</td>
-                        <td>
-                            <select style="width:120px; padding-left:10px;"
-                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="TimeUnit"
-                                name="timeUnit" id="timeunitPicker" data-original-title="" title="">
-                                <option value="DAYS" {if $timeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
-                                <option value="HOURS" {if $timeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
-                                <option value="MINUTES" {if $timeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
-                                <option value="SECONDS" {if $timeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
-                            </select>
-                        </td>
-                        <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
-                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toAgo?:''}"
-                            name="toAgo" id="toHoursPicker" data-original-title="" title="">
-                        </td>
-                        <td>ago.</td>
                     </tr>
-                    </table>
+                </table>
                 <table>
                     <tr>
                         <td>Thread</td>
@@ -144,8 +151,16 @@
                         <td>Message</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
-                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$message?:''}"
+                                class="j-message-autocomplete j-autocomplete-input j-ui-elem" placeholder="Message" value="{$message?:''}"
                                 name="message" id="messagePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Thrown Stack Trace</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
+                                class="j-thrown-autocomplete j-autocomplete-input j-ui-elem" placeholder="Thrown Stack Trace" value="{$thrown?:''}"
+                                name="thrown" id="thrownPicker" data-original-title="" title="">
                         </td>
                     </tr>
                 </table>
@@ -154,47 +169,19 @@
                     <tr>
                         <td>Buckets</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
-                            name="buckets" id="bucketsPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
+                                name="buckets" id="bucketsPicker" data-original-title="" title="">
                         </td>
                         <td>MessageCount</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-messageCount-autocomplete j-autocomplete-input j-ui-elem" placeholder="Message Count" value="{$messageCount?:''}"
-                            name="messageCount" id="messageCountPicker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    </table>
-                    <input type="submit" value="Refresh"/>
-                    <table>
-                    <tr>
-                        <td>Tenant</td>
-                        <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
-                                name="tenantId" id="tenantPicker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                   
-                    <tr>
-                        <td>Activity Types</td>
-                        <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Activity Types" value="{$activityTypes?:''}"
-                            name="activityTypes" id="activityTypesPicker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>User IDs</td>
-                        <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="User IDs" value="{$users?:''}"
-                            name="users" id="usersPicker" data-original-title="" title="">
+                                class="j-messageCount-autocomplete j-autocomplete-input j-ui-elem" placeholder="Message Count" value="{$messageCount?:''}"
+                                name="messageCount" id="messageCountPicker" data-original-title="" title="">
                         </td>
                     </tr>
                 </table>
-                
+                <input type="submit" value="Refresh"/>
             </form>
         </div>
     </div>
@@ -220,7 +207,7 @@
                     </tr>
                 {ifempty}
                     <tr>
-                        <td colspan="9">No read events found</td>
+                        <td colspan="1">No read events found</td>
                     </tr>
                 {/foreach}
             </tbody>

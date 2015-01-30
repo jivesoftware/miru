@@ -16,6 +16,7 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -29,6 +30,8 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
 import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.logappender.MiruLogAppender;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
@@ -72,6 +75,21 @@ public class MiruManageMain {
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class); //config(DevInstanceConfig.class);
 
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        mapper.registerModule(new GuavaModule());
+
+        MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+        MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+            instanceConfig.getClusterName(),
+            instanceConfig.getHost(),
+            instanceConfig.getServiceName(),
+            String.valueOf(instanceConfig.getInstanceName()),
+            instanceConfig.getVersion(),
+            miruLogAppenderConfig,
+            mapper);
+        miruLogAppender.install();
+
         MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
         RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
@@ -79,9 +97,6 @@ public class MiruManageMain {
         @SuppressWarnings("unchecked")
         RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
             .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new GuavaModule());
 
         MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
