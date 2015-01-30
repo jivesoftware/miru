@@ -119,8 +119,9 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "locale", Collections.singletonList("en")));
 
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
-                    Optional.of(fieldFilters),
-                    Optional.<List<MiruFilter>>absent());
+                    false,
+                    fieldFilters,
+                    null);
 
                 MiruResponse<AnalyticsAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {
@@ -133,25 +134,27 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                     analyticsFiltersBuilder.put(
                                         activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name(),
                                         new MiruFilter(MiruFilterOperation.and,
-                                            Optional.of(Collections.singletonList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Collections.singletonList(activityType)))),
-                                            Optional.<List<MiruFilter>>absent()));
+                                            false,
+                                            Collections.singletonList(
+                                                new MiruFieldFilter(MiruFieldType.primary,
+                                                    "activityType",
+                                                    Collections.singletonList(activityType))),
+                                            null));
                                 } else {
                                     for (String user : users) {
                                         analyticsFiltersBuilder.put(
                                             activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name() + ", user=" + user,
                                             new MiruFilter(MiruFilterOperation.and,
-                                                Optional.of(Arrays.asList(
-                                                        new MiruFieldFilter(MiruFieldType.primary,
-                                                            "activityType",
-                                                            Collections.singletonList(activityType)),
-                                                        new MiruFieldFilter(MiruFieldType.primary,
-                                                            "user",
-                                                            Collections.singletonList("3 " + user))
-                                                    )),
-                                                Optional.<List<MiruFilter>>absent()));
+                                                false,
+                                                Arrays.asList(
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "activityType",
+                                                        Collections.singletonList(activityType)),
+                                                    new MiruFieldFilter(MiruFieldType.primary,
+                                                        "user",
+                                                        Collections.singletonList("3 " + user))
+                                                ),
+                                                null));
                                     }
                                 }
                             }
