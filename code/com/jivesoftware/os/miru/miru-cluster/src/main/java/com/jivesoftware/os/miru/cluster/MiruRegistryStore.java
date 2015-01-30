@@ -43,6 +43,7 @@ public class MiruRegistryStore {
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema, ? extends Exception> schemaRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
+    private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> activityPayloadTable;
 
     public MiruRegistryStore(RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry,
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry,
@@ -52,7 +53,8 @@ public class MiruRegistryStore {
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema, ? extends Exception> schemaRegistry,
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable) {
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable,
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> activityPayloadTable) {
         this.hostsRegistry = hostsRegistry;
         this.expectedTenantsRegistry = expectedTenantsRegistry;
         this.expectedTenantPartitionsRegistry = expectedTenantPartitionsRegistry;
@@ -62,6 +64,7 @@ public class MiruRegistryStore {
         this.writerPartitionRegistry = writerPartitionRegistry;
         this.schemaRegistry = schemaRegistry;
         this.activityLookupTable = activityLookupTable;
+        this.activityPayloadTable = activityPayloadTable;
     }
 
     public RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> getHostsRegistry() {
@@ -98,5 +101,9 @@ public class MiruRegistryStore {
 
     public RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> getActivityLookupTable() {
         return activityLookupTable;
+    }
+
+    public RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> getActivityPayloadTable() {
+        return activityPayloadTable;
     }
 }

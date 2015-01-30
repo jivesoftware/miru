@@ -38,7 +38,7 @@ public class LumberyardInjectable {
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>("scoreLumberyard", new LumberyardQuestion(trending, request)),
                 new LumberyardAnswerEvaluator(),
-                new LumberyardAnswerMerger(request.query.timeRange),
+                new LumberyardAnswerMerger(request.query.desiredNumberOfResultsPerWaveform),
                 LumberyardAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException e) {

@@ -15,6 +15,7 @@
  */
 package com.jivesoftware.os.miru.lumberyard.deployable;
 
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.api.HealthTimer;
 import com.jivesoftware.os.jive.utils.health.api.TimerHealthCheckConfig;
@@ -22,10 +23,10 @@ import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import org.merlin.config.defaults.DoubleDefault;
@@ -59,30 +60,37 @@ public class MiruLumberyardIntakeService {
     private final LogMill logMill;
     private final String miruIngressEndpoint;
     private final RequestHelper[] miruWriter;
+    private final MiruActivityPayloads activityPayloads;
 
     public MiruLumberyardIntakeService(LumberyardSchemaService lumberyardSchemaService,
         LogMill logMill,
         String miruIngressEndpoint,
-        RequestHelper[] miruWrites) {
+        RequestHelper[] miruWrites,
+        MiruActivityPayloads activityPayloads) {
         this.lumberyardSchemaService = lumberyardSchemaService;
         this.logMill = logMill;
         this.miruIngressEndpoint = miruIngressEndpoint;
         this.miruWriter = miruWrites;
+        this.activityPayloads = activityPayloads;
     }
 
     void ingressLogEvents(List<MiruLogEvent> logEvents) throws Exception {
-        List<MiruActivity> miruActivites = new ArrayList<>();
+        List<MiruActivity> activities = Lists.newArrayListWithCapacity(logEvents.size());
+        List<MiruLogEventAndActivity> logEventsAndActivities = Lists.newArrayListWithCapacity(logEvents.size());
         for (MiruLogEvent logEvent : logEvents) {
             MiruTenantId tenantId = LumberyardSchemaConstants.TENANT_ID;
             lumberyardSchemaService.ensureSchema(tenantId, LumberyardSchemaConstants.SCHEMA);
-            miruActivites.add(logMill.mill(tenantId, logEvent));
+            MiruActivity activity = logMill.mill(tenantId, logEvent);
+            activities.add(activity);
+            logEventsAndActivities.add(new MiruLogEventAndActivity(logEvent, activity));
         }
-        ingress(miruActivites);
-        log.inc("ingressed", miruActivites.size());
-        log.info("Ingressed " + miruActivites.size());
+        ingress(activities);
+        record(logEventsAndActivities);
+        log.inc("ingressed", logEventsAndActivities.size());
+        log.info("Ingressed " + logEventsAndActivities.size());
     }
 
-    void ingress(List<MiruActivity> miruActivites) {
+    private void ingress(List<MiruActivity> activities) {
         int index = 0;
         ingressLatency.startTimer();
         try {
@@ -90,7 +98,7 @@ public class MiruLumberyardIntakeService {
                 try {
                     index = rand.nextInt(miruWriter.length);
                     RequestHelper requestHelper = miruWriter[index];
-                    requestHelper.executeRequest(miruActivites, miruIngressEndpoint, String.class, null);
+                    requestHelper.executeRequest(activities, miruIngressEndpoint, String.class, null);
                     log.inc("ingressed");
                     break;
                 } catch (Exception x) {
@@ -104,8 +112,25 @@ public class MiruLumberyardIntakeService {
                 }
             }
         } finally {
-            ingressLatency.stopTimer("Ingress " + miruActivites.size(), "Add more lumberyard services or fix down stream issue.");
+            ingressLatency.stopTimer("Ingress " + activities.size(), "Add more lumberyard services or fix down stream issue.");
         }
+    }
 
+    private void record(List<MiruLogEventAndActivity> logEventsAndActivities) throws Exception {
+        for (MiruLogEventAndActivity logEventAndActivity : logEventsAndActivities) {
+            FreshCutTimber timber = new FreshCutTimber(logEventAndActivity.logEvent.message, logEventAndActivity.logEvent.thrownStackTrace);
+            activityPayloads.put(logEventAndActivity.activity.tenantId, logEventAndActivity.activity.time, timber);
+        }
+    }
+
+    private static class MiruLogEventAndActivity {
+
+        public final MiruLogEvent logEvent;
+        public final MiruActivity activity;
+
+        public MiruLogEventAndActivity(MiruLogEvent logEvent, MiruActivity activity) {
+            this.logEvent = logEvent;
+            this.activity = activity;
+        }
     }
 }

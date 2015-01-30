@@ -4,6 +4,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -21,6 +22,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -61,7 +63,8 @@ public class LumberyardQuestion implements Question<LumberyardAnswer, Lumberyard
                         new Function<MiruFilter, LumberyardAnswer.Waveform>() {
                             @Override
                             public LumberyardAnswer.Waveform apply(MiruFilter input) {
-                                return new LumberyardAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
+                                return new LumberyardAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments],
+                                    Collections.<MiruActivity>emptyList());
                             }
                         }),
                     resultsExhausted),
@@ -129,7 +132,7 @@ public class LumberyardQuestion implements Question<LumberyardAnswer, Lumberyard
                 BM answer = bitmaps.create();
                 bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
-                    waveform = lumberyard.lumberyarding(bitmaps, answer, indexes);
+                    waveform = lumberyard.lumberyarding(bitmaps, context, request.tenantId, answer, request.query.desiredNumberOfResultsPerWaveform, indexes);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "lumberyard answer: {} items.", bitmaps.cardinality(answer));
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "lumberyard name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
@@ -139,7 +142,7 @@ public class LumberyardQuestion implements Question<LumberyardAnswer, Lumberyard
                 }
             }
             if (waveform == null) {
-                waveform = new LumberyardAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
+                waveform = new LumberyardAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments], Collections.<MiruActivity>emptyList());
             }
             waveforms.put(entry.getKey(), waveform);
         }

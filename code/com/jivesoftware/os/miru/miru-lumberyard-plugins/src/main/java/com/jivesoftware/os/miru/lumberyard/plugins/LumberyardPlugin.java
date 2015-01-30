@@ -19,7 +19,7 @@ public class LumberyardPlugin implements MiruPlugin<LumberyardEndpoints, Lumbery
 
     @Override
     public Collection<MiruEndpointInjectable<LumberyardInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
-        Lumberyard lumberyard = new Lumberyard();
+        Lumberyard lumberyard = new Lumberyard(miruProvider);
         return Collections.singletonList(new MiruEndpointInjectable<>(
             LumberyardInjectable.class,
             new LumberyardInjectable(miruProvider, lumberyard)

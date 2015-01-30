@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
@@ -78,12 +77,7 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
 
     @Override
     public AnalyticsAnswer done(Optional<AnalyticsAnswer> last, AnalyticsAnswer alternative, final MiruSolutionLog solutionLog) {
-        return last.transform(new Function<AnalyticsAnswer, AnalyticsAnswer>() {
-            @Override
-            public AnalyticsAnswer apply(AnalyticsAnswer result) {
-                return new AnalyticsAnswer(result.waveforms, result.resultsExhausted);
-            }
-        }).or(alternative);
+        return last.or(alternative);
     }
 
 }

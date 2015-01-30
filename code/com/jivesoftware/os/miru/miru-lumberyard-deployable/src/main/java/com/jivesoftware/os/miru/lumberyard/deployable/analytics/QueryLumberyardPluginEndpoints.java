@@ -48,7 +48,7 @@ public class QueryLumberyardPluginEndpoints {
         @QueryParam("message") @DefaultValue("") String message,
         @QueryParam("thrown") @DefaultValue("") String thrown,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("messageCount") @DefaultValue("100") int messageCount) {
+        @QueryParam("desiredNumberOfResultsPerWaveform") @DefaultValue("100") int messageCount) {
         String rendered = lumberyardService.renderPlugin(pluginRegion,
             Optional.of(new LumberyardPluginRegionInput(cluster,
                 host,

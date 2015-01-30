@@ -36,6 +36,7 @@ public class MiruLogAppender implements Appender {
     private final String version;
     private final MiruLogSender[] logSenders;
     private final BlockingQueue<MiruLogEvent> queue;
+    private final int batchSize;
     private final boolean blocking;
     private final long ifSuccessPauseMillis;
     private final long ifEmptyPauseMillis;
@@ -61,6 +62,7 @@ public class MiruLogAppender implements Appender {
         String version,
         MiruLogSender[] logSenders,
         int queueSize,
+        int batchSize,
         boolean blocking,
         long ifSuccessPauseMillis,
         long ifEmptyPauseMillis,
@@ -76,6 +78,7 @@ public class MiruLogAppender implements Appender {
         this.logSenders = logSenders;
         this.cluster = cluster;
         this.queue = new ArrayBlockingQueue<>(queueSize);
+        this.batchSize = batchSize;
         this.blocking = blocking;
         this.ifSuccessPauseMillis = ifSuccessPauseMillis;
         this.ifEmptyPauseMillis = ifEmptyPauseMillis;
@@ -219,7 +222,7 @@ public class MiruLogAppender implements Appender {
         public void run() {
             List<MiruLogEvent> events = new ArrayList<>();
             while (running.get()) {
-                queue.drainTo(events);
+                queue.drainTo(events, batchSize);
                 if (events.isEmpty()) {
                     try {
                         Thread.sleep(ifEmptyPauseMillis);

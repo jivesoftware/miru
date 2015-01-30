@@ -11,12 +11,15 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
+import com.jivesoftware.os.miru.lumberyard.deployable.FreshCutTimber;
 import com.jivesoftware.os.miru.lumberyard.deployable.LumberyardSchemaConstants;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.lumberyard.deployable.analytics.MinMaxDouble;
@@ -46,13 +49,16 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
     private final String template;
     private final MiruSoyRenderer renderer;
     private final RequestHelper[] miruReaders;
+    private final MiruActivityPayloads activityPayloads;
 
     public LumberyardQueryPluginRegion(String template,
         MiruSoyRenderer renderer,
-        RequestHelper[] miruReaders) {
+        RequestHelper[] miruReaders,
+        MiruActivityPayloads activityPayloads) {
         this.template = template;
         this.renderer = renderer;
         this.miruReaders = miruReaders;
+        this.activityPayloads = activityPayloads;
     }
 
     public static class LumberyardPluginRegionInput {
@@ -139,7 +145,7 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
                 data.put("fromAgo", String.valueOf(fromAgo));
                 data.put("toAgo", String.valueOf(toAgo));
                 data.put("buckets", String.valueOf(input.buckets));
-                data.put("messageCount", String.valueOf(input.messageCount));
+                data.put("desiredNumberOfResultsPerWaveform", String.valueOf(input.messageCount));
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -176,6 +182,7 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
                                 new LumberyardQuery(
                                     new MiruTimeRange(fromTime, toTime),
                                     input.buckets,
+                                    input.messageCount,
                                     MiruFilter.NO_FILTER,
                                     lumberyardFilters),
                                 MiruSolutionLogLevel.valueOf(input.logLevel)),
@@ -203,13 +210,28 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
 
                     data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, waveforms,
                         Optional.<MinMaxDouble>absent()));
+
+                    List<Long> activityTimes = Lists.newArrayList();
+                    for (LumberyardAnswer.Waveform waveform : waveforms.values()) {
+                        for (MiruActivity activity : waveform.results) {
+                            activityTimes.add(activity.time);
+                        }
+                    }
+                    List<FreshCutTimber> timbers = activityPayloads.multiGet(tenantId, activityTimes, FreshCutTimber.class);
+                    List<String> events = Lists.newArrayList();
+                    for (FreshCutTimber timber : timbers) {
+                        if (timber.message != null) {
+                            events.add(timber.message);
+                        }
+                        if (timber.thrownStackTrace != null) {
+                            events.add(Joiner.on('\n').join(timber.thrownStackTrace));
+                        }
+                    }
+                    data.put("events", events);
+
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
-                    data.put("events", Arrays.asList(new String[] {
-                        "Event1",
-                        "Event2"
-                    }));
                 }
             }
         } catch (Exception e) {

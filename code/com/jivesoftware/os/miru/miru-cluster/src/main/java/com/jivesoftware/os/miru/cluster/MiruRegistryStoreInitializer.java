@@ -29,6 +29,7 @@ import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.marshall.id.SaltingDelegatingMarshaller;
+import com.jivesoftware.os.rcvs.marshall.primatives.ByteArrayTypeMarshaller;
 import com.jivesoftware.os.rcvs.marshall.primatives.IntegerTypeMarshaller;
 import com.jivesoftware.os.rcvs.marshall.primatives.LongTypeMarshaller;
 
@@ -211,6 +212,20 @@ public class MiruRegistryStoreInitializer {
                 new CurrentTimestamper()
             );
 
+        // Miru Activity Payload Table
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> activityPayloadTable =
+            rowColumnValueStoreInitializer.initialize(
+                tableNameSpace,
+                "miru.payload.t", // Tenant
+                "a",
+                new DefaultRowColumnValueStoreMarshaller<>(
+                    new MiruVoidByteMarshaller(),
+                    new SaltingDelegatingMarshaller<>(new MiruTenantIdMarshaller()),
+                    new LongTypeMarshaller(),
+                    new ByteArrayTypeMarshaller()),
+                new CurrentTimestamper()
+            );
+
         return new MiruRegistryStore(hostsRegistry,
             expectedTenantsRegistry,
             expectedTenantPartitionsRegistry,
@@ -219,7 +234,8 @@ public class MiruRegistryStoreInitializer {
             configRegistry,
             writerPartitionRegistry,
             schemaRegistry,
-            activityLookupTable);
+            activityLookupTable,
+            activityPayloadTable);
     }
 
 }

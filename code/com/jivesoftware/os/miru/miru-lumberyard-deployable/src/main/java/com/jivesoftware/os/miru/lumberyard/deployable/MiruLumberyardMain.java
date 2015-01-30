@@ -27,6 +27,10 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
+import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
+import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardIntakeInitializer.MiruLumberyardIntakeConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.analytics.QueryLumberyardPluginEndpoints;
@@ -34,6 +38,8 @@ import com.jivesoftware.os.miru.lumberyard.deployable.analytics.StatusLumberyard
 import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardQueryPluginRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardStatusPluginRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
@@ -77,19 +83,34 @@ public class MiruLumberyardMain {
         deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
         deployable.buildManageServer().start();
 
-        ObjectMapper schemaMapper = new ObjectMapper();
-        schemaMapper.registerModule(new GuavaModule());
         MiruLumberyardServiceConfig lumberyardServiceConfig = deployable.config(MiruLumberyardServiceConfig.class);
-
-        OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new GuavaModule());
+
+        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+
+        RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+            .newInstance();
+        @SuppressWarnings("unchecked")
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
+            rowColumnValueStoreInitializer, mapper);
+
+        OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
+
         RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(lumberyardServiceConfig.getMiruReaderHosts(), mapper);
         RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(lumberyardServiceConfig.getMiruWriterHosts(), mapper);
+        MiruActivityPayloads activityPayloads = new MiruActivityPayloads(mapper, registryStore.getActivityPayloadTable());
 
         MiruLumberyardIntakeConfig intakeConfig = deployable.config(MiruLumberyardIntakeConfig.class);
-        MiruLumberyardIntakeService inTakeService = new MiruLumberyardIntakeInitializer().initialize(intakeConfig, orderIdProvider, miruWrites, miruReaders);
+        MiruLumberyardIntakeService inTakeService = new MiruLumberyardIntakeInitializer().initialize(intakeConfig,
+            orderIdProvider,
+            miruWrites,
+            miruReaders,
+            activityPayloads);
 
         MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
@@ -99,7 +120,7 @@ public class MiruLumberyardMain {
             new MiruManagePlugin("Query",
                 "/lumberyard/query",
                 QueryLumberyardPluginEndpoints.class,
-                new LumberyardQueryPluginRegion("soy.miru.page.lumberyardQueryPluginRegion", renderer, miruReaders)),
+                new LumberyardQueryPluginRegion("soy.miru.page.lumberyardQueryPluginRegion", renderer, miruReaders, activityPayloads)),
             new MiruManagePlugin("Status",
                 "/lumberyard/status",
                 StatusLumberyardPluginEndpoints.class,

@@ -197,17 +197,19 @@
         <table class="table table-condensed">
             <thead>
                 <tr>
-                    <th>Message</th>
+                    <th>Messages</th>
                 </tr>
             </thead>
             <tbody>
                 {foreach $event in $events}
                     <tr>
-                        <td>{$event}</td>
+                        <td style="white-space: pre-wrap; font-family: monospace;">
+                            {$event|changeNewlineToBr}
+                        </td>
                     </tr>
                 {ifempty}
                     <tr>
-                        <td colspan="1">No read events found</td>
+                        <td colspan="1">No log events found</td>
                     </tr>
                 {/foreach}
             </tbody>

@@ -29,6 +29,9 @@ public class MiruLogAppenderInitializer {
         @IntDefault(100_000)
         int getQueueMaxDepth();
 
+        @IntDefault(10_000)
+        int getBatchSize();
+
         @BooleanDefault(false)
         boolean getQueueIsBlocking();
 
@@ -75,6 +78,7 @@ public class MiruLogAppenderInitializer {
             version,
             logSenders,
             config.getQueueMaxDepth(),
+            config.getBatchSize(),
             config.getQueueIsBlocking(),
             config.getIfSuccessPauseMillis(),
             config.getIfEmptyPauseMillis(),

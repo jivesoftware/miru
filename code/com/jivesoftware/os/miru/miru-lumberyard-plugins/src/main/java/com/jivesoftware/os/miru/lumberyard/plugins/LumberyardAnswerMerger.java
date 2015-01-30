@@ -1,12 +1,12 @@
 package com.jivesoftware.os.miru.lumberyard.plugins;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -15,10 +15,10 @@ import java.util.Map;
  */
 public class LumberyardAnswerMerger implements MiruAnswerMerger<LumberyardAnswer> {
 
-    private final MiruTimeRange timeRange;
+    private final int desiredNumberOfResultsPerWaveform;
 
-    public LumberyardAnswerMerger(MiruTimeRange timeRange) {
-        this.timeRange = timeRange;
+    public LumberyardAnswerMerger(int desiredNumberOfResultsPerWaveform) {
+        this.desiredNumberOfResultsPerWaveform = desiredNumberOfResultsPerWaveform;
     }
 
     /**
@@ -63,12 +63,20 @@ public class LumberyardAnswerMerger implements MiruAnswerMerger<LumberyardAnswer
             LumberyardAnswer.Waveform addWaveform = addEntry.getValue();
             LumberyardAnswer.Waveform mergedWaveform = mergedWaveforms.get(key);
             if (mergedWaveform == null) {
-                mergedWaveform = new LumberyardAnswer.Waveform(new long[addWaveform.waveform.length]);
+                mergedWaveform = new LumberyardAnswer.Waveform(new long[addWaveform.waveform.length],
+                    Lists.<MiruActivity>newArrayListWithCapacity(addWaveform.results.size()));
                 mergedWaveforms.put(key, mergedWaveform);
             }
+
             for (int i = 0; i < mergedWaveform.waveform.length; i++) {
                 mergedWaveform.waveform[i] += addWaveform.waveform[i];
             }
+
+            int remainingCount = desiredNumberOfResultsPerWaveform - mergedWaveform.results.size();
+            if (remainingCount > 0) {
+                mergedWaveform.results.addAll(addWaveform.results.subList(0, Math.min(addWaveform.results.size(), remainingCount)));
+            }
+
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                 solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merged {} into {}",
                     key, Arrays.toString(addWaveform.waveform), Arrays.toString(mergedWaveform.waveform));
@@ -78,12 +86,7 @@ public class LumberyardAnswerMerger implements MiruAnswerMerger<LumberyardAnswer
 
     @Override
     public LumberyardAnswer done(Optional<LumberyardAnswer> last, LumberyardAnswer alternative, final MiruSolutionLog solutionLog) {
-        return last.transform(new Function<LumberyardAnswer, LumberyardAnswer>() {
-            @Override
-            public LumberyardAnswer apply(LumberyardAnswer result) {
-                return new LumberyardAnswer(result.waveforms, result.resultsExhausted);
-            }
-        }).or(alternative);
+        return last.or(alternative);
     }
 
 }
