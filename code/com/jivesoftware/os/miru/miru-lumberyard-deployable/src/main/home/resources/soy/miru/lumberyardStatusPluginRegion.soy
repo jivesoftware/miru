@@ -26,9 +26,21 @@
                         <tbody>
                             {foreach $status in $serviceStatus}
                                 <tr>
-                                    <td>{$status.error}</td>
-                                    <td>{$status.warn}</td>
-                                    <td>{$status.info}</td>
+                                    <td>
+                                        <form method="post" action="query?logLevels=ERROR&cluster={$status.cluster}&host={$status.host}&service={$status.service}&instance={{$status.instance}">
+                                            <input type="submit" value="{$status.error}">
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="query?logLevels=WARN&cluster={$status.cluster}&host={$status.host}&service={$status.service}&instance={{$status.instance}">
+                                            <input type="submit" value="{$status.warn}">
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="query?logLevels=INFO&cluster={$status.cluster}&host={$status.host}&service={$status.service}&instance={{$status.instance}">
+                                            <input type="submit" value="{$status.info}">
+                                        </form>
+                                    </td>
                                     <td>{$status.cluster}</td>
                                     <td>{$status.host}</td>
                                     <td>{$status.service}</td>

@@ -48,10 +48,11 @@ public class LumberyardStatusPluginRegion implements MiruPageRegion<Optional<Lum
     public String render(Optional<LumberyardStatusPluginRegionInput> optionalInput) {
         Map<String, Object> data = Maps.newHashMap();
 
-        logMill.levelCounts.put(new ServiceId("ds", "c", "h", "s", "i", "v"), "INFO", new AtomicLong(10));
-        logMill.levelCounts.put(new ServiceId("ds", "c", "h", "s", "i", "v"), "WARN", new AtomicLong(10));
-        logMill.levelCounts.put(new ServiceId("ds", "c1", "h", "s", "i", "v"), "INFO", new AtomicLong(10));
-        logMill.levelCounts.put(new ServiceId("ds", "c", "h", "s1", "i", "v"), "INFO", new AtomicLong(10));
+//        logMill.levelCounts.put(new ServiceId("ds", "c", "h", "s", "i", "v"), "INFO", new AtomicLong(10));
+//        logMill.levelCounts.put(new ServiceId("ds", "c", "h", "s", "i", "v"), "WARN", new AtomicLong(10));
+//        logMill.levelCounts.put(new ServiceId("ds", "c1", "h", "s", "i", "v"), "INFO", new AtomicLong(10));
+//        logMill.levelCounts.put(new ServiceId("ds", "c", "h", "s1", "i", "v"), "INFO", new AtomicLong(10));
+
         try {
             if (optionalInput.isPresent()) {
                 LumberyardStatusPluginRegionInput input = optionalInput.get();
