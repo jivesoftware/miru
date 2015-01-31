@@ -251,7 +251,9 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
                     terms.add(trimmed);
                 }
             }
-            fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, terms));
+            if (!terms.isEmpty()) {
+                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, terms));
+            }
         }
     }
 
