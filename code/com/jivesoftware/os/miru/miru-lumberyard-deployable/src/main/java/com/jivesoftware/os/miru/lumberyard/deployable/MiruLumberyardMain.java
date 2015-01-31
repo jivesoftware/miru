@@ -33,8 +33,8 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruLumberyardIntakeInitializer.MiruLumberyardIntakeConfig;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.lumberyard.deployable.analytics.QueryLumberyardPluginEndpoints;
-import com.jivesoftware.os.miru.lumberyard.deployable.analytics.StatusLumberyardPluginEndpoints;
+import com.jivesoftware.os.miru.lumberyard.deployable.endpoints.QueryLumberyardPluginEndpoints;
+import com.jivesoftware.os.miru.lumberyard.deployable.endpoints.StatusLumberyardPluginEndpoints;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardQueryPluginRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardStatusPluginRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.MiruManagePlugin;
@@ -93,21 +93,28 @@ public class MiruLumberyardMain {
         RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
             .newInstance();
         @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
-            rowColumnValueStoreInitializer, mapper);
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = null;
+        MiruRegistryStore registryStore = null;
+        try {
+            rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+            registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
+                rowColumnValueStoreInitializer, mapper);
+        } catch (Exception x) {
+            x.printStackTrace();
+        }
 
         OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
         RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(lumberyardServiceConfig.getMiruReaderHosts(), mapper);
         RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(lumberyardServiceConfig.getMiruWriterHosts(), mapper);
-        MiruActivityPayloads activityPayloads = new MiruActivityPayloads(mapper, registryStore.getActivityPayloadTable());
+        MiruActivityPayloads activityPayloads = null; //new MiruActivityPayloads(mapper, registryStore.getActivityPayloadTable());
+
+        LogMill logMill = new LogMill(orderIdProvider);
 
         MiruLumberyardIntakeConfig intakeConfig = deployable.config(MiruLumberyardIntakeConfig.class);
         MiruLumberyardIntakeService inTakeService = new MiruLumberyardIntakeInitializer().initialize(intakeConfig,
-            orderIdProvider,
+            logMill,
             miruWrites,
             miruReaders,
             activityPayloads);
@@ -124,7 +131,7 @@ public class MiruLumberyardMain {
             new MiruManagePlugin("Status",
                 "/lumberyard/status",
                 StatusLumberyardPluginEndpoints.class,
-                new LumberyardStatusPluginRegion("soy.miru.page.lumberyardStatusPluginRegion", renderer)));
+                new LumberyardStatusPluginRegion("soy.miru.page.lumberyardStatusPluginRegion", renderer, logMill)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

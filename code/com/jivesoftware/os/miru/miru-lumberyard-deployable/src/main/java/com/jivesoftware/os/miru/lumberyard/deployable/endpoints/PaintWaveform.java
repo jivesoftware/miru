@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.lumberyard.deployable.analytics;
+package com.jivesoftware.os.miru.lumberyard.deployable.endpoints;
 
 import java.awt.Color;
 import java.awt.Font;

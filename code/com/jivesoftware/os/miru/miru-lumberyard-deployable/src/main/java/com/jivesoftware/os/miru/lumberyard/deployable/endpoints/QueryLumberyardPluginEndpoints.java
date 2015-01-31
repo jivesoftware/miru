@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.lumberyard.deployable.analytics;
+package com.jivesoftware.os.miru.lumberyard.deployable.endpoints;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;

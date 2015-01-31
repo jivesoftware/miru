@@ -24,7 +24,7 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.lumberyard.deployable.LumberyardSchemaConstants;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRenderer;
-import com.jivesoftware.os.miru.lumberyard.deployable.analytics.MinMaxDouble;
+import com.jivesoftware.os.miru.lumberyard.deployable.endpoints.MinMaxDouble;
 import com.jivesoftware.os.miru.lumberyard.plugins.LumberyardAnswer;
 import com.jivesoftware.os.miru.lumberyard.plugins.LumberyardConstants;
 import com.jivesoftware.os.miru.lumberyard.plugins.LumberyardQuery;

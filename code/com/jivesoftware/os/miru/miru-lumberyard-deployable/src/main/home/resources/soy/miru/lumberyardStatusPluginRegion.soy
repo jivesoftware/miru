@@ -3,27 +3,43 @@
 /**
  * Lumberyard Status plugin page
  * 
- * @param? status
+ * @param? serviceStatus
  */
 {template .lumberyardStatusPluginRegion}
-    {if $status}
-        <table class="table table-condensed">
-            <thead>
-                <tr>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {foreach $s in $status}
-                    <tr>
-                        <td>{$s}</td>
-                    </tr>
-                {ifempty}
-                    <tr>
-                        <td colspan="9">No read events found</td>
-                    </tr>
-                {/foreach}
-            </tbody>
-        </table>
+    {if $serviceStatus}
+        <div class="panel panel-default">
+            <div class="panel-heading">Status</div>
+                <div class="panel-body">
+                    <table class="table table-condensed">
+                        <thead>
+                            <tr>
+                                <th>ERROR</th>
+                                <th>WARN</th>
+                                <th>INFO</th>
+                                <th>Cluster</th>
+                                <th>Host</th>
+                                <th>Service</th>
+                                <th>Instance</th>
+                                <th>Version</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {foreach $status in $serviceStatus}
+                                <tr>
+                                    <td>{$status.error}</td>
+                                    <td>{$status.warn}</td>
+                                    <td>{$status.info}</td>
+                                    <td>{$status.cluster}</td>
+                                    <td>{$status.host}</td>
+                                    <td>{$status.service}</td>
+                                    <td>{$status.instance}</td>
+                                    <td>{$status.version}</td>
+                                </tr>
+                            {/foreach}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     {/if}
 {/template}

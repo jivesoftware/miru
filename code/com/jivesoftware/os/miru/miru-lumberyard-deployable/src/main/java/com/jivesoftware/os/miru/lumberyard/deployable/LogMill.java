@@ -35,7 +35,7 @@ public class LogMill {
 
     private final OrderIdProvider idProvider;
 
-    private final Table<ServiceId, String, AtomicLong> levelCounts = HashBasedTable.create();
+    public final Table<ServiceId, String, AtomicLong> levelCounts = HashBasedTable.create();
 
     public LogMill(OrderIdProvider idProvider) {
         this.idProvider = idProvider;

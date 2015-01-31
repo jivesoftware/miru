@@ -3,8 +3,8 @@ package com.jivesoftware.os.miru.lumberyard.deployable;
 import com.google.common.collect.ComparisonChain;
 
 /**
-*
-*/
+ *
+ */
 public class ServiceId implements Comparable<ServiceId> {
 
     public final String datacenter;
