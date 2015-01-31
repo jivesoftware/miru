@@ -32,7 +32,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -243,10 +242,16 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
 
     private void addFieldFilter(List<MiruFieldFilter> fieldFilters, String fieldName, String values) {
         if (values != null) {
+            values = values.trim();
             String[] valueArray = values.split("\\s*,\\s*");
-            if (valueArray.length != 0) {
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, Arrays.asList(valueArray)));
+            List<String> terms = Lists.newArrayList();
+            for (String value : valueArray) {
+                String trimmed = value.trim();
+                if (!trimmed.isEmpty()) {
+                    terms.add(trimmed);
+                }
             }
+            fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, terms));
         }
     }
 
