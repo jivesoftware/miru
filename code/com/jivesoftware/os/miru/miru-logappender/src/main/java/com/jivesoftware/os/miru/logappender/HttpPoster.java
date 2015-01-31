@@ -93,6 +93,7 @@ public class HttpPoster implements MiruLogSender {
             post(toJson);
         } catch (Exception x) {
             System.err.println("Failed to post:" + toJson + " to http://" + host + ":" + port + "" + path);
+            x.printStackTrace();
             destroy();
         }
     }
