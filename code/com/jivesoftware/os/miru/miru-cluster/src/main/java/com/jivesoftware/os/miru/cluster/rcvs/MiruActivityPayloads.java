@@ -28,6 +28,7 @@ public class MiruActivityPayloads {
         for (TimeAndPayload<T> timeAndPayload : timesAndPayloads) {
             timestamps[i] = timeAndPayload.activityTime;
             payloadBytes[i] = objectMapper.writeValueAsBytes(timeAndPayload.payload);
+            i++;
         }
 
         activityPayloadTable.multiAdd(MiruVoidByte.INSTANCE, tenantId, timestamps, payloadBytes, null, null);
