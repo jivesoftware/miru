@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.map.store.api.KeyRange;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -18,9 +19,11 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -126,13 +129,13 @@ public class MiruAggregateUtil {
 
     public <BM> void filter(MiruBitmaps<BM> bitmaps,
         MiruSchema schema,
-        MiruTermComposer termComposer,
-        MiruFieldIndexProvider<BM> fieldIndexProvider,
+        final MiruTermComposer termComposer,
+        final MiruFieldIndexProvider<BM> fieldIndexProvider,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
         BM bitmapStorage,
         int largestIndex,
-        int considerIfIndexIdGreaterThanN)
+        final int considerIfIndexIdGreaterThanN)
         throws Exception {
 
         List<BM> filterBitmaps = new ArrayList<>();
@@ -140,20 +143,48 @@ public class MiruAggregateUtil {
             filterBitmaps.add(bitmaps.buildIndexMask(largestIndex, Optional.<BM>absent()));
         }
         if (filter.fieldFilters != null) {
-            for (MiruFieldFilter fieldFilter : filter.fieldFilters) {
-                int fieldId = schema.getFieldId(fieldFilter.fieldName);
-                MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
+            for (final MiruFieldFilter fieldFilter : filter.fieldFilters) {
+                final int fieldId = schema.getFieldId(fieldFilter.fieldName);
+                final MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
                 if (fieldId >= 0) {
-                    List<BM> fieldBitmaps = new ArrayList<>();
+                    final List<BM> fieldBitmaps = new ArrayList<>();
                     long start = System.currentTimeMillis();
-                    for (String term : fieldFilter.values) {
-                        MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
-                            fieldId,
-                            termComposer.compose(fieldDefinition, term),
-                            considerIfIndexIdGreaterThanN);
-                        Optional<BM> index = got.getIndex();
-                        if (index.isPresent()) {
-                            fieldBitmaps.add(index.get());
+                    for (final String term : fieldFilter.values) {
+                        if (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none && term.endsWith("*")) {
+                            String baseTerm = term.substring(0, term.length() - 1);
+                            byte[] lowerInclusive = termComposer.prefixLowerInclusive(fieldDefinition.prefix, baseTerm);
+                            byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
+                            fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).streamTermIdsForField(fieldId,
+                                Arrays.asList(new KeyRange(lowerInclusive, upperExclusive)),
+                                new TermIdStream() {
+                                    @Override
+                                    public boolean stream(MiruTermId termId) {
+                                        if (termId != null) {
+                                            try {
+                                                MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
+                                                    fieldId,
+                                                    termId,
+                                                    considerIfIndexIdGreaterThanN);
+                                                Optional<BM> index = got.getIndex();
+                                                if (index.isPresent()) {
+                                                    fieldBitmaps.add(index.get());
+                                                }
+                                            } catch (Exception e) {
+                                                throw new RuntimeException("Failed to get wildcard index", e);
+                                            }
+                                        }
+                                        return true;
+                                    }
+                                });
+                        } else {
+                            MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
+                                fieldId,
+                                termComposer.compose(fieldDefinition, term),
+                                considerIfIndexIdGreaterThanN);
+                            Optional<BM> index = got.getIndex();
+                            if (index.isPresent()) {
+                                fieldBitmaps.add(index.get());
+                            }
                         }
                     }
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} values={} lookup took {} millis.",
