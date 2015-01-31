@@ -93,22 +93,16 @@ public class MiruStumptownMain {
         RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
             .newInstance();
         @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = null;
-        MiruRegistryStore registryStore = null;
-        try {
-            rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-            registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
-                rowColumnValueStoreInitializer, mapper);
-        } catch (Exception x) {
-            x.printStackTrace();
-        }
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
+            rowColumnValueStoreInitializer, mapper);
 
         OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
         RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruReaderHosts(), mapper);
         RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruWriterHosts(), mapper);
-        MiruActivityPayloads activityPayloads = null; //new MiruActivityPayloads(mapper, registryStore.getActivityPayloadTable());
+        MiruActivityPayloads activityPayloads = new MiruActivityPayloads(mapper, registryStore.getActivityPayloadTable());
 
         LogMill logMill = new LogMill(orderIdProvider);
 
