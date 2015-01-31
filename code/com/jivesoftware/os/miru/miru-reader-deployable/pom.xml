@@ -126,7 +126,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-lumberyard-plugins</artifactId>
+            <artifactId>miru-stumptown-plugins</artifactId>
             <version>0.246-SNAPSHOT</version>
             <type>jar</type>
             <scope>runtime</scope>

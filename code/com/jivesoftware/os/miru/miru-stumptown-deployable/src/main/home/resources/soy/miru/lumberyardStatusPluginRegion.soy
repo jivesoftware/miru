@@ -1,0 +1,57 @@
+{namespace soy.miru.page}
+
+/**
+ * Stumptown Status plugin page
+ * 
+ * @param? serviceStatus
+ */
+{template .stumptownStatusPluginRegion}
+    {if $serviceStatus}
+        <div class="panel panel-default">
+            <div class="panel-heading">Status</div>
+                <div class="panel-body">
+                    <table class="table table-condensed">
+                        <thead>
+                            <tr>
+                                <th>ERROR</th>
+                                <th>WARN</th>
+                                <th>INFO</th>
+                                <th>Cluster</th>
+                                <th>Host</th>
+                                <th>Service</th>
+                                <th>Instance</th>
+                                <th>Version</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {foreach $status in $serviceStatus}
+                                <tr>
+                                    <td>
+                                        <form method="post" action="query?logLevels=ERROR&cluster={$status.cluster}&host={$status.host}&service={$status.service}&instance={$status.instance}">
+                                            <input type="submit" value="{$status.error}">
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="query?logLevels=WARN&cluster={$status.cluster}&host={$status.host}&service={$status.service}&instance={$status.instance}">
+                                            <input type="submit" value="{$status.warn}">
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="query?logLevels=INFO&cluster={$status.cluster}&host={$status.host}&service={$status.service}&instance={$status.instance}">
+                                            <input type="submit" value="{$status.info}">
+                                        </form>
+                                    </td>
+                                    <td>{$status.cluster}</td>
+                                    <td>{$status.host}</td>
+                                    <td>{$status.service}</td>
+                                    <td>{$status.instance}</td>
+                                    <td>{$status.version}</td>
+                                </tr>
+                            {/foreach}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {/if}
+{/template}

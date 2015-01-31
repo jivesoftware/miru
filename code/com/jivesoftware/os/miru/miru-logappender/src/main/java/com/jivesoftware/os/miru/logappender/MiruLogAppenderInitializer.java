@@ -15,7 +15,7 @@ public class MiruLogAppenderInitializer {
     public static interface MiruLogAppenderConfig extends Config {
 
         @StringDefault("undefined")
-        String getMiruLumberyardHostPorts();
+        String getMiruStumptownHostPorts();
 
         @IntDefault(60_000)
         int getSocketTimeoutInMillis();
@@ -62,7 +62,7 @@ public class MiruLogAppenderInitializer {
         String version,
         MiruLogAppenderConfig config) throws IOException {
 
-        String[] hostPorts = config.getMiruLumberyardHostPorts().split("\\s*,\\s*");
+        String[] hostPorts = config.getMiruStumptownHostPorts().split("\\s*,\\s*");
         MiruLogSender[] logSenders = new MiruLogSender[hostPorts.length];
 
         for (int i = 0; i < logSenders.length; i++) {

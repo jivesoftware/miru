@@ -31,7 +31,7 @@ import java.util.List;
  */
 public class HttpPoster implements MiruLogSender {
 
-    private static final String path = "/miru/lumberyard/intake";
+    private static final String path = "/miru/stumptown/intake";
     private final Gson gson = new Gson();
     private final String host;
     private final int port;
