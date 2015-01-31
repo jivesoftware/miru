@@ -198,16 +198,16 @@
             <div class="panel-body">
                 <table class="table table-condensed">
                     <tbody>
-                        <th>
-                            <td>Datacenter</td>
-                            <td>Cluster</td>
-                            <td>Host</td>
-                            <td>Service</td>
-                            <td>Instance</td>
-                            <td>Version</td>
-                        </th>
+                        <tr style="background-color: #ccc; font-weight: bold;">
+                            <th>Datacenter</th>
+                            <th>Cluster</th>
+                            <th>Host</th>
+                            <th>Service</th>
+                            <th>Instance</th>
+                            <th>Version</th>
+                        </tr>
                         {foreach $event in $events}
-                            <tr>
+                            <tr style="background-color: #ccc;">
                                 <td>{$event.datacenter}</td>
                                 <td>{$event.cluster}</td>
                                 <td>{$event.host}</td>

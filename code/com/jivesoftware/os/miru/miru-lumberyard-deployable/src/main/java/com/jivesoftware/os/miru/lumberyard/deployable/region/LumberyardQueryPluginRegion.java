@@ -146,7 +146,7 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
 
                 Set<String> logLevelSet = Sets.newHashSet(Splitter.on(',').split(input.logLevel));
                 data.put("logLevels", ImmutableMap.of(
-                    "trace", logLevelSet.contains("ERROR"),
+                    "trace", logLevelSet.contains("TRACE"),
                     "debug", logLevelSet.contains("DEBUG"),
                     "info", logLevelSet.contains("INFO"),
                     "warn", logLevelSet.contains("WARN"),
@@ -204,7 +204,7 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
                                     input.messageCount,
                                     MiruFilter.NO_FILTER,
                                     lumberyardFilters),
-                                MiruSolutionLogLevel.valueOf(input.logLevel)),
+                                MiruSolutionLogLevel.INFO), //TODO MiruSolutionLogLevel.valueOf(input.solutionLogLevel)),
                             LumberyardConstants.LUMBERYARD_PREFIX + LumberyardConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
                             new Class[] { LumberyardAnswer.class },
                             null);
