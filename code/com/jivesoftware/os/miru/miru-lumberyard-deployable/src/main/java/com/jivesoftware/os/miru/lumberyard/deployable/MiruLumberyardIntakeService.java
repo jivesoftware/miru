@@ -76,18 +76,18 @@ public class MiruLumberyardIntakeService {
 
     void ingressLogEvents(List<MiruLogEvent> logEvents) throws Exception {
         List<MiruActivity> activities = Lists.newArrayListWithCapacity(logEvents.size());
-        List<MiruLogEventAndActivity> logEventsAndActivities = Lists.newArrayListWithCapacity(logEvents.size());
+        List<MiruTimedLogEvent> timedLogEvents = Lists.newArrayListWithCapacity(logEvents.size());
         for (MiruLogEvent logEvent : logEvents) {
             MiruTenantId tenantId = LumberyardSchemaConstants.TENANT_ID;
             lumberyardSchemaService.ensureSchema(tenantId, LumberyardSchemaConstants.SCHEMA);
             MiruActivity activity = logMill.mill(tenantId, logEvent);
             activities.add(activity);
-            logEventsAndActivities.add(new MiruLogEventAndActivity(logEvent, activity));
+            timedLogEvents.add(new MiruTimedLogEvent(activity.time, logEvent));
         }
         ingress(activities);
-        record(logEventsAndActivities);
-        log.inc("ingressed", logEventsAndActivities.size());
-        log.info("Ingressed " + logEventsAndActivities.size());
+        record(timedLogEvents);
+        log.inc("ingressed", timedLogEvents.size());
+        log.info("Ingressed " + timedLogEvents.size());
     }
 
     private void ingress(List<MiruActivity> activities) {
@@ -116,21 +116,24 @@ public class MiruLumberyardIntakeService {
         }
     }
 
-    private void record(List<MiruLogEventAndActivity> logEventsAndActivities) throws Exception {
-        for (MiruLogEventAndActivity logEventAndActivity : logEventsAndActivities) {
-            FreshCutTimber timber = new FreshCutTimber(logEventAndActivity.logEvent.message, logEventAndActivity.logEvent.thrownStackTrace);
-            activityPayloads.put(logEventAndActivity.activity.tenantId, logEventAndActivity.activity.time, timber);
+    private void record(List<MiruTimedLogEvent> timedLogEvents) throws Exception {
+        List<MiruActivityPayloads.TimeAndPayload<FreshCutTimber>> timesAndPayloads = Lists.newArrayListWithCapacity(timedLogEvents.size());
+        for (MiruTimedLogEvent timedLogEvent : timedLogEvents) {
+            timesAndPayloads.add(new MiruActivityPayloads.TimeAndPayload<>(
+                timedLogEvent.time,
+                new FreshCutTimber(timedLogEvent.logEvent.message, timedLogEvent.logEvent.thrownStackTrace)));
         }
+        activityPayloads.multiPut(LumberyardSchemaConstants.TENANT_ID, timesAndPayloads);
     }
 
-    private static class MiruLogEventAndActivity {
+    private static class MiruTimedLogEvent {
 
+        public final long time;
         public final MiruLogEvent logEvent;
-        public final MiruActivity activity;
 
-        public MiruLogEventAndActivity(MiruLogEvent logEvent, MiruActivity activity) {
+        public MiruTimedLogEvent(long time, MiruLogEvent logEvent) {
+            this.time = time;
             this.logEvent = logEvent;
-            this.activity = activity;
         }
     }
 }

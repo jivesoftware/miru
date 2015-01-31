@@ -125,6 +125,13 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-lumberyard-plugins</artifactId>
+            <version>0.236-SNAPSHOT</version>
+            <type>jar</type>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>jaxrs-util</artifactId>
         </dependency>

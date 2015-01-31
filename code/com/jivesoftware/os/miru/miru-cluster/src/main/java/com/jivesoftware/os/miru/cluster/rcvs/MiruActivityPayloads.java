@@ -21,8 +21,16 @@ public class MiruActivityPayloads {
         this.activityPayloadTable = activityPayloadTable;
     }
 
-    public <T> void put(MiruTenantId tenantId, long activityTime, T payload) throws Exception {
-        activityPayloadTable.add(MiruVoidByte.INSTANCE, tenantId, activityTime, objectMapper.writeValueAsBytes(payload), null, null);
+    public <T> void multiPut(MiruTenantId tenantId, List<TimeAndPayload<T>> timesAndPayloads) throws Exception {
+        Long[] timestamps = new Long[timesAndPayloads.size()];
+        byte[][] payloadBytes = new byte[timesAndPayloads.size()][];
+        int i = 0;
+        for (TimeAndPayload<T> timeAndPayload : timesAndPayloads) {
+            timestamps[i] = timeAndPayload.activityTime;
+            payloadBytes[i] = objectMapper.writeValueAsBytes(timeAndPayload.payload);
+        }
+
+        activityPayloadTable.multiAdd(MiruVoidByte.INSTANCE, tenantId, timestamps, payloadBytes, null, null);
     }
 
     public <T> T get(MiruTenantId tenantId, long activityTime, Class<T> payloadClass) throws Exception {
@@ -39,4 +47,14 @@ public class MiruActivityPayloads {
         return payloads;
     }
 
+    public static class TimeAndPayload<T> {
+
+        public final long activityTime;
+        public final T payload;
+
+        public TimeAndPayload(long activityTime, T payload) {
+            this.activityTime = activityTime;
+            this.payload = payload;
+        }
+    }
 }
