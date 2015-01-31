@@ -76,13 +76,13 @@ public class MiruLumberyardIntakeService {
 
     void ingressLogEvents(List<MiruLogEvent> logEvents) throws Exception {
         List<MiruActivity> activities = Lists.newArrayListWithCapacity(logEvents.size());
-        List<MiruTimedLogEvent> timedLogEvents = Lists.newArrayListWithCapacity(logEvents.size());
+        List<MiruActivityPayloads.TimeAndPayload<MiruLogEvent>> timedLogEvents = Lists.newArrayListWithCapacity(logEvents.size());
         for (MiruLogEvent logEvent : logEvents) {
             MiruTenantId tenantId = LumberyardSchemaConstants.TENANT_ID;
             lumberyardSchemaService.ensureSchema(tenantId, LumberyardSchemaConstants.SCHEMA);
             MiruActivity activity = logMill.mill(tenantId, logEvent);
             activities.add(activity);
-            timedLogEvents.add(new MiruTimedLogEvent(activity.time, logEvent));
+            timedLogEvents.add(new MiruActivityPayloads.TimeAndPayload<>(activity.time, logEvent));
         }
         ingress(activities);
         record(timedLogEvents);
@@ -116,24 +116,7 @@ public class MiruLumberyardIntakeService {
         }
     }
 
-    private void record(List<MiruTimedLogEvent> timedLogEvents) throws Exception {
-        List<MiruActivityPayloads.TimeAndPayload<FreshCutTimber>> timesAndPayloads = Lists.newArrayListWithCapacity(timedLogEvents.size());
-        for (MiruTimedLogEvent timedLogEvent : timedLogEvents) {
-            timesAndPayloads.add(new MiruActivityPayloads.TimeAndPayload<>(
-                timedLogEvent.time,
-                new FreshCutTimber(timedLogEvent.logEvent.message, timedLogEvent.logEvent.thrownStackTrace)));
-        }
-        activityPayloads.multiPut(LumberyardSchemaConstants.TENANT_ID, timesAndPayloads);
-    }
-
-    private static class MiruTimedLogEvent {
-
-        public final long time;
-        public final MiruLogEvent logEvent;
-
-        public MiruTimedLogEvent(long time, MiruLogEvent logEvent) {
-            this.time = time;
-            this.logEvent = logEvent;
-        }
+    private void record(List<MiruActivityPayloads.TimeAndPayload<MiruLogEvent>> timedLogEvents) throws Exception {
+        activityPayloads.multiPut(LumberyardSchemaConstants.TENANT_ID, timedLogEvents);
     }
 }

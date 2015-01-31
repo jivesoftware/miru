@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
@@ -19,7 +21,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
-import com.jivesoftware.os.miru.lumberyard.deployable.FreshCutTimber;
+import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.lumberyard.deployable.LumberyardSchemaConstants;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.lumberyard.deployable.analytics.MinMaxDouble;
@@ -32,9 +34,11 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -84,9 +88,9 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
 
         public LumberyardPluginRegionInput(String cluster,
             String host,
-            String version,
             String service,
             String instance,
+            String version,
             String logLevel,
             int fromAgo,
             int toAgo,
@@ -101,9 +105,9 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
 
             this.cluster = cluster;
             this.host = host;
-            this.version = version;
             this.service = service;
             this.instance = instance;
+            this.version = version;
             this.logLevel = logLevel;
             this.fromAgo = fromAgo;
             this.toAgo = toAgo;
@@ -140,7 +144,13 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
                 data.put("message", input.message);
                 data.put("thrown", input.thrown);
 
-                data.put("logLevel", input.logLevel);
+                Set<String> logLevelSet = Sets.newHashSet(Splitter.on(',').split(input.logLevel));
+                data.put("logLevels", ImmutableMap.of(
+                    "trace", logLevelSet.contains("ERROR"),
+                    "debug", logLevelSet.contains("DEBUG"),
+                    "info", logLevelSet.contains("INFO"),
+                    "warn", logLevelSet.contains("WARN"),
+                    "error", logLevelSet.contains("ERROR")));
                 data.put("fromAgo", String.valueOf(fromAgo));
                 data.put("toAgo", String.valueOf(toAgo));
                 data.put("buckets", String.valueOf(input.buckets));
@@ -157,23 +167,33 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
                 for (RequestHelper requestHelper : miruReaders) {
                     try {
                         List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                        addFieldFilter(fieldFilters, "cluster", input.cluster);
-                        addFieldFilter(fieldFilters, "host", input.host);
-                        addFieldFilter(fieldFilters, "service", input.service);
-                        addFieldFilter(fieldFilters, "instance", input.instance);
-                        addFieldFilter(fieldFilters, "version", input.version);
-                        addFieldFilter(fieldFilters, "thread", input.thread);
-                        addFieldFilter(fieldFilters, "logger", input.logger);
-                        addFieldFilter(fieldFilters, "message", input.message);
-                        addFieldFilter(fieldFilters, "level", input.logLevel);
-                        addFieldFilter(fieldFilters, "thrownStackTrace", input.thrown);
+                        List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
+                        addFieldFilter(fieldFilters, notFieldFilters, "cluster", input.cluster);
+                        addFieldFilter(fieldFilters, notFieldFilters, "host", input.host);
+                        addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
+                        addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
+                        addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
+                        addFieldFilter(fieldFilters, notFieldFilters, "thread", input.thread);
+                        addFieldFilter(fieldFilters, notFieldFilters, "logger", input.logger);
+                        addFieldFilter(fieldFilters, notFieldFilters, "message", input.message.toLowerCase());
+                        addFieldFilter(fieldFilters, notFieldFilters, "level", input.logLevel);
+                        addFieldFilter(fieldFilters, notFieldFilters, "thrownStackTrace", input.thrown.toLowerCase());
+
+                        List<MiruFilter> notFilters = null;
+                        if (!notFieldFilters.isEmpty()) {
+                            notFilters = Arrays.asList(
+                                new MiruFilter(MiruFilterOperation.pButNotQ,
+                                    true,
+                                    notFieldFilters,
+                                    null));
+                        }
 
                         ImmutableMap<String, MiruFilter> lumberyardFilters = ImmutableMap.of(
                             "stumptown",
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
                                 fieldFilters,
-                                null));
+                                notFilters));
 
                         @SuppressWarnings("unchecked")
                         MiruResponse<LumberyardAnswer> analyticsResponse = requestHelper.executeRequest(
@@ -216,17 +236,8 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
                             activityTimes.add(activity.time);
                         }
                     }
-                    List<FreshCutTimber> timbers = activityPayloads.multiGet(tenantId, activityTimes, FreshCutTimber.class);
-                    List<String> events = Lists.newArrayList();
-                    for (FreshCutTimber timber : timbers) {
-                        if (timber.message != null) {
-                            events.add(timber.message);
-                        }
-                        if (timber.thrownStackTrace != null) {
-                            events.add(Joiner.on('\n').join(timber.thrownStackTrace));
-                        }
-                    }
-                    data.put("events", events);
+                    List<MiruLogEvent> logEvents = activityPayloads.multiGet(tenantId, activityTimes, MiruLogEvent.class);
+                    data.put("events", logEvents);
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -240,19 +251,29 @@ public class LumberyardQueryPluginRegion implements MiruPageRegion<Optional<Lumb
         return renderer.render(template, data);
     }
 
-    private void addFieldFilter(List<MiruFieldFilter> fieldFilters, String fieldName, String values) {
+    private void addFieldFilter(List<MiruFieldFilter> fieldFilters, List<MiruFieldFilter> notFilters, String fieldName, String values) {
         if (values != null) {
             values = values.trim();
             String[] valueArray = values.split("\\s*,\\s*");
             List<String> terms = Lists.newArrayList();
+            List<String> notTerms = Lists.newArrayList();
             for (String value : valueArray) {
                 String trimmed = value.trim();
                 if (!trimmed.isEmpty()) {
-                    terms.add(trimmed);
+                    if (trimmed.startsWith("!")) {
+                        if (trimmed.length() > 1) {
+                            notTerms.add(trimmed.substring(1));
+                        }
+                    } else {
+                        terms.add(trimmed);
+                    }
                 }
             }
             if (!terms.isEmpty()) {
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, terms));
+            }
+            if (!notTerms.isEmpty()) {
+                notFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, notTerms));
             }
         }
     }

@@ -1,9 +1,11 @@
 package com.jivesoftware.os.miru.lumberyard.deployable.analytics;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.lumberyard.deployable.MiruQueryLumberyardService;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardQueryPluginRegion;
 import com.jivesoftware.os.miru.lumberyard.deployable.region.LumberyardQueryPluginRegion.LumberyardPluginRegionInput;
+import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -38,7 +40,7 @@ public class QueryLumberyardPluginEndpoints {
         @QueryParam("service") @DefaultValue("") String service,
         @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("version") @DefaultValue("") String version,
-        @QueryParam("logLevel") @DefaultValue("INFO") String logLevel,
+        @QueryParam("logLevels") @DefaultValue("INFO") List<String> logLevels,
         @QueryParam("fromAgo") @DefaultValue("8") int fromAgo,
         @QueryParam("toAgo") @DefaultValue("0") int toAgo,
         @QueryParam("fromTimeUnit") @DefaultValue("MINUTES") String fromTimeUnit,
@@ -55,7 +57,7 @@ public class QueryLumberyardPluginEndpoints {
                 service,
                 instance,
                 version,
-                logLevel,
+                Joiner.on(',').join(logLevels),
                 fromAgo,
                 toAgo,
                 fromTimeUnit,
