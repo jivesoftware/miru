@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.cluster.rcvs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.Collection;
 import java.util.List;
@@ -12,6 +14,7 @@ import java.util.List;
  */
 public class MiruActivityPayloads {
 
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
     private final ObjectMapper objectMapper;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> activityPayloadTable;
 
@@ -43,7 +46,13 @@ public class MiruActivityPayloads {
         List<byte[]> payloadBytes = activityPayloadTable.multiGet(MiruVoidByte.INSTANCE, tenantId, timestamps, null, null);
         List<T> payloads = Lists.newArrayListWithCapacity(payloadBytes.size());
         for (byte[] bytes : payloadBytes) {
-            payloads.add(objectMapper.readValue(bytes, payloadClass));
+            if (bytes != null) {
+                try {
+                    payloads.add(objectMapper.readValue(bytes, payloadClass));
+                } catch (Exception x) {
+                    log.error("Failed mapping " + new String(bytes) + " to " + payloadClass, x);
+                }
+            }
         }
         return payloads;
     }
