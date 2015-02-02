@@ -47,6 +47,8 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Objects.firstNonNull;
+
 /**
  *
  */
@@ -256,18 +258,20 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                         @Override
                         public Map<String, Object> apply(MiruLogEvent input) {
                             return ImmutableMap.<String, Object>builder()
-                                .put("datacenter", input.datacenter)
-                                .put("cluster", input.cluster)
-                                .put("host", input.host)
-                                .put("service", input.service)
-                                .put("instance", input.instance)
-                                .put("version", input.version)
-                                .put("level", input.level)
-                                .put("threadName", input.threadName)
-                                .put("loggerName", input.loggerName)
-                                .put("message", input.message)
-                                .put("timestamp", new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp))))
-                                .put("thrownStackTrace", Arrays.asList(input.thrownStackTrace))
+                                .put("datacenter", firstNonNull(input.datacenter, ""))
+                                .put("cluster", firstNonNull(input.cluster, ""))
+                                .put("host", firstNonNull(input.host, ""))
+                                .put("service", firstNonNull(input.service, ""))
+                                .put("instance", firstNonNull(input.instance, ""))
+                                .put("version", firstNonNull(input.version, ""))
+                                .put("level", firstNonNull(input.level, ""))
+                                .put("threadName", firstNonNull(input.threadName, ""))
+                                .put("loggerName", firstNonNull(input.loggerName, ""))
+                                .put("message", firstNonNull(input.message, ""))
+                                .put("timestamp", input.timestamp != null
+                                    ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
+                                    : "")
+                                .put("thrownStackTrace", input.thrownStackTrace != null ? Arrays.asList(input.thrownStackTrace) : Arrays.asList())
                                 .build();
                         }
                     }));
