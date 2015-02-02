@@ -5,12 +5,12 @@ import com.jivesoftware.os.miru.stumptown.deployable.region.MiruHomeRegion;
 
 public class MiruQueryStumptownInitializer {
 
-    public MiruQueryStumptownService initialize(MiruSoyRenderer renderer) throws Exception {
+    public MiruStumptownService initialize(MiruSoyRenderer renderer) throws Exception {
 
-        return new MiruQueryStumptownService(
+        return new MiruStumptownService(
             renderer,
-            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer),
-            new MiruHomeRegion("soy.miru.page.homeRegion", renderer)
+            new MiruHeaderRegion("soy.stumptown.chrome.headerRegion", renderer),
+            new MiruHomeRegion("soy.stumptown.page.homeRegion", renderer)
         );
     }
 

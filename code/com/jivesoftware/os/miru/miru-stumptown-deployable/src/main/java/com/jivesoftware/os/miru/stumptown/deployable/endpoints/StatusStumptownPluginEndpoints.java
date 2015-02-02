@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.stumptown.deployable.endpoints;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.stumptown.deployable.MiruQueryStumptownService;
+import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownService;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPluginRegion.StumptownStatusPluginRegionInput;
 import javax.inject.Singleton;
@@ -19,10 +19,10 @@ import javax.ws.rs.core.Response;
 @Path("/stumptown/status")
 public class StatusStumptownPluginEndpoints {
 
-    private final MiruQueryStumptownService stumptownService;
+    private final MiruStumptownService stumptownService;
     private final StumptownStatusPluginRegion pluginRegion;
 
-    public StatusStumptownPluginEndpoints(@Context MiruQueryStumptownService stumptownService, @Context StumptownStatusPluginRegion pluginRegion) {
+    public StatusStumptownPluginEndpoints(@Context MiruStumptownService stumptownService, @Context StumptownStatusPluginRegion pluginRegion) {
         this.stumptownService = stumptownService;
         this.pluginRegion = pluginRegion;
     }

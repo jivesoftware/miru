@@ -38,8 +38,11 @@ import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StatusStumptownPl
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPluginRegion;
+import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginEndpoints;
+import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
+import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
@@ -93,8 +96,9 @@ public class MiruStumptownMain {
         RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
             .newInstance();
         @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+//        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+//            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
             rowColumnValueStoreInitializer, mapper);
 
@@ -115,22 +119,25 @@ public class MiruStumptownMain {
 
         MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-        MiruQueryStumptownService queryService = new MiruQueryStumptownInitializer().initialize(renderer);
+        MiruStumptownService queryService = new MiruQueryStumptownInitializer().initialize(renderer);
 
         List<MiruManagePlugin> plugins = Lists.newArrayList(
-            new MiruManagePlugin("Query",
-                "/stumptown/query",
-                QueryStumptownPluginEndpoints.class,
-                new StumptownQueryPluginRegion("soy.miru.page.stumptownQueryPluginRegion", renderer, miruReaders, activityPayloads)),
             new MiruManagePlugin("Status",
                 "/stumptown/status",
                 StatusStumptownPluginEndpoints.class,
-                new StumptownStatusPluginRegion("soy.miru.page.stumptownStatusPluginRegion", renderer, logMill)));
+                new StumptownStatusPluginRegion("soy.stumptown.page.stumptownStatusPluginRegion", renderer, logMill)),
+            new MiruManagePlugin("Trends",
+                "/stumptown/trends",
+                StumptownTrendsPluginEndpoints.class,
+                new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, miruReaders)),
+            new MiruManagePlugin("Query",
+                "/stumptown/query",
+                QueryStumptownPluginEndpoints.class,
+                new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion", renderer, miruReaders, activityPayloads)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
         Resource sourceTree = new Resource(staticResourceDir)
-            //.addResourcePath("../../../../../src/main/resources") // fluff?
             .addResourcePath(rendererConfig.getPathToStaticResources())
             .setContext("/static");
 
@@ -138,7 +145,7 @@ public class MiruStumptownMain {
         deployable.addInjectables(MiruStumptownIntakeService.class, inTakeService);
 
         deployable.addEndpoints(MiruQueryStumptownEndpoints.class);
-        deployable.addInjectables(MiruQueryStumptownService.class, queryService);
+        deployable.addInjectables(MiruStumptownService.class, queryService);
 
         for (MiruManagePlugin plugin : plugins) {
             queryService.registerPlugin(plugin);

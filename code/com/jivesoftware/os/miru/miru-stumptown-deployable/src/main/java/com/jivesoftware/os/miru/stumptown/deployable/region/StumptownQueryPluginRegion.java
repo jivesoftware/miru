@@ -36,16 +36,18 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
  *
  */
-// soy.miru.page.stumptownQueryPluginRegion
-public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<StumptownQueryPluginRegion.StumptownPluginRegionInput>> {
+// soy.stumptown.page.stumptownQueryPluginRegion
+public class StumptownQueryPluginRegion implements PageRegion<Optional<StumptownQueryPluginRegion.StumptownPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -206,7 +208,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
                                     stumptownFilters),
                                 MiruSolutionLogLevel.INFO), //TODO MiruSolutionLogLevel.valueOf(input.solutionLogLevel)),
                             StumptownConstants.STUMPTOWN_PREFIX + StumptownConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                            new Class[] { StumptownAnswer.class },
+                            new Class[]{StumptownAnswer.class},
                             null);
                         response = analyticsResponse;
                         if (response != null && response.answer != null) {
@@ -215,7 +217,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
                             log.warn("Empty stumptown response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed stumptown request to {}, trying another", new Object[] { requestHelper }, e);
+                        log.warn("Failed stumptown request to {}, trying another", new Object[]{requestHelper}, e);
                     }
                 }
 
@@ -225,9 +227,13 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
                         waveforms = Collections.emptyMap();
                     }
                     data.put("elapse", String.valueOf(response.totalElapsed));
-                    //data.put("waveform", waveform == null ? "" : waveform.toString());
 
-                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, waveforms,
+                    Map<String, long[]> rawWaveforms = new HashMap<>();
+                    for (Entry<String, StumptownAnswer.Waveform> e : waveforms.entrySet()) {
+                        rawWaveforms.put(e.getKey(), e.getValue().waveform);
+                    }
+
+                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, rawWaveforms,
                         Optional.<MinMaxDouble>absent()));
 
                     List<Long> activityTimes = Lists.newArrayList();

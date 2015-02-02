@@ -6,7 +6,7 @@ import java.util.Collections;
 /**
  *
  */
-public class MiruHomeRegion implements MiruPageRegion<Void> {
+public class MiruHomeRegion implements PageRegion<Void> {
 
     private final String template;
     private final MiruSoyRenderer renderer;

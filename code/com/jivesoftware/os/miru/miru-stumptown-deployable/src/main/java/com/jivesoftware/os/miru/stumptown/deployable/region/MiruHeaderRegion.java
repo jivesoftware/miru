@@ -3,8 +3,8 @@ package com.jivesoftware.os.miru.stumptown.deployable.region;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRenderer;
 import java.util.Collections;
 
-// soy.miru.chrome.headerRegion
-public class MiruHeaderRegion implements MiruRegion<Void> {
+// soy.stumptown.chrome.headerRegion
+public class MiruHeaderRegion implements Region<Void> {
 
     private final String template;
     private final MiruSoyRenderer renderer;

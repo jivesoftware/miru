@@ -1,27 +1,27 @@
 package com.jivesoftware.os.miru.stumptown.deployable;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.stumptown.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruManagePlugin;
-import com.jivesoftware.os.miru.stumptown.deployable.region.MiruPageRegion;
+import com.jivesoftware.os.miru.stumptown.deployable.region.PageRegion;
+import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownChromeRegion;
 import java.util.List;
 
 /**
  *
  */
-public class MiruQueryStumptownService {
+public class MiruStumptownService {
 
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
-    private final MiruPageRegion<Void> homeRegion;
+    private final PageRegion<Void> homeRegion;
 
     private final List<MiruManagePlugin> plugins = Lists.newCopyOnWriteArrayList();
 
-    public MiruQueryStumptownService(
+    public MiruStumptownService(
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
-        MiruPageRegion<Void> homeRegion
+        PageRegion<Void> homeRegion
     ) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
@@ -37,11 +37,11 @@ public class MiruQueryStumptownService {
         plugins.add(plugin);
     }
 
-    private <I, R extends MiruPageRegion<I>> MiruChromeRegion<I, R> chrome(R region) {
-        return new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion, plugins, region);
+    private <I, R extends PageRegion<I>> StumptownChromeRegion<I, R> chrome(R region) {
+        return new StumptownChromeRegion<>("soy.stumptown.chrome.chromeRegion", renderer, headerRegion, plugins, region);
     }
 
-    public <I> String renderPlugin(MiruPageRegion<I> pluginRegion, I input) {
+    public <I> String renderPlugin(PageRegion<I> pluginRegion, I input) {
         return chrome(pluginRegion).render(input);
     }
 }

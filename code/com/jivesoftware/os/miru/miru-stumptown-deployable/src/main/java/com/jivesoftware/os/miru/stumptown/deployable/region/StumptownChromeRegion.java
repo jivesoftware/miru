@@ -11,8 +11,8 @@ import java.util.Map;
 /**
  *
  */
-// soy.miru.chrome.chromeRegion
-public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruRegion<I> {
+// soy.stumptown.chrome.chromeRegion
+public class StumptownChromeRegion<I, R extends PageRegion<I>> implements Region<I> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
@@ -20,7 +20,7 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
     private final List<MiruManagePlugin> plugins;
     private final R region;
 
-    public MiruChromeRegion(String template, MiruSoyRenderer renderer, MiruHeaderRegion headerRegion, List<MiruManagePlugin> plugins, R region) {
+    public StumptownChromeRegion(String template, MiruSoyRenderer renderer, MiruHeaderRegion headerRegion, List<MiruManagePlugin> plugins, R region) {
         this.template = template;
         this.renderer = renderer;
         this.headerRegion = headerRegion;

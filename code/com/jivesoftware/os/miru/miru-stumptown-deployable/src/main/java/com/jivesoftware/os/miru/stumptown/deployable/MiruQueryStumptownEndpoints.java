@@ -15,9 +15,9 @@ import javax.ws.rs.core.Response;
 @Path("/")
 public class MiruQueryStumptownEndpoints {
 
-    private final MiruQueryStumptownService miruQueryStumptownService;
+    private final MiruStumptownService miruQueryStumptownService;
 
-    public MiruQueryStumptownEndpoints(@Context MiruQueryStumptownService stumptownService) {
+    public MiruQueryStumptownEndpoints(@Context MiruStumptownService stumptownService) {
         this.miruQueryStumptownService = stumptownService;
     }
 

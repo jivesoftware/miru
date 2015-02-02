@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.stumptown.deployable.endpoints;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.stumptown.deployable.MiruQueryStumptownService;
+import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownService;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion.StumptownPluginRegionInput;
 import java.util.List;
@@ -23,10 +23,10 @@ import javax.ws.rs.core.Response;
 @Path("/stumptown/query")
 public class QueryStumptownPluginEndpoints {
 
-    private final MiruQueryStumptownService stumptownService;
+    private final MiruStumptownService stumptownService;
     private final StumptownQueryPluginRegion pluginRegion;
 
-    public QueryStumptownPluginEndpoints(@Context MiruQueryStumptownService stumptownService, @Context StumptownQueryPluginRegion pluginRegion) {
+    public QueryStumptownPluginEndpoints(@Context MiruStumptownService stumptownService, @Context StumptownQueryPluginRegion pluginRegion) {
         this.stumptownService = stumptownService;
         this.pluginRegion = pluginRegion;
     }

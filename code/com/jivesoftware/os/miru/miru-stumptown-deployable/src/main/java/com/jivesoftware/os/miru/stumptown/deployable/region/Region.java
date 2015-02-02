@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.stumptown.deployable.region;
 /**
  *
  */
-public interface MiruRegion<I> {
+public interface Region<I> {
 
     String render(I input);
 }

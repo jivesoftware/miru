@@ -16,8 +16,8 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  *
  */
-// soy.miru.page.stumptownStatusPluginRegion
-public class StumptownStatusPluginRegion implements MiruPageRegion<Optional<StumptownStatusPluginRegion.StumptownStatusPluginRegionInput>> {
+// soy.stumptown.page.stumptownStatusPluginRegion
+public class StumptownStatusPluginRegion implements PageRegion<Optional<StumptownStatusPluginRegion.StumptownStatusPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
