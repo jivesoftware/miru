@@ -21,12 +21,12 @@ import javax.ws.rs.core.Response;
  */
 @Singleton
 @Path("/stumptown/query")
-public class QueryStumptownPluginEndpoints {
+public class StumptownQueryPluginEndpoints {
 
     private final MiruStumptownService stumptownService;
     private final StumptownQueryPluginRegion pluginRegion;
 
-    public QueryStumptownPluginEndpoints(@Context MiruStumptownService stumptownService, @Context StumptownQueryPluginRegion pluginRegion) {
+    public StumptownQueryPluginEndpoints(@Context MiruStumptownService stumptownService, @Context StumptownQueryPluginRegion pluginRegion) {
         this.stumptownService = stumptownService;
         this.pluginRegion = pluginRegion;
     }

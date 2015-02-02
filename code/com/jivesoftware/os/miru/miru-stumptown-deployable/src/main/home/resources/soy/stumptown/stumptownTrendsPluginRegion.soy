@@ -4,7 +4,9 @@
  * Trending plugin page
  *
  * @param? logLevel
+ * @param? service
  * @param? results
+ * @param? fromHoursAgo
  * @param? summary
  * @param? elapse
  */
@@ -26,7 +28,6 @@
                                 <option value="INFO" {if $logLevel == 'INFO'}selected="selected"{/if}>INFO</option>
                                 <option value="WARN" {if $logLevel == 'WARN'}selected="selected"{/if}>WARN</option>
                                 <option value="ERROR" {if $logLevel == 'ERROR'}selected="selected"{/if}>ERROR</option>
-                                <option value="NONE" {if $logLevel == 'NONE'}selected="selected"{/if}>NONE</option>
                             </select>
                         </td>
                     </tr>
@@ -41,14 +42,32 @@
             <div class="panel-body">
                 <table>
                     <tr>
-                        <td>Name</td>
+                        {if $service}
+                            <td>Service</td>
+                            <td>Instance</td>
+                        {else}
+                            <td>Service</td>
+                        {/if}
                         <td>Rank</td>
+                        <td>Action</td>
                         <td>Waveform</td>
                     </tr>
                     {foreach $result in $results}
                         <tr>
-                            <td>{$result.name}</td>
+                            {if $service}
+                                <td>{$service}</td>
+                                <td>{$result.name}</td>
+                            {else}
+                                <td><a href="#" onclick="document.location.href='/stumptown/trends?service={$result.name}&amp;logLevel='+document.getElementById('logLevelPicker').value; return false;">{$result.name}</a></td>
+                            {/if}
                             <td>{$result.rank}</td>
+                            <td>
+                                {if $service}
+                                    <a href="/stumptown/query?service={$service}&amp;instance={$result.name}&amp;fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;logLevels={$logLevel}">Query</a>
+                                {else}
+                                    <a href="/stumptown/query?service={$result.name}&amp;fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;logLevels={$logLevel}">Query</a>
+                                {/if}
+                            </td>
                             <td><img alt="waveform" src="{$result.waveform}"></td>
                         </tr>
                     {/foreach}

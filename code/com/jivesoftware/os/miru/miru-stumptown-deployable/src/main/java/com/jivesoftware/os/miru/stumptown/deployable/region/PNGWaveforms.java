@@ -24,8 +24,13 @@ import org.apache.commons.net.util.Base64;
  */
 public class PNGWaveforms {
 
-    public String hitsToBase64PNGWaveform(int width, int height, int padding, Map<String, long[]> waveforms,
+    public String hitsToBase64PNGWaveform(int width,
+        int height,
+        int padding,
+        int horizontalLineCount,
+        Map<String, long[]> waveforms,
         Optional<MinMaxDouble> bounds) {
+
         int headerHeight = waveforms.size() * 16;
         int w = width;
         int h = height + headerHeight;
@@ -96,7 +101,7 @@ public class PNGWaveforms {
             maxWaveformLength = paintedWaveformWidth / 2;
         }
 
-        pw.paintGrid(g, maxWaveformLength, 10, mmd, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
+        pw.paintGrid(g, maxWaveformLength, horizontalLineCount, mmd, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
 
         for (int i = entries.size() - 1; i >= 0; i--) {
             Map.Entry<String, long[]> entry = entries.get(i);

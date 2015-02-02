@@ -51,7 +51,7 @@ public class PaintWaveform {
         if (hits.length == 1) {
             hits = new double[] { hits[0], hits[0] };
         }
-        float ws = _w / (hits.length - 1);
+        float ws = (float) _w / (float) (hits.length - 1);
 
         g.setColor(color);
         for (int i = 1; i < hits.length; i++) {

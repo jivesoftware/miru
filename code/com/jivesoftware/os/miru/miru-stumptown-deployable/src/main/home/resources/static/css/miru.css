@@ -32,51 +32,31 @@ div.container {
     width: 100% !important;
 }
 
-table.balancer {
-    border-collapse: separate;
-    border-spacing: 2px;
-}
+form#stump-query-filters .stump-query-advanced { display: none; }
+form#stump-query-filters.stump-query-show-advanced tr.stump-query-advanced { display: table-row; }
+form#stump-query-filters.stump-query-show-advanced td.stump-query-advanced { display: table-cell; }
 
-table.balancer > tbody > tr > td {
-    word-break: break-all;
-    word-wrap: break-word;
-    padding: 2px;
-}
+table#stump-events td, table#stump-events th { display: none; }
+table#stump-events.stump-show-datacenter .stump-event-datacenter { display: table-cell; }
+table#stump-events.stump-show-cluster .stump-event-cluster { display: table-cell; }
+table#stump-events.stump-show-host .stump-event-host { display: table-cell; }
+table#stump-events.stump-show-service .stump-event-service { display: table-cell; }
+table#stump-events.stump-show-instance .stump-event-instance { display: table-cell; }
+table#stump-events.stump-show-version .stump-event-version { display: table-cell; }
+table#stump-events.stump-show-time .stump-event-time { display: table-cell; }
+table#stump-events.stump-show-thread .stump-event-thread { display: table-cell; }
+table#stump-events.stump-show-level .stump-event-level { display: table-cell; }
+table#stump-events.stump-show-message .stump-event-message { display: table-cell; }
 
-td.balancer-label {
-    vertical-align: top;
-}
-
-td.balancer-offline {
-    background-color: #808080;
-    color: white;
-}
-
-td.balancer-bootstrap {
-    background-color: #00f;
-    color: white;
-}
-
-td.balancer-rebuilding {
-    background-color: #f0f;
-    color: black;
-}
-
-td.balancer-online {
-    background-color: #0f0;
-    color: black;
-}
-
-img.balancer-visual {
-    margin-bottom: -2px;
-    display: block;
-}
-
-a.activity-wal-partition {
-    background-color: #eee;
-    padding: 8px;
-    border-radius: 8px;
-    margin-right: 8px;
-    line-height: 46px;
-    white-space: nowrap;
-}
+/*
+<th class="stump-event-datacenter">Datacenter</th>
+<th class="stump-event-cluster">Cluster</th>
+<th class="stump-event-host">Host</th>
+<th class="stump-event-service">Service</th>
+<th class="stump-event-instance">Instance</th>
+<th class="stump-event-version">Version</th>
+<th class="stump-event-time">Time</th>
+<th class="stump-event-thread">Thread</th>
+<th class="stump-event-level">Level</th>
+<th class="stump-event-message">Message</th>
+*/

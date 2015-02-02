@@ -1,145 +1,39 @@
 window.$ = window.jQuery;
 
-window.miru = {};
+window.stump = {};
 
-miru.resetButton = function($button, value) {
-    $button.val(value);
-    $button.removeAttr('disabled');
-};
+stump.query = {
 
-miru.balancer = {
-
-    repair: function(ele) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "POST",
-            url: "/miru/manage/topology/repair",
-            data: {},
-            //contentType: "application/json",
-            success: function() {
-                $button.val('Success');
-                setTimeout(function() {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function() {
-                $button.val('Failure');
-                setTimeout(function() {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
-        });
+    advanced: function(ele) {
+        var $e = $(ele);
+        if ($e.prop('checked')) {
+            $('#stump-query-filters').addClass('stump-query-show-advanced');
+        } else {
+            $('#stump-query-filters').removeClass('stump-query-show-advanced');
+        }
     },
 
-    rebalance: function(ele, host, port, direction) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "POST",
-            url: "/miru/manage/topology/shift",
-            data: {
-                "host": host,
-                "port": port,
-                "direction": direction
-            },
-            //contentType: "application/json",
-            success: function() {
-                $button.val('Success');
-                setTimeout(function() {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function() {
-                $button.val('Failure');
-                setTimeout(function() {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
-        });
+    toggle: function(ele) {
+        var $e = $(ele);
+        if ($e.prop('checked')) {
+            $('#stump-events').addClass('stump-show-' + $e.data('name'));
+        } else {
+            $('#stump-events').removeClass('stump-show-' + $e.data('name'));
+        }
     },
 
-    remove: function(ele, host, port) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "DELETE",
-            url: "/miru/manage/hosts/" + host + "/" + port,
-            //contentType: "application/json",
-            success: function() {
-                $button.val('Success');
-                setTimeout(function() {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function() {
-                $button.val('Failure');
-                setTimeout(function() {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
+    initEvents: function() {
+        var $toggle = $('.stump-toggle');
+        var $toggleOn = $('.stump-toggle-on');
+
+        $toggle.prop('checked', false);
+        $toggleOn.prop('checked', true);
+        $toggle.each(function(index, ele) {
+            stump.query.toggle(ele);
         });
     }
 };
 
-miru.tenants = {
-
-    rebuild: function (ele, host, port, tenantId, partitionId) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "POST",
-            url: "/miru/manage/tenants/rebuild",
-            data: {
-                "host": host,
-                "port": port,
-                "tenantId": tenantId,
-                "partitionId": partitionId
-            },
-            //contentType: "application/json",
-            success: function () {
-                $button.val('Success');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function () {
-                $button.val('Failure');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
-        });
-    }
-};
-
-miru.activitywal = {
-
-    repair: function (ele) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "POST",
-            url: "/miru/manage/wal/repair",
-            data: {},
-            //contentType: "application/json",
-            success: function () {
-                $button.val('Success');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function () {
-                $button.val('Failure');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
-        });
-    }
-};
+$(document).ready(function() {
+    stump.query.initEvents();
+});

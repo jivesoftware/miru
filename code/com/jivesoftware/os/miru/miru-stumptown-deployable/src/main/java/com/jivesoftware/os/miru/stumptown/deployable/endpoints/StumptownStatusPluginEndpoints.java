@@ -17,12 +17,12 @@ import javax.ws.rs.core.Response;
  */
 @Singleton
 @Path("/stumptown/status")
-public class StatusStumptownPluginEndpoints {
+public class StumptownStatusPluginEndpoints {
 
     private final MiruStumptownService stumptownService;
     private final StumptownStatusPluginRegion pluginRegion;
 
-    public StatusStumptownPluginEndpoints(@Context MiruStumptownService stumptownService, @Context StumptownStatusPluginRegion pluginRegion) {
+    public StumptownStatusPluginEndpoints(@Context MiruStumptownService stumptownService, @Context StumptownStatusPluginRegion pluginRegion) {
         this.stumptownService = stumptownService;
         this.pluginRegion = pluginRegion;
     }

@@ -33,12 +33,12 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownIntakeInitializer.MiruStumptownIntakeConfig;
-import com.jivesoftware.os.miru.stumptown.deployable.endpoints.QueryStumptownPluginEndpoints;
-import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StatusStumptownPluginEndpoints;
+import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownQueryPluginEndpoints;
+import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownStatusPluginEndpoints;
+import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownTrendsPluginEndpoints;
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPluginRegion;
-import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginEndpoints;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
@@ -123,7 +123,7 @@ public class MiruStumptownMain {
         List<MiruManagePlugin> plugins = Lists.newArrayList(
             new MiruManagePlugin("Status",
                 "/stumptown/status",
-                StatusStumptownPluginEndpoints.class,
+                StumptownStatusPluginEndpoints.class,
                 new StumptownStatusPluginRegion("soy.stumptown.page.stumptownStatusPluginRegion", renderer, logMill)),
             new MiruManagePlugin("Trends",
                 "/stumptown/trends",
@@ -131,7 +131,7 @@ public class MiruStumptownMain {
                 new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, miruReaders)),
             new MiruManagePlugin("Query",
                 "/stumptown/query",
-                QueryStumptownPluginEndpoints.class,
+                StumptownQueryPluginEndpoints.class,
                 new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion", renderer, miruReaders, activityPayloads)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));

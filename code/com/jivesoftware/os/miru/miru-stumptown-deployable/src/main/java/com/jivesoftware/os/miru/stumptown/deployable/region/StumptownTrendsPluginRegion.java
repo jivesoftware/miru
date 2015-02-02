@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.stumptown.deployable.region;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -61,9 +60,11 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
     public static class TrendingPluginRegionInput {
 
         final String logLevel;
+        final String service;
 
-        public TrendingPluginRegionInput(String logLevel) {
+        public TrendingPluginRegionInput(String logLevel, String service) {
             this.logLevel = logLevel;
+            this.service = service;
         }
     }
 
@@ -73,10 +74,12 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
         try {
             if (optionalInput.isPresent()) {
                 TrendingPluginRegionInput input = optionalInput.get();
-                int fromHoursAgo = 1;
+                int fromHoursAgo = 8;
                 int toHoursAgo = 0;
 
                 data.put("logLevel", input.logLevel);
+                data.put("service", input.service);
+                data.put("fromHoursAgo", fromHoursAgo);
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -84,10 +87,10 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "activityType",
-                    Lists.transform(
-                        Arrays.asList(0, 1, 11, 65),
-                        Functions.toStringFunction())));
+                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "level", Arrays.asList(String.valueOf(input.logLevel))));
+                if (input.service != null) {
+                    fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "service", Arrays.asList(input.service)));
+                }
 
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);
 
@@ -102,13 +105,13 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                                     new MiruTimeRange(fromTime, toTime),
                                     30,
                                     constraintsFilter,
-                                    "level",
+                                    input.service != null ? "instance" : "service",
                                     MiruFilter.NO_FILTER,
-                                    Arrays.asList("*"),
+                                    null,
                                     100),
-                                MiruSolutionLogLevel.valueOf(input.logLevel)),
+                                MiruSolutionLogLevel.INFO),
                             TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                            new Class[]{TrendingAnswer.class},
+                            new Class[] { TrendingAnswer.class },
                             null);
                         response = trendingResponse;
                         if (response != null && response.answer != null) {
@@ -117,9 +120,10 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                             log.warn("Empty trending response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed trending request to {}, trying another", new Object[]{requestHelper}, e);
+                        log.warn("Failed trending request to {}, trying another", new Object[] { requestHelper }, e);
                     }
                 }
+
 
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
@@ -144,11 +148,11 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                         public Map<String, String> apply(Trendy input) {
                             return ImmutableMap.of(
                                 "name", input.distinctValue,
-                                "rank", String.valueOf(input.rank),
+                                "rank", String.valueOf(Math.round(input.rank * 100.0) / 100.0),
                                 "waveform", "data:image/png;base64," + new PNGWaveforms()
-                                .hitsToBase64PNGWaveform(600, 128, 10,
-                                    ImmutableMap.of(input.distinctValue, input.waveform),
-                                    Optional.of(mmd)));
+                                    .hitsToBase64PNGWaveform(600, 96, 10, 4,
+                                        ImmutableMap.of(input.distinctValue, input.waveform),
+                                        Optional.of(mmd)));
                         }
                     }));
                     ObjectMapper mapper = new ObjectMapper();

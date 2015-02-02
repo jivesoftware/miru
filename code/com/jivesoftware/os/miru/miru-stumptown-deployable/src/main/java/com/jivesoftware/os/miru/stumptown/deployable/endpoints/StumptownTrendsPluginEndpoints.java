@@ -1,7 +1,8 @@
-package com.jivesoftware.os.miru.stumptown.deployable.region;
+package com.jivesoftware.os.miru.stumptown.deployable.endpoints;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownService;
+import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion.TrendingPluginRegionInput;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
@@ -31,10 +32,14 @@ public class StumptownTrendsPluginEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response getTenantsForTenant(@QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
+    public Response getTenantsForTenant(@QueryParam("logLevel") @DefaultValue("ERROR") String logLevel,
+        @QueryParam("service") @DefaultValue("") String service) {
 
+        if (service.trim().isEmpty()) {
+            service = null;
+        }
         String rendered = miruStumptownService.renderPlugin(trendingPluginRegion,
-            Optional.of(new TrendingPluginRegionInput(logLevel)));
+            Optional.of(new TrendingPluginRegionInput(logLevel, service)));
         return Response.ok(rendered).build();
     }
 }

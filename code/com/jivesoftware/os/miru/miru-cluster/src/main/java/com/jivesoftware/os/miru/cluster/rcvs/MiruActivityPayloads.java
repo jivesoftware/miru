@@ -7,6 +7,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -42,6 +43,9 @@ public class MiruActivityPayloads {
     }
 
     public <T> List<T> multiGet(MiruTenantId tenantId, Collection<Long> activityTimes, final Class<T> payloadClass) throws Exception {
+        if (activityTimes.isEmpty()) {
+            return Collections.emptyList();
+        }
         Long[] timestamps = activityTimes.toArray(new Long[activityTimes.size()]);
         List<byte[]> payloadBytes = activityPayloadTable.multiGet(MiruVoidByte.INSTANCE, tenantId, timestamps, null, null);
         List<T> payloads = Lists.newArrayListWithCapacity(payloadBytes.size());

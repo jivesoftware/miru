@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stumptown.deployable.region;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
@@ -32,15 +33,18 @@ import com.jivesoftware.os.miru.stumptown.deployable.endpoints.MinMaxDouble;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownQuery;
+import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -208,7 +212,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                                     stumptownFilters),
                                 MiruSolutionLogLevel.INFO), //TODO MiruSolutionLogLevel.valueOf(input.solutionLogLevel)),
                             StumptownConstants.STUMPTOWN_PREFIX + StumptownConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                            new Class[]{StumptownAnswer.class},
+                            new Class[] { StumptownAnswer.class },
                             null);
                         response = analyticsResponse;
                         if (response != null && response.answer != null) {
@@ -217,7 +221,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                             log.warn("Empty stumptown response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed stumptown request to {}, trying another", new Object[]{requestHelper}, e);
+                        log.warn("Failed stumptown request to {}, trying another", new Object[] { requestHelper }, e);
                     }
                 }
 
@@ -233,7 +237,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                         rawWaveforms.put(e.getKey(), e.getValue().waveform);
                     }
 
-                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, rawWaveforms,
+                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, 10, rawWaveforms,
                         Optional.<MinMaxDouble>absent()));
 
                     List<Long> activityTimes = Lists.newArrayList();
@@ -243,7 +247,30 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                         }
                     }
                     List<MiruLogEvent> logEvents = activityPayloads.multiGet(tenantId, activityTimes, MiruLogEvent.class);
-                    data.put("events", logEvents);
+                    /*
+                    List<MiruLogEvent> logEvents = Arrays.asList(
+                        new MiruLogEvent("dc", "clu", "host", "serv", "inst", "ver", "INFO", "t-1", "c.m.j.s.Class", "hello",
+                            String.valueOf(System.currentTimeMillis()), new String[] { "a", "b", "c" }));
+                    */
+                    data.put("events", Lists.transform(logEvents, new Function<MiruLogEvent, Map<String, Object>>() {
+                        @Override
+                        public Map<String, Object> apply(MiruLogEvent input) {
+                            return ImmutableMap.<String, Object>builder()
+                                .put("datacenter", input.datacenter)
+                                .put("cluster", input.cluster)
+                                .put("host", input.host)
+                                .put("service", input.service)
+                                .put("instance", input.instance)
+                                .put("version", input.version)
+                                .put("level", input.level)
+                                .put("threadName", input.threadName)
+                                .put("loggerName", input.loggerName)
+                                .put("message", input.message)
+                                .put("timestamp", new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp))))
+                                .put("thrownStackTrace", Arrays.asList(input.thrownStackTrace))
+                                .build();
+                        }
+                    }));
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
