@@ -116,6 +116,23 @@ public class MiruStumptownMain {
             miruReaders,
             activityPayloads);
 
+        new MiruStumptownInternalLogAppender("unknownDatacenter",
+            instanceConfig.getClusterName(),
+            instanceConfig.getHost(),
+            instanceConfig.getServiceName(),
+            String.valueOf(instanceConfig.getInstanceName()),
+            instanceConfig.getVersion(),
+            inTakeService,
+            10_000,
+            1_000,
+            false,
+            1_000,
+            1_000,
+            5_000,
+            1_000,
+            1_000,
+            10_000).install();
+
         MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
         MiruStumptownService queryService = new MiruQueryStumptownInitializer().initialize(renderer);
