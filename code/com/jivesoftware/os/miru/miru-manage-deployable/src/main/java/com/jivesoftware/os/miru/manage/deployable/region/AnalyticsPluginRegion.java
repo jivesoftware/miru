@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -49,6 +50,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
     private final String template;
     private final MiruSoyRenderer renderer;
     private final ReaderRequestHelpers readerRequestHelpers;
+    private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public AnalyticsPluginRegion(String template,
         MiruSoyRenderer renderer,
@@ -64,17 +66,30 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         final int fromHoursAgo;
         final int toHoursAgo;
         final int buckets;
-        final String activityTypes;
-        final String users;
+        final String field1;
+        final String terms1;
+        final String field2;
+        final String terms2;
+        final String filters;
         final String logLevel;
 
-        public AnalyticsPluginRegionInput(String tenant, int fromHoursAgo, int toHoursAgo, int buckets, String activityTypes, String users, String logLevel) {
+        public AnalyticsPluginRegionInput(String tenant,
+            int fromHoursAgo,
+            int toHoursAgo,
+            int buckets,
+            String field1,
+            String terms1,
+            String field2,
+            String terms2, String filters, String logLevel) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
             this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
-            this.activityTypes = activityTypes;
-            this.users = users;
+            this.field1 = field1;
+            this.terms1 = terms1;
+            this.field2 = field2;
+            this.terms2 = terms2;
+            this.filters = filters;
             this.logLevel = logLevel;
         }
     }
@@ -93,22 +108,25 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 data.put("fromHoursAgo", String.valueOf(fromHoursAgo));
                 data.put("toHoursAgo", String.valueOf(toHoursAgo));
                 data.put("buckets", String.valueOf(input.buckets));
-                data.put("activityTypes", input.activityTypes);
-                data.put("users", input.users);
+                data.put("field1", input.field1);
+                data.put("terms1", input.terms1);
+                data.put("field2", input.field2);
+                data.put("terms2", input.terms2);
+                data.put("filters", input.filters);
 
-                List<String> activityTypes = Lists.newArrayList();
-                for (String activityType : input.activityTypes.split(",")) {
-                    String trimmed = activityType.trim();
+                List<String> terms1 = Lists.newArrayList();
+                for (String term : input.terms1.split(",")) {
+                    String trimmed = term.trim();
                     if (!trimmed.isEmpty()) {
-                        activityTypes.add(trimmed);
+                        terms1.add(trimmed);
                     }
                 }
 
-                List<String> users = Lists.newArrayList();
-                for (String user : input.users.split(",")) {
-                    String trimmed = user.trim();
+                List<String> terms2 = Lists.newArrayList();
+                for (String term : input.terms2.split(",")) {
+                    String trimmed = term.trim();
                     if (!trimmed.isEmpty()) {
-                        users.add(trimmed);
+                        terms2.add(trimmed);
                     }
                 }
 
@@ -117,10 +135,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
-                List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "locale", Collections.singletonList("en")));
 
-                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);
+                MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
 
                 List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<AnalyticsAnswer> response = null;
@@ -129,30 +145,30 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                     for (RequestHelper requestHelper : requestHelpers) {
                         try {
                             ImmutableMap.Builder<String, MiruFilter> analyticsFiltersBuilder = ImmutableMap.builder();
-                            for (String activityType : activityTypes) {
-                                if (users.isEmpty()) {
+                            for (String term1 : terms1) {
+                                if (input.field2.isEmpty() || terms2.isEmpty()) {
                                     analyticsFiltersBuilder.put(
-                                        activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name(),
+                                        termString(input.field1, term1),
                                         new MiruFilter(MiruFilterOperation.and,
                                             false,
                                             Collections.singletonList(
                                                 new MiruFieldFilter(MiruFieldType.primary,
-                                                    "activityType",
-                                                    Collections.singletonList(activityType))),
+                                                    input.field1,
+                                                    Collections.singletonList(term1))),
                                             null));
                                 } else {
-                                    for (String user : users) {
+                                    for (String term2 : terms2) {
                                         analyticsFiltersBuilder.put(
-                                            activityType + "=" + Type.valueOf(Integer.parseInt(activityType)).name() + ", user=" + user,
+                                            termString(input.field1, term1) + ", " + termString(input.field2, term2),
                                             new MiruFilter(MiruFilterOperation.and,
                                                 false,
                                                 Arrays.asList(
                                                     new MiruFieldFilter(MiruFieldType.primary,
-                                                        "activityType",
-                                                        Collections.singletonList(activityType)),
+                                                        input.field1,
+                                                        Collections.singletonList(term1)),
                                                     new MiruFieldFilter(MiruFieldType.primary,
-                                                        "user",
-                                                        Collections.singletonList("3 " + user))
+                                                        input.field2,
+                                                        Collections.singletonList(term2))
                                                 ),
                                                 null));
                                     }
@@ -204,6 +220,14 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         }
 
         return renderer.render(template, data);
+    }
+
+    private String termString(String field, String term) {
+        if (field.equals("activityType")) {
+            return term + "=" + Type.valueOf(Integer.parseInt(term)).name();
+        } else {
+            return term;
+        }
     }
 
     @Override

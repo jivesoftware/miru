@@ -36,8 +36,11 @@ public class AnalyticsPluginEndpoints {
         @QueryParam("fromHoursAgo") @DefaultValue("720") int fromHoursAgo,
         @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("activityTypes") @DefaultValue("0, 1, 11, 65") String activityTypes,
-        @QueryParam("users") @DefaultValue("") String users,
+        @QueryParam("field1") @DefaultValue("activityType") String field1,
+        @QueryParam("terms1") @DefaultValue("0, 1, 11, 65") String terms1,
+        @QueryParam("field2") @DefaultValue("") String field2,
+        @QueryParam("terms2") @DefaultValue("") String terms2,
+        @QueryParam("filters") @DefaultValue("") String filters,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
         String rendered = miruManageService.renderPlugin(analyticsPluginRegion,
             Optional.of(new AnalyticsPluginRegionInput(
@@ -45,8 +48,11 @@ public class AnalyticsPluginEndpoints {
                 fromHoursAgo,
                 toHoursAgo,
                 buckets,
-                activityTypes,
-                users,
+                field1.trim(),
+                terms1.trim(),
+                field2.trim(),
+                terms2.trim(),
+                filters.trim(),
                 logLevel)));
         return Response.ok(rendered).build();
     }

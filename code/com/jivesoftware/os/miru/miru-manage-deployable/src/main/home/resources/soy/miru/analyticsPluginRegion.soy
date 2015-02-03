@@ -8,8 +8,11 @@
  * @param? fromHoursAgo
  * @param? toHoursAgo
  * @param? buckets
- * @param? activityTypes
- * @param? users
+ * @param? field1
+ * @param? terms1
+ * @param? field2
+ * @param? terms2
+ * @param? filters
  * @param? waveform
  * @param? summary
  * @param? elapse
@@ -47,41 +50,67 @@
                     <tr>
                         <td>From Hours Ago</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromHoursAgo?:''}"
-                            name="fromHoursAgo" id="fromHoursPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromHoursAgo?:''}"
+                                name="fromHoursAgo" id="fromHoursPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
                         <td>To Hours Ago</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toHoursAgo?:''}"
-                            name="toHoursAgo" id="toHoursPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toHoursAgo?:''}"
+                                name="toHoursAgo" id="toHoursPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
                         <td>Buckets</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
-                            name="buckets" id="bucketsPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
+                                name="buckets" id="bucketsPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
-                        <td>Activity Types</td>
+                        <td>Field1</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-activityTypes-autocomplete j-autocomplete-input j-ui-elem" placeholder="Activity Types" value="{$activityTypes?:''}"
-                            name="activityTypes" id="activityTypesPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-field-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field1" value="{$field1?:''}"
+                                name="field1" id="field1Picker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
-                        <td>User IDs</td>
+                        <td>Field1 Terms</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-users-autocomplete j-autocomplete-input j-ui-elem" placeholder="User IDs" value="{$users?:''}"
-                            name="users" id="usersPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-terms-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field1 Terms" value="{$terms1?:''}"
+                                name="terms1" id="terms1Picker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Field2</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:20px;"
+                                class="j-field-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field2" value="{$field2?:''}"
+                                name="field2" id="field2Picker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Field2 Terms</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:20px;"
+                                class="j-terms-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field2 Terms" value="{$terms2?:''}"
+                                name="terms2" id="terms2Picker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Filters</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-filters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Filters" value="{$filters?:''}"
+                                name="filters" id="filtersPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. user:3 3765, parentType:102|2|38)</em>
                         </td>
                     </tr>
                 </table>

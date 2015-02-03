@@ -162,7 +162,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                 data.put("fromAgo", String.valueOf(fromAgo));
                 data.put("toAgo", String.valueOf(toAgo));
                 data.put("buckets", String.valueOf(input.buckets));
-                data.put("desiredNumberOfResultsPerWaveform", String.valueOf(input.messageCount));
+                data.put("messageCount", String.valueOf(input.messageCount));
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();

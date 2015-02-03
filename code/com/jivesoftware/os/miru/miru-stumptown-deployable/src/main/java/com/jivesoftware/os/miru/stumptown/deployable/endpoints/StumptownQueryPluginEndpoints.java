@@ -50,7 +50,7 @@ public class StumptownQueryPluginEndpoints {
         @QueryParam("message") @DefaultValue("") String message,
         @QueryParam("thrown") @DefaultValue("") String thrown,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("desiredNumberOfResultsPerWaveform") @DefaultValue("100") int messageCount) {
+        @QueryParam("messageCount") @DefaultValue("100") int messageCount) {
         String rendered = stumptownService.renderPlugin(pluginRegion,
             Optional.of(new StumptownPluginRegionInput(cluster,
                 host,

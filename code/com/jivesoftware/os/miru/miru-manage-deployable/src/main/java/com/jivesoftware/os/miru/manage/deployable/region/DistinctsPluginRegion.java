@@ -13,11 +13,9 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -29,7 +27,6 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +42,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
     private final String template;
     private final MiruSoyRenderer renderer;
     private final ReaderRequestHelpers readerRequestHelpers;
+    private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public DistinctsPluginRegion(String template,
         MiruSoyRenderer renderer,
@@ -117,7 +115,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
 
-                MiruFilter constraintsFilter = filterFromString(input.filters);
+                MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
                 /*
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "locale", Collections.singletonList("en")));
@@ -169,24 +167,6 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
         }
 
         return renderer.render(template, data);
-    }
-
-    /**
-     * Example input: activityType:0|1|2, authors:3765
-     */
-    private MiruFilter filterFromString(String filtersString) {
-        String[] filtersArray = filtersString.split("\\s*,\\s*");
-
-        List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-
-        for (String filterString : filtersArray) {
-            String[] filterTokens = filterString.trim().split(":");
-            String fieldName = filterTokens[0].trim();
-            String[] values = filterTokens[1].split("\\s*\\|\\s*");
-            fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, Arrays.asList(values)));
-        }
-
-        return new MiruFilter(MiruFilterOperation.and, false, fieldFilters, Arrays.<MiruFilter>asList());
     }
 
     @Override
