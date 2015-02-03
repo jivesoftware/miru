@@ -80,7 +80,7 @@ public class TrendingInjectable {
                         request.query.distinctPrefixes),
                     request.logLevel))),
                 new DistinctsAnswerEvaluator(),
-                new DistinctsAnswerMerger(request.query.timeRange),
+                new DistinctsAnswerMerger(),
                 DistinctsAnswer.EMPTY_RESULTS,
                 request.logLevel);
             List<String> distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)

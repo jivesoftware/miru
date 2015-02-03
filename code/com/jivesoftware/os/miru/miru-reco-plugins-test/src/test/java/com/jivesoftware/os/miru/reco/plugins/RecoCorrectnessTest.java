@@ -127,7 +127,7 @@ public class RecoCorrectnessTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
-        this.recoInjectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(aggregateUtil, indexUtil));
+        this.recoInjectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(aggregateUtil, indexUtil), new Distincts(termComposer));
         this.trendingInjectable = new TrendingInjectable(miruProvider, new Trending(), new Distincts(termComposer), new Analytics());
     }
 
@@ -217,6 +217,7 @@ public class RecoCorrectnessTest {
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
                 new RecoQuery(
+                    null,
                     filter,
                     "parent", "parent", "parent",
                     "user", "user", "user",

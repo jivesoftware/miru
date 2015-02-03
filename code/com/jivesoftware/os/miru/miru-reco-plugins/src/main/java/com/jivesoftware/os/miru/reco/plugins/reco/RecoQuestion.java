@@ -1,9 +1,11 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -28,13 +30,16 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
 
     private final CollaborativeFiltering collaborativeFiltering;
     private final MiruRequest<RecoQuery> request;
+    private final MiruFilter removeDistinctsFilter;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public RecoQuestion(CollaborativeFiltering collaborativeFiltering,
-        MiruRequest<RecoQuery> query) {
-        this.collaborativeFiltering = collaborativeFiltering;
-        this.request = query;
+        MiruRequest<RecoQuery> query,
+        MiruFilter removeDistinctsFilter) {
+        this.collaborativeFiltering = Preconditions.checkNotNull(collaborativeFiltering);
+        this.request = Preconditions.checkNotNull(query);
+        this.removeDistinctsFilter = Preconditions.checkNotNull(removeDistinctsFilter);
     }
 
     @Override
@@ -80,13 +85,15 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
+
+
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "considering {} items.", bitmaps.cardinality(answer));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "considering bitmap {}", answer);
         }
 
         return new MiruPartitionResponse<>(
-            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, answer),
+            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, answer, removeDistinctsFilter),
             solutionLog.asList()
         );
     }
@@ -100,7 +107,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
     public Optional<RecoReport> createReport(Optional<RecoAnswer> answer) {
         Optional<RecoReport> report = Optional.absent();
         if (answer.isPresent()) {
-            report = Optional.of(new RecoReport(answer.get().results.size()));
+            report = Optional.of(new RecoReport(removeDistinctsFilter, answer.get().results.size()));
         }
         return report;
     }

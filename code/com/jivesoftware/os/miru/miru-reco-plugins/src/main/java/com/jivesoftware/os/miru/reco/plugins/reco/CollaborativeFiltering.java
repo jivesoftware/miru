@@ -53,7 +53,8 @@ public class CollaborativeFiltering {
         MiruRequestContext<BM> requestContext,
         final MiruRequest<RecoQuery> request,
         Optional<RecoReport> report,
-        BM answer)
+        BM answer,
+        MiruFilter removeDistinctsFilter)
         throws Exception {
 
         log.debug("Get collaborative filtering for answer={} query={}", answer, request);
@@ -109,11 +110,31 @@ public class CollaborativeFiltering {
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "possible bitmap {}", possible);
             }
 
-            scorable = bitmaps.create();
-            bitmaps.and(scorable, Arrays.asList(possible, othersContributions));
+            BM constrainedScorable = bitmaps.create();
+            bitmaps.and(constrainedScorable, Arrays.asList(possible, othersContributions));
+
+            scorable = constrainedScorable;
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-                solutionLog.log(MiruSolutionLogLevel.INFO, "scorable {}.", bitmaps.cardinality(scorable));
-                solutionLog.log(MiruSolutionLogLevel.TRACE, "scorable bitmap {}", scorable);
+                solutionLog.log(MiruSolutionLogLevel.INFO, "constrained {}.", bitmaps.cardinality(scorable));
+                solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained bitmap {}", scorable);
+            }
+        }
+        if (!MiruFilter.NO_FILTER.equals(removeDistinctsFilter)) {
+            BM remove = bitmaps.create();
+            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
+                removeDistinctsFilter, solutionLog, remove, requestContext.getActivityIndex().lastId(), -1);
+            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+                solutionLog.log(MiruSolutionLogLevel.INFO, "remove {}.", bitmaps.cardinality(remove));
+                solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);
+            }
+
+            BM removedScorable = bitmaps.create();
+            bitmaps.andNot(removedScorable, scorable, Arrays.asList(remove));
+
+            scorable = removedScorable;
+            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+                solutionLog.log(MiruSolutionLogLevel.INFO, "reduced {}.", bitmaps.cardinality(scorable));
+                solutionLog.log(MiruSolutionLogLevel.TRACE, "reduced bitmap {}", scorable);
             }
         }
 
@@ -201,7 +222,7 @@ public class CollaborativeFiltering {
         return r;
     }
 
-    private <BM> RecoAnswer score(MiruBitmaps<BM> bitmaps, final MiruRequest<RecoQuery> request, BM join2, MiruRequestContext<BM> requestContext,
+    private <BM> RecoAnswer score(MiruBitmaps<BM> bitmaps, final MiruRequest<RecoQuery> request, BM scorable, MiruRequestContext<BM> requestContext,
         final BloomIndex<BM> bloomIndex, final List<BloomIndex.Mights<MiruTermCount>> wantBits) throws Exception {
 
         final int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName3);
@@ -218,7 +239,7 @@ public class CollaborativeFiltering {
         }).maximumSize(request.query.desiredNumberOfDistincts).create();
 
         // feeds us all recommended parents <field3>
-        aggregateUtil.stream(bitmaps, request.tenantId, requestContext, join2, Optional.<BM>absent(), fieldId, request.query.retrieveFieldName3,
+        aggregateUtil.stream(bitmaps, request.tenantId, requestContext, scorable, Optional.<BM>absent(), fieldId, request.query.retrieveFieldName3,
             new CallbackStream<MiruTermCount>() {
                 @Override
                 public MiruTermCount callback(MiruTermCount v) throws Exception {

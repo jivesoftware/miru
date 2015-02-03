@@ -6,19 +6,12 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.LinkedHashSet;
 
 /**
  *
  */
 public class DistinctsAnswerMerger implements MiruAnswerMerger<DistinctsAnswer> {
-
-    private final MiruTimeRange timeRange;
-
-    public DistinctsAnswerMerger(MiruTimeRange timeRange) {
-        this.timeRange = timeRange;
-    }
 
     /**
      * Merges the last and current results, returning the merged result.

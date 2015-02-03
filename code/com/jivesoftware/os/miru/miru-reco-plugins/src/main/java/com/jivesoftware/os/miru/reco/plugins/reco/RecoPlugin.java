@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -24,7 +25,7 @@ public class RecoPlugin implements MiruPlugin<RecoEndpoints, RecoInjectable> {
         CollaborativeFiltering collaborativeFiltering = new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil());
         return Collections.singletonList(new MiruEndpointInjectable<>(
                 RecoInjectable.class,
-                new RecoInjectable(miruProvider, collaborativeFiltering)
+                new RecoInjectable(miruProvider, collaborativeFiltering, new Distincts(miruProvider.getTermComposer()))
         ));
     }
 }

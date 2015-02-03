@@ -72,6 +72,7 @@ public class MiruTestRecoQueryDistributor {
             new MiruActorId(userId),
             new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
             new RecoQuery(
+                null,
                 filter,
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),

@@ -14,19 +14,19 @@ import java.util.List;
 public class DistinctsQuery implements Serializable {
 
     public final MiruTimeRange timeRange;
-    public final String aggregateCountAroundField;
+    public final String gatherDistinctsForField;
     public final MiruFilter constraintsFilter;
     public final List<String> prefixes;
 
     @JsonCreator
     public DistinctsQuery(
         @JsonProperty("timeRange") MiruTimeRange timeRange,
-        @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
+        @JsonProperty("gatherDistinctsForField") String gatherDistinctsForField,
         @JsonProperty("constraints") MiruFilter constraintsFilter,
         @JsonProperty("prefixes") List<String> prefixes) {
         Preconditions.checkArgument(!MiruTimeRange.ALL_TIME.equals(timeRange), "Requires an explicit time range");
         this.timeRange = Preconditions.checkNotNull(timeRange);
-        this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
+        this.gatherDistinctsForField = Preconditions.checkNotNull(gatherDistinctsForField);
         this.prefixes = prefixes;
         this.constraintsFilter = constraintsFilter;
     }
@@ -35,7 +35,7 @@ public class DistinctsQuery implements Serializable {
     public String toString() {
         return "DistinctsQuery{" +
             "timeRange=" + timeRange +
-            ", aggregateCountAroundField='" + aggregateCountAroundField + '\'' +
+            ", gatherDistinctsForField='" + gatherDistinctsForField + '\'' +
             ", constraintsFilter=" + constraintsFilter +
             ", prefixes=" + prefixes +
             '}';

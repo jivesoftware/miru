@@ -43,7 +43,7 @@ public class Distincts {
 
         log.debug("Gather distincts for query={}", request);
 
-        int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
+        int fieldId = requestContext.getSchema().getFieldId(request.query.gatherDistinctsForField);
         final MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
 
         final List<String> results = Lists.newArrayList();
@@ -80,7 +80,7 @@ public class Distincts {
             BM result = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), request.query.constraintsFilter,
                 solutionLog, result, requestContext.getActivityIndex().lastId(), -1);
-            aggregateUtil.stream(bitmaps, request.tenantId, requestContext, result, Optional.<BM>absent(), fieldId, request.query.aggregateCountAroundField,
+            aggregateUtil.stream(bitmaps, request.tenantId, requestContext, result, Optional.<BM>absent(), fieldId, request.query.gatherDistinctsForField,
                 new CallbackStream<MiruTermCount>() {
                     @Override
                     public MiruTermCount callback(MiruTermCount termCount) throws Exception {

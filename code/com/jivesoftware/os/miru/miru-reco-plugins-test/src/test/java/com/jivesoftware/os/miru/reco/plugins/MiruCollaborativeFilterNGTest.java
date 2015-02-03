@@ -27,6 +27,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
+import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
@@ -94,7 +95,9 @@ public class MiruCollaborativeFilterNGTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil()));
+        this.injectable = new RecoInjectable(miruProvider,
+            new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil()),
+            new Distincts(termComposer));
     }
 
     @Test(enabled = true)
@@ -185,6 +188,7 @@ public class MiruCollaborativeFilterNGTest {
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
                 new RecoQuery(
+                    null,
                     filter,
                     "doc", "doc", "doc",
                     "user", "user", "user",

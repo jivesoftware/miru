@@ -39,7 +39,7 @@ public class DistinctsInjectable {
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>("gatherDistincts", new DistinctsQuestion(distincts, request)),
                 new DistinctsAnswerEvaluator(),
-                new DistinctsAnswerMerger(request.query.timeRange),
+                new DistinctsAnswerMerger(),
                 DistinctsAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
