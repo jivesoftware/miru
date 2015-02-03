@@ -16,7 +16,7 @@
 package com.jivesoftware.os.miru.stumptown.deployable;
 
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.StringDefault;
 
@@ -36,7 +36,7 @@ public class MiruStumptownIntakeInitializer {
         LogMill logMill,
         RequestHelper[] miruWrites,
         RequestHelper[] miruReaders,
-        MiruActivityPayloads activityPayloads) {
+        MiruStumptownPayloads activityPayloads) {
 
         StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(miruReaders);
         return new MiruStumptownIntakeService(stumptownSchemaService, logMill, config.getMiruIngressEndpoint(), miruWrites, activityPayloads);

@@ -23,8 +23,8 @@ import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -60,29 +60,29 @@ public class MiruStumptownIntakeService {
     private final LogMill logMill;
     private final String miruIngressEndpoint;
     private final RequestHelper[] miruWriter;
-    private final MiruActivityPayloads activityPayloads;
+    private final MiruStumptownPayloads payloads;
 
     public MiruStumptownIntakeService(StumptownSchemaService stumptownSchemaService,
         LogMill logMill,
         String miruIngressEndpoint,
         RequestHelper[] miruWrites,
-        MiruActivityPayloads activityPayloads) {
+        MiruStumptownPayloads payloads) {
         this.stumptownSchemaService = stumptownSchemaService;
         this.logMill = logMill;
         this.miruIngressEndpoint = miruIngressEndpoint;
         this.miruWriter = miruWrites;
-        this.activityPayloads = activityPayloads;
+        this.payloads = payloads;
     }
 
     void ingressLogEvents(List<MiruLogEvent> logEvents) throws Exception {
         List<MiruActivity> activities = Lists.newArrayListWithCapacity(logEvents.size());
-        List<MiruActivityPayloads.TimeAndPayload<MiruLogEvent>> timedLogEvents = Lists.newArrayListWithCapacity(logEvents.size());
+        List<MiruStumptownPayloads.TimeAndPayload<MiruLogEvent>> timedLogEvents = Lists.newArrayListWithCapacity(logEvents.size());
         for (MiruLogEvent logEvent : logEvents) {
             MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
             stumptownSchemaService.ensureSchema(tenantId, StumptownSchemaConstants.SCHEMA);
             MiruActivity activity = logMill.mill(tenantId, logEvent);
             activities.add(activity);
-            timedLogEvents.add(new MiruActivityPayloads.TimeAndPayload<>(activity.time, logEvent));
+            timedLogEvents.add(new MiruStumptownPayloads.TimeAndPayload<>(activity.time, logEvent));
         }
         ingress(activities);
         record(timedLogEvents);
@@ -116,7 +116,7 @@ public class MiruStumptownIntakeService {
         }
     }
 
-    private void record(List<MiruActivityPayloads.TimeAndPayload<MiruLogEvent>> timedLogEvents) throws Exception {
-        activityPayloads.multiPut(StumptownSchemaConstants.TENANT_ID, timedLogEvents);
+    private void record(List<MiruStumptownPayloads.TimeAndPayload<MiruLogEvent>> timedLogEvents) throws Exception {
+        payloads.multiPut(StumptownSchemaConstants.TENANT_ID, timedLogEvents);
     }
 }

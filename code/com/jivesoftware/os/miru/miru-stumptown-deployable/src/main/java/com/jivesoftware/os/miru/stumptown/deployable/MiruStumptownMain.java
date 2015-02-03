@@ -28,9 +28,6 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownIntakeInitializer.MiruStumptownIntakeConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownQueryPluginEndpoints;
@@ -40,6 +37,8 @@ import com.jivesoftware.os.miru.stumptown.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsIntializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
@@ -60,7 +59,6 @@ public class MiruStumptownMain {
         final Deployable deployable = new Deployable(args);
 
         InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-        //InstanceConfig instanceConfig = deployable.config(DevInstanceConfig.class);
 
         HealthFactory.initialize(new HealthCheckConfigBinder() {
 
@@ -98,14 +96,13 @@ public class MiruStumptownMain {
         RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
             .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
 //        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
+        MiruStumptownPayloads payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(),
             rowColumnValueStoreInitializer, mapper);
 
         OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
         RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruReaderHosts(), mapper);
         RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruWriterHosts(), mapper);
-        MiruActivityPayloads activityPayloads = new MiruActivityPayloads(mapper, registryStore.getActivityPayloadTable());
 
         LogMill logMill = new LogMill(orderIdProvider);
 
@@ -114,7 +111,7 @@ public class MiruStumptownMain {
             logMill,
             miruWrites,
             miruReaders,
-            activityPayloads);
+            payloads);
 
         new MiruStumptownInternalLogAppender("unknownDatacenter",
             instanceConfig.getClusterName(),
@@ -149,7 +146,7 @@ public class MiruStumptownMain {
             new MiruManagePlugin("Query",
                 "/stumptown/query",
                 StumptownQueryPluginEndpoints.class,
-                new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion", renderer, miruReaders, activityPayloads)));
+                new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion", renderer, miruReaders, payloads)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

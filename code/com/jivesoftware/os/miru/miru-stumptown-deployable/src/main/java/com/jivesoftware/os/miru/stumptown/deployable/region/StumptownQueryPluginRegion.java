@@ -21,7 +21,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityPayloads;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -30,6 +29,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.stumptown.deployable.StumptownSchemaConstants;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.MinMaxDouble;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownQuery;
@@ -60,16 +60,17 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
     private final String template;
     private final MiruSoyRenderer renderer;
     private final RequestHelper[] miruReaders;
-    private final MiruActivityPayloads activityPayloads;
+    private final MiruStumptownPayloads payloads;
 
     public StumptownQueryPluginRegion(String template,
         MiruSoyRenderer renderer,
         RequestHelper[] miruReaders,
-        MiruActivityPayloads activityPayloads) {
+        MiruStumptownPayloads payloads) {
+
         this.template = template;
         this.renderer = renderer;
         this.miruReaders = miruReaders;
-        this.activityPayloads = activityPayloads;
+        this.payloads = payloads;
     }
 
     public static class StumptownPluginRegionInput {
@@ -214,7 +215,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                                     stumptownFilters),
                                 MiruSolutionLogLevel.INFO), //TODO MiruSolutionLogLevel.valueOf(input.solutionLogLevel)),
                             StumptownConstants.STUMPTOWN_PREFIX + StumptownConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                            new Class[] { StumptownAnswer.class },
+                            new Class[]{StumptownAnswer.class},
                             null);
                         response = analyticsResponse;
                         if (response != null && response.answer != null) {
@@ -223,7 +224,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                             log.warn("Empty stumptown response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed stumptown request to {}, trying another", new Object[] { requestHelper }, e);
+                        log.warn("Failed stumptown request to {}, trying another", new Object[]{requestHelper}, e);
                     }
                 }
 
@@ -248,12 +249,12 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                             activityTimes.add(activity.time);
                         }
                     }
-                    List<MiruLogEvent> logEvents = activityPayloads.multiGet(tenantId, activityTimes, MiruLogEvent.class);
+                    List<MiruLogEvent> logEvents = payloads.multiGet(tenantId, activityTimes, MiruLogEvent.class);
                     /*
-                    List<MiruLogEvent> logEvents = Arrays.asList(
-                        new MiruLogEvent("dc", "clu", "host", "serv", "inst", "ver", "INFO", "t-1", "c.m.j.s.Class", "hello",
-                            String.valueOf(System.currentTimeMillis()), new String[] { "a", "b", "c" }));
-                    */
+                     List<MiruLogEvent> logEvents = Arrays.asList(
+                     new MiruLogEvent("dc", "clu", "host", "serv", "inst", "ver", "INFO", "t-1", "c.m.j.s.Class", "hello",
+                     String.valueOf(System.currentTimeMillis()), new String[] { "a", "b", "c" }));
+                     */
                     data.put("events", Lists.transform(logEvents, new Function<MiruLogEvent, Map<String, Object>>() {
                         @Override
                         public Map<String, Object> apply(MiruLogEvent input) {
@@ -269,8 +270,8 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                                 .put("loggerName", firstNonNull(input.loggerName, ""))
                                 .put("message", firstNonNull(input.message, ""))
                                 .put("timestamp", input.timestamp != null
-                                    ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
-                                    : "")
+                                        ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
+                                        : "")
                                 .put("thrownStackTrace", input.thrownStackTrace != null ? Arrays.asList(input.thrownStackTrace) : Arrays.asList())
                                 .build();
                         }
