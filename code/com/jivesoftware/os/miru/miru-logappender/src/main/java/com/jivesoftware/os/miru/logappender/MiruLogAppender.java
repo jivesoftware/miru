@@ -151,12 +151,18 @@ public class MiruLogAppender implements Appender {
             return null;
         }
 
-        StackTraceElement[] elements = throwable.getStackTrace();
-        String[] stackTrace = new String[elements.length];
-        for (int i = 0; i < elements.length; i++) {
-            stackTrace[i] = elements[i].toString();
+        List<String> stackTrace = new ArrayList<>();
+        stackTrace.add(throwable.getClass().getCanonicalName() + ": " + throwable.getMessage());
+        while (throwable != null) {
+            for (StackTraceElement element : throwable.getStackTrace()) {
+                stackTrace.add(element.toString());
+            }
+            throwable = throwable.getCause();
+            if (throwable != null) {
+                stackTrace.add("Caused by: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage());
+            }
         }
-        return stackTrace;
+        return stackTrace.toArray(new String[stackTrace.size()]);
     }
 
     @Override

@@ -156,7 +156,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
 
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
-                    data.put("count", response.answer.results);
+                    data.put("count", response.answer.results.size());
                     data.put("distincts", response.answer.results.subList(0, Math.min(1_000, response.answer.results.size())));
 
                     ObjectMapper mapper = new ObjectMapper();
@@ -182,7 +182,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
         for (String filterString : filtersArray) {
             String[] filterTokens = filterString.trim().split(":");
             String fieldName = filterTokens[0].trim();
-            String[] values = filterTokens[1].split("\\s*|\\s*");
+            String[] values = filterTokens[1].split("\\s*\\|\\s*");
             fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, Arrays.asList(values)));
         }
 
