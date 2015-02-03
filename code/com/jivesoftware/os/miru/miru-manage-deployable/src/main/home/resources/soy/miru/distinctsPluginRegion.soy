@@ -1,22 +1,24 @@
 {namespace soy.miru.page}
 
 /**
- * Analytics plugin page
+ * Distincts plugin page
  *
  * @param? logLevel
  * @param? tenant
  * @param? fromHoursAgo
  * @param? toHoursAgo
- * @param? buckets
- * @param? activityTypes
- * @param? users
- * @param? waveform
+ * @param? field
+ * @param? types
+ * @param? filters
+ * @param? maxCount
+ * @param? count
+ * @param? distincts
  * @param? summary
  * @param? elapse
  */
-{template .analyticsPluginRegion}
+{template .distinctsPluginRegion}
     <div class="panel panel-default">
-        <div class="panel-heading">Analytics</div>
+        <div class="panel-heading">Distincts</div>
         <div class="panel-body">
             <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
                 data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
@@ -47,41 +49,51 @@
                     <tr>
                         <td>From Hours Ago</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromHoursAgo?:''}"
-                            name="fromHoursAgo" id="fromHoursPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Hours Ago" value="{$fromHoursAgo?:''}"
+                                name="fromHoursAgo" id="fromHoursPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
                         <td>To Hours Ago</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toHoursAgo?:''}"
-                            name="toHoursAgo" id="toHoursPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Hours Ago" value="{$toHoursAgo?:''}"
+                                name="toHoursAgo" id="toHoursPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
-                        <td>Buckets</td>
+                        <td>Field</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
-                            name="buckets" id="bucketsPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-field-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field" value="{$field?:''}"
+                                name="field" id="fieldPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
-                        <td>Activity Types</td>
+                        <td>Types</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-activityTypes-autocomplete j-autocomplete-input j-ui-elem" placeholder="Activity Types" value="{$activityTypes?:''}"
-                            name="activityTypes" id="activityTypesPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-types-autocomplete j-autocomplete-input j-ui-elem" placeholder="Types" value="{$types?:''}"
+                                name="types" id="typesPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
-                        <td>User IDs</td>
+                        <td>Filters</td>
                         <td>
-                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-users-autocomplete j-autocomplete-input j-ui-elem" placeholder="User IDs" value="{$users?:''}"
-                            name="users" id="usersPicker" data-original-title="" title="">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-filters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Filters" value="{$filters?:''}"
+                                name="filters" id="filtersPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. activityType:0|1|2, authors:3765)</em>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Max Count</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-maxCount-autocomplete j-autocomplete-input j-ui-elem" placeholder="Max Count" value="{$maxCount?:''}"
+                                name="maxCount" id="maxCountPicker" data-original-title="" title="">
                         </td>
                     </tr>
                 </table>
@@ -89,11 +101,19 @@
             </form>
         </div>
     </div>
-    {if $waveform}
+    {if $distincts}
         <div class="panel panel-default">
-            <div class="panel-heading">Waveform</div>
+            <div class="panel-heading">Distincts</div>
             <div class="panel-body">
-                <img alt="waveform" src="{$waveform}">
+                {if $count > 0}
+                    Showing first {$maxCount} of {$count} distincts:<br/>
+                {/if}
+                {foreach $d in $distincts}
+                    {if not isFirst($d)}, {/if}
+                    {$d}
+                {ifempty}
+                    No distincts found
+                {/foreach}
             </div>
         </div>
     {/if}

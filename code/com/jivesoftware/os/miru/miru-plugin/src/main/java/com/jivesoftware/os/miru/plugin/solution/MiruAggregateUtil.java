@@ -183,6 +183,12 @@ public class MiruAggregateUtil {
                                 considerIfIndexIdGreaterThanN);
                             Optional<BM> index = got.getIndex();
                             if (index.isPresent()) {
+                                if (filter.operation == MiruFilterOperation.and && bitmaps.isEmpty(index.get())) {
+                                    // implicitly empty results, "and" operation would also be empty
+                                    solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: short circuit to 'and' empty bitmap after {} millis.",
+                                        System.currentTimeMillis() - start);
+                                    return;
+                                }
                                 fieldBitmaps.add(index.get());
                             }
                         }

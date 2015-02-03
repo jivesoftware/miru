@@ -34,6 +34,7 @@ import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
+import com.jivesoftware.os.miru.manage.deployable.region.DistinctsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginEndpoints;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion;
@@ -132,6 +133,10 @@ public class MiruManageMain {
         ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper);
 
         List<MiruManagePlugin> plugins = Lists.newArrayList(
+            new MiruManagePlugin("Distincts",
+                "/miru/manage/distincts",
+                DistinctsPluginEndpoints.class,
+                new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
             new MiruManagePlugin("Analytics",
                 "/miru/manage/analytics",
                 AnalyticsPluginEndpoints.class,
