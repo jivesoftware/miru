@@ -109,7 +109,7 @@ public class MiruStumptownInternalLogAppender implements Appender {
         if (!isStarted()) {
             throw new IllegalStateException("MiruLogAppender " + getName() + " is not active");
         } else {
-            for(StackTraceElement traceElement:Thread.currentThread().getStackTrace()) {
+            for (StackTraceElement traceElement : Thread.currentThread().getStackTrace()) {
                 // Kills recusive logging problem.
                 if (traceElement.getClassName().endsWith("MiruStumptownIntakeService")) {
                     return;
