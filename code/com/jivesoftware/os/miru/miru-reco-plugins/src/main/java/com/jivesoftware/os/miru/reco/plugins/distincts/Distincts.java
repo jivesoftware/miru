@@ -49,7 +49,7 @@ public class Distincts {
         final List<String> results = Lists.newArrayList();
         if (MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             List<KeyRange> ranges = null;
-            if (request.query.prefixes != null) {
+            if (request.query.prefixes != null && !request.query.prefixes.isEmpty()) {
                 ranges = Lists.newArrayListWithCapacity(request.query.prefixes.size());
                 for (String prefix : request.query.prefixes) {
                     ranges.add(new KeyRange(

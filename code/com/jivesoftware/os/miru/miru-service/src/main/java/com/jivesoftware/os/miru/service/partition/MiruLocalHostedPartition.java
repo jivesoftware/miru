@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.mlogger.core.ValueType;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -702,6 +703,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             long suggestedTimestamp = sipTracker.suggestTimestamp(afterTimestamp);
             if (accessor.setSipTimestamp(suggestedTimestamp)) {
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
+                log.set(ValueType.COUNT, "sipTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, suggestedTimestamp);
             }
 
             log.inc("sip>count>calls", 1);

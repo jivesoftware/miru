@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.mlogger.core.ValueType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -200,6 +201,14 @@ public class MiruPartitionAccessor<BM> {
                 } else {
                     indexRepairs.current(strategy, coord);
                 }
+
+                if (context.isPresent()) {
+                    MiruContext<BM> got = context.get();
+                    log.set(ValueType.COUNT, "lastId>tenant>" + coord.tenantId + ">partition>" + coord.partitionId,
+                        got.activityIndex.lastId());
+                    log.set(ValueType.COUNT, "largestTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId,
+                        got.timeIndex.getLargestTimestamp());
+                }
             }
         } finally {
             semaphore.release();
@@ -233,9 +242,6 @@ public class MiruPartitionAccessor<BM> {
             for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
                 MiruActivity activity = partitionedActivity.activity.get();
                 activityTimes.add(activity.time);
-//                if (!timeIndex.contains(activity.time)) {
-//                    passed.add(activity);
-//                }
             }
 
             List<MiruActivity> passed = new ArrayList<>();
@@ -257,7 +263,7 @@ public class MiruPartitionAccessor<BM> {
                 }
             }
 
-            partitionedActivities.clear(); // The frees up the MiruPartitionedActivity to be garbage collected.
+            partitionedActivities.clear(); // This frees up the MiruPartitionedActivity to be garbage collected.
             if (!indexables.isEmpty()) {
                 indexer.index(context.get(), indexables, indexExecutor);
                 activityCount = indexables.size();
