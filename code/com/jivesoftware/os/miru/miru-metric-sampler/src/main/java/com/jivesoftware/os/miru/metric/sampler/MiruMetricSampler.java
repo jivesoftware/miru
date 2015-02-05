@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.metric.sampler;
 
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent.MetricKey;
 import com.jivesoftware.os.mlogger.core.AtomicCounter;
 import com.jivesoftware.os.mlogger.core.Counter;
 import com.jivesoftware.os.mlogger.core.CountersAndTimers;
@@ -8,9 +7,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.Timer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -98,18 +95,18 @@ public class MiruMetricSampler implements Runnable {
     }
 
     private MiruMetricSampleEvent sample() {
-        Map<MetricKey, Long> metricAndValue = new HashMap<>();
+        List<Metric> metrics = new ArrayList<>();
         for (CountersAndTimers a : CountersAndTimers.getAll()) {
             for (Entry<String, Counter> counter : a.getCounters()) {
-                metricAndValue.put(new MetricKey(a.getLoggerName(), counter.getKey().split("\\>"), "timer"), counter.getValue().getCount());
+                metrics.add(new Metric(a.getLoggerName(), counter.getKey().split("\\>"), "timer", counter.getValue().getCount()));
             }
 
             for (Entry<String, AtomicCounter> atomicCounter : a.getAtomicCounters()) {
-                metricAndValue.put(new MetricKey(a.getLoggerName(), atomicCounter.getKey().split("\\>"), "atomicCounter"), atomicCounter.getValue().getCount());
+                metrics.add(new Metric(a.getLoggerName(), atomicCounter.getKey().split("\\>"), "atomicCounter", atomicCounter.getValue().getCount()));
             }
 
             for (Entry<String, Timer> timers : a.getTimers()) {
-                metricAndValue.put(new MetricKey(a.getLoggerName(), timers.getKey().split("\\>"), "timer"), timers.getValue().getLastSample());
+                metrics.add(new Metric(a.getLoggerName(), timers.getKey().split("\\>"), "timer", timers.getValue().getLastSample()));
             }
         }
         MiruMetricSampleEvent sample = new MiruMetricSampleEvent(datacenter,
@@ -118,7 +115,7 @@ public class MiruMetricSampler implements Runnable {
             service,
             instance,
             version,
-            metricAndValue,
+            metrics,
             String.valueOf(System.currentTimeMillis()));
         return sample;
     }

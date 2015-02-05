@@ -21,11 +21,10 @@ import com.google.common.collect.Table;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.metric.sampler.Metric;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent;
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent.MetricKey;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Objects.firstNonNull;
@@ -44,7 +43,7 @@ public class SampleTrawl {
     }
 
     MiruActivity trawl(MiruTenantId tenantId, MiruMetricSampleEvent event) {
-        if (event.metricAndValue.isEmpty()) {
+        if (event.metrics.isEmpty()) {
             return null;
         }
 
@@ -68,23 +67,21 @@ public class SampleTrawl {
         List<String> samplers = new ArrayList<>();
         List<String> tags = new ArrayList<>();
         List<String> types = new ArrayList<>();
-        for (Entry<MetricKey, Long> metric : event.metricAndValue.entrySet()) {
-            MetricKey key = metric.getKey();
-            Long value = metric.getValue();
-            String metricName = key.sampler + " " + Joiner.on(">").join(key.path) + " " + key.type;
+        for (Metric metric : event.metrics) {
+            String metricName = metric.sampler + " " + Joiner.on(">").join(metric.path) + " " + metric.type;
             metrics.add(metricName);
             for (int i = 0; i < 64; i++) {
-                if (((value >> i) & 1) != 0) {
+                if (((metric.value >> i) & 1) != 0) {
                     bits.add(metricName + "-" + i);
                 }
             }
 
-            for (String tag : metric.getKey().path) {
+            for (String tag : metric.path) {
                 tags.add(tag + ":" + metricName);
             }
 
-            samplers.add(key.sampler + ":" + metricName);
-            types.add(key.type + ":" + metricName);
+            samplers.add(metric.sampler + ":" + metricName);
+            types.add(metric.type + ":" + metricName);
 
         }
 
