@@ -33,7 +33,7 @@ public class MiruSeaAnomalyIntakeInitializer {
     }
 
     MiruSeaAnomalyIntakeService initialize(MiruSeaAnomalyIntakeConfig config,
-        SampleMill logMill,
+        SampleTrawl logMill,
         RequestHelper[] miruWrites,
         RequestHelper[] miruReaders,
         MiruSeaAnomalyPayloads activityPayloads) {

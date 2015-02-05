@@ -57,13 +57,13 @@ public class MiruSeaAnomalyIntakeService {
 
     private final Random rand = new Random();
     private final SeaAnomalySchemaService seaAnomalySchemaService;
-    private final SampleMill logMill;
+    private final SampleTrawl logMill;
     private final String miruIngressEndpoint;
     private final RequestHelper[] miruWriter;
     private final MiruSeaAnomalyPayloads payloads;
 
     public MiruSeaAnomalyIntakeService(SeaAnomalySchemaService seaAnomalySchemaService,
-        SampleMill logMill,
+        SampleTrawl logMill,
         String miruIngressEndpoint,
         RequestHelper[] miruWrites,
         MiruSeaAnomalyPayloads payloads) {
@@ -80,14 +80,18 @@ public class MiruSeaAnomalyIntakeService {
         for (MiruMetricSampleEvent logEvent : events) {
             MiruTenantId tenantId = SeaAnomalySchemaConstants.TENANT_ID;
             seaAnomalySchemaService.ensureSchema(tenantId, SeaAnomalySchemaConstants.SCHEMA);
-            MiruActivity activity = logMill.mill(tenantId, logEvent);
-            activities.add(activity);
-            timedLogEvents.add(new MiruSeaAnomalyPayloads.TimeAndPayload<>(activity.time, logEvent));
+            MiruActivity activity = logMill.trawl(tenantId, logEvent);
+            if (activity != null) {
+                activities.add(activity);
+                timedLogEvents.add(new MiruSeaAnomalyPayloads.TimeAndPayload<>(activity.time, logEvent));
+            }
         }
-        ingress(activities);
-        record(timedLogEvents);
-        log.inc("ingressed", timedLogEvents.size());
-        log.info("Ingressed " + timedLogEvents.size());
+        if (!activities.isEmpty()) {
+            ingress(activities);
+            record(timedLogEvents);
+            log.inc("ingressed", timedLogEvents.size());
+            log.info("Ingressed " + timedLogEvents.size());
+        }
     }
 
     private void ingress(List<MiruActivity> activities) {

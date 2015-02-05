@@ -106,7 +106,7 @@ public class MiruSeaAnomalyMain {
         RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruReaderHosts(), mapper);
         RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruWriterHosts(), mapper);
 
-        SampleMill logMill = new SampleMill(orderIdProvider);
+        SampleTrawl logMill = new SampleTrawl(orderIdProvider);
 
         MiruSeaAnomalyIntakeConfig intakeConfig = deployable.config(MiruSeaAnomalyIntakeConfig.class);
         MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,

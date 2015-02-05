@@ -15,12 +15,17 @@
  */
 package com.jivesoftware.os.miru.sea.anomaly.deployable;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent.MetricKey;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Objects.firstNonNull;
@@ -28,17 +33,21 @@ import static com.google.common.base.Objects.firstNonNull;
 /**
  * @author jonathan.colt
  */
-public class SampleMill {
+public class SampleTrawl {
 
     private final OrderIdProvider idProvider;
 
-    public final Table<ServiceId, String, AtomicLong> levelCounts = HashBasedTable.create();
+    public final Table<ServiceId, String, AtomicLong> trawled = HashBasedTable.create();
 
-    public SampleMill(OrderIdProvider idProvider) {
+    public SampleTrawl(OrderIdProvider idProvider) {
         this.idProvider = idProvider;
     }
 
-    MiruActivity mill(MiruTenantId tenantId, MiruMetricSampleEvent event) {
+    MiruActivity trawl(MiruTenantId tenantId, MiruMetricSampleEvent event) {
+        if (event.metricAndValue.isEmpty()) {
+            return null;
+        }
+
         ServiceId serviceId = new ServiceId(
             firstNonNull(event.datacenter, "unknown"),
             firstNonNull(event.cluster, "unknown"),
@@ -47,12 +56,37 @@ public class SampleMill {
             firstNonNull(event.instance, "unknown"),
             firstNonNull(event.version, "unknown"));
 
-        AtomicLong levelCount = levelCounts.get(serviceId, "Sample");
+        AtomicLong levelCount = trawled.get(serviceId, "sample");
         if (levelCount == null) {
             levelCount = new AtomicLong();
-            levelCounts.put(serviceId, "Sample", levelCount);
+            trawled.put(serviceId, "sample", levelCount);
         }
         levelCount.incrementAndGet();
+
+        List<String> metrics = new ArrayList<>();
+        List<String> bits = new ArrayList<>();
+        List<String> samplers = new ArrayList<>();
+        List<String> tags = new ArrayList<>();
+        List<String> types = new ArrayList<>();
+        for (Entry<MetricKey, Long> metric : event.metricAndValue.entrySet()) {
+            MetricKey key = metric.getKey();
+            Long value = metric.getValue();
+            String metricName = key.sampler + " " + Joiner.on(">").join(key.path) + " " + key.type;
+            metrics.add(metricName);
+            for (int i = 0; i < 64; i++) {
+                if (((value >> i) & 1) != 0) {
+                    bits.add(metricName + "-" + i);
+                }
+            }
+
+            for (String tag : metric.getKey().path) {
+                tags.add(tag + ":" + metricName);
+            }
+
+            samplers.add(key.sampler + ":" + metricName);
+            types.add(key.type + ":" + metricName);
+
+        }
 
         return new MiruActivity.Builder(tenantId, idProvider.nextId(), new String[0], 0)
             .putFieldValue("datacenter", firstNonNull(event.datacenter, "unknown"))
@@ -61,7 +95,11 @@ public class SampleMill {
             .putFieldValue("service", firstNonNull(event.service, "unknown"))
             .putFieldValue("instance", firstNonNull(event.instance, "unknown"))
             .putFieldValue("version", firstNonNull(event.version, "unknown"))
-            //.putAllFieldValues("metrics", tokenize(event.message))
+            .putAllFieldValues("samplers", samplers)
+            .putAllFieldValues("metrics", metrics)
+            .putAllFieldValues("bits", bits)
+            .putAllFieldValues("tags", tags)
+            .putAllFieldValues("types", types)
             .putFieldValue("timestamp", firstNonNull(event.timestamp, "unknown"))
             .build();
     }

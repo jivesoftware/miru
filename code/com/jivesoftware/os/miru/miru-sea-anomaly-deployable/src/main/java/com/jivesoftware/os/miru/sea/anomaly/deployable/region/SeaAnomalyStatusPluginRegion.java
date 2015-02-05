@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.sea.anomaly.deployable.region;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.SampleMill;
+import com.jivesoftware.os.miru.sea.anomaly.deployable.SampleTrawl;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.ServiceId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -23,11 +23,11 @@ public class SeaAnomalyStatusPluginRegion implements PageRegion<Optional<SeaAnom
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final SampleMill logMill;
+    private final SampleTrawl logMill;
 
     public SeaAnomalyStatusPluginRegion(String template,
         MiruSoyRenderer renderer,
-        SampleMill logMill) {
+        SampleTrawl logMill) {
         this.template = template;
         this.renderer = renderer;
         this.logMill = logMill;
@@ -58,7 +58,7 @@ public class SeaAnomalyStatusPluginRegion implements PageRegion<Optional<SeaAnom
                 SeaAnomalyStatusPluginRegionInput input = optionalInput.get();
 
                 List<Map<String, String>> rows = new ArrayList<>();
-                Map<ServiceId, Map<String, AtomicLong>> rowMap = logMill.levelCounts.rowMap();
+                Map<ServiceId, Map<String, AtomicLong>> rowMap = logMill.trawled.rowMap();
                 for (ServiceId serviceId : rowMap.keySet()) {
 
                     Map<String, String> status = new HashMap<>();

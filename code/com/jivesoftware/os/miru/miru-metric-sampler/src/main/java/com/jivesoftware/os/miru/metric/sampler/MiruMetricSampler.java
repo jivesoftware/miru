@@ -74,8 +74,6 @@ public class MiruMetricSampler implements Runnable {
     @Override
     public void run() {
 
-        MiruMetricSampleEvent miruLogEvent = sample();
-
         List<MiruMetricSampleEvent> samples = new ArrayList<>();
 
         while (running.get()) {
@@ -110,7 +108,7 @@ public class MiruMetricSampler implements Runnable {
                 metricAndValue.put(new MetricKey(a.getLoggerName(), timers.getKey().split("\\>"), "timer"), timers.getValue().getLastSample());
             }
         }
-        MiruMetricSampleEvent miruLogEvent = new MiruMetricSampleEvent(datacenter,
+        MiruMetricSampleEvent sample = new MiruMetricSampleEvent(datacenter,
             cluster,
             host,
             service,
@@ -118,7 +116,7 @@ public class MiruMetricSampler implements Runnable {
             version,
             metricAndValue,
             String.valueOf(System.currentTimeMillis()));
-        return miruLogEvent;
+        return sample;
     }
 
     private void send(List<MiruMetricSampleEvent> samples) {
