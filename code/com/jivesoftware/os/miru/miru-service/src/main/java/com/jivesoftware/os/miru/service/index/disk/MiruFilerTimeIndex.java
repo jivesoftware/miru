@@ -233,12 +233,15 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
 
         try {
             final TLongList monotonicTimestamps = new TLongArrayList(timestamps.length);
+            int firstId = id.get() + 1;
+            int lastId = -1;
             for (int i = 0; i < timestamps.length; i++) {
                 long timestamp = timestamps[i];
                 if (timestamp == -1) {
                     nextIds[i] = -1;
                 } else {
                     nextIds[i] = id.incrementAndGet();
+                    lastId = nextIds[i];
 
                     if (smallestTimestamp == Long.MAX_VALUE) {
                         smallestTimestamp = timestamp;
@@ -260,43 +263,46 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                 }
             }
 
-            final int lastId = nextIds[nextIds.length - 1];
-            final long longs = (lastId + 1) * timestampSize;
+            if (!monotonicTimestamps.isEmpty()) {
+                long longs = (lastId + 1) * timestampSize;
+                final int _firstId = firstId;
+                final int _lastId = lastId;
 
-            //TODO we should be concerned about potential corruption with failures during readWriteAutoGrow
-            filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, new FilerTransaction<Filer, Void>() {
-                @Override
-                public Void commit(Object lock, Filer filer) throws IOException {
-                    synchronized (lock) {
-                        filer.seek(0);
-                        FilerIO.writeInt(filer, lastId, "int");
-                        FilerIO.writeLong(filer, smallestTimestamp, "smallestTimestamp");
-                        FilerIO.writeLong(filer, largestTimestamp, "largestTimestamp");
-                        timestampsLength = lastId + 1;
-                        FilerIO.writeInt(filer, timestampsLength, "timestampsLength");
+                //TODO we should be concerned about potential corruption with failures during readWriteAutoGrow
+                filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, new FilerTransaction<Filer, Void>() {
+                    @Override
+                    public Void commit(Object lock, Filer filer) throws IOException {
+                        synchronized (lock) {
+                            filer.seek(0);
+                            FilerIO.writeInt(filer, _lastId, "int");
+                            FilerIO.writeLong(filer, smallestTimestamp, "smallestTimestamp");
+                            FilerIO.writeLong(filer, largestTimestamp, "largestTimestamp");
+                            timestampsLength = _lastId + 1;
+                            FilerIO.writeInt(filer, timestampsLength, "timestampsLength");
 
-                        filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + (nextIds[0] * timestampSize));
-                        TLongIterator iter = monotonicTimestamps.iterator();
-                        while (iter.hasNext()) {
-                            FilerIO.writeLong(filer, iter.next(), "long");
+                            filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + (_firstId * timestampSize));
+                            TLongIterator iter = monotonicTimestamps.iterator();
+                            while (iter.hasNext()) {
+                                FilerIO.writeLong(filer, iter.next(), "long");
+                            }
+
+                            segmentForSearch(filer, searchIndexSizeInBytes, searchIndexLevels, searchIndexSegments, HEADER_SIZE_IN_BYTES, 0, _lastId + 1);
                         }
-
-                        segmentForSearch(filer, searchIndexSizeInBytes, searchIndexLevels, searchIndexSegments, HEADER_SIZE_IN_BYTES, 0, lastId + 1);
+                        return null;
                     }
-                    return null;
-                }
-            });
-            for (int i = 0; i < nextIds.length; i++) {
-                if (timestamps[i] != -1) {
-                    final int nextId = nextIds[i];
-                    // TODO would be nice to batch here :)
-                    timestampToIndex.execute(timestamps[i], true, new KeyValueTransaction<Integer, Void>() {
-                        @Override
-                        public Void commit(KeyValueContext<Integer> keyValueContext) throws IOException {
-                            keyValueContext.set(nextId);
-                            return null;
-                        }
-                    });
+                });
+                for (int i = 0; i < nextIds.length; i++) {
+                    if (timestamps[i] != -1) {
+                        final int nextId = nextIds[i];
+                        // TODO would be nice to batch here :)
+                        timestampToIndex.execute(timestamps[i], true, new KeyValueTransaction<Integer, Void>() {
+                            @Override
+                            public Void commit(KeyValueContext<Integer> keyValueContext) throws IOException {
+                                keyValueContext.set(nextId);
+                                return null;
+                            }
+                        });
+                    }
                 }
             }
 

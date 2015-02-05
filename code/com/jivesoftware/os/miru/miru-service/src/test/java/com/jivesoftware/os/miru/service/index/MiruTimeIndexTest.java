@@ -20,7 +20,7 @@ import static org.testng.Assert.assertTrue;
 public class MiruTimeIndexTest {
 
     private final MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
-    private final MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+    private final MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
     private final MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
     private final int numberOfChunkStores = 4;
 
@@ -94,6 +94,50 @@ public class MiruTimeIndexTest {
         assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(6), 9);
     }
 
+    @Test(dataProvider = "miruTimeIndexDataProviderWithoutData")
+    public void testPartiallyPresentBatchIds(MiruTimeIndex miruTimeIndex) throws Exception {
+        boolean[] contains = miruTimeIndex.contains(Arrays.asList(10L, 20L, 30L, 40L));
+        for (boolean contained : contains) {
+            assertFalse(contained);
+        }
+
+        int[] ids = miruTimeIndex.nextId(10L, 20L, 30L, 40L);
+        for (int i = 0; i < ids.length; i++) {
+            assertEquals(ids[i], i);
+            assertEquals(miruTimeIndex.getExactId((i + 1) * 10), ids[i]);
+        }
+
+        assertEquals(miruTimeIndex.getSmallestTimestamp(), 10L);
+        assertEquals(miruTimeIndex.getLargestTimestamp(), 40L);
+
+        contains = miruTimeIndex.contains(Arrays.asList(30L, 35L, 40L, 45L));
+        for (int i = 0; i < contains.length; i++) {
+            if (i % 2 == 1) {
+                assertFalse(contains[i]);
+            } else {
+                assertTrue(contains[i]);
+            }
+        }
+
+        ids = miruTimeIndex.nextId(-1L, 35L, -1L, 45L);
+        for (int i = 0; i < ids.length; i++) {
+            if (i % 2 == 1) {
+                assertEquals(ids[i], 4 + i / 2);
+            } else {
+                assertEquals(ids[i], -1);
+            }
+        }
+
+        assertEquals(miruTimeIndex.getSmallestTimestamp(), 10L);
+        assertEquals(miruTimeIndex.getLargestTimestamp(), 45L);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(10L), 0);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(12L), 1);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(40L), 5);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(5L), -1);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(42L), 4);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(45L), 5);
+    }
+
     /*
      SSD:
 
@@ -139,8 +183,8 @@ public class MiruTimeIndexTest {
     @Test
     public void testPerformance() throws Exception {
         DecimalFormat formatter = new DecimalFormat("###,###,###");
-        int[] tryLevels = new int[]{3}; //{2, 3, 4, 5};
-        int[] trySegments = new int[]{16}; //{4, 16, 32};
+        int[] tryLevels = new int[] { 3 }; //{2, 3, 4, 5};
+        int[] trySegments = new int[] { 16 }; //{4, 16, 32};
         int capacity = 100; //1_000_000;
         long start;
 
@@ -178,6 +222,26 @@ public class MiruTimeIndexTest {
         }
     }
 
+    @DataProvider(name = "miruTimeIndexDataProviderWithoutData")
+    public Object[][] miruTimeIndexDataProviderWithoutData() throws Exception {
+        try {
+            // Set up and import in-memory implementation
+            MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
+
+            // Set up and import on-disk implementation
+            MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
+
+            return new Object[][] {
+                { miruInMemoryTimeIndex },
+                { miruOnDiskTimeIndex }
+            };
+        } catch (Exception x) {
+            System.out.println("Your data provider is hosed!");
+            x.printStackTrace();
+            return null;
+        }
+    }
+
     @DataProvider(name = "miruTimeIndexDataProviderWithData")
     public Object[][] miruTimeIndexDataProviderWithData() throws Exception {
         try {
@@ -200,9 +264,9 @@ public class MiruTimeIndexTest {
                 miruOnDiskTimeIndex.nextId(timestamp);
             }
 
-            return new Object[][]{
-                {miruInMemoryTimeIndex, capacity},
-                {miruOnDiskTimeIndex, capacity}
+            return new Object[][] {
+                { miruInMemoryTimeIndex, capacity },
+                { miruOnDiskTimeIndex, capacity }
             };
         } catch (Exception x) {
             System.out.println("Your data provider is hosed!");
@@ -217,7 +281,7 @@ public class MiruTimeIndexTest {
             // Set up and import in-memory implementation
             MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
 
-            final long[] importValues = {1, 1, 1, 3, 3, 3, 5, 5, 5};
+            final long[] importValues = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
 
             for (long timestamp : importValues) {
                 miruInMemoryTimeIndex.nextId(timestamp);
@@ -229,9 +293,9 @@ public class MiruTimeIndexTest {
                 miruOnDiskTimeIndex.nextId(timestamp);
             }
 
-            return new Object[][]{
-                {miruInMemoryTimeIndex},
-                {miruOnDiskTimeIndex}
+            return new Object[][] {
+                { miruInMemoryTimeIndex },
+                { miruOnDiskTimeIndex }
             };
         } catch (Exception x) {
             System.out.println("Your data provider is hosed!");
