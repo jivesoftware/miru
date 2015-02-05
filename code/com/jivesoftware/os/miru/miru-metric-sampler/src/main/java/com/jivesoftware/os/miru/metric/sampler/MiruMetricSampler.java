@@ -75,52 +75,77 @@ public class MiruMetricSampler implements Runnable {
     @Override
     public void run() {
 
-        List<MiruMetricSampleEvent> samples = new ArrayList<>();
+        List<AnomalyMetric> samples = new ArrayList<>();
 
         while (running.get()) {
-            samples.add(sample());
-            while (samples.size() > maxBacklog) {
-                samples.remove(0);
-            }
+            samples.addAll(sample());
             send(samples);
             try {
+                samples.clear();
                 Thread.sleep(sampleIntervalInMillis); // expose to config
             } catch (InterruptedException e) {
                 log.warn("Sender was interrupted while sleeping due to errors");
                 Thread.interrupted();
                 break;
             }
+
         }
 
     }
 
-    private MiruMetricSampleEvent sample() {
-        List<Metric> metrics = new ArrayList<>();
+    private List<AnomalyMetric> sample() {
+        String time = String.valueOf(System.currentTimeMillis());
+        List<AnomalyMetric> metrics = new ArrayList<>();
         for (CountersAndTimers a : CountersAndTimers.getAll()) {
             for (Entry<String, Counter> counter : a.getCounters()) {
-                metrics.add(new Metric(a.getLoggerName(), counter.getKey().split("\\>"), "timer", counter.getValue().getCount()));
+                metrics.add(new AnomalyMetric(
+                    datacenter,
+                    cluster,
+                    host,
+                    service,
+                    instance,
+                    version,
+                    a.getLoggerName(),
+                    counter.getKey().split("\\>"),
+                    "timer",
+                    counter.getValue().getCount(),
+                    time));
             }
 
             for (Entry<String, AtomicCounter> atomicCounter : a.getAtomicCounters()) {
-                metrics.add(new Metric(a.getLoggerName(), atomicCounter.getKey().split("\\>"), "atomicCounter", atomicCounter.getValue().getCount()));
+                metrics.add(new AnomalyMetric(
+                    datacenter,
+                    cluster,
+                    host,
+                    service,
+                    instance,
+                    version,
+                    a.getLoggerName(),
+                    atomicCounter.getKey().split("\\>"),
+                    "atomicCounter",
+                    atomicCounter.getValue().getCount(),
+                    time));
             }
 
             for (Entry<String, Timer> timers : a.getTimers()) {
-                metrics.add(new Metric(a.getLoggerName(), timers.getKey().split("\\>"), "timer", timers.getValue().getLastSample()));
+                metrics.add(new AnomalyMetric(
+                    datacenter,
+                    cluster,
+                    host,
+                    service,
+                    instance,
+                    version,
+                    a.getLoggerName(),
+                    timers.getKey().split("\\>"),
+                    "timer",
+                    timers.getValue().getLastSample(),
+                    time));
             }
         }
-        MiruMetricSampleEvent sample = new MiruMetricSampleEvent(datacenter,
-            cluster,
-            host,
-            service,
-            instance,
-            version,
-            metrics,
-            String.valueOf(System.currentTimeMillis()));
-        return sample;
+        return metrics;
     }
 
-    private void send(List<MiruMetricSampleEvent> samples) {
+    private void send(List<AnomalyMetric> samples) {
         for (int tries = 0; tries < sender.length; tries++) {
             int i = 0;
             try {
@@ -129,7 +154,7 @@ public class MiruMetricSampler implements Runnable {
                 samples.clear();
                 return;
             } catch (Exception e) {
-                log.warn("Sampler:" + sender[i] + " failed to send:" + samples.size() + " samples.");
+                log.warn("Sampler:" + sender[i] + " failed to send:" + samples.size() + " samples.", e);
                 senderIndex.incrementAndGet();
             }
         }

@@ -84,7 +84,7 @@ public class HttpPoster implements MiruMetricSampleSender {
     }
 
     @Override
-    public void send(List<MiruMetricSampleEvent> events) throws Exception {
+    public void send(List<AnomalyMetric> events) throws Exception {
         if (socket == null) {
             connect();
         }

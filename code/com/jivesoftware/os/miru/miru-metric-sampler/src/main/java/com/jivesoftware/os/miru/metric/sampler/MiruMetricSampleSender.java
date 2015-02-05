@@ -22,5 +22,5 @@ import java.util.List;
  * @author jonathan.colt
  */
 public interface MiruMetricSampleSender {
-    void send(List<MiruMetricSampleEvent> events) throws Exception;
+    void send(List<AnomalyMetric> events) throws Exception;
 }

@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.sea.anomaly.deployable;
 
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent;
+import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -32,7 +32,7 @@ public class MiruSeaAnomalyIntakeEndpoints {
     @Path("/intake")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_HTML)
-    public Response intake(List<MiruMetricSampleEvent> events) throws Exception {
+    public Response intake(List<AnomalyMetric> events) throws Exception {
         try {
             intakeService.ingressEvents(events);
             return Response.ok().build();

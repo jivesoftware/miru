@@ -1,11 +1,9 @@
 package com.jivesoftware.os.miru.metric.sampler;
 
-import java.util.List;
-
 /**
  *
  */
-public class MiruMetricSampleEvent {
+public class AnomalyMetric {
 
     public String datacenter;
     public String cluster;
@@ -13,19 +11,25 @@ public class MiruMetricSampleEvent {
     public String service;
     public String instance;
     public String version;
-    public List<Metric> metrics;
+    public String sampler;
+    public String[] path;
+    public String type;
+    public long value;
     public String timestamp;
 
-    public MiruMetricSampleEvent() {
+    public AnomalyMetric() {
     }
 
-    public MiruMetricSampleEvent(String datacenter,
+    public AnomalyMetric(String datacenter,
         String cluster,
         String host,
         String service,
         String instance,
         String version,
-        List<Metric> metrics,
+        String sampler,
+        String[] path,
+        String type,
+        long value,
         String timestamp) {
         this.datacenter = datacenter;
         this.cluster = cluster;
@@ -33,7 +37,10 @@ public class MiruMetricSampleEvent {
         this.service = service;
         this.instance = instance;
         this.version = version;
-        this.metrics = metrics;
+        this.sampler = sampler;
+        this.path = path;
+        this.type = type;
+        this.value = value;
         this.timestamp = timestamp;
     }
 

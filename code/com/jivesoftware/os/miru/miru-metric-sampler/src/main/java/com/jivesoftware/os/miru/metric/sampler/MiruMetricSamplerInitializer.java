@@ -21,7 +21,7 @@ public class MiruMetricSamplerInitializer {
         @IntDefault(5_000)
         int getSampleIntervalInMillis();
 
-        @IntDefault(1000)
+        @IntDefault(100)
         int getMaxBacklog();
 
     }

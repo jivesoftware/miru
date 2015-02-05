@@ -23,7 +23,7 @@ import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent;
+import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.storage.MiruSeaAnomalyPayloads;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -74,10 +74,10 @@ public class MiruSeaAnomalyIntakeService {
         this.payloads = payloads;
     }
 
-    void ingressEvents(List<MiruMetricSampleEvent> events) throws Exception {
+    void ingressEvents(List<AnomalyMetric> events) throws Exception {
         List<MiruActivity> activities = Lists.newArrayListWithCapacity(events.size());
-        List<MiruSeaAnomalyPayloads.TimeAndPayload<MiruMetricSampleEvent>> timedLogEvents = Lists.newArrayListWithCapacity(events.size());
-        for (MiruMetricSampleEvent logEvent : events) {
+        List<MiruSeaAnomalyPayloads.TimeAndPayload<AnomalyMetric>> timedLogEvents = Lists.newArrayListWithCapacity(events.size());
+        for (AnomalyMetric logEvent : events) {
             MiruTenantId tenantId = SeaAnomalySchemaConstants.TENANT_ID;
             seaAnomalySchemaService.ensureSchema(tenantId, SeaAnomalySchemaConstants.SCHEMA);
             MiruActivity activity = logMill.trawl(tenantId, logEvent);
@@ -120,7 +120,7 @@ public class MiruSeaAnomalyIntakeService {
         }
     }
 
-    private void record(List<MiruSeaAnomalyPayloads.TimeAndPayload<MiruMetricSampleEvent>> timedEvents) throws Exception {
+    private void record(List<MiruSeaAnomalyPayloads.TimeAndPayload<AnomalyMetric>> timedEvents) throws Exception {
         payloads.multiPut(SeaAnomalySchemaConstants.TENANT_ID, timedEvents);
     }
 }

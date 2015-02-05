@@ -17,9 +17,9 @@ public class SeaAnomalySchemaConstants {
     private SeaAnomalySchemaConstants() {
     }
 
-    public static final MiruTenantId TENANT_ID = new MiruTenantId("seaAnomaly".getBytes(Charsets.UTF_8));
+    public static final MiruTenantId TENANT_ID = new MiruTenantId("sea-anomaly".getBytes(Charsets.UTF_8));
 
-    public static final MiruSchema SCHEMA = new MiruSchema.Builder("seaAnomaly", 2)
+    public static final MiruSchema SCHEMA = new MiruSchema.Builder("sea-anomaly", 2)
         .setFieldDefinitions(new MiruFieldDefinition[]{
             new MiruFieldDefinition(0, "datacenter", singleTerm, Prefix.NONE),
             new MiruFieldDefinition(1, "cluster", singleTerm, Prefix.NONE),
@@ -27,11 +27,11 @@ public class SeaAnomalySchemaConstants {
             new MiruFieldDefinition(3, "service", singleTerm, Prefix.WILDCARD),
             new MiruFieldDefinition(4, "instance", singleTerm, Prefix.NONE),
             new MiruFieldDefinition(5, "version", singleTerm, Prefix.NONE),
-            new MiruFieldDefinition(6, "samplers", singleTerm, Prefix.WILDCARD),
-            new MiruFieldDefinition(7, "metrics", singleTerm, Prefix.WILDCARD),
+            new MiruFieldDefinition(6, "sampler", singleTerm, Prefix.WILDCARD),
+            new MiruFieldDefinition(7, "metric", singleTerm, Prefix.WILDCARD),
             new MiruFieldDefinition(8, "bits", multiTerm, Prefix.NONE),
             new MiruFieldDefinition(9, "tags", multiTerm, Prefix.WILDCARD),
-            new MiruFieldDefinition(10, "types", multiTerm, Prefix.WILDCARD),
+            new MiruFieldDefinition(10, "type", singleTerm, Prefix.NONE),
             new MiruFieldDefinition(11, "timestamp", singleTerm, Prefix.NONE)
         }).build();
 }

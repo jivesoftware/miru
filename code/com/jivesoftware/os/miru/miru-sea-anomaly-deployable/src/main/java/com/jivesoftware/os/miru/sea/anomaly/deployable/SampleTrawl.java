@@ -21,9 +21,9 @@ import com.google.common.collect.Table;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.metric.sampler.Metric;
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent;
+import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -42,18 +42,15 @@ public class SampleTrawl {
         this.idProvider = idProvider;
     }
 
-    MiruActivity trawl(MiruTenantId tenantId, MiruMetricSampleEvent event) {
-        if (event.metrics.isEmpty()) {
-            return null;
-        }
+    MiruActivity trawl(MiruTenantId tenantId, AnomalyMetric metric) {
 
         ServiceId serviceId = new ServiceId(
-            firstNonNull(event.datacenter, "unknown"),
-            firstNonNull(event.cluster, "unknown"),
-            firstNonNull(event.host, "unknown"),
-            firstNonNull(event.service, "unknown"),
-            firstNonNull(event.instance, "unknown"),
-            firstNonNull(event.version, "unknown"));
+            firstNonNull(metric.datacenter, "unknown"),
+            firstNonNull(metric.cluster, "unknown"),
+            firstNonNull(metric.host, "unknown"),
+            firstNonNull(metric.service, "unknown"),
+            firstNonNull(metric.instance, "unknown"),
+            firstNonNull(metric.version, "unknown"));
 
         AtomicLong levelCount = trawled.get(serviceId, "sample");
         if (levelCount == null) {
@@ -62,42 +59,28 @@ public class SampleTrawl {
         }
         levelCount.incrementAndGet();
 
-        List<String> metrics = new ArrayList<>();
         List<String> bits = new ArrayList<>();
-        List<String> samplers = new ArrayList<>();
-        List<String> tags = new ArrayList<>();
-        List<String> types = new ArrayList<>();
-        for (Metric metric : event.metrics) {
-            String metricName = metric.sampler + " " + Joiner.on(">").join(metric.path) + " " + metric.type;
-            metrics.add(metricName);
-            for (int i = 0; i < 64; i++) {
-                if (((metric.value >> i) & 1) != 0) {
-                    bits.add(metricName + "-" + i);
-                }
+
+        String metricName = Joiner.on(">").join(metric.path);
+        for (int i = 0; i < 64; i++) {
+            if (((metric.value >> i) & 1) != 0) {
+                bits.add(String.valueOf(i));
             }
-
-            for (String tag : metric.path) {
-                tags.add(tag + ":" + metricName);
-            }
-
-            samplers.add(metric.sampler + ":" + metricName);
-            types.add(metric.type + ":" + metricName);
-
         }
 
         return new MiruActivity.Builder(tenantId, idProvider.nextId(), new String[0], 0)
-            .putFieldValue("datacenter", firstNonNull(event.datacenter, "unknown"))
-            .putFieldValue("cluster", firstNonNull(event.cluster, "unknown"))
-            .putFieldValue("host", firstNonNull(event.host, "unknown"))
-            .putFieldValue("service", firstNonNull(event.service, "unknown"))
-            .putFieldValue("instance", firstNonNull(event.instance, "unknown"))
-            .putFieldValue("version", firstNonNull(event.version, "unknown"))
-            .putAllFieldValues("samplers", samplers)
-            .putAllFieldValues("metrics", metrics)
+            .putFieldValue("datacenter", firstNonNull(metric.datacenter, "unknown"))
+            .putFieldValue("cluster", firstNonNull(metric.cluster, "unknown"))
+            .putFieldValue("host", firstNonNull(metric.host, "unknown"))
+            .putFieldValue("service", firstNonNull(metric.service, "unknown"))
+            .putFieldValue("instance", firstNonNull(metric.instance, "unknown"))
+            .putFieldValue("version", firstNonNull(metric.version, "unknown"))
+            .putFieldValue("sampler", metric.sampler)
+            .putFieldValue("metric", metricName)
             .putAllFieldValues("bits", bits)
-            .putAllFieldValues("tags", tags)
-            .putAllFieldValues("types", types)
-            .putFieldValue("timestamp", firstNonNull(event.timestamp, "unknown"))
+            .putAllFieldValues("tags", Arrays.asList(metric.path))
+            .putFieldValue("type", metric.type)
+            .putFieldValue("timestamp", firstNonNull(metric.timestamp, "unknown"))
             .build();
     }
 

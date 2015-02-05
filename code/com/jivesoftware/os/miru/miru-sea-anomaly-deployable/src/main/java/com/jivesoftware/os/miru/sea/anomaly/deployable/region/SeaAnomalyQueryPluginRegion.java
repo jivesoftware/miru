@@ -21,7 +21,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent;
+import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -249,15 +249,15 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                             activityTimes.add(activity.time);
                         }
                     }
-                    List<MiruMetricSampleEvent> logEvents = payloads.multiGet(tenantId, activityTimes, MiruMetricSampleEvent.class);
+                    List<AnomalyMetric> logEvents = payloads.multiGet(tenantId, activityTimes, AnomalyMetric.class);
                     /*
                      List<MiruLogEvent> logEvents = Arrays.asList(
                      new MiruLogEvent("dc", "clu", "host", "serv", "inst", "ver", "INFO", "t-1", "c.m.j.s.Class", "hello",
                      String.valueOf(System.currentTimeMillis()), new String[] { "a", "b", "c" }));
                      */
-                    data.put("events", Lists.transform(logEvents, new Function<MiruMetricSampleEvent, Map<String, Object>>() {
+                    data.put("events", Lists.transform(logEvents, new Function<AnomalyMetric, Map<String, Object>>() {
                         @Override
-                        public Map<String, Object> apply(MiruMetricSampleEvent input) {
+                        public Map<String, Object> apply(AnomalyMetric input) {
                             return ImmutableMap.<String, Object>builder()
                                 .put("datacenter", firstNonNull(input.datacenter, ""))
                                 .put("cluster", firstNonNull(input.cluster, ""))
