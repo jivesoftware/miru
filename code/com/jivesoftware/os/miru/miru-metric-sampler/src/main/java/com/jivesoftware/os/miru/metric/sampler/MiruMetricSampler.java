@@ -107,7 +107,7 @@ public class MiruMetricSampler implements Runnable {
                     version,
                     a.getLoggerName(),
                     counter.getKey().split("\\>"),
-                    "timer",
+                    "counter",
                     counter.getValue().getCount(),
                     time));
             }

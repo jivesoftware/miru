@@ -17,6 +17,7 @@ public class MiruRequest<Q> implements Serializable {
     public final MiruActorId actorId;
     public final MiruAuthzExpression authzExpression;
     public final Q query;
+    public final String powerBitFieldName;
     public final MiruSolutionLogLevel logLevel;
 
     @JsonCreator
@@ -24,24 +25,25 @@ public class MiruRequest<Q> implements Serializable {
         @JsonProperty("actorId") MiruActorId actorId,
         @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
         @JsonProperty("query") Q query,
+        @JsonProperty("powerBitFieldName") String powerBitFieldName,
         @JsonProperty("logLevel") MiruSolutionLogLevel logLevel) {
         this.tenantId = tenantId;
         this.actorId = actorId;
         this.query = query;
+        this.powerBitFieldName = powerBitFieldName;
         this.authzExpression = authzExpression;
         this.logLevel = logLevel;
     }
 
     @Override
     public String toString() {
-        return "MiruRequest{" +
-            "tenantId=" + tenantId +
-            ", actorId=" + actorId +
-            ", authzExpression=" + authzExpression +
-            ", query=" + query +
-            ", logLevel=" + logLevel +
-            '}';
+        return "MiruRequest{"
+            + "tenantId=" + tenantId
+            + ", actorId=" + actorId
+            + ", authzExpression=" + authzExpression
+            + ", query=" + query
+            + ", logLevel=" + logLevel
+            + '}';
     }
-
 
 }
