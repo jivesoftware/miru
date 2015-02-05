@@ -1,0 +1,242 @@
+{namespace soy.sea.anomaly.page}
+
+/**
+ * SeaAnomaly Query plugin page
+ * 
+ * @param? cluster
+ * @param? host
+ * @param? version
+ * @param? service
+ * @param? instance
+ * @param? logLevels
+ * @param? fromAgo
+ * @param? toAgo
+ * @param? fromTimeUnit
+ * @param? toTimeUnit
+ * @param? thread
+ * @param? logger
+ * @param? message
+ * @param? thrown
+ * @param? waveform
+ * @param? events
+ * @param? buckets
+ * @param? messageCount
+ * @param? summary
+ * @param? elapse
+ */
+{template .seaAnomalyQueryPluginRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Query SeaAnomaly</div>
+        <div class="panel-body">
+            <form id="stump-query-filters" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table cellspacing="5">
+                    <tr class="stump-query-advanced">
+                        <td>Cluster</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Cluster" value="{$cluster?:''}"
+                                name="cluster" id="clusterPicker" data-original-title="" title="">
+                        </td>
+                        <td>Host</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-host-autocomplete j-autocomplete-input j-ui-elem" placeholder="Host" value="{$host?:''}"
+                                name="host" id="hostPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Service</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-service-autocomplete j-autocomplete-input j-ui-elem" placeholder="Service" value="{$service?:''}"
+                                name="service" id="servicePicker" data-original-title="" title="">
+                        </td>
+                        <td class="stump-query-advanced">Instance</td>
+                        <td class="stump-query-advanced">
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-host-autocomplete j-autocomplete-input j-ui-elem" placeholder="Instance" value="{$instance?:''}"
+                                name="instance" id="instancePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="stump-query-advanced">
+                        <td>Version</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:560px; padding-left:10px;"
+                                class="j-version-autocomplete j-autocomplete-input j-ui-elem" placeholder="Version" value="{$version?:''}"
+                                name="version" id="versionPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>From</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$fromAgo?:''}"
+                                name="fromAgo" id="fromTimePicker" data-original-title="" title="">
+                            &nbsp;
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="FromTimeUnit"
+                                name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                            &nbsp;
+                            ago
+                            </td>
+                    </tr>
+                    <tr>
+                        <td>To</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Time Ago" value="{$toAgo?:''}"
+                                name="toAgo" id="toTimePicker" data-original-title="" title="">
+                            &nbsp;
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="ToTimeUnit"
+                                name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                            &nbsp;
+                            ago
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Level</td>
+                        <td colspan="3">
+                            <input type="checkbox" name="logLevels" value="TRACE" {if $logLevels.trace}checked="checked"{/if} /> Trace &nbsp;
+                            <input type="checkbox" name="logLevels" value="DEBUG" {if $logLevels.debug}checked="checked"{/if} /> Debug &nbsp;
+                            <input type="checkbox" name="logLevels" value="INFO" {if $logLevels.info}checked="checked"{/if} /> Info &nbsp;
+                            <input type="checkbox" name="logLevels" value="WARN" {if $logLevels.warn}checked="checked"{/if} /> Warn &nbsp;
+                            <input type="checkbox" name="logLevels" value="ERROR" {if $logLevels.error}checked="checked"{/if} /> Error &nbsp;
+                        </td>
+                    </tr>
+                    <tr class="stump-query-advanced">
+                        <td>Thread</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-thread-autocomplete j-autocomplete-input j-ui-elem" placeholder="Thread" value="{$thread?:''}"
+                                name="thread" id="threadPicker" data-original-title="" title="">
+                        </td>
+                        <td>Logger</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-logger-autocomplete j-autocomplete-input j-ui-elem" placeholder="Logger" value="{$logger?:''}"
+                                name="logger" id="loggerPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Message</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
+                                class="j-message-autocomplete j-autocomplete-input j-ui-elem" placeholder="Message" value="{$message?:''}"
+                                name="message" id="messagePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="stump-query-advanced">
+                        <td>Thrown</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
+                                class="j-thrown-autocomplete j-autocomplete-input j-ui-elem" placeholder="Thrown Stack Trace" value="{$thrown?:''}"
+                                name="thrown" id="thrownPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="stump-query-advanced">
+                        <td>Buckets</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
+                                name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                        <td>Count</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-messageCount-autocomplete j-autocomplete-input j-ui-elem" placeholder="Message Count" value="{$messageCount?:''}"
+                                name="messageCount" id="messageCountPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <br/>
+                <input type="submit" value="Refresh"/>
+                &nbsp;
+                <input type="checkbox" onchange="stump.query.advanced(this);" /> Show advanced filters
+            </form>
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">Results</div>
+        <div class="panel-body">
+            {if $waveform}
+                <img alt="waveform" src="{$waveform}">
+                <br/>
+            {/if}
+            {if $events}
+                <input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="datacenter" /> Datacenter &nbsp;
+                <input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="cluster" /> Cluster &nbsp;
+                <input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="host" /> Host &nbsp;
+                <input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="service" /> Service &nbsp;
+                <input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="instance" /> Instance &nbsp;
+                <input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="version" /> Version &nbsp;
+                <input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="time" /> Time &nbsp;
+                <input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="thread" /> Thread &nbsp;
+                <input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="level" /> Level &nbsp;
+                <input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="message" /> Message &nbsp;
+                <br/>
+                <table id="stump-events" class="table table-condensed">
+                    <tbody>
+                        <tr style="background-color: #ccc; font-weight: bold;">
+                            <th class="stump-event-datacenter">Datacenter</th>
+                            <th class="stump-event-cluster">Cluster</th>
+                            <th class="stump-event-host">Host</th>
+                            <th class="stump-event-service">Service</th>
+                            <th class="stump-event-instance">Instance</th>
+                            <th class="stump-event-version">Version</th>
+                            <th class="stump-event-time">Time</th>
+                            <th class="stump-event-thread">Thread</th>
+                            <th class="stump-event-level">Level</th>
+                            <th class="stump-event-message" width="99%">Message</th>
+                        </tr>
+                        {foreach $event in $events}
+                            <tr>
+                                <td class="stump-event-datacenter">{$event.datacenter}</td>
+                                <td class="stump-event-cluster">{$event.cluster}</td>
+                                <td class="stump-event-host">{$event.host}</td>
+                                <td class="stump-event-service">{$event.service}</td>
+                                <td class="stump-event-instance">{$event.instance}</td>
+                                <td class="stump-event-version">{$event.version}</td>
+                                <td class="stump-event-time" style="white-space: nowrap;">{$event.timestamp}</td>
+                                <td class="stump-event-thread">{$event.threadName}</td>
+                                <td class="stump-event-level">{$event.level}</td>
+                                <td class="stump-event-message">
+                                    {$event.loggerName} - {$event.message}
+                                    {if $event.thrownStackTrace}
+                                        <br/>
+                                        {foreach $line in $event.thrownStackTrace}
+                                            {$line}<br/>
+                                        {/foreach}
+                                    {/if}
+                                </td>
+                            </tr>
+                        {ifempty}
+                            <tr>
+                                <td colspan="10">No log events found</td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            {/if}
+        </div>
+    </div>
+    {if $summary}
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Summary {$elapse}</div>
+            <div class="panel-body">
+                <pre>{$summary}</pre>
+            </div>
+        </div>
+    {/if}
+{/template}

@@ -25,7 +25,6 @@
         <module>miru-reader-deployable</module>
         <module>miru-writer-deployable</module>
         <module>miru-manage-deployable</module>
-        <module>miru-stumptown-deployable</module>
         <module>miru-test</module>
         <module>miru-plugin-test</module>
         <module>miru-stream-plugins</module>
@@ -34,7 +33,12 @@
         <module>miru-reco-plugins-test</module>
         <module>miru-analytics-plugins</module>
         <module>miru-analytics-plugins-test</module>
+        <module>miru-stumptown-deployable</module>
         <module>miru-stumptown-plugins</module>
         <module>miru-stumptown-plugins-test</module>
+        <module>miru-sea-anomaly-deployable</module>
+        <module>miru-sea-anomaly-plugins</module>
+        <module>miru-sea-anomaly-plugins-test</module>
+        <module>miru-metric-sampler</module>
   </modules>
 </project>

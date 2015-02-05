@@ -36,6 +36,9 @@ import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
@@ -91,6 +94,16 @@ public class MiruWriterMain {
             instanceConfig.getVersion(),
             miruLogAppenderConfig);
         miruLogAppender.install();
+
+        MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
+        MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+            instanceConfig.getClusterName(),
+            instanceConfig.getHost(),
+            instanceConfig.getServiceName(),
+            String.valueOf(instanceConfig.getInstanceName()),
+            instanceConfig.getVersion(),
+            metricSamplerConfig);
+        sampler.start();
 
         MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 

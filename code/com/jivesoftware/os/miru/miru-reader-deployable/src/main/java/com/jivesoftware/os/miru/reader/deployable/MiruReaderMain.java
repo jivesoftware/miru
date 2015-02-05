@@ -43,6 +43,9 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
@@ -106,6 +109,16 @@ public class MiruReaderMain {
             instanceConfig.getVersion(),
             miruLogAppenderConfig);
         miruLogAppender.install();
+
+        MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
+        MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+            instanceConfig.getClusterName(),
+            instanceConfig.getHost(),
+            instanceConfig.getServiceName(),
+            String.valueOf(instanceConfig.getInstanceName()),
+            instanceConfig.getVersion(),
+            metricSamplerConfig);
+        sampler.start();
 
         HealthFactory.initialize(
             new HealthCheckConfigBinder() {

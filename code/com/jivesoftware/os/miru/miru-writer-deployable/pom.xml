@@ -103,6 +103,11 @@
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>merlin-config</artifactId>
         </dependency>
-         
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-metric-sampler</artifactId>
+            <version>0.258-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
     </dependencies>
 </project>

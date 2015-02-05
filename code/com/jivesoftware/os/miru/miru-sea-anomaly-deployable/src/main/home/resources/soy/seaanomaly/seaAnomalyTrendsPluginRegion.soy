@@ -1,0 +1,86 @@
+{namespace soy.sea.anomaly.page}
+
+/**
+ * Trending plugin page
+ *
+ * @param? logLevel
+ * @param? service
+ * @param? results
+ * @param? fromHoursAgo
+ * @param? summary
+ * @param? elapse
+ */
+{template .seaAnomalyTrendsPluginRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Trends</div>
+        <div class="panel-body">
+            <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td>Log Level</td>
+                        <td>
+                            <select style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Log Level"
+                                name="logLevel" id="logLevelPicker" data-original-title="" title="">
+                                <option value="TRACE" {if $logLevel == 'TRACE'}selected="selected"{/if}>TRACE</option>
+                                <option value="DEBUG" {if $logLevel == 'DEBUG'}selected="selected"{/if}>DEBUG</option>
+                                <option value="INFO" {if $logLevel == 'INFO'}selected="selected"{/if}>INFO</option>
+                                <option value="WARN" {if $logLevel == 'WARN'}selected="selected"{/if}>WARN</option>
+                                <option value="ERROR" {if $logLevel == 'ERROR'}selected="selected"{/if}>ERROR</option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+                <input type="submit" value="Run"/>
+            </form>
+        </div>
+    </div>
+    {if $results}
+        <div class="panel panel-default">
+            <div class="panel-heading">Results</div>
+            <div class="panel-body">
+                <table>
+                    <tr>
+                        {if $service}
+                            <td>Service</td>
+                            <td>Instance</td>
+                        {else}
+                            <td>Service</td>
+                        {/if}
+                        <td>Rank</td>
+                        <td>Action</td>
+                        <td>Waveform</td>
+                    </tr>
+                    {foreach $result in $results}
+                        <tr>
+                            {if $service}
+                                <td>{$service}</td>
+                                <td>{$result.name}</td>
+                            {else}
+                                <td><a href="#" onclick="document.location.href='/seaAnomaly/trends?service={$result.name}&amp;logLevel='+document.getElementById('logLevelPicker').value; return false;">{$result.name}</a></td>
+                            {/if}
+                            <td>{$result.rank}</td>
+                            <td>
+                                {if $service}
+                                    <a href="/seaAnomaly/query?service={$service}&amp;instance={$result.name}&amp;fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;logLevels={$logLevel}">Query</a>
+                                {else}
+                                    <a href="/seaAnomaly/query?service={$result.name}&amp;fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;logLevels={$logLevel}">Query</a>
+                                {/if}
+                            </td>
+                            <td><img alt="waveform" src="{$result.waveform}"></td>
+                        </tr>
+                    {/foreach}
+                </table>
+            </div>
+        </div>
+    {/if}
+    {if $summary}
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Summary {$elapse}</div>
+            <div class="panel-body">
+                <pre>{$summary}</pre>
+            </div>
+        </div>
+    {/if}
+{/template}

@@ -38,6 +38,9 @@ import com.jivesoftware.os.miru.manage.deployable.region.DistinctsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginEndpoints;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
+import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
@@ -89,6 +92,17 @@ public class MiruManageMain {
             instanceConfig.getVersion(),
             miruLogAppenderConfig);
         miruLogAppender.install();
+
+
+        MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
+        MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+            instanceConfig.getClusterName(),
+            instanceConfig.getHost(),
+            instanceConfig.getServiceName(),
+            String.valueOf(instanceConfig.getInstanceName()),
+            instanceConfig.getVersion(),
+            metricSamplerConfig);
+        sampler.start();
 
         MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 

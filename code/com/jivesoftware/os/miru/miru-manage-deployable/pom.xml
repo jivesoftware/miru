@@ -151,5 +151,11 @@
             <artifactId>testng</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-metric-sampler</artifactId>
+            <version>0.258-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
     </dependencies>
 </project>
