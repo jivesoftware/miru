@@ -55,7 +55,7 @@ public class MiruFieldIndexTest {
 
     @Test(dataProvider = "miruIndexDataProvider")
     public <BM> void testIndexFieldTerm(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
-        miruFieldIndex.index(0, new MiruTermId(FilerIO.intBytes(2)), 3);
+        miruFieldIndex.append(0, new MiruTermId(FilerIO.intBytes(2)), 3);
         MiruInvertedIndex<BM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.getIndex().isPresent());
@@ -105,11 +105,11 @@ public class MiruFieldIndexTest {
 
         MiruContext<EWAHCompressedBitmap> hybridContext = buildInMemoryContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruHybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
-        miruHybridFieldIndex.index(0, new MiruTermId("term1".getBytes()), 1, 2, 3);
+        miruHybridFieldIndex.append(0, new MiruTermId("term1".getBytes()), 1, 2, 3);
 
         MiruContext<EWAHCompressedBitmap> onDiskContext = buildOnDiskContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
-        miruOnDiskFieldIndex.index(0, new MiruTermId("term1".getBytes()), 1, 2, 3);
+        miruOnDiskFieldIndex.append(0, new MiruTermId("term1".getBytes()), 1, 2, 3);
 
         return new Object[][]{
             {bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory },

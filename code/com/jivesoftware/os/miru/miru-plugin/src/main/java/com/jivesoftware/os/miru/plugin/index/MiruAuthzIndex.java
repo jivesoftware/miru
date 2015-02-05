@@ -10,9 +10,11 @@ public interface MiruAuthzIndex<BM> {
 
     BM getCompositeAuthz(MiruAuthzExpression authzExpression) throws Exception;
 
-    void index(String authz, int id) throws Exception;
+    void append(String authz, int id) throws Exception;
 
-    void repair(String authz, int id, boolean value) throws Exception;
+    void set(String authz, int id) throws Exception;
+
+    void remove(String authz, int id) throws Exception;
 
     void close();
 

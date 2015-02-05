@@ -65,14 +65,14 @@ public class MiruFieldTest {
 
         for (int id = 0; id < 10; id++) {
             ids.add(id);
-            hybridFieldIndex.index(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), id);
+            hybridFieldIndex.append(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), id);
         }
 
         MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> onDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         for (int id = 0; id < 10; id++) {
-            onDiskFieldIndex.index(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), id);
+            onDiskFieldIndex.append(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), id);
         }
 
         return new Object[][] {

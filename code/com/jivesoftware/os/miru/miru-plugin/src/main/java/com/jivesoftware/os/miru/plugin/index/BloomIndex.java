@@ -78,7 +78,7 @@ public class BloomIndex<BM> {
             MiruTermId key = keys.get(i);
             createBitIndexesForValue(key.getBytes(), numHashFunctions, bitIndexes, i * numHashFunctions);
         }
-        bloomIndex.setIntermediate(bitIndexes);
+        bloomIndex.set(bitIndexes);
     }
 
     public <V extends HasValue> List<Mights<V>> wantBits(List<V> keys) {

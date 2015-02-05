@@ -79,6 +79,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
     private final AtomicReference<MiruPartitionAccessor<BM>> accessorRef = new AtomicReference<>();
     private final Object factoryLock = new Object();
+    private final AtomicBoolean firstRebuild = new AtomicBoolean(true);
+    private final AtomicBoolean firstSip = new AtomicBoolean(true);
 
     private interface BootstrapCount extends MinMaxHealthCheckConfig {
 
@@ -269,8 +271,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         // intentionally locking all stream writes for the entire batch to avoid getting a lock for each activity
         MiruPartitionAccessor<BM> accessor = accessorRef.get();
         if (accessor.isOpenForWrites()) {
-            //TODO handle return case
-            int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress, MoreExecutors.sameThreadExecutor());
+            int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress, true, MoreExecutors.sameThreadExecutor());
             if (count > 0) {
                 log.inc("indexIngress>written", count);
             }
@@ -600,7 +601,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                 log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                 try {
-                    accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, rebuildIndexExecutor);
+                    boolean repair = firstRebuild.compareAndSet(true, false);
+                    accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, repair, rebuildIndexExecutor);
                     accessor.setRebuildTimestamp(rebuildTimestamp.get());
                     accessor.setSipTimestamp(sipTimestamp.get());
                 } catch (Exception e) {
@@ -697,8 +699,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 }
             );
 
-            int count = partitionedActivities.size();
-            accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip, sipIndexExecutor);
+            boolean repair = firstSip.compareAndSet(true, false);
+            int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip, repair, sipIndexExecutor);
 
             long suggestedTimestamp = sipTracker.suggestTimestamp(afterTimestamp);
             if (accessor.setSipTimestamp(suggestedTimestamp)) {
@@ -707,10 +709,12 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             }
 
             log.inc("sip>count>calls", 1);
-            log.inc("sip>count>total", count);
-            log.inc("sip>count>power>" + FilerIO.chunkPower(count, 0), 1);
-            log.inc("sip>tenant>" + coord.tenantId, count);
-            log.inc("sip>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, count);
+            if (count > 0) {
+                log.inc("sip>count>total", count);
+                log.inc("sip>count>power>" + FilerIO.chunkPower(count, 0), 1);
+                log.inc("sip>tenant>" + coord.tenantId, count);
+                log.inc("sip>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, count);
+            }
 
             return accessorRef.get() == accessor;
         }

@@ -36,7 +36,7 @@ import org.roaringbitmap.RoaringInspection;
  */
 public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
 
-    private boolean set(RoaringBitmap bitmap, int... indexes) {
+    private boolean append(RoaringBitmap bitmap, int... indexes) {
         if (indexes.length == 1) {
             bitmap.add(indexes[0]);
         } else if (indexes.length > 1) {
@@ -61,17 +61,23 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
-    public boolean append(RoaringBitmap container, RoaringBitmap bitmap, int... indexes) {
+    public void append(RoaringBitmap container, RoaringBitmap bitmap, int... indexes) {
         copy(container, bitmap);
-        return set(container, indexes);
+        append(container, indexes);
     }
 
     @Override
-    public void setIntermediate(RoaringBitmap container, RoaringBitmap bitmap, int... indexes) {
+    public void set(RoaringBitmap container, RoaringBitmap bitmap, int... indexes) {
         copy(container, bitmap);
         for (int index : indexes) {
             container.add(index);
         }
+    }
+
+    @Override
+    public void remove(RoaringBitmap container, RoaringBitmap bitmap, int index) {
+        copy(container, bitmap);
+        container.remove(index);
     }
 
     @Override
@@ -110,7 +116,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     @Override
     public RoaringBitmap createWithBits(int... indexes) {
         RoaringBitmap bitmap = new RoaringBitmap();
-        set(bitmap, indexes);
+        append(bitmap, indexes);
         return bitmap;
     }
 

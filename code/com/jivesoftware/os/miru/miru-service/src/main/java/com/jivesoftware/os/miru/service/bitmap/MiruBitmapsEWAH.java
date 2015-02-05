@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -44,25 +45,23 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public boolean append(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int... indexes) {
-        copy(container, bitmap);
-
+    public void append(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int... indexes) {
         //TODO we could optimize by adding ranges via streams of words
-        for (int index : indexes) {
-            if (!container.set(index)) {
-                return false;
-            }
-        }
-        return true;
+        set(container, bitmap, indexes);
     }
 
     @Override
-    public void setIntermediate(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int... indexes) {
+    public void set(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int... indexes) {
         copy(container, bitmap);
 
         for (int index : indexes) {
             container.set(index);
         }
+    }
+
+    @Override
+    public void remove(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int index) {
+        andNot(container, bitmap, Arrays.asList(createWithBits(index)));
     }
 
     @Override

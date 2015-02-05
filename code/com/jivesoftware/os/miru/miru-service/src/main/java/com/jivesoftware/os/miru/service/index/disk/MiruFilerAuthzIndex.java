@@ -40,18 +40,19 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
     }
 
     @Override
-    public void index(String authz, int id) throws Exception {
+    public void append(String authz, int id) throws Exception {
         get(authz).append(id);
     }
 
     @Override
-    public void repair(String authz, int id, boolean value) throws Exception {
-        MiruInvertedIndex index = get(authz);
-        if (value) {
-            index.set(id);
-        } else {
-            index.remove(id);
-        }
+    public void set(String authz, int id) throws Exception {
+        get(authz).set(id);
+        cache.increment(authz);
+    }
+
+    @Override
+    public void remove(String authz, int id) throws Exception {
+        get(authz).remove(id);
         cache.increment(authz);
     }
 

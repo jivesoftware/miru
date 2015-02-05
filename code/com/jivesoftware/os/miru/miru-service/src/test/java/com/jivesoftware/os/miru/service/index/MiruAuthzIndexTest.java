@@ -84,7 +84,7 @@ public class MiruAuthzIndexTest {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
 
             for (Integer bit : bits) {
-                authzIndex.index(authz, bit);
+                authzIndex.append(authz, bit);
             }
             assertNull(bitsIn.put(authz, bits));
         }

@@ -24,7 +24,7 @@ public class MiruFilerSipIndex implements MiruSipIndex {
     public long getSip() throws IOException {
         long sipTime = sipTimestamp.get();
         if (sipTime < 0) {
-            sipFilerProvider.execute(-1, new FilerTransaction<Filer, Void>() {
+            sipFilerProvider.read(-1, new FilerTransaction<Filer, Void>() {
                 @Override
                 public Void commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
@@ -45,7 +45,7 @@ public class MiruFilerSipIndex implements MiruSipIndex {
 
     @Override
     public boolean setSip(final long timestamp) throws IOException {
-        return sipFilerProvider.execute(8, new FilerTransaction<Filer, Boolean>() {
+        return sipFilerProvider.readWriteAutoGrow(8, new FilerTransaction<Filer, Boolean>() {
             @Override
             public Boolean commit(Object lock, Filer filer) throws IOException {
                 long existingTime = sipTimestamp.get();

@@ -18,7 +18,19 @@ public class KeyedFilerProvider implements MiruFilerProvider {
         this.key = key;
     }
 
-    public <R> R execute(long initialCapacity, final FilerTransaction<Filer, R> filerTransaction) throws IOException {
-        return keyedFilerStore.execute(key, initialCapacity, filerTransaction);
+    @Override
+    public <R> R read(long initialCapacity, final FilerTransaction<Filer, R> filerTransaction) throws IOException {
+        return keyedFilerStore.read(key, initialCapacity, filerTransaction);
     }
+
+    @Override
+    public <R> R writeNewReplace(long initialCapacity, final FilerTransaction<Filer, R> filerTransaction) throws IOException {
+        return keyedFilerStore.writeNewReplace(key, initialCapacity, filerTransaction);
+    }
+
+    @Override
+    public <R> R readWriteAutoGrow(long initialCapacity, final FilerTransaction<Filer, R> filerTransaction) throws IOException {
+        return keyedFilerStore.readWriteAutoGrow(key, initialCapacity, filerTransaction);
+    }
+
 }

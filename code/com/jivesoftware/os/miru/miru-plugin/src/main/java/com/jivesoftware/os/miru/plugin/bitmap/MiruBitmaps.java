@@ -33,11 +33,13 @@ public interface MiruBitmaps<BM> {
 
     BM[] createArrayOf(int size);
 
-    boolean append(BM container, BM bitmap, int... indexes);
+    void append(BM container, BM bitmap, int... indexes);
 
-    void setIntermediate(BM container, BM bitmap, int... indexes);
+    void set(BM container, BM bitmap, int... indexes);
 
-    boolean isSet(BM bitmap, int i);
+    void remove(BM container, BM bitmap, int index);
+
+    boolean isSet(BM bitmap, int index);
 
     void extend(BM container, BM bitmap, List<Integer> indexes, int extendToIndex);
 

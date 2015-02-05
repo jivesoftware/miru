@@ -51,8 +51,13 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
     }
 
     @Override
-    public void index(int fieldId, MiruTermId termId, int... ids) throws Exception {
+    public void append(int fieldId, MiruTermId termId, int... ids) throws Exception {
         getOrAllocate(fieldId, termId).append(ids);
+    }
+
+    @Override
+    public void set(int fieldId, MiruTermId termId, int... ids) throws Exception {
+        getOrAllocate(fieldId, termId).set(ids);
     }
 
     @Override

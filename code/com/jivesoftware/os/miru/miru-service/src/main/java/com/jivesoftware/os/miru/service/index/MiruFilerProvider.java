@@ -9,5 +9,9 @@ import java.io.IOException;
  */
 public interface MiruFilerProvider {
 
-    <R> R execute(long initialCapacity, FilerTransaction<Filer, R> filerTransaction) throws IOException;
+    <R> R read(long initialCapacity, FilerTransaction<Filer, R> filerTransaction) throws IOException;
+
+    <R> R writeNewReplace(long initialCapacity, FilerTransaction<Filer, R> filerTransaction) throws IOException;
+
+    <R> R readWriteAutoGrow(long initialCapacity, FilerTransaction<Filer, R> filerTransaction) throws IOException;
 }

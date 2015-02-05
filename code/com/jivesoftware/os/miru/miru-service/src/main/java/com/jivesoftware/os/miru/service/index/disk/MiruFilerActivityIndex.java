@@ -45,7 +45,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            return keyedStore.execute(FilerIO.intBytes(index), -1, new FilerTransaction<Filer, MiruInternalActivity>() {
+            return keyedStore.read(FilerIO.intBytes(index), -1, new FilerTransaction<Filer, MiruInternalActivity>() {
                 @Override
                 public MiruInternalActivity commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
@@ -68,7 +68,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            return keyedStore.execute(FilerIO.intBytes(index), -1, new FilerTransaction<Filer, MiruTermId[]>() {
+            return keyedStore.read(FilerIO.intBytes(index), -1, new FilerTransaction<Filer, MiruTermId[]>() {
                 @Override
                 public MiruTermId[] commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
@@ -106,14 +106,13 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             MiruInternalActivity activity = activityAndId.activity;
             checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
             try {
-                //byte[] bytes = objectMapper.writeValueAsBytes(activity);
                 final byte[] bytes = internalActivityMarshaller.toBytes(activity);
-                keyedStore.execute(FilerIO.intBytes(index), 4 + bytes.length, new FilerTransaction<Filer, Void>() {
+                keyedStore.writeNewReplace(FilerIO.intBytes(index), 4 + bytes.length, new FilerTransaction<Filer, Void>() {
                     @Override
-                    public Void commit(Object lock, Filer filer) throws IOException {
-                        synchronized (lock) {
-                            filer.seek(0);
-                            FilerIO.write(filer, bytes);
+                    public Void commit(Object newLock, Filer newFiler) throws IOException {
+                        synchronized (newLock) {
+                            newFiler.seek(0);
+                            FilerIO.write(newFiler, bytes);
                         }
                         return null;
                     }
@@ -130,7 +129,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         final int size = index + 1;
         synchronized (indexSize) {
             if (size > indexSize.get()) {
-                indexSizeFiler.execute(4, new FilerTransaction<Filer, Void>() {
+                indexSizeFiler.readWriteAutoGrow(4, new FilerTransaction<Filer, Void>() {
                     @Override
                     public Void commit(Object lock, Filer filer) throws IOException {
                         synchronized (lock) {
@@ -150,7 +149,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         try {
             int size = indexSize.get();
             if (size < 0) {
-                size = indexSizeFiler.execute(-1, new FilerTransaction<Filer, Integer>() {
+                size = indexSizeFiler.read(-1, new FilerTransaction<Filer, Integer>() {
                     @Override
                     public Integer commit(Object lock, Filer filer) throws IOException {
                         if (filer != null) {

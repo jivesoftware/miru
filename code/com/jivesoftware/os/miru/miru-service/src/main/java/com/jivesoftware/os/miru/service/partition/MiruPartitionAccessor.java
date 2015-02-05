@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -23,6 +24,7 @@ import com.jivesoftware.os.mlogger.core.ValueType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -154,61 +156,58 @@ public class MiruPartitionAccessor<BM> {
         ingress, rebuild, sip;
     }
 
-    int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities, IndexStrategy strategy, ExecutorService indexExecutor) throws Exception {
+    int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities, IndexStrategy strategy, boolean recovery, ExecutorService indexExecutor)
+        throws Exception {
+
         int count = 0;
         semaphore.acquire();
         try {
-            if (closed.get()) {
+            if (closed.get() || !context.isPresent()) {
                 return -1;
             }
-            synchronized (context) {
-                List<MiruPartitionedActivity> batch = new ArrayList<>();
+
+            MiruContext<BM> got = context.get();
+            synchronized (got) {
+                MiruPartitionedActivity.Type batchType = null;
+                List<MiruPartitionedActivity> batch = Lists.newArrayList();
                 int activityCount = 0;
                 while (partitionedActivities.hasNext()) {
                     MiruPartitionedActivity partitionedActivity = partitionedActivities.next();
+                    MiruPartitionedActivity.Type activityType = partitionedActivity.type;
+
                     if (partitionedActivity.partitionId.equals(coord.partitionId)) {
-                        if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN
-                            || partitionedActivity.type == MiruPartitionedActivity.Type.END) {
-                            activityCount += handleActivityType(batch, indexExecutor);
-                            batch.clear();
-                            handleBoundaryType(partitionedActivity);
-                        } else if (partitionedActivity.type == MiruPartitionedActivity.Type.ACTIVITY) {
-                            batch.add(partitionedActivity);
-                        } else if (partitionedActivity.type == MiruPartitionedActivity.Type.REPAIR) {
-                            if (strategy != IndexStrategy.rebuild) {
-                                activityCount += handleActivityType(batch, indexExecutor);
-                                batch.clear();
-                                handleRepairType(partitionedActivity);
-                            } else {
-                                batch.add(partitionedActivity);
-                            }
-                        } else if (partitionedActivity.type == MiruPartitionedActivity.Type.REMOVE) {
-                            activityCount += handleActivityType(batch, indexExecutor);
-                            batch.clear();
-                            handleRemoveType(partitionedActivity, strategy);
-                        } else {
-                            log.warn("Activity WAL contained unsupported type {}", partitionedActivity.type);
+                        // converge for simplicity
+                        if (activityType == MiruPartitionedActivity.Type.ACTIVITY && recovery) {
+                            activityType = MiruPartitionedActivity.Type.REPAIR;
+                        } else if (activityType == MiruPartitionedActivity.Type.END) {
+                            activityType = MiruPartitionedActivity.Type.BEGIN;
                         }
+
+                        if (activityType != batchType) {
+                            // this also clears the batch
+                            activityCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor);
+                            batchType = activityType;
+                        }
+
+                        batch.add(partitionedActivity);
 
                         // This activity has been handled, so remove it from the backing list
                         partitionedActivities.remove();
                     }
                     count++;
                 }
-                activityCount += handleActivityType(batch, indexExecutor);
+
+                activityCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor);
                 if (activityCount > 0) {
                     indexRepairs.repaired(strategy, coord, activityCount);
                 } else {
                     indexRepairs.current(strategy, coord);
                 }
 
-                if (context.isPresent()) {
-                    MiruContext<BM> got = context.get();
-                    log.set(ValueType.COUNT, "lastId>tenant>" + coord.tenantId + ">partition>" + coord.partitionId,
-                        got.activityIndex.lastId());
-                    log.set(ValueType.COUNT, "largestTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId,
-                        got.timeIndex.getLargestTimestamp());
-                }
+                log.set(ValueType.COUNT, "lastId>tenant>" + coord.tenantId + ">partition>" + coord.partitionId,
+                    got.activityIndex.lastId());
+                log.set(ValueType.COUNT, "largestTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId,
+                    got.timeIndex.getLargestTimestamp());
             }
         } finally {
             semaphore.release();
@@ -216,26 +215,61 @@ public class MiruPartitionAccessor<BM> {
         return count;
     }
 
-    private void handleBoundaryType(MiruPartitionedActivity partitionedActivity) {
-        if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-            beginWriters.add(partitionedActivity.writerId);
-        } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
-            endWriters.add(partitionedActivity.writerId);
+    /**
+     * <code>batchType</code> must be one of the following:
+     * {@link MiruPartitionedActivity.Type#BEGIN}
+     * {@link MiruPartitionedActivity.Type#ACTIVITY}
+     * {@link MiruPartitionedActivity.Type#REPAIR}
+     * {@link MiruPartitionedActivity.Type#REMOVE}
+     */
+    private int consumeTypedBatch(MiruContext<BM> got,
+        MiruPartitionedActivity.Type batchType,
+        List<MiruPartitionedActivity> batch,
+        IndexStrategy strategy,
+        ExecutorService indexExecutor) throws Exception {
+
+        int count = 0;
+        if (!batch.isEmpty()) {
+            if (batchType == MiruPartitionedActivity.Type.BEGIN) {
+                count = handleBoundaryType(batch);
+            } else if (batchType == MiruPartitionedActivity.Type.ACTIVITY) {
+                count = handleActivityType(got, batch, indexExecutor);
+            } else if (batchType == MiruPartitionedActivity.Type.REPAIR) {
+                count = handleRepairType(got, batch, indexExecutor);
+            } else if (batchType == MiruPartitionedActivity.Type.REMOVE) {
+                count = handleRemoveType(got, batch, strategy);
+            } else {
+                log.warn("Attempt to index unsupported type {}", batchType);
+            }
+            batch.clear();
         }
+        return count;
     }
 
-    private int handleActivityType(List<MiruPartitionedActivity> partitionedActivities,
+    private int handleBoundaryType(List<MiruPartitionedActivity> partitionedActivities) {
+        int count = 0;
+        for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
+            if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
+                if (beginWriters.add(partitionedActivity.writerId)) {
+                    count++;
+                }
+            } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
+                if (endWriters.add(partitionedActivity.writerId)) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    private int handleActivityType(MiruContext<BM> got,
+        List<MiruPartitionedActivity> partitionedActivities,
         ExecutorService indexExecutor)
         throws Exception {
 
-        if (!context.isPresent()) {
-            log.warn("Ignored activity for empty context");
-            return 0;
-        }
-
         int activityCount = 0;
         if (!partitionedActivities.isEmpty()) {
-            MiruTimeIndex timeIndex = context.get().getTimeIndex();
+            MiruTimeIndex timeIndex = got.getTimeIndex();
 
             List<MiruActivityAndId<MiruActivity>> indexables = new ArrayList<>(partitionedActivities.size());
             List<Long> activityTimes = new ArrayList<>();
@@ -263,47 +297,95 @@ public class MiruPartitionAccessor<BM> {
                 }
             }
 
-            partitionedActivities.clear(); // This frees up the MiruPartitionedActivity to be garbage collected.
+            // free for GC before we begin indexing
+            partitionedActivities.clear();
             if (!indexables.isEmpty()) {
-                indexer.index(context.get(), indexables, indexExecutor);
+                indexer.index(got, indexables, false, indexExecutor);
                 activityCount = indexables.size();
             }
         }
         return activityCount;
     }
 
-    private void handleRepairType(MiruPartitionedActivity partitionedActivity) throws Exception {
-        MiruTimeIndex timeIndex = context.get().getTimeIndex();
-        MiruActivity activity = partitionedActivity.activity.get();
+    private int handleRepairType(MiruContext<BM> got,
+        List<MiruPartitionedActivity> partitionedActivities,
+        ExecutorService indexExecutor)
+        throws Exception {
 
-        int id = timeIndex.getExactId(activity.time);
-        if (id < 0) {
-            log.warn("Attempted to repair an activity that does not belong to this partition: {}", activity);
-        } else {
-            indexer.repair(context.get(), activity, id);
+        int count = 0;
+        if (!partitionedActivities.isEmpty()) {
+            MiruTimeIndex timeIndex = got.getTimeIndex();
+
+            int activityCount = partitionedActivities.size();
+            List<Long> activityTimes = Lists.newArrayListWithCapacity(activityCount);
+            long[] timestamps = new long[activityCount];
+            for (int i = 0; i < activityCount; i++) {
+                MiruActivity activity = partitionedActivities.get(i).activity.get();
+                activityTimes.add(activity.time);
+                timestamps[i] = activity.time;
+            }
+
+            boolean[] contains = timeIndex.contains(activityTimes);
+            for (int i = 0; i < contains.length; i++) {
+                if (contains[i]) {
+                    timestamps[i] = -1;
+                }
+            }
+
+            int[] ids = timeIndex.nextId(timestamps);
+
+            List<MiruActivityAndId<MiruActivity>> indexables = Lists.newArrayListWithCapacity(activityCount);
+            for (int i = 0; i < activityCount; i++) {
+                int id = ids[i];
+                if (id == -1) {
+                    id = timeIndex.getExactId(timestamps[i]);
+                }
+                if (id >= 0) {
+                    indexables.add(new MiruActivityAndId<>(partitionedActivities.get(i).activity.get(), id));
+                }
+            }
+
+            // free for GC before we begin indexing
+            partitionedActivities.clear();
+            if (!indexables.isEmpty()) {
+                Collections.sort(indexables);
+                indexer.index(got, indexables, true, indexExecutor);
+                count = indexables.size();
+            }
         }
+        return count;
     }
 
-    private void handleRemoveType(MiruPartitionedActivity partitionedActivity, IndexStrategy strategy) throws Exception {
-        MiruTimeIndex timeIndex = context.get().getTimeIndex();
-        MiruActivity activity = partitionedActivity.activity.get();
-        log.debug("Handling removal type for {} with strategy {}", activity, strategy);
+    private int handleRemoveType(MiruContext<BM> got,
+        List<MiruPartitionedActivity> partitionedActivities,
+        IndexStrategy strategy)
+        throws Exception {
 
-        int id;
-        if (strategy != IndexStrategy.rebuild || timeIndex.contains(Arrays.asList(activity.time))[0]) {
-            id = timeIndex.getExactId(activity.time);
-            log.trace("Removing activity for exact id {}", id);
-        } else {
-            id = timeIndex.nextId(activity.time)[0];
-            indexer.set(context.get(), Arrays.asList(new MiruActivityAndId<>(activity, id)));
-            log.trace("Removing activity for next id {}", id);
-        }
+        int count = 0;
+        MiruTimeIndex timeIndex = got.getTimeIndex();
+        //TODO batch remove
+        for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
+            MiruActivity activity = partitionedActivity.activity.get();
+            log.debug("Handling removal type for {} with strategy {}", activity, strategy);
 
-        if (id < 0) {
-            log.warn("Attempted to remove an activity that does not belong to this partition: {}", activity);
-        } else {
-            indexer.remove(context.get(), activity, id);
+            int id;
+            if (strategy != IndexStrategy.rebuild || timeIndex.contains(Arrays.asList(activity.time))[0]) {
+                id = timeIndex.getExactId(activity.time);
+                log.trace("Removing activity for exact id {}", id);
+            } else {
+                id = timeIndex.nextId(activity.time)[0];
+                indexer.set(got, Arrays.asList(new MiruActivityAndId<>(activity, id)));
+                log.trace("Removing activity for next id {}", id);
+            }
+
+            if (id < 0) {
+                log.warn("Attempted to remove an activity that does not belong to this partition: {}", activity);
+            } else {
+                indexer.remove(got, activity, id);
+                count++;
+            }
         }
+        return count;
     }
 
     MiruRequestHandle<BM> getRequestHandle() {
@@ -406,7 +488,7 @@ public class MiruPartitionAccessor<BM> {
                 if (state.isPresent()) {
                     migratedInfo = migratedInfo.copyToState(state.get());
                 }
-                return new MiruPartitionAccessor<BM>(bitmaps, coord, migratedInfo, Optional.of(context), indexRepairs, indexer);
+                return new MiruPartitionAccessor<>(bitmaps, coord, migratedInfo, Optional.of(context), indexRepairs, indexer);
             }
 
             @Override
