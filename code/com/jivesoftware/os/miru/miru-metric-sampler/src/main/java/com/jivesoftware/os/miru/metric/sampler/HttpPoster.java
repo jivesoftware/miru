@@ -31,7 +31,7 @@ import java.util.List;
  */
 public class HttpPoster implements MiruMetricSampleSender {
 
-    private static final String path = "/miru/stumptown/intake";
+    private static final String path = "/miru/sea/anomaly/intake";
     private final Gson gson = new Gson();
     private final String host;
     private final int port;

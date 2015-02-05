@@ -17,7 +17,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/seaAnomaly")
+@Path("/miru/sea/anomaly")
 public class MiruSeaAnomalyIntakeEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

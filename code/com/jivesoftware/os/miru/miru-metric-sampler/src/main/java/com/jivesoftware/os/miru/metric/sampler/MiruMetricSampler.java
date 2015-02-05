@@ -4,6 +4,8 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampleEvent.MetricKey;
 import com.jivesoftware.os.mlogger.core.AtomicCounter;
 import com.jivesoftware.os.mlogger.core.Counter;
 import com.jivesoftware.os.mlogger.core.CountersAndTimers;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.Timer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,6 +22,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  */
 public class MiruMetricSampler implements Runnable {
+
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final String datacenter;
     private final String cluster;
@@ -85,7 +89,7 @@ public class MiruMetricSampler implements Runnable {
             try {
                 Thread.sleep(sampleIntervalInMillis); // expose to config
             } catch (InterruptedException e) {
-                System.err.println("Sender was interrupted while sleeping due to errors");
+                log.warn("Sender was interrupted while sleeping due to errors");
                 Thread.interrupted();
                 break;
             }
@@ -128,7 +132,7 @@ public class MiruMetricSampler implements Runnable {
                 samples.clear();
                 return;
             } catch (Exception e) {
-                System.err.println("Sampler:" + sender[i] + " failed to send:" + samples.size() + " samples.");
+                log.warn("Sampler:" + sender[i] + " failed to send:" + samples.size() + " samples.");
                 senderIndex.incrementAndGet();
             }
         }
