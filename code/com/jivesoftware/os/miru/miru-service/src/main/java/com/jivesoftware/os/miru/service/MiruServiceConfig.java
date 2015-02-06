@@ -57,7 +57,7 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(10_000)
     int getPartitionRebuildBatchSize();
 
-    @IntDefault(1_000)
+    @IntDefault(10_000)
     int getPartitionSipBatchSize();
 
     @LongDefault(10_000)

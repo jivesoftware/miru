@@ -2,15 +2,20 @@ package com.jivesoftware.os.miru.analytics.plugins.metrics;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -119,11 +124,14 @@ public class MetricsQuestion implements Question<MetricsAnswer, MetricsReport> {
             currentTime += segmentDuration;
         }
         
-        int powerBitFieldId = context.getSchema().getFieldId(request.query.powerBitFieldName);
-            context.getFieldIndexProvider().getFieldIndex(MiruFieldType.latest).get(fieldId, null)
-        List<BM> powerBitFilters = new ArrayList<>();
+        MiruFieldIndex<BM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        int powerBitsFieldId = context.getSchema().getFieldId(request.query.powerBitsFieldName);
+        MiruFieldDefinition powerBitsFieldDefinition = context.getSchema().getFieldDefinition(powerBitsFieldId);
+        List<Optional<BM>> powerBitIndexes = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
-            powerBitFilters.add()
+            MiruTermId powerBitTerm = context.getTermComposer().compose(powerBitsFieldDefinition, String.valueOf(i));
+            MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
+            powerBitIndexes.add(invertedIndex.getIndex());
         }
 
         Map<String, MetricsAnswer.Waveform> waveforms = Maps.newHashMap();
@@ -134,18 +142,32 @@ public class MetricsQuestion implements Question<MetricsAnswer, MetricsReport> {
                 BM waveformFiltered = bitmaps.create();
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), entry.getValue(), solutionLog,
                     waveformFiltered, context.getActivityIndex().lastId(), -1);
-                BM answer = bitmaps.create();
+                BM rawAnswer = bitmaps.create();
 
-                bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
-                if (!bitmaps.isEmpty(answer)) {
-                    BM bits = new ArrayList<>();
+                bitmaps.and(rawAnswer, Arrays.asList(constrained, waveformFiltered));
+                if (!bitmaps.isEmpty(rawAnswer)) {
+                    List<BM> answers = Lists.newArrayList();
                     for (int i = 0; i < 64; i++) {
-                        bits =
+                        Optional<BM> powerBitIndex = powerBitIndexes.get(i);
+                        if (powerBitIndex.isPresent()) {
+                            BM answer = bitmaps.create();
+                            bitmaps.and(answer, Arrays.asList(powerBitIndex.get(), rawAnswer));
+                            answers.add(answer);
+                        } else {
+                            answers.add(null);
+                        }
                     }
 
-                    waveform = metrics.metricing(bitmaps, answer, indexes);
+                    waveform = metrics.metricing(bitmaps, answers, indexes, 64);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "metrics answer: {} items.", bitmaps.cardinality(answer));
+                        int cardinality = 0;
+                        for (int i = 0; i < 64; i++) {
+                            BM answer = answers.get(i);
+                            if (answer != null) {
+                                cardinality += bitmaps.cardinality(answer);
+                            }
+                        }
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "metrics answer: {} items.", cardinality);
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "metrics name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
                     }
                 } else {
