@@ -130,6 +130,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
         MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         final Map<String, MiruFilter> expanded = new LinkedHashMap<>();
         for (String expansion : request.query.expansionValues) {
+            solutionLog.log(MiruSolutionLogLevel.INFO,"Expanding with "+expansion);
             if (expansion.endsWith("*")) {
                 fieldIndex.streamTermIdsForField(fieldId, null, new TermIdStream() {
 
@@ -143,6 +144,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                 });
             } else {
                 MiruInvertedIndex<BM> got = fieldIndex.get(fieldId, new MiruTermId(expansion.getBytes(StandardCharsets.UTF_8)));
+                // TODO use got.
                 for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
                     expanded.put(entry.getKey() + "-" + expansion, entry.getValue());
                 }

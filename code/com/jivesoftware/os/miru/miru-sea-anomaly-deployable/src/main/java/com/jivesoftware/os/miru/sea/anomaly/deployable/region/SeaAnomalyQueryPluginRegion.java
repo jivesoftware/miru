@@ -139,6 +139,10 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                 data.put("toAgo", String.valueOf(toAgo));
                 data.put("buckets", String.valueOf(input.buckets));
 
+                data.put("expansionField", input.expansionField);
+                data.put("expansionValue", input.expansionValue);
+
+
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
@@ -170,7 +174,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         }
 
                         ImmutableMap<String, MiruFilter> seaAnomalyFilters = ImmutableMap.of(
-                            "seaAnomaly",
+                            "see",
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
                                 fieldFilters,
