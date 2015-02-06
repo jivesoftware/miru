@@ -124,6 +124,10 @@ public class MiruPartitionAccessor<BM> {
         return info.state == MiruPartitionState.online;
     }
 
+    boolean hasOpenWriters() {
+        return beginWriters.isEmpty() || !endWriters.containsAll(beginWriters);
+    }
+
     boolean isEligibleToBackfill() {
         return info.state == MiruPartitionState.online;
     }

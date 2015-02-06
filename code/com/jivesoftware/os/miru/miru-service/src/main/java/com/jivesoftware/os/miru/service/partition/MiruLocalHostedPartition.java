@@ -667,7 +667,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
 
         private boolean sip(final MiruPartitionAccessor<BM> accessor) throws Exception {
-            if (!accessor.isOpenForWrites()) {
+            if (!accessor.isOpenForWrites() || !accessor.hasOpenWriters()) {
                 return false;
             }
 
