@@ -106,7 +106,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Resolution</td>
+                        <td>Buckets</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                                 class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
@@ -117,15 +117,15 @@
                         <td>Samplers</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-samplers-autocomplete j-autocomplete-input j-ui-elem" placeholder="Logger" value="{$samplers?:''}"
-                                name="samplers" id="loggerPicker" data-original-title="" title="">
+                                class="j-samplers-autocomplete j-autocomplete-input j-ui-elem" placeholder="Sampler Name/s" value="{$samplers?:''}"
+                                name="samplers" id="samplerPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
                         <td>Metrics</td>
                         <td colspan="3">
                             <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
-                                class="j-metrics-autocomplete j-autocomplete-input j-ui-elem" placeholder="Metrics" value="{$metrics?:''}"
+                                class="j-metrics-autocomplete j-autocomplete-input j-ui-elem" placeholder="Metric Name/s" value="{$metrics?:''}"
                                 name="metrics" id="messagePicker" data-original-title="" title="">
                         </td>
                     </tr>
@@ -169,7 +169,7 @@
                                 <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>tags</option>
                             </select>
                         </td>
-                        <td colspan="3">
+                        <td colspan="4">
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                                 class="j-expansionValue-autocomplete j-autocomplete-input j-ui-elem" placeholder="expansionValue" value="{$expansionValue?:''}"
                                 name="expansionValue" id="expansionValuePicker" data-original-title="" title="">
@@ -189,7 +189,7 @@
             <div class="panel-body">
             <table>
                 <tr>
-                    <td columnSpans="3"><img alt="waveform" src="{$waveform}"></td>
+                    <td><img alt="waveform" src="{$waveform}"></td>
                 </tr>
             </table>
             </div>
@@ -220,7 +220,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td columnSpans="3"><img alt="waveform" src="{$result.waveform}"></td>
+                            <td colspan="4"><img alt="waveform" src="{$result.waveform}"></td>
                         </tr>
                     {/foreach}
                 </table>

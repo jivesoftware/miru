@@ -159,7 +159,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                             expandable.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
                                 new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                         }
-                        return stopIfZero.decrementAndGet() <= 0;
+                        return stopIfZero.decrementAndGet() > 0;
                     }
                 });
             } else {
