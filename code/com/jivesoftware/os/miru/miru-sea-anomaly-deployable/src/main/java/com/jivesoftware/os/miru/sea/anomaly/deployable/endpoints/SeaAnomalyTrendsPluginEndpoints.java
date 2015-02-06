@@ -32,7 +32,7 @@ public class SeaAnomalyTrendsPluginEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response getTenantsForTenant(@QueryParam("logLevel") @DefaultValue("ERROR") String logLevel,
+    public Response getTrends(@QueryParam("logLevel") @DefaultValue("ERROR") String logLevel,
         @QueryParam("service") @DefaultValue("") String service) {
 
         if (service.trim().isEmpty()) {

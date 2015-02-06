@@ -32,7 +32,7 @@ public class DistinctsPluginEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response getTenantsForTenant(@QueryParam("tenantId") @DefaultValue("") String tenantId,
+    public Response getDistincts(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("fromHoursAgo") @DefaultValue("720") int fromHoursAgo,
         @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
         @QueryParam("field") @DefaultValue("") String field,
