@@ -14,7 +14,7 @@ public class MiruLogAppenderInitializer {
 
     public static interface MiruLogAppenderConfig extends Config {
 
-        @StringDefault("undefined")
+        @StringDefault("undefinedHost:-1")
         String getMiruStumptownHostPorts();
 
         @IntDefault(60_000)

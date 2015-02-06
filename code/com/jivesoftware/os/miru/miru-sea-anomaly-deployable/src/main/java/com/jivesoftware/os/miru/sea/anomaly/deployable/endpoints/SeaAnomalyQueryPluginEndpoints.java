@@ -1,11 +1,9 @@
 package com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSeaAnomalyService;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyQueryPluginRegion;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyQueryPluginRegion.SeaAnomalyPluginRegionInput;
-import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -40,34 +38,33 @@ public class SeaAnomalyQueryPluginEndpoints {
         @QueryParam("service") @DefaultValue("") String service,
         @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("version") @DefaultValue("") String version,
-        @QueryParam("logLevels") @DefaultValue("INFO") List<String> logLevels,
         @QueryParam("fromAgo") @DefaultValue("8") int fromAgo,
         @QueryParam("toAgo") @DefaultValue("0") int toAgo,
         @QueryParam("fromTimeUnit") @DefaultValue("MINUTES") String fromTimeUnit,
         @QueryParam("toTimeUnit") @DefaultValue("MINUTES") String toTimeUnit,
-        @QueryParam("thread") @DefaultValue("") String thread,
-        @QueryParam("logger") @DefaultValue("") String logger,
-        @QueryParam("message") @DefaultValue("") String message,
-        @QueryParam("thrown") @DefaultValue("") String thrown,
+        @QueryParam("samplers") @DefaultValue("") String samplers,
+        @QueryParam("metrics") @DefaultValue("") String metrics,
+        @QueryParam("tags") @DefaultValue("") String tags,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("messageCount") @DefaultValue("100") int messageCount) {
+        @QueryParam("expansionField") @DefaultValue("") String expansionField,
+        @QueryParam("expansionValue") @DefaultValue("") String expansionValue
+    ) {
         String rendered = seaAnomalyService.renderPlugin(pluginRegion,
             Optional.of(new SeaAnomalyPluginRegionInput(cluster,
-                host,
-                service,
-                instance,
-                version,
-                Joiner.on(',').join(logLevels),
-                fromAgo,
-                toAgo,
-                fromTimeUnit,
-                toTimeUnit,
-                thread,
-                logger,
-                message,
-                thrown,
-                buckets,
-                messageCount)));
+                    host,
+                    service,
+                    instance,
+                    version,
+                    fromAgo,
+                    toAgo,
+                    fromTimeUnit,
+                    toTimeUnit,
+                    samplers,
+                    metrics,
+                    tags,
+                    buckets,
+                    expansionField,
+                    expansionValue)));
         return Response.ok(rendered).build();
     }
 }

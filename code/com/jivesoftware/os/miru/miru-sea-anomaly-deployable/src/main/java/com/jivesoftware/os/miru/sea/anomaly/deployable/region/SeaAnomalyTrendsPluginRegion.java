@@ -170,6 +170,6 @@ public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnom
 
     @Override
     public String getTitle() {
-        return "Trending";
+        return "Anomalies";
     }
 }

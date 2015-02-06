@@ -4,11 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
@@ -37,7 +35,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -69,53 +66,51 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
         final String instance;
         final String version;
 
-        final String logLevel;
         final int fromAgo;
         final int toAgo;
         final String fromTimeUnit;
         final String toTimeUnit;
 
-        final String thread;
-        final String logger;
-        final String message;
-        final String thrown;
+        final String samplers;
+        final String metrics;
+        final String tags;
 
         final int buckets;
-        final int messageCount;
+
+        final String expansionField;
+        final String expansionValue;
 
         public SeaAnomalyPluginRegionInput(String cluster,
             String host,
             String service,
             String instance,
             String version,
-            String logLevel,
             int fromAgo,
             int toAgo,
             String fromTimeUnit,
             String toTimeUnit,
-            String thread,
-            String logger,
-            String message,
-            String thrown,
+            String samplers,
+            String metrics,
+            String tags,
             int buckets,
-            int messageCount) {
+            String expansionField,
+            String expansionValue) {
 
             this.cluster = cluster;
             this.host = host;
             this.service = service;
             this.instance = instance;
             this.version = version;
-            this.logLevel = logLevel;
             this.fromAgo = fromAgo;
             this.toAgo = toAgo;
             this.fromTimeUnit = fromTimeUnit;
             this.toTimeUnit = toTimeUnit;
-            this.thread = thread;
-            this.logger = logger;
-            this.message = message;
-            this.thrown = thrown;
+            this.samplers = samplers;
+            this.metrics = metrics;
+            this.tags = tags;
             this.buckets = buckets;
-            this.messageCount = messageCount;
+            this.expansionField = expansionField;
+            this.expansionValue = expansionValue;
         }
 
     }
@@ -136,22 +131,13 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                 data.put("version", input.version);
                 data.put("fromTimeUnit", input.fromTimeUnit);
                 data.put("toTimeUnit", input.toTimeUnit);
-                data.put("thread", input.thread);
-                data.put("logger", input.logger);
-                data.put("message", input.message);
-                data.put("thrown", input.thrown);
+                data.put("samplers", input.samplers);
+                data.put("metrics", input.metrics);
+                data.put("tags", input.tags);
 
-                Set<String> logLevelSet = Sets.newHashSet(Splitter.on(',').split(input.logLevel));
-                data.put("logLevels", ImmutableMap.of(
-                    "trace", logLevelSet.contains("TRACE"),
-                    "debug", logLevelSet.contains("DEBUG"),
-                    "info", logLevelSet.contains("INFO"),
-                    "warn", logLevelSet.contains("WARN"),
-                    "error", logLevelSet.contains("ERROR")));
                 data.put("fromAgo", String.valueOf(fromAgo));
                 data.put("toAgo", String.valueOf(toAgo));
                 data.put("buckets", String.valueOf(input.buckets));
-                data.put("messageCount", String.valueOf(input.messageCount));
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -170,11 +156,9 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
                         addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
                         addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
-                        addFieldFilter(fieldFilters, notFieldFilters, "thread", input.thread);
-                        addFieldFilter(fieldFilters, notFieldFilters, "logger", input.logger);
-                        addFieldFilter(fieldFilters, notFieldFilters, "message", input.message.toLowerCase());
-                        addFieldFilter(fieldFilters, notFieldFilters, "level", input.logLevel);
-                        addFieldFilter(fieldFilters, notFieldFilters, "thrownStackTrace", input.thrown.toLowerCase());
+                        addFieldFilter(fieldFilters, notFieldFilters, "samplers", input.samplers);
+                        addFieldFilter(fieldFilters, notFieldFilters, "metrics", input.metrics);
+                        addFieldFilter(fieldFilters, notFieldFilters, "tags", input.tags);
 
                         List<MiruFilter> notFilters = null;
                         if (!notFieldFilters.isEmpty()) {
@@ -274,6 +258,6 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
 
     @Override
     public String getTitle() {
-        return "Query";
+        return "Find Anomaly";
     }
 }

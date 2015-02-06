@@ -132,6 +132,13 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-sea-anomaly-plugins</artifactId>
+            <version>0.264-SNAPSHOT</version>
+            <type>jar</type>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>jaxrs-util</artifactId>
         </dependency>

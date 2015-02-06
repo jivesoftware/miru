@@ -90,7 +90,7 @@ public class SeaAnomalyStatusPluginRegion implements PageRegion<Optional<SeaAnom
 
     @Override
     public String getTitle() {
-        return "Status";
+        return "Anomaly Status";
     }
 
     static class ServiceStatus {
