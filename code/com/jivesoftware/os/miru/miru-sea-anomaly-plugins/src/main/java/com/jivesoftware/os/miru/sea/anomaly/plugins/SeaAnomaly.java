@@ -88,15 +88,14 @@ public class SeaAnomaly {
         for (int i = 0; i < numBits; i++) {
             BM answer = answers.get(i);
             if (answer != null) {
-                int multiplier = 1 << (numBits - 1 - i);
                 long[] cardinalities = bitmaps.boundedCardinalities(answer, indexes);
                 if (waveform == null) {
                     waveform = new long[cardinalities.length];
                 }
+                long multiplier = (1L << i);
                 for (int j = 0; j < waveform.length; j++) {
-                    waveform[j] += multiplier * cardinalities[j];
                     if (cardinalities[j] > 0) {
-                        waveform[j] += cardinalities[j] * (1L << i);
+                        waveform[j] += cardinalities[j] * multiplier;
                     }
                 }
             }
