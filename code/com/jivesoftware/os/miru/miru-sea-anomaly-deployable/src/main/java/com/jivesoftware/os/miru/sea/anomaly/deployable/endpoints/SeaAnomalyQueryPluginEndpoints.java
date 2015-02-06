@@ -45,6 +45,7 @@ public class SeaAnomalyQueryPluginEndpoints {
         @QueryParam("samplers") @DefaultValue("") String samplers,
         @QueryParam("metrics") @DefaultValue("") String metrics,
         @QueryParam("tags") @DefaultValue("") String tags,
+        @QueryParam("type") @DefaultValue("") String type,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("expansionField") @DefaultValue("") String expansionField,
         @QueryParam("expansionValue") @DefaultValue("") String expansionValue
@@ -62,6 +63,7 @@ public class SeaAnomalyQueryPluginEndpoints {
                     samplers,
                     metrics,
                     tags,
+                    type,
                     buckets,
                     expansionField,
                     expansionValue)));

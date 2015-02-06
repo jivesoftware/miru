@@ -75,6 +75,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
         final String samplers;
         final String metrics;
         final String tags;
+        final String type;
 
         final int buckets;
 
@@ -93,6 +94,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
             String samplers,
             String metrics,
             String tags,
+            String type,
             int buckets,
             String expansionField,
             String expansionValue) {
@@ -109,6 +111,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
             this.samplers = samplers;
             this.metrics = metrics;
             this.tags = tags;
+            this.type = type;
             this.buckets = buckets;
             this.expansionField = expansionField;
             this.expansionValue = expansionValue;
@@ -135,6 +138,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                 data.put("samplers", input.samplers);
                 data.put("metrics", input.metrics);
                 data.put("tags", input.tags);
+                data.put("type", input.type);
 
                 data.put("fromAgo", String.valueOf(fromAgo));
                 data.put("toAgo", String.valueOf(toAgo));
@@ -163,6 +167,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         addFieldFilter(fieldFilters, notFieldFilters, "samplers", input.samplers);
                         addFieldFilter(fieldFilters, notFieldFilters, "metrics", input.metrics);
                         addFieldFilter(fieldFilters, notFieldFilters, "tags", input.tags);
+                        addFieldFilter(fieldFilters, notFieldFilters, "type", input.type);
 
                         List<MiruFilter> notFilters = null;
                         if (!notFieldFilters.isEmpty()) {
@@ -221,8 +226,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         rawWaveforms.put(e.getKey(), e.getValue().waveform);
                     }
 
-                    int h = Math.max(1024, (200 + (64 * rawWaveforms.size())));
-                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, h, 32, 10, rawWaveforms,
+                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, 10, rawWaveforms,
                         Optional.<MinMaxDouble>absent()));
 
                     final MinMaxDouble mmd = new MinMaxDouble();
@@ -244,6 +248,8 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                                     ImmutableMap.of(t.getKey(), t.getValue()),
                                     Optional.of(mmd))));
                     }
+
+                    data.put("results", results);
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

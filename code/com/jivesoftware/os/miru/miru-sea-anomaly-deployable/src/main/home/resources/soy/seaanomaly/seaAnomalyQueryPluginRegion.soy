@@ -15,6 +15,7 @@
  * @param? samplers
  * @param? metrics
  * @param? tags
+ * @param? type
  * @param? expansionField
  * @param? expansionValue
  * @param? waveform
@@ -134,6 +135,18 @@
                             <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
                                 class="j-tags-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tags" value="{$tags?:''}"
                                 name="tags" id="messagePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Type</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-type-autocomplete j-autocomplete-input j-ui-elem" placeholder="type"
+                                name="type" id="type" data-original-title="" title="">
+                                <option value="counter" {if $type == 'counter'}selected="selected"{/if}>counter</option>
+                                <option value="timer" {if $type == 'timer'}selected="selected"{/if}>timer</option>
+                                <option value="all" {if $type == 'all'}selected="selected"{/if}></option>
+                            </select>
                         </td>
                     </tr>
                     <tr><td colspan="5">

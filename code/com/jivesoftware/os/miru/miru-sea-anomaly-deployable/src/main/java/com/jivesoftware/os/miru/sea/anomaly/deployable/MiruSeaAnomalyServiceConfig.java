@@ -31,7 +31,7 @@ public interface MiruSeaAnomalyServiceConfig extends Config {
     public String getMiruWriterHosts();
 
     //@StringDefault("unspecifiedHost:0")
-    @StringDefault("soa-prime-data7.phx1.jivehosted.com:10004")
+    @StringDefault("soa-prime-data8.phx1.jivehosted.com:10004")
     public String getMiruReaderHosts();
 
 }

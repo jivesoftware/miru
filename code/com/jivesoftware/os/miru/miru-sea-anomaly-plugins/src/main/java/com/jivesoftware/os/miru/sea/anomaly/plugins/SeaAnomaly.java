@@ -82,13 +82,16 @@ public class SeaAnomaly {
     }
 
     private <BM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM> bitmaps) {
-        long[] waveform = new long[indexes.length];
+        long[] waveform = null;
         for (int i = 0; i < numBits; i++) {
             BM answer = answers.get(i);
             if (answer != null) {
                 int multiplier = 1 << (numBits - 1 - i);
                 long[] cardinalities = bitmaps.boundedCardinalities(answer, indexes);
-                for (int j = 0; j < indexes.length; j++) {
+                if (waveform == null) {
+                    waveform = new long[cardinalities.length];
+                }
+                for (int j = 0; j < waveform.length; j++) {
                     waveform[j] += multiplier * cardinalities[j];
                 }
             }
