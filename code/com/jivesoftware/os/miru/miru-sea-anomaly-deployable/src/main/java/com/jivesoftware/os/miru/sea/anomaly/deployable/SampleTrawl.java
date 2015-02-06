@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Objects.firstNonNull;
@@ -82,6 +83,40 @@ public class SampleTrawl {
             .putFieldValue("type", metric.type)
             .putFieldValue("timestamp", firstNonNull(metric.timestamp, "unknown"))
             .build();
+    }
+
+    public static void main(String[] args) {
+        long expected = 0;
+        int[] bits = new int[64];
+
+        for (int a = 0; a < 10; a++) {
+            long o = new Random().nextLong();
+            expected += o;
+            long l = o;
+
+            /*
+             int i = 0;
+             while (l != 0L) {
+             if (l % 2L != 0) {
+             bits[i]++;
+             }
+             ++i;
+             l = l >>> 1;
+             }*/
+            for (int i = 0; i < 64; i++) {
+                if (((l >> i) & 1) != 0) {
+                    bits[i]++;
+                }
+            }
+
+        }
+
+        long r = 0;
+        for (int i = 0; i < 64; i++) {
+            r += (bits[i] > 0) ? (bits[i] * (1L << i)) : 0L;
+        }
+
+        System.out.println(expected + " " + r);
     }
 
 }

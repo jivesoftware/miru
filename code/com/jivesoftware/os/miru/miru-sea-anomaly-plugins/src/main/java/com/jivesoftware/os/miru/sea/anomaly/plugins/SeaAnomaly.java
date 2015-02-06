@@ -95,6 +95,9 @@ public class SeaAnomaly {
                 }
                 for (int j = 0; j < waveform.length; j++) {
                     waveform[j] += multiplier * cardinalities[j];
+                    if (cardinalities[j] > 0) {
+                        waveform[j] += cardinalities[j] * (1L << i);
+                    }
                 }
             }
         }
