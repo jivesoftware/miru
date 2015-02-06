@@ -33,7 +33,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 public class MiruBestEffortFailureTolerantClient implements MiruClient {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
@@ -83,7 +85,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
             List<MiruActivity> tenantActivities = activitiesPerTenant.get(tenantId);
             final List<MiruPartitionedActivity> partitionTenantActivites = miruPartitioner.writeActivities(tenantId, tenantActivities, recoverFromRemoval);
             LOG.inc("sendActivity>wal", tenantActivities.size());
-            LOG.inc("sendActivity>wal>tenant>" + tenantId, tenantActivities.size());
+            LOG.inc("sendActivity>wal", tenantActivities.size(), tenantId.toString());
 
             ListMultimap<MiruPartitionId, MiruPartitionedActivity> activitiesPerPartition = ArrayListMultimap.create();
             for (MiruPartitionedActivity partitionedActivity : partitionTenantActivites) {
@@ -127,7 +129,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                 List<MiruPartitionedActivity> tenantPartitionedActivities = activitiesPerPartition.get(partitionId);
                 sendForTenant(allCoords, tenantId, tenantPartitionedActivities);
                 LOG.inc("sendActivity>sent", tenantPartitionedActivities.size());
-                LOG.inc("sendActivity>sent>tenant>" + tenantId, tenantPartitionedActivities.size());
+                LOG.inc("sendActivity>sent", tenantPartitionedActivities.size(), tenantId.toString());
             }
         }
     }
@@ -196,7 +198,6 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                         } catch (Exception x) {
 
                             // TODO add hook to track of tenant partition inconsistent
-
                             LOG.warn("Failed to send {} activities for tenantId:{} to host:{}",
                                 tenantPartitionedActivities.size(), tenantId, coord.host);
                             LOG.inc("sendForTenant>notSent", tenantPartitionedActivities.size());

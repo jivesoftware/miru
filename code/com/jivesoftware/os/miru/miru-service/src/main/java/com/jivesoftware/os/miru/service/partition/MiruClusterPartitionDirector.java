@@ -51,7 +51,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
                     try {
                         tenantTopology.index(activities);
                         LOG.inc("indexed", activities.size());
-                        LOG.inc("indexed>" + tenantId, activities.size());
+                        LOG.inc("indexed", activities.size(), tenantId.toString());
                     } finally {
                         LOG.stopTimer("indexed");
                     }

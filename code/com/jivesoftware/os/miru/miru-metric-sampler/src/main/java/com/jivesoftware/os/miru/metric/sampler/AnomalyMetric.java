@@ -11,6 +11,7 @@ public class AnomalyMetric {
     public String service;
     public String instance;
     public String version;
+    public String tenant;
     public String sampler;
     public String[] path;
     public String type;
@@ -26,6 +27,7 @@ public class AnomalyMetric {
         String service,
         String instance,
         String version,
+        String tenant,
         String sampler,
         String[] path,
         String type,
@@ -37,6 +39,7 @@ public class AnomalyMetric {
         this.service = service;
         this.instance = instance;
         this.version = version;
+        this.tenant = tenant;
         this.sampler = sampler;
         this.path = path;
         this.type = type;

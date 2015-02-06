@@ -61,7 +61,7 @@ public class MiruWarmActivitySenderProvider implements MiruActivitySenderProvide
 
                     LOG.inc("warm", activities.size());
                     for (MiruTenantId tenantId : tenantIds) {
-                        LOG.inc("warm>" + tenantId, 1);
+                        LOG.inc("warm", 1, tenantId.toString());
                     }
                 } catch (Exception x) {
                     LOG.warn("Failed to warm tenants {} for host: {}", new Object[] { tenantIds, host }, x);

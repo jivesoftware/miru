@@ -209,10 +209,10 @@ public class MiruPartitionAccessor<BM> {
                     indexRepairs.current(strategy, coord);
                 }
 
-                log.set(ValueType.COUNT, "lastId>tenant>" + coord.tenantId + ">partition>" + coord.partitionId,
-                    got.activityIndex.lastId());
-                log.set(ValueType.COUNT, "largestTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId,
-                    got.timeIndex.getLargestTimestamp());
+                log.set(ValueType.COUNT, "lastId>partition>" + coord.partitionId,
+                    got.activityIndex.lastId(), coord.tenantId.toString());
+                log.set(ValueType.COUNT, "largestTimestamp>partition>" + coord.partitionId,
+                    got.timeIndex.getLargestTimestamp(), coord.tenantId.toString());
             }
         } finally {
             semaphore.release();

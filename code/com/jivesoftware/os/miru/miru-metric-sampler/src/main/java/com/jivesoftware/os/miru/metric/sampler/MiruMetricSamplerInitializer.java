@@ -28,6 +28,12 @@ public class MiruMetricSamplerInitializer {
         @BooleanDefault(true)
         boolean getEnabled();
 
+        @BooleanDefault(true)
+        boolean getEnableJVMMetrics();
+
+        @BooleanDefault(false)
+        boolean getEnableTenantMetrics();
+
     }
 
     public MiruMetricSampler initialize(String datacenter,
@@ -36,7 +42,7 @@ public class MiruMetricSamplerInitializer {
         String service,
         String instance,
         String version,
-        MiruMetricSamplerConfig config) throws IOException {
+        final MiruMetricSamplerConfig config) throws IOException {
 
         if (config.getEnabled()) {
 
@@ -56,7 +62,18 @@ public class MiruMetricSamplerInitializer {
                 version,
                 sampleSenders,
                 config.getSampleIntervalInMillis(),
-                config.getMaxBacklog());
+                config.getMaxBacklog(),
+                config.getEnableTenantMetrics()) {
+
+                    @Override
+                    public void run() {
+                        if (config.getEnableJVMMetrics()) {
+                            JVMMetrics.INSTANCE.logJMVMetrics();
+                        }
+                        super.run(); //To change body of generated methods, choose Tools | Templates.
+                    }
+
+                };
         } else {
             return new MiruMetricSampler() {
 

@@ -81,6 +81,7 @@ public class SampleTrawl {
             .putAllFieldValues("bits", bits)
             .putAllFieldValues("tags", Arrays.asList(metric.path))
             .putFieldValue("type", metric.type)
+            .putFieldValue("tenant", firstNonNull(metric.tenant, "unknown"))
             .putFieldValue("timestamp", firstNonNull(metric.timestamp, "unknown"))
             .build();
     }

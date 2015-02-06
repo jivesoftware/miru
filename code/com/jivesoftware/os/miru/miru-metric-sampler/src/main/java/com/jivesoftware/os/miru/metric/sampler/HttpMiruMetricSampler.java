@@ -7,6 +7,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.Timer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
@@ -32,6 +33,7 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
     private final MiruMetricSampleSender[] sender;
     private final int maxBacklog;
     private final int sampleIntervalInMillis;
+    private final boolean tenantLevelMetricsEnable;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final ScheduledExecutorService sampler = Executors.newSingleThreadScheduledExecutor();
@@ -44,7 +46,8 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         String version,
         MiruMetricSampleSender[] logSenders,
         int sampleIntervalInMillis,
-        int maxBacklog) {
+        int maxBacklog,
+        boolean tenantLevelMetricsEnable) {
         this.datacenter = datacenter;
         this.host = host;
         this.service = service;
@@ -54,6 +57,7 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         this.cluster = cluster;
         this.sampleIntervalInMillis = sampleIntervalInMillis;
         this.maxBacklog = maxBacklog;
+        this.tenantLevelMetricsEnable = tenantLevelMetricsEnable;
     }
 
     @Override
@@ -100,52 +104,66 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         String time = String.valueOf(System.currentTimeMillis());
         List<AnomalyMetric> metrics = new ArrayList<>();
         for (CountersAndTimers a : CountersAndTimers.getAll()) {
-            for (Entry<String, Counter> counter : a.getCounters()) {
-                metrics.add(new AnomalyMetric(
-                    datacenter,
-                    cluster,
-                    host,
-                    service,
-                    instance,
-                    version,
-                    a.getLoggerName(),
-                    counter.getKey().split("\\>"),
-                    "counter",
-                    counter.getValue().getCount(),
-                    time));
-            }
-
-            for (Entry<String, AtomicCounter> atomicCounter : a.getAtomicCounters()) {
-                metrics.add(new AnomalyMetric(
-                    datacenter,
-                    cluster,
-                    host,
-                    service,
-                    instance,
-                    version,
-                    a.getLoggerName(),
-                    atomicCounter.getKey().split("\\>"),
-                    "atomicCounter",
-                    atomicCounter.getValue().getCount(),
-                    time));
-            }
-
-            for (Entry<String, Timer> timers : a.getTimers()) {
-                metrics.add(new AnomalyMetric(
-                    datacenter,
-                    cluster,
-                    host,
-                    service,
-                    instance,
-                    version,
-                    a.getLoggerName(),
-                    timers.getKey().split("\\>"),
-                    "timer",
-                    timers.getValue().getLastSample(),
-                    time));
+            gather("null", a, metrics, time);
+            if (tenantLevelMetricsEnable) {
+                Collection<CountersAndTimers> cats = a.getAllTenantSpecficMetrics();
+                for(CountersAndTimers c:cats) {
+                    String tenant = c.getName().split(">")[2];
+                    gather(tenant, c, metrics, time);
+                }
             }
         }
         return metrics;
+    }
+
+    private void gather(String tenant, CountersAndTimers a, List<AnomalyMetric> metrics, String time) {
+        for (Entry<String, Counter> counter : a.getCounters()) {
+            metrics.add(new AnomalyMetric(
+                datacenter,
+                cluster,
+                host,
+                service,
+                instance,
+                version,
+                tenant,
+                a.getName(),
+                counter.getKey().split("\\>"),
+                "counter",
+                counter.getValue().getCount(),
+                time));
+        }
+
+        for (Entry<String, AtomicCounter> atomicCounter : a.getAtomicCounters()) {
+            metrics.add(new AnomalyMetric(
+                datacenter,
+                cluster,
+                host,
+                service,
+                instance,
+                version,
+                tenant,
+                a.getName(),
+                atomicCounter.getKey().split("\\>"),
+                "atomicCounter",
+                atomicCounter.getValue().getCount(),
+                time));
+        }
+
+        for (Entry<String, Timer> timers : a.getTimers()) {
+            metrics.add(new AnomalyMetric(
+                datacenter,
+                cluster,
+                host,
+                service,
+                instance,
+                version,
+                tenant,
+                a.getName(),
+                timers.getKey().split("\\>"),
+                "timer",
+                timers.getValue().getLastSample(),
+                time));
+        }
     }
 
     private void send(List<AnomalyMetric> samples) {

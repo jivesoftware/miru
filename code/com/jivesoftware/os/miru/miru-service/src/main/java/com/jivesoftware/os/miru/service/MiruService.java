@@ -187,11 +187,11 @@ public class MiruService implements Miru {
             totalElapsed = log.stopTimer("askAndMerge");
         }
 
-        log.inc("askAndMerge>all");
-        log.inc("askAndMerge>tenant>" + tenantId);
+        log.inc("askAndMerge");
+        log.inc("askAndMerge", tenantId.toString());
         log.inc("askAndMerge>query>" + solvableFactory.getQueryKey());
-        log.inc("askAndMerge>tenantAndQuery>" + tenantId + '>' + solvableFactory.getQueryKey());
-
+        log.inc("askAndMerge>query>" + solvableFactory.getQueryKey(), tenantId.toString());
+        
         return new MiruResponse<>(answer, solutions, totalElapsed, false, incompletePartitionIds, solutionLog.asList());
     }
 
@@ -210,11 +210,11 @@ public class MiruService implements Miru {
             Callable<MiruPartitionResponse<A>> callable = factory.create(partition.get(), report);
             MiruPartitionResponse<A> answer = callable.call();
 
-            log.inc("askImmediate>all");
-            log.inc("askImmediate>tenant>" + tenantId);
-            log.inc("askImmediate>query>" + factory.getQueryKey());
-            log.inc("askImmediate>tenantAndQuery>" + tenantId + '>' + factory.getQueryKey());
-
+            log.inc("askImmediate");
+            log.inc("askImmediate", tenantId.toString());
+            log.inc("askImmediate>query" + factory.getQueryKey());
+            log.inc("askImmediate>query" + factory.getQueryKey(), tenantId.toString());
+         
             return answer;
         } else {
             throw new MiruPartitionUnavailableException("partition is NOT present. partitionId:" + partitionId);

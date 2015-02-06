@@ -298,8 +298,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         accessorRef.get().markForRefresh(Optional.of(System.currentTimeMillis()));
 
         log.inc("warm", 1);
-        log.inc("warm>tenant>" + coord.tenantId, 1);
-        log.inc("warm>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, 1);
+        log.inc("warm", 1, coord.tenantId.toString());
+        log.inc("warm>partition>" + coord.partitionId, 1, coord.tenantId.toString());
     }
 
     @Override
@@ -625,8 +625,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     log.inc("rebuild>count>calls", 1);
                     log.inc("rebuild>count>total", count);
                     log.inc("rebuild>count>power>" + FilerIO.chunkPower(count, 0), 1);
-                    log.inc("rebuild>tenant>" + coord.tenantId, count);
-                    log.inc("rebuild>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, count);
+                    log.inc("rebuild", count, coord.tenantId.toString());
+                    log.inc("rebuild>partition>" + coord.partitionId, count, coord.tenantId.toString());
                 }
             }
 
@@ -707,18 +707,18 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             Sip suggestion = sipTracker.suggest(sip);
             if (accessor.setSip(suggestion)) {
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
-                log.set(ValueType.COUNT, "sipTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId + ">clock",
-                    suggestion.clockTimestamp);
-                log.set(ValueType.COUNT, "sipTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId + ">activity",
-                    suggestion.activityTimestamp);
+                log.set(ValueType.COUNT, "sipTimestamp>partition>" + coord.partitionId + ">clock",
+                    suggestion.clockTimestamp, coord.tenantId.toString());
+                log.set(ValueType.COUNT, "sipTimestamp>partition>" + coord.partitionId + ">activity",
+                    suggestion.activityTimestamp, coord.tenantId.toString());
             }
 
             log.inc("sip>count>calls", 1);
             if (count > 0) {
                 log.inc("sip>count>total", count);
                 log.inc("sip>count>power>" + FilerIO.chunkPower(count, 0), 1);
-                log.inc("sip>tenant>" + coord.tenantId, count);
-                log.inc("sip>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, count);
+                log.inc("sip>count", count, coord.tenantId.toString());
+                log.inc("sip>partition>" + coord.partitionId, count, coord.tenantId.toString());
             }
 
             return accessorRef.get() == accessor;

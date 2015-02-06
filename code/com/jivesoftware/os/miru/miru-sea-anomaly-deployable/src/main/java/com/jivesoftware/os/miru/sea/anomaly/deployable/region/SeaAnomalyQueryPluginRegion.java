@@ -71,6 +71,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
         final int toAgo;
         final String fromTimeUnit;
         final String toTimeUnit;
+        final String tenant;
 
         final String samplers;
         final String metrics;
@@ -91,6 +92,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
             int toAgo,
             String fromTimeUnit,
             String toTimeUnit,
+            String tenant,
             String samplers,
             String metrics,
             String tags,
@@ -108,6 +110,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
             this.toAgo = toAgo;
             this.fromTimeUnit = fromTimeUnit;
             this.toTimeUnit = toTimeUnit;
+            this.tenant = tenant;
             this.samplers = samplers;
             this.metrics = metrics;
             this.tags = tags;
@@ -135,6 +138,8 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                 data.put("version", input.version);
                 data.put("fromTimeUnit", input.fromTimeUnit);
                 data.put("toTimeUnit", input.toTimeUnit);
+
+                data.put("tenant", input.tenant);
                 data.put("samplers", input.samplers);
                 data.put("metrics", input.metrics);
                 data.put("tags", input.tags);
@@ -164,6 +169,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
                         addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
                         addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
+                        addFieldFilter(fieldFilters, notFieldFilters, "tenant", input.tenant);
                         addFieldFilter(fieldFilters, notFieldFilters, "sampler", input.samplers);
                         addFieldFilter(fieldFilters, notFieldFilters, "metric", input.metrics);
                         addFieldFilter(fieldFilters, notFieldFilters, "tags", input.tags);
@@ -179,7 +185,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         }
 
                         ImmutableMap<String, MiruFilter> seaAnomalyFilters = ImmutableMap.of(
-                            "see",
+                            "metric",
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
                                 fieldFilters,

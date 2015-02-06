@@ -211,9 +211,9 @@ public class MiruPartitioner {
         activityLookupTable.add(tenantId, partitionedActivities);
 
         if (!partitionedActivities.isEmpty()) {
-            log.set(ValueType.COUNT, "partitioner>index>" + tenantId + ">" + currentPartition.getId(),
-                partitionedActivities.get(partitionedActivities.size() - 1).index);
-            log.set(ValueType.COUNT, "partitioner>partition>" + tenantId, currentPartition.getId());
+            log.set(ValueType.COUNT, "partitioner>index>" + currentPartition.getId(),
+                partitionedActivities.get(partitionedActivities.size() - 1).index, tenantId.toString());
+            log.set(ValueType.COUNT, "partitioner>partition", currentPartition.getId(), tenantId.toString());
         }
 
         if (partitionRolloverOccurred) {
