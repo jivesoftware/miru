@@ -138,7 +138,6 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
         MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         final Map<String, MiruFilter> expandable = new LinkedHashMap<>();
         for (String expansion : request.query.expansionValues) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "Expanding with " + expansion);
             if (expansion.endsWith("*")) {
                 MiruTermComposer termComposer = context.getTermComposer();
                 KeyRange keyRange = null;
@@ -149,7 +148,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                     keyRange = new KeyRange(lowerInclusive, upperExclusive);
                 }
                 final AtomicInteger stopIfZero = new AtomicInteger(100); // TODO expose to query.
-                fieldIndex.streamTermIdsForField(fieldId, Arrays.asList(keyRange), new TermIdStream() {
+                fieldIndex.streamTermIdsForField(fieldId, (keyRange == null ? null : Arrays.asList(keyRange)), new TermIdStream() {
 
                     @Override
                     public boolean stream(MiruTermId termId) {

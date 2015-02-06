@@ -159,14 +159,14 @@
                             <select style="width:120px; padding-left:10px;"
                                 class="j-expansionField-autocomplete j-autocomplete-input j-ui-elem" placeholder="expansionField"
                                 name="expansionField" id="expansionField" data-original-title="" title="">
+                                <option value="metric" {if $expansionField == 'metric'}selected="selected"{/if}>metric</option>
+                                <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>tags</option>
                                 <option value="cluster" {if $expansionField == 'cluster'}selected="selected"{/if}>cluster</option>
                                 <option value="host" {if $expansionField == 'host'}selected="selected"{/if}>host</option>
                                 <option value="service" {if $expansionField == 'service'}selected="selected"{/if}>service</option>
                                 <option value="instance" {if $expansionField == 'instance'}selected="selected"{/if}>instance</option>
                                 <option value="version" {if $expansionField == 'version'}selected="selected"{/if}>version</option>
                                 <option value="sampler" {if $expansionField == 'sampler'}selected="selected"{/if}>sampler</option>
-                                <option value="metric" {if $expansionField == 'metric'}selected="selected"{/if}>metric</option>
-                                <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>tags</option>
                             </select>
                         </td>
                         <td colspan="4">
