@@ -27,6 +27,7 @@ import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -498,7 +499,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         private boolean rebuild(final MiruPartitionAccessor<BM> accessor) throws Exception {
             final ArrayBlockingQueue<List<MiruPartitionedActivity>> queue = new ArrayBlockingQueue<>(1);
             final AtomicLong rebuildTimestamp = new AtomicLong(accessor.getRebuildTimestamp());
-            final AtomicLong sipTimestamp = new AtomicLong(accessor.getSipTimestamp());
+            final AtomicReference<Sip> sip = new AtomicReference<>(accessor.getSip());
             final AtomicBoolean rebuilding = new AtomicBoolean(true);
             final AtomicBoolean streaming = new AtomicBoolean(true);
 
@@ -592,8 +593,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                         }
 
                         // activityWAL uses CurrentTimestamper, so column version implies desired sip offset
-                        if (partitionedActivity.clockTimestamp > sipTimestamp.get()) {
-                            sipTimestamp.set(partitionedActivity.clockTimestamp);
+                        Sip suggestion = new Sip(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
+                        if (suggestion.compareTo(sip.get()) > 0) {
+                            sip.set(suggestion);
                         }
                         break;
                     }
@@ -604,7 +606,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     boolean repair = firstRebuild.compareAndSet(true, false);
                     accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, repair, rebuildIndexExecutor);
                     accessor.setRebuildTimestamp(rebuildTimestamp.get());
-                    accessor.setSipTimestamp(sipTimestamp.get());
+                    accessor.setSip(sip.get());
                 } catch (Exception e) {
                     log.error("Failure during rebuild index for {}", coord);
                     rebuilding.set(false);
@@ -671,11 +673,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
             final MiruSipTracker sipTracker = new MiruSipTracker(maxSipReplaySize, maxSipClockSkew, accessor.seenLastSip.get());
 
-            long afterTimestamp = accessor.getSipTimestamp();
-            final List<MiruPartitionedActivity> partitionedActivities = Lists.newLinkedList();
+            Sip sip = accessor.getSip();
+            final List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList();
             activityWALReader.streamSip(coord.tenantId,
                 coord.partitionId,
-                afterTimestamp,
+                sip,
                 partitionSipBatchSize,
                 timings.partitionRebuildFailureSleepMillis,
                 new MiruActivityWALReader.StreamMiruActivityWAL() {
@@ -690,7 +692,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                         sipTracker.addSeenThisSip(timeAndVersion);
 
                         if (!partitionedActivity.type.isBoundaryType()) {
-                            sipTracker.put(partitionedActivity.clockTimestamp);
+                            sipTracker.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
                         }
 
                         // stop if the accessor has changed
@@ -702,10 +704,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             boolean repair = firstSip.compareAndSet(true, false);
             int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip, repair, sipIndexExecutor);
 
-            long suggestedTimestamp = sipTracker.suggestTimestamp(afterTimestamp);
-            if (accessor.setSipTimestamp(suggestedTimestamp)) {
+            Sip suggestion = sipTracker.suggest(sip);
+            if (accessor.setSip(suggestion)) {
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
-                log.set(ValueType.COUNT, "sipTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId, suggestedTimestamp);
+                log.set(ValueType.COUNT, "sipTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId + ">clock",
+                    suggestion.clockTimestamp);
+                log.set(ValueType.COUNT, "sipTimestamp>tenant>" + coord.tenantId + ">partition>" + coord.partitionId + ">activity",
+                    suggestion.activityTimestamp);
             }
 
             log.inc("sip>count>calls", 1);

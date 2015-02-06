@@ -73,7 +73,7 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                 }
                 for (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
                     if (streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
-                        // activityWAL is inclusive of the given timestamp, so add 1
+                        // add 1 to exclude last result
                         lastSort = v.getColumn().getSort();
                         lastTimestamp = v.getColumn().getCollisionId() + 1;
                     } else {
@@ -96,7 +96,7 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
     @Override
     public void streamSip(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        long afterTimestamp,
+        Sip afterSip,
         final int batchSize,
         long sleepOnFailureMillis,
         final StreamMiruActivityWAL streamMiruActivityWAL)
@@ -107,10 +107,11 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
         final List<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
         boolean streaming = true;
         byte lastSort = MiruPartitionedActivity.Type.ACTIVITY.getSort();
-        long lastTimestamp = afterTimestamp;
+        long lastClockTimestamp = afterSip.clockTimestamp;
+        long lastActivityTimestamp = afterSip.activityTimestamp;
         while (streaming) {
             try {
-                MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(lastSort, lastTimestamp);
+                MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(lastSort, lastClockTimestamp, lastActivityTimestamp);
                 activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                     new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
                         @Override
@@ -133,9 +134,10 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                 }
                 for (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
                     if (streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
-                        // activitySipWAL is exclusive of the given timestamp, so do NOT add 1
+                        // add 1 to exclude last result
                         lastSort = v.getColumn().getSort();
-                        lastTimestamp = v.getColumn().getCollisionId();
+                        lastClockTimestamp = v.getColumn().getCollisionId();
+                        lastActivityTimestamp = v.getColumn().getSipId() + 1;
                     } else {
                         streaming = false;
                         break;

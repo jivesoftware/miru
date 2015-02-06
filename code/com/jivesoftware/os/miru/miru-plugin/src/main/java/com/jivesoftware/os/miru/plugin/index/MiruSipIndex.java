@@ -6,6 +6,7 @@
 
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
 import java.io.IOException;
 
 /**
@@ -13,7 +14,8 @@ import java.io.IOException;
  */
 public interface MiruSipIndex {
 
-    long getSip() throws IOException;
+    Sip getSip() throws IOException;
 
-    boolean setSip(long timestamp) throws IOException;
+    boolean setSip(Sip sip) throws IOException;
+
 }

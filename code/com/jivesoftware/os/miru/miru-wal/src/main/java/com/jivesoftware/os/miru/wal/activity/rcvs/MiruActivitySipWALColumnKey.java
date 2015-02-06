@@ -1,23 +1,15 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
-import com.google.common.base.Optional;
-
 public class MiruActivitySipWALColumnKey implements Comparable<MiruActivitySipWALColumnKey> {
+
     private final byte sort;
     private final long collisionId;
-    private final Optional<Long> sipId;
+    private final long sipId;
 
     public MiruActivitySipWALColumnKey(byte sort, long collisionId, long sipId) {
         this.sort = sort;
         this.collisionId = collisionId;
-        this.sipId = Optional.of(sipId);
-    }
-
-    /** Only used for reading from the sip WAL */
-    public MiruActivitySipWALColumnKey(byte sort, long collisionId) {
-        this.sort = sort;
-        this.collisionId = collisionId;
-        this.sipId = Optional.absent();
+        this.sipId = sipId;
     }
 
     public byte getSort() {
@@ -28,7 +20,7 @@ public class MiruActivitySipWALColumnKey implements Comparable<MiruActivitySipWA
         return collisionId;
     }
 
-    public Optional<Long> getSipId() {
+    public long getSipId() {
         return sipId;
     }
 
@@ -39,9 +31,7 @@ public class MiruActivitySipWALColumnKey implements Comparable<MiruActivitySipWA
             result = Long.compare(collisionId, o.collisionId);
         }
         if (result == 0) {
-            long a = sipId.or(Long.MAX_VALUE);
-            long b = o.sipId.or(Long.MAX_VALUE);
-            result = Long.compare(a, b);
+            result = Long.compare(sipId, o.sipId);
         }
         return result;
     }
@@ -69,17 +59,21 @@ public class MiruActivitySipWALColumnKey implements Comparable<MiruActivitySipWA
         if (collisionId != that.collisionId) {
             return false;
         }
+        if (sipId != that.sipId) {
+            return false;
+        }
         if (sort != that.sort) {
             return false;
         }
-        return !(sipId != null ? !sipId.equals(that.sipId) : that.sipId != null);
+
+        return true;
     }
 
     @Override
     public int hashCode() {
-        int result = sort;
+        int result = (int) sort;
         result = 31 * result + (int) (collisionId ^ (collisionId >>> 32));
-        result = 31 * result + (sipId != null ? sipId.hashCode() : 0);
+        result = 31 * result + (int) (sipId ^ (sipId >>> 32));
         return result;
     }
 }

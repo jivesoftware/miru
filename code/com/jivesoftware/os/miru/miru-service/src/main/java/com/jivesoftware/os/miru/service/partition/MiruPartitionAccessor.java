@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableExcepti
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
@@ -143,12 +144,12 @@ public class MiruPartitionAccessor<BM> {
         rebuildTimestamp.set(timestamp);
     }
 
-    long getSipTimestamp() throws IOException {
-        return context.isPresent() ? context.get().sipIndex.getSip() : 0;
+    Sip getSip() throws IOException {
+        return context.isPresent() ? context.get().sipIndex.getSip() : Sip.INITIAL;
     }
 
-    boolean setSipTimestamp(long timestamp) throws IOException {
-        return (context.isPresent() && context.get().sipIndex.setSip(timestamp));
+    boolean setSip(Sip sip) throws IOException {
+        return (context.isPresent() && context.get().sipIndex.setSip(sip));
     }
 
     public static enum IndexStrategy {

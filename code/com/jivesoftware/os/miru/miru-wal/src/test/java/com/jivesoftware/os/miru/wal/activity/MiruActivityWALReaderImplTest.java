@@ -86,17 +86,61 @@ public class MiruActivityWALReaderImplTest {
         }
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
-        activityWALReader.streamSip(tenantId, partitionId, startingTimestamp - 1, batchSize, 10_000, new MiruActivityWALReader.StreamMiruActivityWAL() {
-            @Override
-            public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                timestamps.add(collisionId);
-                return true;
-            }
-        });
+        activityWALReader.streamSip(tenantId, partitionId, MiruActivityWALReader.Sip.INITIAL, batchSize, 10_000,
+            new MiruActivityWALReader.StreamMiruActivityWAL() {
+                @Override
+                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
+                    timestamps.add(collisionId);
+                    return true;
+                }
+            });
 
         assertEquals(timestamps.size(), totalActivities);
         assertEquals(timestamps.get(0).longValue(), startingTimestamp);
         assertEquals(timestamps.get(timestamps.size() - 1).longValue(), startingTimestamp + totalActivities - 1);
+    }
+
+    @Test
+    public void testStreamSameClock() throws Exception {
+        final MiruTenantId tenantId = new MiruTenantId("test".getBytes());
+        final MiruPartitionId partitionId = MiruPartitionId.of(0);
+        final int batchSize = 10;
+        final int totalActivities = 1_000;
+        final long startingTimestamp = 1_000;
+
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL =
+            new InMemoryRowColumnValueStore<>();
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
+            new InMemoryRowColumnValueStore<>();
+
+        MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
+        final AtomicLong clockTimestamp = new AtomicLong();
+        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(new MiruPartitionedActivityFactory.ClockTimestamper() {
+            @Override
+            public long get() {
+                return clockTimestamp.get();
+            }
+        });
+
+        clockTimestamp.set(startingTimestamp);
+        for (int i = 0; i < totalActivities; i++) {
+            activityWALWriter.write(tenantId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
+                new MiruActivity.Builder(tenantId, startingTimestamp + i, new String[0], 0).build())));
+        }
+
+        final AtomicLong expectedTimestamp = new AtomicLong(startingTimestamp);
+        activityWALReader.streamSip(tenantId, partitionId, MiruActivityWALReader.Sip.INITIAL, batchSize, 10_000,
+            new MiruActivityWALReader.StreamMiruActivityWAL() {
+                @Override
+                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
+                    assertEquals(partitionedActivity.clockTimestamp, startingTimestamp);
+                    assertEquals(partitionedActivity.timestamp, expectedTimestamp.getAndIncrement());
+                    return true;
+                }
+            });
+
+        assertEquals(expectedTimestamp.get(), startingTimestamp + totalActivities);
     }
 
 }

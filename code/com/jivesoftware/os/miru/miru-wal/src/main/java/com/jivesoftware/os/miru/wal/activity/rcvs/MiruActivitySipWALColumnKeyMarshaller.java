@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import java.nio.ByteBuffer;
@@ -20,18 +19,12 @@ public class MiruActivitySipWALColumnKeyMarshaller implements TypeMarshaller<Mir
 
     @Override
     public byte[] toBytes(MiruActivitySipWALColumnKey miruActivitySipWALColumnKey) throws Exception {
-        Optional<Long> sipId = miruActivitySipWALColumnKey.getSipId();
         int capacity = 17; // sort (1 byte) + collisionId (8 bytes) + sipId (8 bytes)
 
         ByteBuffer buffer = ByteBuffer.allocate(capacity);
         buffer.put(miruActivitySipWALColumnKey.getSort());
         buffer.putLong(miruActivitySipWALColumnKey.getCollisionId());
-
-        if (sipId.isPresent()) {
-            buffer.putLong(sipId.get());
-        } else {
-            buffer.putLong(Long.MAX_VALUE);
-        }
+        buffer.putLong(miruActivitySipWALColumnKey.getSipId());
 
         return buffer.array();
     }
@@ -47,18 +40,12 @@ public class MiruActivitySipWALColumnKeyMarshaller implements TypeMarshaller<Mir
 
     @Override
     public byte[] toLexBytes(MiruActivitySipWALColumnKey miruActivitySipWALColumnKey) throws Exception {
-        Optional<Long> sipId = miruActivitySipWALColumnKey.getSipId();
         int capacity = 17; // sort (1 byte) + collisionId (8 bytes) + sipId (8 bytes)
 
         ByteBuffer buffer = ByteBuffer.allocate(capacity);
         buffer.put(miruActivitySipWALColumnKey.getSort());
         buffer.put(UtilLexMarshaller.longToLex(miruActivitySipWALColumnKey.getCollisionId()));
-
-        if (sipId.isPresent()) {
-            buffer.put(UtilLexMarshaller.longToLex(sipId.get()));
-        } else {
-            buffer.put(UtilLexMarshaller.longToLex(Long.MAX_VALUE));
-        }
+        buffer.put(UtilLexMarshaller.longToLex(miruActivitySipWALColumnKey.getSipId()));
 
         return buffer.array();
     }

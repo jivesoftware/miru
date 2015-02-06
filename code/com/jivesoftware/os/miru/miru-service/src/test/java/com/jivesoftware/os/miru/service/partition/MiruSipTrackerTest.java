@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
 import java.util.concurrent.TimeUnit;
 import org.testng.annotations.Test;
 
@@ -15,7 +16,7 @@ public class MiruSipTrackerTest {
     public void testSuggestTimestamp_empty() throws Exception {
         MiruSipTracker sipTracker = new MiruSipTracker(maxSipReplaySize, maxSipClockSkew, Sets.<TimeAndVersion>newHashSet());
         long initialTimestamp = System.currentTimeMillis();
-        assertEquals(sipTracker.suggestTimestamp(initialTimestamp), initialTimestamp);
+        assertEquals(sipTracker.suggest(new Sip(initialTimestamp, 0)), new Sip(initialTimestamp, 0));
     }
 
     @Test
@@ -26,10 +27,10 @@ public class MiruSipTrackerTest {
         int numTimestamps = maxSipReplaySize / 2;
         final long firstTimestamp = System.currentTimeMillis() - 3 * maxSipClockSkew * numTimestamps;
         for (int i = 0; i < numTimestamps; i++) {
-            sipTracker.put(firstTimestamp + i * 2 * maxSipClockSkew);
+            sipTracker.put(firstTimestamp + i * 2 * maxSipClockSkew, 0);
         }
 
-        assertEquals(sipTracker.suggestTimestamp(initialTimestamp), firstTimestamp);
+        assertEquals(sipTracker.suggest(new Sip(initialTimestamp, 0)), new Sip(firstTimestamp, 0));
     }
 
     @Test
@@ -42,10 +43,10 @@ public class MiruSipTrackerTest {
         long lastTimestamp = 0;
         for (int i = 0; i < numTimestamps; i++) {
             lastTimestamp = firstTimestamp + i;
-            sipTracker.put(lastTimestamp);
+            sipTracker.put(lastTimestamp, 0);
         }
 
-        assertEquals(sipTracker.suggestTimestamp(initialTimestamp), lastTimestamp - maxSipClockSkew);
+        assertEquals(sipTracker.suggest(new Sip(initialTimestamp, 0)), new Sip(lastTimestamp - maxSipClockSkew, 0));
     }
 
     @Test
@@ -58,10 +59,10 @@ public class MiruSipTrackerTest {
         long lastTimestamp = 0;
         for (int i = 0; i < numTimestamps; i++) {
             lastTimestamp = firstTimestamp + i * 2 * maxSipClockSkew;
-            sipTracker.put(lastTimestamp);
+            sipTracker.put(lastTimestamp, 0);
         }
 
-        assertEquals(sipTracker.suggestTimestamp(initialTimestamp), lastTimestamp - maxSipClockSkew);
+        assertEquals(sipTracker.suggest(new Sip(initialTimestamp, 0)), new Sip(lastTimestamp - maxSipClockSkew, 0));
     }
 
     @Test
@@ -74,11 +75,11 @@ public class MiruSipTrackerTest {
         long lastTimestamp = 0;
         for (int i = 0; i < numTimestamps; i++) {
             lastTimestamp = firstTimestamp + i;
-            sipTracker.put(lastTimestamp);
+            sipTracker.put(lastTimestamp, 0);
         }
 
         final long oldestReplayTimestamp = lastTimestamp - maxSipReplaySize + 1;
-        assertEquals(sipTracker.suggestTimestamp(initialTimestamp), oldestReplayTimestamp + 1);
+        assertEquals(sipTracker.suggest(new Sip(initialTimestamp, 0)), new Sip(oldestReplayTimestamp, 0));
     }
 
     @Test
