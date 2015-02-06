@@ -38,7 +38,7 @@ public class SeaAnomalyInjectable {
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>("scoreStumptown", new SeaAnomalyQuestion(trending, request)),
                 new SeaAnomalyAnswerEvaluator(),
-                new SeaAnomalyAnswerMerger(request.query.desiredNumberOfResultsPerWaveform),
+                new SeaAnomalyAnswerMerger(),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException e) {

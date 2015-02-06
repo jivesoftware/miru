@@ -39,10 +39,6 @@ import com.jivesoftware.os.miru.sea.anomaly.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyQueryPluginRegion;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyStatusPluginRegion;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyTrendsPluginRegion;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.storage.MiruSeaAnomalyPayloads;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.storage.MiruSeaAnomalyPayloadsIntializer;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
@@ -92,15 +88,6 @@ public class MiruSeaAnomalyMain {
 
         MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
-        RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
-            .newInstance();
-        @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-        //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
-        MiruSeaAnomalyPayloads payloads = new MiruSeaAnomalyPayloadsIntializer().initialize(instanceConfig.getClusterName(),
-            rowColumnValueStoreInitializer, mapper);
-
         OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
         RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruReaderHosts(), mapper);
@@ -112,8 +99,7 @@ public class MiruSeaAnomalyMain {
         MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,
             logMill,
             miruWrites,
-            miruReaders,
-            payloads);
+            miruReaders);
 
         MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
         MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
@@ -141,7 +127,7 @@ public class MiruSeaAnomalyMain {
             new MiruManagePlugin("Query",
                 "/seaAnomaly/query",
                 SeaAnomalyQueryPluginEndpoints.class,
-                new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, miruReaders, payloads)));
+                new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, miruReaders)));
 
         File staticResourceDir = new File(System.getProperty("user.dir"));
         System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

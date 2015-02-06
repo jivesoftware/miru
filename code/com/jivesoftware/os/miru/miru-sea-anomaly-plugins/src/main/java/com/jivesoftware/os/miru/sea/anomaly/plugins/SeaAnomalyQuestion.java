@@ -4,7 +4,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -22,7 +21,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -31,14 +29,14 @@ import java.util.Map;
  */
 public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownReport> {
 
-    private final SeaAnomaly stumptown;
+    private final SeaAnomaly seaAnomaly;
     private final MiruRequest<SeaAnomalyQuery> request;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public SeaAnomalyQuestion(SeaAnomaly stumptown,
         MiruRequest<SeaAnomalyQuery> request) {
-        this.stumptown = stumptown;
+        this.seaAnomaly = stumptown;
         this.request = request;
     }
 
@@ -59,12 +57,11 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
             return new MiruPartitionResponse<>(
                 new SeaAnomalyAnswer(
-                    Maps.transformValues(request.query.stumptownFilters,
+                    Maps.transformValues(request.query.filters,
                         new Function<MiruFilter, SeaAnomalyAnswer.Waveform>() {
                             @Override
                             public SeaAnomalyAnswer.Waveform apply(MiruFilter input) {
-                                return new SeaAnomalyAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments],
-                                    Collections.<MiruActivity>emptyList());
+                                return new SeaAnomalyAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
                             }
                         }),
                     resultsExhausted),
@@ -123,7 +120,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
 
         Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMap();
         start = System.currentTimeMillis();
-        for (Map.Entry<String, MiruFilter> entry : request.query.stumptownFilters.entrySet()) {
+        for (Map.Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
             SeaAnomalyAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
@@ -132,7 +129,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                 BM answer = bitmaps.create();
                 bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
-                    waveform = stumptown.stumptowning(bitmaps, context, request.tenantId, answer, request.query.desiredNumberOfResultsPerWaveform, indexes);
+                    waveform = seaAnomaly.stumptowning(bitmaps, context, request.tenantId, answer, indexes);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown answer: {} items.", bitmaps.cardinality(answer));
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
@@ -142,12 +139,12 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                 }
             }
             if (waveform == null) {
-                waveform = new SeaAnomalyAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments], Collections.<MiruActivity>emptyList());
+                waveform = new SeaAnomalyAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
             }
             waveforms.put(entry.getKey(), waveform);
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown answered: {} millis.", System.currentTimeMillis() - start);
-        solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown answered: {} iterations.", request.query.stumptownFilters.size());
+        solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown answered: {} iterations.", request.query.filters.size());
 
         SeaAnomalyAnswer result = new SeaAnomalyAnswer(waveforms, resultsExhausted);
 

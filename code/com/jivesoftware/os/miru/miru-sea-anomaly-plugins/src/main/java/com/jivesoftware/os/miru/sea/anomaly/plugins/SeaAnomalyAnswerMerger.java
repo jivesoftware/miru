@@ -1,9 +1,7 @@
 package com.jivesoftware.os.miru.sea.anomaly.plugins;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -15,11 +13,7 @@ import java.util.Map;
  */
 public class SeaAnomalyAnswerMerger implements MiruAnswerMerger<SeaAnomalyAnswer> {
 
-    private final int desiredNumberOfResultsPerWaveform;
-
-    public SeaAnomalyAnswerMerger(int desiredNumberOfResultsPerWaveform) {
-        this.desiredNumberOfResultsPerWaveform = desiredNumberOfResultsPerWaveform;
-    }
+    public SeaAnomalyAnswerMerger() {}
 
     /**
      * Merges the last and current results, returning the merged result.
@@ -63,18 +57,12 @@ public class SeaAnomalyAnswerMerger implements MiruAnswerMerger<SeaAnomalyAnswer
             SeaAnomalyAnswer.Waveform addWaveform = addEntry.getValue();
             SeaAnomalyAnswer.Waveform mergedWaveform = mergedWaveforms.get(key);
             if (mergedWaveform == null) {
-                mergedWaveform = new SeaAnomalyAnswer.Waveform(new long[addWaveform.waveform.length],
-                    Lists.<MiruActivity>newArrayListWithCapacity(addWaveform.results.size()));
+                mergedWaveform = new SeaAnomalyAnswer.Waveform(new long[addWaveform.waveform.length]);
                 mergedWaveforms.put(key, mergedWaveform);
             }
 
             for (int i = 0; i < mergedWaveform.waveform.length; i++) {
                 mergedWaveform.waveform[i] += addWaveform.waveform[i];
-            }
-
-            int remainingCount = desiredNumberOfResultsPerWaveform - mergedWaveform.results.size();
-            if (remainingCount > 0) {
-                mergedWaveform.results.addAll(addWaveform.results.subList(0, Math.min(addWaveform.results.size(), remainingCount)));
             }
 
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {

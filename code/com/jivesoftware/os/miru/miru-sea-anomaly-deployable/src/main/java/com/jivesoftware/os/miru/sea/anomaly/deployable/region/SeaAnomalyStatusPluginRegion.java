@@ -69,12 +69,10 @@ public class SeaAnomalyStatusPluginRegion implements PageRegion<Optional<SeaAnom
                     status.put("version", serviceId.version);
 
                     Map<String, AtomicLong> levelCounts = rowMap.get(serviceId);
-                    for (String level : new String[]{"info", "warn", "error"}) {
-                        if (levelCounts.containsKey(level.toUpperCase())) {
-                            status.put(level, String.valueOf(levelCounts.get(level.toUpperCase()).get()));
-                        } else {
-                            status.put(level, String.valueOf(0L));
-                        }
+                    if (levelCounts.containsKey("ingressed")) {
+                        status.put("ingressed", String.valueOf(levelCounts.get("ingressed").get()));
+                    } else {
+                        status.put("ingressed", String.valueOf(0L));
                     }
                     rows.add(status);
 

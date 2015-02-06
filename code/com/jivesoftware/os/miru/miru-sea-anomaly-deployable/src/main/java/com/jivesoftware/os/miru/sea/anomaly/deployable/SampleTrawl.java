@@ -52,10 +52,10 @@ public class SampleTrawl {
             firstNonNull(metric.instance, "unknown"),
             firstNonNull(metric.version, "unknown"));
 
-        AtomicLong levelCount = trawled.get(serviceId, "sample");
+        AtomicLong levelCount = trawled.get(serviceId, "ingressed");
         if (levelCount == null) {
             levelCount = new AtomicLong();
-            trawled.put(serviceId, "sample", levelCount);
+            trawled.put(serviceId, "ingressed", levelCount);
         }
         levelCount.incrementAndGet();
 

@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.sea.anomaly.deployable.region;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
@@ -14,14 +13,12 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -29,25 +26,19 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SeaAnomalySchemaConstants;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.MinMaxDouble;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.storage.MiruSeaAnomalyPayloads;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyConstants;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyQuery;
-import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
-
-import static com.google.common.base.Objects.firstNonNull;
 
 /**
  *
@@ -60,17 +51,14 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
     private final String template;
     private final MiruSoyRenderer renderer;
     private final RequestHelper[] miruReaders;
-    private final MiruSeaAnomalyPayloads payloads;
 
     public SeaAnomalyQueryPluginRegion(String template,
         MiruSoyRenderer renderer,
-        RequestHelper[] miruReaders,
-        MiruSeaAnomalyPayloads payloads) {
+        RequestHelper[] miruReaders) {
 
         this.template = template;
         this.renderer = renderer;
         this.miruReaders = miruReaders;
-        this.payloads = payloads;
     }
 
     public static class SeaAnomalyPluginRegionInput {
@@ -206,15 +194,17 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
 
                         @SuppressWarnings("unchecked")
                         MiruResponse<SeaAnomalyAnswer> analyticsResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                            new MiruRequest<>(tenantId,
+                                MiruActorId.NOT_PROVIDED,
+                                MiruAuthzExpression.NOT_PROVIDED,
                                 new SeaAnomalyQuery(
                                     new MiruTimeRange(fromTime, toTime),
                                     input.buckets,
-                                    input.messageCount,
                                     MiruFilter.NO_FILTER,
                                     seaAnomalyFilters),
-                                MiruSolutionLogLevel.INFO), //TODO MiruSolutionLogLevel.valueOf(input.solutionLogLevel)),
-                            SeaAnomalyConstants.SEA_ANOMALY_PREFIX + SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
+                                MiruSolutionLogLevel.INFO),
+                            SeaAnomalyConstants.SEA_ANOMALY_PREFIX + SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT,
+                            MiruResponse.class,
                             new Class[]{SeaAnomalyAnswer.class},
                             null);
                         response = analyticsResponse;
@@ -242,35 +232,6 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
 
                     data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, 10, rawWaveforms,
                         Optional.<MinMaxDouble>absent()));
-
-                    List<Long> activityTimes = Lists.newArrayList();
-                    for (SeaAnomalyAnswer.Waveform waveform : waveforms.values()) {
-                        for (MiruActivity activity : waveform.results) {
-                            activityTimes.add(activity.time);
-                        }
-                    }
-                    List<AnomalyMetric> logEvents = payloads.multiGet(tenantId, activityTimes, AnomalyMetric.class);
-                    /*
-                     List<MiruLogEvent> logEvents = Arrays.asList(
-                     new MiruLogEvent("dc", "clu", "host", "serv", "inst", "ver", "INFO", "t-1", "c.m.j.s.Class", "hello",
-                     String.valueOf(System.currentTimeMillis()), new String[] { "a", "b", "c" }));
-                     */
-                    data.put("events", Lists.transform(logEvents, new Function<AnomalyMetric, Map<String, Object>>() {
-                        @Override
-                        public Map<String, Object> apply(AnomalyMetric input) {
-                            return ImmutableMap.<String, Object>builder()
-                                .put("datacenter", firstNonNull(input.datacenter, ""))
-                                .put("cluster", firstNonNull(input.cluster, ""))
-                                .put("host", firstNonNull(input.host, ""))
-                                .put("service", firstNonNull(input.service, ""))
-                                .put("instance", firstNonNull(input.instance, ""))
-                                .put("version", firstNonNull(input.version, ""))
-                                .put("timestamp", input.timestamp != null
-                                        ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
-                                        : "")
-                                .build();
-                        }
-                    }));
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

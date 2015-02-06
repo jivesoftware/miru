@@ -100,7 +100,9 @@ public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnom
                     try {
                         @SuppressWarnings("unchecked")
                         MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                            new MiruRequest<>(tenantId,
+                                MiruActorId.NOT_PROVIDED,
+                                MiruAuthzExpression.NOT_PROVIDED,
                                 new TrendingQuery(
                                     new MiruTimeRange(fromTime, toTime),
                                     30,
@@ -111,7 +113,7 @@ public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnom
                                     100),
                                 MiruSolutionLogLevel.INFO),
                             TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                            new Class[] { TrendingAnswer.class },
+                            new Class[]{TrendingAnswer.class},
                             null);
                         response = trendingResponse;
                         if (response != null && response.answer != null) {
@@ -120,10 +122,9 @@ public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnom
                             log.warn("Empty trending response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed trending request to {}, trying another", new Object[] { requestHelper }, e);
+                        log.warn("Failed trending request to {}, trying another", new Object[]{requestHelper}, e);
                     }
                 }
-
 
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
@@ -150,9 +151,9 @@ public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnom
                                 "name", input.distinctValue,
                                 "rank", String.valueOf(Math.round(input.rank * 100.0) / 100.0),
                                 "waveform", "data:image/png;base64," + new PNGWaveforms()
-                                    .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                        ImmutableMap.of(input.distinctValue, input.waveform),
-                                        Optional.of(mmd)));
+                                .hitsToBase64PNGWaveform(600, 96, 10, 4,
+                                    ImmutableMap.of(input.distinctValue, input.waveform),
+                                    Optional.of(mmd)));
                         }
                     }));
                     ObjectMapper mapper = new ObjectMapper();

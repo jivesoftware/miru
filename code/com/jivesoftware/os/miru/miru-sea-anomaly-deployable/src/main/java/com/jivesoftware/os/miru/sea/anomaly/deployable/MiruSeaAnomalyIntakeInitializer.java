@@ -16,7 +16,6 @@
 package com.jivesoftware.os.miru.sea.anomaly.deployable;
 
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.storage.MiruSeaAnomalyPayloads;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.StringDefault;
 
@@ -35,10 +34,9 @@ public class MiruSeaAnomalyIntakeInitializer {
     MiruSeaAnomalyIntakeService initialize(MiruSeaAnomalyIntakeConfig config,
         SampleTrawl logMill,
         RequestHelper[] miruWrites,
-        RequestHelper[] miruReaders,
-        MiruSeaAnomalyPayloads activityPayloads) {
+        RequestHelper[] miruReaders) {
 
         SeaAnomalySchemaService seaAnomalySchemaService = new SeaAnomalySchemaService(miruReaders);
-        return new MiruSeaAnomalyIntakeService(seaAnomalySchemaService, logMill, config.getMiruIngressEndpoint(), miruWrites, activityPayloads);
+        return new MiruSeaAnomalyIntakeService(seaAnomalySchemaService, logMill, config.getMiruIngressEndpoint(), miruWrites);
     }
 }

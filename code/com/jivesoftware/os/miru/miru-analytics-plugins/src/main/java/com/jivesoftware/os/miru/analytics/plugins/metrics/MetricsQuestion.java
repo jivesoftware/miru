@@ -123,7 +123,7 @@ public class MetricsQuestion implements Question<MetricsAnswer, MetricsReport> {
             indexes[i] = Math.abs(timeIndex.getClosestId(currentTime)); // handle negative "theoretical insertion" index
             currentTime += segmentDuration;
         }
-        
+
         MiruFieldIndex<BM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int powerBitsFieldId = context.getSchema().getFieldId(request.query.powerBitsFieldName);
         MiruFieldDefinition powerBitsFieldDefinition = context.getSchema().getFieldDefinition(powerBitsFieldId);
@@ -158,7 +158,7 @@ public class MetricsQuestion implements Question<MetricsAnswer, MetricsReport> {
                         }
                     }
 
-                    waveform = metrics.metricing(bitmaps, answers, indexes, 64);
+                    waveform = metrics.metricingAvg(bitmaps, rawAnswer, answers, indexes, 64);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         int cardinality = 0;
                         for (int i = 0; i < 64; i++) {

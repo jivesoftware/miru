@@ -4,10 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,28 +28,25 @@ public class SeaAnomalyAnswer implements Serializable {
 
     @Override
     public String toString() {
-        return "StumptownAnswer{" +
-            "waveforms=" + waveforms +
-            ", resultsExhausted=" + resultsExhausted +
-            '}';
+        return "StumptownAnswer{"
+            + "waveforms=" + waveforms
+            + ", resultsExhausted=" + resultsExhausted
+            + '}';
     }
 
     public static class Waveform implements Serializable {
 
         public final long[] waveform;
-        public final List<MiruActivity> results;
 
-        public Waveform(long[] waveform, List<MiruActivity> results) {
+        public Waveform(long[] waveform) {
             this.waveform = waveform;
-            this.results = results;
         }
 
         @JsonCreator
         public static Waveform fromJson(
-            @JsonProperty("waveform") byte[] waveform,
-            @JsonProperty("results") List<MiruActivity> results)
-            throws Exception {
-            return new Waveform(FilerIO.bytesLongs(waveform), results);
+            @JsonProperty("waveform") byte[] waveform
+        ) throws Exception {
+            return new Waveform(FilerIO.bytesLongs(waveform));
         }
 
         @JsonGetter("waveform")
@@ -61,11 +56,9 @@ public class SeaAnomalyAnswer implements Serializable {
 
         @Override
         public String toString() {
-            return "Waveform{" +
-                "waveform=" + Arrays.toString(waveform) +
-                ", results=" + results +
-                '}';
+            return "Waveform{"
+                + "waveform=" + Arrays.toString(waveform)
+                + '}';
         }
     }
-
 }
