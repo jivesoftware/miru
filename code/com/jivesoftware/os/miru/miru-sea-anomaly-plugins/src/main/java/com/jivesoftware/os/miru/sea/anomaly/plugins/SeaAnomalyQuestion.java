@@ -136,7 +136,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
         MiruFieldDefinition fieldDefinition = context.getSchema().getFieldDefinition(fieldId);
 
         MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        final Map<String, MiruFilter> expanded = new LinkedHashMap<>();
+        final Map<String, MiruFilter> expandable = new LinkedHashMap<>();
         for (String expansion : request.query.expansionValues) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "Expanding with " + expansion);
             if (expansion.endsWith("*")) {
@@ -156,7 +156,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                             join.add(new MiruFieldFilter(MiruFieldType.primary,
                                 request.query.expansionField, Lists.newArrayList(new String(termId.getBytes(), StandardCharsets.UTF_8))));
 
-                            expanded.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
+                            expandable.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
                                 new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                         }
                         return stopIfZero.decrementAndGet() <= 0;
@@ -171,10 +171,15 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                     join.add(new MiruFieldFilter(MiruFieldType.primary,
                         request.query.expansionField, Lists.newArrayList(expansion)));
 
-                    expanded.put(entry.getKey() + "-" + expansion,
+                    expandable.put(entry.getKey() + "-" + expansion,
                         new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                 }
             }
+        }
+
+        Map<String, MiruFilter> expand = expandable;
+        if (expand.isEmpty()) {
+            expand = request.query.filters;
         }
 
         MiruFieldIndex<BM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
@@ -189,7 +194,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
 
         Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMap();
         start = System.currentTimeMillis();
-        for (Map.Entry<String, MiruFilter> entry : expanded.entrySet()) {
+        for (Map.Entry<String, MiruFilter> entry : expand.entrySet()) {
             SeaAnomalyAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
@@ -229,10 +234,9 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly empty answer.");
                 }
             }
-            if (waveform == null) {
-                waveform = new SeaAnomalyAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
+            if (waveform != null) {
+                waveforms.put(entry.getKey(), waveform);
             }
-            waveforms.put(entry.getKey(), waveform);
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly answered: {} millis.", System.currentTimeMillis() - start);
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly answered: {} iterations.", request.query.filters.size());
