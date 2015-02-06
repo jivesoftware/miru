@@ -2,18 +2,19 @@ package com.jivesoftware.os.miru.sea.anomaly.plugins;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -130,23 +131,35 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
         MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         final Map<String, MiruFilter> expanded = new LinkedHashMap<>();
         for (String expansion : request.query.expansionValues) {
-            solutionLog.log(MiruSolutionLogLevel.INFO,"Expanding with "+expansion);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "Expanding with " + expansion);
             if (expansion.endsWith("*")) {
                 fieldIndex.streamTermIdsForField(fieldId, null, new TermIdStream() {
 
                     @Override
                     public boolean stream(MiruTermId termId) {
                         for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
-                            expanded.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8), entry.getValue());
+                            ArrayList<MiruFieldFilter> join = new ArrayList<>();
+                            join.addAll(entry.getValue().fieldFilters);
+                            join.add(new MiruFieldFilter(MiruFieldType.primary,
+                                request.query.expansionField, Lists.newArrayList(new String(termId.getBytes(), StandardCharsets.UTF_8))));
+
+                            expanded.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
+                                new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                         }
                         return true; // TODO stop after some number
                     }
                 });
             } else {
-                MiruInvertedIndex<BM> got = fieldIndex.get(fieldId, new MiruTermId(expansion.getBytes(StandardCharsets.UTF_8)));
                 // TODO use got.
                 for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
-                    expanded.put(entry.getKey() + "-" + expansion, entry.getValue());
+
+                    ArrayList<MiruFieldFilter> join = new ArrayList<>();
+                    join.addAll(entry.getValue().fieldFilters);
+                    join.add(new MiruFieldFilter(MiruFieldType.primary,
+                        request.query.expansionField, Lists.newArrayList(expansion)));
+
+                    expanded.put(entry.getKey() + "-" + expansion,
+                        new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                 }
             }
         }
