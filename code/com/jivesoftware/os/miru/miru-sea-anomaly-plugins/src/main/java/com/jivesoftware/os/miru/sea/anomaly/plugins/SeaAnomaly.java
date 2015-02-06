@@ -47,7 +47,9 @@ public class SeaAnomaly {
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
         for (int i = 0; i < waveform.length; i++) {
-            waveform[i] /= rawCardinalities[i];
+            if (rawCardinalities[i] > 0) {
+                waveform[i] /= rawCardinalities[i];
+            }
         }
         return new Waveform(waveform);
     }
