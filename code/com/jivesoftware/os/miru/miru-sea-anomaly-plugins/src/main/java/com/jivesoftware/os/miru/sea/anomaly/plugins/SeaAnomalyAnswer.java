@@ -28,7 +28,7 @@ public class SeaAnomalyAnswer implements Serializable {
 
     @Override
     public String toString() {
-        return "StumptownAnswer{"
+        return "SeaAnomalyAnswer{"
             + "waveforms=" + waveforms
             + ", resultsExhausted=" + resultsExhausted
             + '}';

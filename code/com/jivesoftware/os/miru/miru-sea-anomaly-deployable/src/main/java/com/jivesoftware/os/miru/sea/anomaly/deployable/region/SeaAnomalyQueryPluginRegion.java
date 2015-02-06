@@ -177,7 +177,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                                 notFilters));
 
                         @SuppressWarnings("unchecked")
-                        MiruResponse<SeaAnomalyAnswer> analyticsResponse = requestHelper.executeRequest(
+                        MiruResponse<SeaAnomalyAnswer> miruResponse = requestHelper.executeRequest(
                             new MiruRequest<>(tenantId,
                                 MiruActorId.NOT_PROVIDED,
                                 MiruAuthzExpression.NOT_PROVIDED,
@@ -185,13 +185,15 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                                     new MiruTimeRange(fromTime, toTime),
                                     input.buckets,
                                     MiruFilter.NO_FILTER,
-                                    seaAnomalyFilters),
+                                    seaAnomalyFilters,
+                                    input.expansionField,
+                                    Arrays.asList(input.expansionValue.split("\\s*,\\s*"))),
                                 MiruSolutionLogLevel.INFO),
                             SeaAnomalyConstants.SEA_ANOMALY_PREFIX + SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT,
                             MiruResponse.class,
                             new Class[]{SeaAnomalyAnswer.class},
                             null);
-                        response = analyticsResponse;
+                        response = miruResponse;
                         if (response != null && response.answer != null) {
                             break;
                         } else {
@@ -219,6 +221,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
+
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
                 }
             }

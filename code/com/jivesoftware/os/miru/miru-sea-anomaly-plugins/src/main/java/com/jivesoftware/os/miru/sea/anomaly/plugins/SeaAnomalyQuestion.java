@@ -5,12 +5,17 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -19,10 +24,13 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  *
@@ -118,18 +126,43 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
             currentTime += segmentDuration;
         }
 
+        int fieldId = context.getSchema().getFieldId(request.query.expansionField);
+        MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        final Map<String, MiruFilter> expanded = new LinkedHashMap<>();
+        for (String expansion : request.query.expansionValues) {
+            if (expansion.endsWith("*")) {
+                fieldIndex.streamTermIdsForField(fieldId, null, new TermIdStream() {
+
+                    @Override
+                    public boolean stream(MiruTermId termId) {
+                        for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
+                            expanded.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8), entry.getValue());
+                        }
+                        return true; // TODO stop after some number
+                    }
+                });
+            } else {
+                MiruInvertedIndex<BM> got = fieldIndex.get(fieldId, new MiruTermId(expansion.getBytes(StandardCharsets.UTF_8)));
+                for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
+                    expanded.put(entry.getKey() + "-" + expansion, entry.getValue());
+                }
+            }
+        }
+
         Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMap();
         start = System.currentTimeMillis();
-        for (Map.Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
+        for (Map.Entry<String, MiruFilter> entry : expanded.entrySet()) {
             SeaAnomalyAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
+
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), entry.getValue(), solutionLog,
                     waveformFiltered, context.getActivityIndex().lastId(), -1);
+
                 BM answer = bitmaps.create();
                 bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
-                    waveform = seaAnomaly.stumptowning(bitmaps, context, request.tenantId, answer, indexes);
+                    waveform = seaAnomaly.anomalying(bitmaps, context, request.tenantId, answer, indexes);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown answer: {} items.", bitmaps.cardinality(answer));
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
