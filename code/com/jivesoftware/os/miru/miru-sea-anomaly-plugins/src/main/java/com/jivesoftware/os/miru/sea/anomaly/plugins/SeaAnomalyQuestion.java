@@ -36,7 +36,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -139,15 +138,14 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
         final Map<String, MiruFilter> expandable = new LinkedHashMap<>();
         for (String expansion : request.query.expansionValues) {
             if (expansion.endsWith("*")) {
-                MiruTermComposer termComposer = context.getTermComposer();
                 KeyRange keyRange = null;
                 String baseTerm = expansion.substring(0, expansion.length() - 1);
                 if (baseTerm.length() > 0) {
+                    MiruTermComposer termComposer = context.getTermComposer();
                     byte[] lowerInclusive = termComposer.prefixLowerInclusive(fieldDefinition.prefix, baseTerm);
                     byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
                     keyRange = new KeyRange(lowerInclusive, upperExclusive);
                 }
-                final AtomicInteger stopIfZero = new AtomicInteger(100); // TODO expose to query.
                 fieldIndex.streamTermIdsForField(fieldId, (keyRange == null ? null : Arrays.asList(keyRange)), new TermIdStream() {
 
                     @Override
@@ -161,7 +159,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                             expandable.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
                                 new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                         }
-                        return stopIfZero.decrementAndGet() > 0;
+                        return true;
                     }
                 });
             } else {
@@ -196,6 +194,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
 
         Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMap();
         start = System.currentTimeMillis();
+        int producedWaveformCount = 0;
         for (Map.Entry<String, MiruFilter> entry : expand.entrySet()) {
             SeaAnomalyAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
@@ -238,6 +237,11 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
             }
             if (waveform != null) {
                 waveforms.put(entry.getKey(), waveform);
+                producedWaveformCount++;
+                if (producedWaveformCount > 100) { // TODO add to query?
+                    solutionLog.log(MiruSolutionLogLevel.INFO, "truncated result to 100");
+                    break;
+                }
             }
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly answered: {} millis.", System.currentTimeMillis() - start);
