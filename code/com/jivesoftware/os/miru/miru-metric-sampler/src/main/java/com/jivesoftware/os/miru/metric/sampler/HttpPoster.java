@@ -92,7 +92,7 @@ public class HttpPoster implements MiruMetricSampleSender {
         try {
             post(toJson);
         } catch (Exception x) {
-            System.err.println("Failed to post:" + toJson + " to http://" + host + ":" + port + "" + path);
+            System.err.println("Failed to metrics sizeInBytes:" + toJson.length() + " to http://" + host + ":" + port + "" + path);
             x.printStackTrace();
             destroy();
         }

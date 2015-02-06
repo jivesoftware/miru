@@ -141,10 +141,13 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
             solutionLog.log(MiruSolutionLogLevel.INFO, "Expanding with " + expansion);
             if (expansion.endsWith("*")) {
                 MiruTermComposer termComposer = context.getTermComposer();
+                KeyRange keyRange = null;
                 String baseTerm = expansion.substring(0, expansion.length() - 1);
-                byte[] lowerInclusive = termComposer.prefixLowerInclusive(fieldDefinition.prefix, baseTerm);
-                byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
-                KeyRange keyRange = new KeyRange(lowerInclusive, upperExclusive);
+                if (baseTerm.length() > 0) {
+                    byte[] lowerInclusive = termComposer.prefixLowerInclusive(fieldDefinition.prefix, baseTerm);
+                    byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
+                    keyRange = new KeyRange(lowerInclusive, upperExclusive);
+                }
                 final AtomicInteger stopIfZero = new AtomicInteger(100); // TODO expose to query.
                 fieldIndex.streamTermIdsForField(fieldId, Arrays.asList(keyRange), new TermIdStream() {
 
