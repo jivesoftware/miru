@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -15,6 +16,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -164,6 +166,16 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
             }
         }
 
+        MiruFieldIndex<BM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        int powerBitsFieldId = context.getSchema().getFieldId(request.query.powerBitsFieldName);
+        MiruFieldDefinition powerBitsFieldDefinition = context.getSchema().getFieldDefinition(powerBitsFieldId);
+        List<Optional<BM>> powerBitIndexes = new ArrayList<>();
+        for (int i = 0; i < 64; i++) {
+            MiruTermId powerBitTerm = context.getTermComposer().compose(powerBitsFieldDefinition, String.valueOf(i));
+            MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
+            powerBitIndexes.add(invertedIndex.getIndex());
+        }
+
         Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMap();
         start = System.currentTimeMillis();
         for (Map.Entry<String, MiruFilter> entry : expanded.entrySet()) {
@@ -174,16 +186,36 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), entry.getValue(), solutionLog,
                     waveformFiltered, context.getActivityIndex().lastId(), -1);
 
-                BM answer = bitmaps.create();
-                bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
-                if (!bitmaps.isEmpty(answer)) {
-                    waveform = seaAnomaly.anomalying(bitmaps, context, request.tenantId, answer, indexes);
+                BM rawAnswer = bitmaps.create();
+
+                bitmaps.and(rawAnswer, Arrays.asList(constrained, waveformFiltered));
+                if (!bitmaps.isEmpty(rawAnswer)) {
+                    List<BM> answers = Lists.newArrayList();
+                    for (int i = 0; i < 64; i++) {
+                        Optional<BM> powerBitIndex = powerBitIndexes.get(i);
+                        if (powerBitIndex.isPresent()) {
+                            BM answer = bitmaps.create();
+                            bitmaps.and(answer, Arrays.asList(powerBitIndex.get(), rawAnswer));
+                            answers.add(answer);
+                        } else {
+                            answers.add(null);
+                        }
+                    }
+
+                    waveform = seaAnomaly.metricingAvg(bitmaps, rawAnswer, answers, indexes, 64);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown answer: {} items.", bitmaps.cardinality(answer));
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
+                        int cardinality = 0;
+                        for (int i = 0; i < 64; i++) {
+                            BM answer = answers.get(i);
+                            if (answer != null) {
+                                cardinality += bitmaps.cardinality(answer);
+                            }
+                        }
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly answer: {} items.", cardinality);
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
                     }
                 } else {
-                    solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown empty answer.");
+                    solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly empty answer.");
                 }
             }
             if (waveform == null) {
@@ -191,8 +223,8 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
             }
             waveforms.put(entry.getKey(), waveform);
         }
-        solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown answered: {} millis.", System.currentTimeMillis() - start);
-        solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown answered: {} iterations.", request.query.filters.size());
+        solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly answered: {} millis.", System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly answered: {} iterations.", request.query.filters.size());
 
         SeaAnomalyAnswer result = new SeaAnomalyAnswer(waveforms, resultsExhausted);
 

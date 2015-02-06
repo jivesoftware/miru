@@ -42,34 +42,25 @@
             <div class="panel-body">
                 <table>
                     <tr>
-                        {if $service}
-                            <td>Service</td>
-                            <td>Instance</td>
-                        {else}
-                            <td>Service</td>
-                        {/if}
                         <td>Rank</td>
-                        <td>Action</td>
-                        <td>Waveform</td>
+                        <td>Field</td>
+                        <td>Value</td>
                     </tr>
                     {foreach $result in $results}
                         <tr>
-                            {if $service}
-                                <td>{$service}</td>
-                                <td>{$result.name}</td>
-                            {else}
-                                <td><a href="#" onclick="document.location.href='/seaAnomaly/trends?service={$result.name}&amp;logLevel='+document.getElementById('logLevelPicker').value; return false;">{$result.name}</a></td>
-                            {/if}
                             <td>{$result.rank}</td>
+                            <td>{$result.field}</td>
                             <td>
                                 {if $service}
-                                    <a href="/seaAnomaly/query?service={$service}&amp;instance={$result.name}&amp;fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;logLevels={$logLevel}">Query</a>
+                                    <a href="/seaAnomaly/query?fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;">{$result.value}</a>
                                 {else}
-                                    <a href="/seaAnomaly/query?service={$result.name}&amp;fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;logLevels={$logLevel}">Query</a>
+                                    <a href="/seaAnomaly/query?fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;">{$result.value}</a>
                                 {/if}
                             </td>
-                            <td><img alt="waveform" src="{$result.waveform}"></td>
                         </tr>
+                        <tr>
+                            <td columnSpans="3"><img alt="waveform" src="{$result.waveform}"></td>
+                        </td>
                     {/foreach}
                 </table>
             </div>

@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyConstants;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyQuery;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -142,7 +143,6 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                 data.put("expansionField", input.expansionField);
                 data.put("expansionValue", input.expansionValue);
 
-
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
@@ -188,6 +188,7 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                                 new SeaAnomalyQuery(
                                     new MiruTimeRange(fromTime, toTime),
                                     input.buckets,
+                                    "bits",
                                     MiruFilter.NO_FILTER,
                                     seaAnomalyFilters,
                                     input.expansionField,
@@ -220,8 +221,29 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         rawWaveforms.put(e.getKey(), e.getValue().waveform);
                     }
 
-                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, 10, rawWaveforms,
+                    int h = Math.max(1024, (200 + (64 * rawWaveforms.size())));
+                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, h, 32, 10, rawWaveforms,
                         Optional.<MinMaxDouble>absent()));
+
+                    final MinMaxDouble mmd = new MinMaxDouble();
+                    mmd.value(0);
+                    for (Entry<String, long[]> t : rawWaveforms.entrySet()) {
+                        for (long w : t.getValue()) {
+                            mmd.value(w);
+                        }
+                    }
+
+                    ArrayList<Map<String, String>> results = new ArrayList<>();
+                    for (Entry<String, long[]> t : rawWaveforms.entrySet()) {
+                        results.add(ImmutableMap.of(
+                                "rank", "nil",
+                                "field", input.expansionField,
+                                "value", t.getKey(),
+                                "waveform", "data:image/png;base64," + new PNGWaveforms()
+                                .hitsToBase64PNGWaveform(600, 96, 10, 4,
+                                    ImmutableMap.of(t.getKey(), t.getValue()),
+                                    Optional.of(mmd))));
+                    }
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

@@ -18,6 +18,7 @@
  * @param? expansionField
  * @param? expansionValue
  * @param? waveform
+ * @param? results
  * @param? buckets
  * @param? summary
  * @param? elapse
@@ -149,7 +150,7 @@
                                 <option value="service" {if $expansionField == 'service'}selected="selected"{/if}>service</option>
                                 <option value="instance" {if $expansionField == 'instance'}selected="selected"{/if}>instance</option>
                                 <option value="version" {if $expansionField == 'version'}selected="selected"{/if}>version</option>
-                                <option value="samplers" {if $expansionField == 'samplers'}selected="selected"{/if}>samplers</option>
+                                <option value="sampler" {if $expansionField == 'sampler'}selected="selected"{/if}>sampler</option>
                                 <option value="metrics" {if $expansionField == 'metrics'}selected="selected"{/if}>metrics</option>
                                 <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>tags</option>
                             </select>
@@ -168,15 +169,50 @@
             </form>
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">Results</div>
-        <div class="panel-body">
-            {if $waveform}
-                <img alt="waveform" src="{$waveform}">
-                <br/>
-            {/if}
+    {if $waveform}
+        <div class="panel panel-default">
+            <div class="panel-heading">Waveform</div>
+            <div class="panel-body">
+            <table>
+                <tr>
+                    <td columnSpans="3"><img alt="waveform" src="{$waveform}"></td>
+                </tr>
+            </table>
+            </div>
         </div>
-    </div>
+    {/if}
+    {if $results}
+        <div class="panel panel-default">
+            <div class="panel-heading">Waveforms</div>
+            <div class="panel-body">
+                <table>
+                    <tr>
+                        <td>Rank</td>
+                        <td>Field</td>
+                        <td>Value</td>
+                    </tr>
+                    {foreach $result in $results}
+                        <tr>
+                            <td>{$result.rank}</td>
+                            <td>{$result.field}</td>
+                            <td>
+                                <a href="/seaAnomaly/query?{$result.field}={$result.value}&amp;
+                                    fromAgo={$fromAgo}&amp;
+                                    fromTimeUnit=HOURS&amp;
+                                    toAgo=0&amp;
+                                    toTimeUnit=HOURS&amp;
+                                    ">{$result.value}</a>
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td columnSpans="3"><img alt="waveform" src="{$result.waveform}"></td>
+                        </tr>
+                    {/foreach}
+                </table>
+            </div>
+        </div>
+    {/if}
     {if $summary}
         <div class="panel panel-default">
             <div class="panel-heading">Query Summary {$elapse}</div>

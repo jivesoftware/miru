@@ -9,6 +9,8 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  *
  */
@@ -16,6 +18,7 @@ public class SeaAnomalyQuery implements Serializable {
 
     public final MiruTimeRange timeRange;
     public final int divideTimeRangeIntoNSegments;
+    public final String powerBitsFieldName;
     public final MiruFilter constraintsFilter;
     public final Map<String, MiruFilter> filters;
     public final String expansionField;
@@ -25,6 +28,7 @@ public class SeaAnomalyQuery implements Serializable {
     public SeaAnomalyQuery(
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("divideTimeRangeIntoNSegments") int divideTimeRangeIntoNSegments,
+        @JsonProperty("powerBitsFieldName") String powerBitsFieldName,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("filters") Map<String, MiruFilter> filters,
         @JsonProperty("expansionField") String expansionField,
@@ -34,6 +38,7 @@ public class SeaAnomalyQuery implements Serializable {
         this.timeRange = Preconditions.checkNotNull(timeRange);
         Preconditions.checkArgument(divideTimeRangeIntoNSegments > 0, "Segments must be at least 1");
         this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
+        this.powerBitsFieldName = checkNotNull(powerBitsFieldName);
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.filters = Preconditions.checkNotNull(filters);
         this.expansionField = expansionField;
@@ -44,6 +49,7 @@ public class SeaAnomalyQuery implements Serializable {
     public String toString() {
         return "SeaAnomalyQuery{" + "timeRange=" + timeRange
             + ", divideTimeRangeIntoNSegments=" + divideTimeRangeIntoNSegments
+            + ", powerBitsFieldName='" + powerBitsFieldName + '\''
             + ", constraintsFilter=" + constraintsFilter
             + ", filters=" + filters
             + ", expansionField=" + expansionField
