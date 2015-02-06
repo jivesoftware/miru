@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.metric.sampler;
 
 import java.io.IOException;
 import org.merlin.config.Config;
+import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.StringDefault;
 
@@ -24,6 +25,9 @@ public class MiruMetricSamplerInitializer {
         @IntDefault(100)
         int getMaxBacklog();
 
+        @BooleanDefault(true)
+        boolean getEnabled();
+
     }
 
     public MiruMetricSampler initialize(String datacenter,
@@ -34,23 +38,42 @@ public class MiruMetricSamplerInitializer {
         String version,
         MiruMetricSamplerConfig config) throws IOException {
 
-        String[] hostPorts = config.getMiruSeaAnomalyHostPorts().split("\\s*,\\s*");
-        MiruMetricSampleSender[] sampleSenders = new MiruMetricSampleSender[hostPorts.length];
+        if (config.getEnabled()) {
 
-        for (int i = 0; i < sampleSenders.length; i++) {
-            String[] parts = hostPorts[i].split(":");
-            sampleSenders[i] = new HttpPoster(parts[0], Integer.parseInt(parts[1]), config.getSocketTimeoutInMillis());
+            String[] hostPorts = config.getMiruSeaAnomalyHostPorts().split("\\s*,\\s*");
+            MiruMetricSampleSender[] sampleSenders = new MiruMetricSampleSender[hostPorts.length];
+
+            for (int i = 0; i < sampleSenders.length; i++) {
+                String[] parts = hostPorts[i].split(":");
+                sampleSenders[i] = new HttpPoster(parts[0], Integer.parseInt(parts[1]), config.getSocketTimeoutInMillis());
+            }
+
+            return new HttpMiruMetricSampler(datacenter,
+                cluster,
+                host,
+                service,
+                instance,
+                version,
+                sampleSenders,
+                config.getSampleIntervalInMillis(),
+                config.getMaxBacklog());
+        } else {
+            return new MiruMetricSampler() {
+
+                @Override
+                public void start() {
+                }
+
+                @Override
+                public void stop() {
+                }
+
+                @Override
+                public boolean isStarted() {
+                    return false;
+                }
+            };
         }
-
-        return new MiruMetricSampler(datacenter,
-            cluster,
-            host,
-            service,
-            instance,
-            version,
-            sampleSenders,
-            config.getSampleIntervalInMillis(),
-            config.getMaxBacklog());
     }
 
 }

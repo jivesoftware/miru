@@ -52,6 +52,9 @@ public class MiruLogAppenderInitializer {
 
         @IntDefault(10_000)
         int getNonBlockingDrainCount();
+
+        @BooleanDefault(true)
+        boolean getEnabled();
     }
 
     public MiruLogAppender initialize(String datacenter,
@@ -62,30 +65,40 @@ public class MiruLogAppenderInitializer {
         String version,
         MiruLogAppenderConfig config) throws IOException {
 
-        String[] hostPorts = config.getMiruStumptownHostPorts().split("\\s*,\\s*");
-        MiruLogSender[] logSenders = new MiruLogSender[hostPorts.length];
+        if (config.getEnabled()) {
 
-        for (int i = 0; i < logSenders.length; i++) {
-            String[] parts = hostPorts[i].split(":");
-            logSenders[i] = new HttpPoster(parts[0], Integer.parseInt(parts[1]), config.getSocketTimeoutInMillis());
+            String[] hostPorts = config.getMiruStumptownHostPorts().split("\\s*,\\s*");
+            MiruLogSender[] logSenders = new MiruLogSender[hostPorts.length];
+
+            for (int i = 0; i < logSenders.length; i++) {
+                String[] parts = hostPorts[i].split(":");
+                logSenders[i] = new HttpPoster(parts[0], Integer.parseInt(parts[1]), config.getSocketTimeoutInMillis());
+            }
+
+            return new HttpMiruLogAppender(datacenter,
+                cluster,
+                host,
+                service,
+                instance,
+                version,
+                logSenders,
+                config.getQueueMaxDepth(),
+                config.getBatchSize(),
+                config.getQueueIsBlocking(),
+                config.getIfSuccessPauseMillis(),
+                config.getIfEmptyPauseMillis(),
+                config.getIfErrorPauseMillis(),
+                config.getCycleReceiverAfterAppendCount(),
+                config.getNonBlockingDrainThreshold(),
+                config.getNonBlockingDrainCount());
+        } else {
+            return new MiruLogAppender() {
+
+                @Override
+                public void install() {
+                }
+            };
         }
-
-        return new MiruLogAppender(datacenter,
-            cluster,
-            host,
-            service,
-            instance,
-            version,
-            logSenders,
-            config.getQueueMaxDepth(),
-            config.getBatchSize(),
-            config.getQueueIsBlocking(),
-            config.getIfSuccessPauseMillis(),
-            config.getIfEmptyPauseMillis(),
-            config.getIfErrorPauseMillis(),
-            config.getCycleReceiverAfterAppendCount(),
-            config.getNonBlockingDrainThreshold(),
-            config.getNonBlockingDrainCount());
     }
 
 }
