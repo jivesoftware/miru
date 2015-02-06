@@ -164,8 +164,8 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
                         addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
                         addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
-                        addFieldFilter(fieldFilters, notFieldFilters, "samplers", input.samplers);
-                        addFieldFilter(fieldFilters, notFieldFilters, "metrics", input.metrics);
+                        addFieldFilter(fieldFilters, notFieldFilters, "sampler", input.samplers);
+                        addFieldFilter(fieldFilters, notFieldFilters, "metric", input.metrics);
                         addFieldFilter(fieldFilters, notFieldFilters, "tags", input.tags);
                         addFieldFilter(fieldFilters, notFieldFilters, "type", input.type);
 

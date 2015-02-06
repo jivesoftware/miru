@@ -113,7 +113,9 @@ public class SampleTrawl {
 
         long r = 0;
         for (int i = 0; i < 64; i++) {
-            r += (bits[i] > 0) ? (bits[i] * (1L << i)) : 0L;
+            if (bits[i] > 0) {
+                r += (bits[i] * (1L << i));
+            }
         }
 
         System.out.println(expected + " " + r);

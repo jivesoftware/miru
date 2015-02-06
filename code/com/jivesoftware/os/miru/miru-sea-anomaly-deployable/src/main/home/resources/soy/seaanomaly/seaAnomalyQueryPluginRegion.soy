@@ -144,6 +144,7 @@
                                 class="j-type-autocomplete j-autocomplete-input j-ui-elem" placeholder="type"
                                 name="type" id="type" data-original-title="" title="">
                                 <option value="counter" {if $type == 'counter'}selected="selected"{/if}>counter</option>
+                                <option value="atomicCounter" {if $type == 'atomicCounter'}selected="selected"{/if}>atomicCounter</option>
                                 <option value="timer" {if $type == 'timer'}selected="selected"{/if}>timer</option>
                                 <option value="all" {if $type == 'all'}selected="selected"{/if}></option>
                             </select>
@@ -164,7 +165,7 @@
                                 <option value="instance" {if $expansionField == 'instance'}selected="selected"{/if}>instance</option>
                                 <option value="version" {if $expansionField == 'version'}selected="selected"{/if}>version</option>
                                 <option value="sampler" {if $expansionField == 'sampler'}selected="selected"{/if}>sampler</option>
-                                <option value="metrics" {if $expansionField == 'metrics'}selected="selected"{/if}>metrics</option>
+                                <option value="metric" {if $expansionField == 'metric'}selected="selected"{/if}>metric</option>
                                 <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>tags</option>
                             </select>
                         </td>

@@ -4,6 +4,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.map.store.api.KeyRange;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -17,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -34,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -130,12 +133,20 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
         }
 
         int fieldId = context.getSchema().getFieldId(request.query.expansionField);
+        MiruFieldDefinition fieldDefinition = context.getSchema().getFieldDefinition(fieldId);
+
         MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         final Map<String, MiruFilter> expanded = new LinkedHashMap<>();
         for (String expansion : request.query.expansionValues) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "Expanding with " + expansion);
             if (expansion.endsWith("*")) {
-                fieldIndex.streamTermIdsForField(fieldId, null, new TermIdStream() {
+                MiruTermComposer termComposer = context.getTermComposer();
+                String baseTerm = expansion.substring(0, expansion.length() - 1);
+                byte[] lowerInclusive = termComposer.prefixLowerInclusive(fieldDefinition.prefix, baseTerm);
+                byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
+                KeyRange keyRange = new KeyRange(lowerInclusive, upperExclusive);
+                final AtomicInteger stopIfZero = new AtomicInteger(100); // TODO expose to query.
+                fieldIndex.streamTermIdsForField(fieldId, Arrays.asList(keyRange), new TermIdStream() {
 
                     @Override
                     public boolean stream(MiruTermId termId) {
@@ -148,7 +159,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
                             expanded.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
                                 new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                         }
-                        return true; // TODO stop after some number
+                        return stopIfZero.decrementAndGet() <= 0;
                     }
                 });
             } else {
