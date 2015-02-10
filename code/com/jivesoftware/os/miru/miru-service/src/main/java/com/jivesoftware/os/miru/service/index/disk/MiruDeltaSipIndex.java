@@ -31,6 +31,9 @@ public class MiruDeltaSipIndex implements MiruSipIndex {
         Sip existing = sipReference.get();
         if (existing == null) {
             existing = backingIndex.getSip();
+            if (!sipReference.compareAndSet(null, existing)) {
+                existing = sipReference.get();
+            }
         }
         if (existing == null) {
             sipReference.set(sip);
