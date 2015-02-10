@@ -67,7 +67,7 @@ public class MiruInternalActivityMarshaller {
 
     private MiruTermId[] valuesFromFiler(Filer filer) throws IOException {
         int length = FilerIO.readInt(filer, "length");
-        if (length == -1) {
+        if (length <= 0) {
             return null;
         }
         MiruTermId[] terms = new MiruTermId[length];
@@ -83,7 +83,7 @@ public class MiruInternalActivityMarshaller {
 
     private MiruIBA[] propsFromFiler(Filer filer) throws IOException {
         int length = FilerIO.readInt(filer, "length");
-        if (length == -1) {
+        if (length <= 0) {
             return null;
         }
         MiruIBA[] terms = new MiruIBA[length];

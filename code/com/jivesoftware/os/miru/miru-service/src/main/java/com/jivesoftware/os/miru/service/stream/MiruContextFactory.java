@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
@@ -30,6 +31,9 @@ import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaActivityIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaFieldIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaSipIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruFilerActivityIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruFilerAuthzIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruFilerFieldIndex;
@@ -131,8 +135,6 @@ public class MiruContextFactory {
     }
 
     private <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ChunkStore[] chunkStores) throws Exception {
-        //TODO refactor OnDisk impls to take a shared VariableKeySizeFileBackedKeyedStore and a prefixed KeyProvider
-
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
@@ -147,13 +149,14 @@ public class MiruContextFactory {
                 8, false, 4, false));
 
         TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"), false);
-        MiruFilerActivityIndex activityIndex = new MiruFilerActivityIndex(
-            activityFilerStore,
-            new MiruInternalActivityMarshaller(),
-            new KeyedFilerProvider(activityFilerStore, keyBytes("activityIndex-size")));
+        MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
+            new MiruFilerActivityIndex(
+                activityFilerStore,
+                new MiruInternalActivityMarshaller(),
+                new KeyedFilerProvider(activityFilerStore, keyBytes("activityIndex-size"))));
 
         @SuppressWarnings("unchecked")
-        MiruFilerFieldIndex<BM>[] fieldIndexes = new MiruFilerFieldIndex[MiruFieldType.values().length];
+        MiruFieldIndex<BM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
             KeyedFilerStore[] indexes = new KeyedFilerStore[schema.fieldCount()];
             long[] indexIds = new long[schema.fieldCount()];
@@ -169,11 +172,14 @@ public class MiruContextFactory {
                 }
                 indexIds[fieldId] = fieldIndexIdProvider.incrementAndGet();
             }
-            fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps, fieldIndexCache, indexIds, indexes, fieldIndexStripingLocksProvider);
+            fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
+                bitmaps,
+                new MiruFilerFieldIndex<>(bitmaps, fieldIndexCache, indexIds, indexes, fieldIndexStripingLocksProvider),
+                schema.fieldCount());
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
-        MiruSipIndex sipIndex = new MiruFilerSipIndex(new KeyedFilerProvider(genericFilerStore, GENERIC_FILER_SIP_INDEX_KEY));
+        MiruSipIndex sipIndex = new MiruDeltaSipIndex(new MiruFilerSipIndex(new KeyedFilerProvider(genericFilerStore, GENERIC_FILER_SIP_INDEX_KEY)));
 
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 

@@ -133,6 +133,9 @@ public class MiruIndexerTest {
         MiruInternalActivity miruActivity = context.getActivityIndex().get(tenantId, activityId);
 
         MiruTermId[] fieldValues = miruActivity.fieldsValues[fieldId];
+        if (fieldValues == null) {
+            fieldValues = new MiruTermId[0];
+        }
         for (MiruTermId fieldValue : fieldValues) {
             MiruInvertedIndex<EWAHCompressedBitmap> invertedIndex = context.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)

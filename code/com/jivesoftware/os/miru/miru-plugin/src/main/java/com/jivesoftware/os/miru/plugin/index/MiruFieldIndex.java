@@ -25,10 +25,6 @@ public interface MiruFieldIndex<BM> {
 
     void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream) throws Exception;
 
-    long sizeInMemory() throws Exception;
-
-    long sizeOnDisk() throws Exception;
-
     class IndexKey {
         public final long id;
         public final byte[] keyBytes;

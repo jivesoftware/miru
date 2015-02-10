@@ -74,6 +74,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final boolean partitionWakeOnIndex;
     private final int partitionRebuildBatchSize;
     private final int partitionSipBatchSize;
+    private final long mergeAfterLiveCount;
+    private final long mergeAfterRebuildCount;
     private final Timings timings;
     private final long maxSipClockSkew;
     private final int maxSipReplaySize;
@@ -122,6 +124,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         boolean partitionWakeOnIndex,
         int partitionRebuildBatchSize,
         int partitionSipBatchSize,
+        long mergeAfterLiveCount,
+        long mergeAfterRebuildCount,
         Timings timings)
         throws Exception {
 
@@ -141,6 +145,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.partitionWakeOnIndex = partitionWakeOnIndex;
         this.partitionRebuildBatchSize = partitionRebuildBatchSize;
         this.partitionSipBatchSize = partitionSipBatchSize;
+        this.mergeAfterLiveCount = mergeAfterLiveCount;
+        this.mergeAfterRebuildCount = mergeAfterRebuildCount;
         this.timings = timings;
         this.maxSipClockSkew = TimeUnit.SECONDS.toMillis(10); //TODO config
         this.maxSipReplaySize = 100; //TODO config
@@ -272,7 +278,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         // intentionally locking all stream writes for the entire batch to avoid getting a lock for each activity
         MiruPartitionAccessor<BM> accessor = accessorRef.get();
         if (accessor.isOpenForWrites()) {
-            int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress, true, MoreExecutors.sameThreadExecutor());
+            int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress, true, Long.MAX_VALUE,
+                MoreExecutors.sameThreadExecutor());
             if (count > 0) {
                 log.inc("indexIngress>written", count);
             }
@@ -474,7 +481,10 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                                 try {
                                     if (rebuild(rebuilding)) {
                                         MiruPartitionAccessor<BM> online = rebuilding.copyToState(MiruPartitionState.online);
-                                        updatePartition(rebuilding, online);
+                                        MiruPartitionAccessor<BM> updated = updatePartition(rebuilding, online);
+                                        if (updated != null) {
+                                            updated.merge();
+                                        }
                                     }
                                 } catch (Throwable t) {
                                     log.error("Rebuild encountered a problem", t);
@@ -604,7 +614,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                 try {
                     boolean repair = firstRebuild.compareAndSet(true, false);
-                    accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, repair, rebuildIndexExecutor);
+                    accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, repair, mergeAfterRebuildCount,
+                        rebuildIndexExecutor);
                     accessor.setRebuildTimestamp(rebuildTimestamp.get());
                     accessor.setSip(sip.get());
                 } catch (Exception e) {
@@ -702,7 +713,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             );
 
             boolean repair = firstSip.compareAndSet(true, false);
-            int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip, repair, sipIndexExecutor);
+            int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip,
+                repair, mergeAfterLiveCount,
+                sipIndexExecutor);
 
             Sip suggestion = sipTracker.suggest(sip);
             if (accessor.setSip(suggestion)) {
@@ -719,6 +732,10 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 log.inc("sip>count>power>" + FilerIO.chunkPower(count, 0), 1);
                 log.inc("sip>count", count, coord.tenantId.toString());
                 log.inc("sip>partition>" + coord.partitionId, count, coord.tenantId.toString());
+            }
+
+            if (!accessor.hasOpenWriters()) {
+                accessor.merge();
             }
 
             return accessorRef.get() == accessor;

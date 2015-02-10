@@ -75,9 +75,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
-    public void remove(RoaringBitmap container, RoaringBitmap bitmap, int index) {
+    public void remove(RoaringBitmap container, RoaringBitmap bitmap, int... indexes) {
         copy(container, bitmap);
-        container.remove(index);
+        for (int index : indexes) {
+            container.remove(index);
+        }
     }
 
     @Override

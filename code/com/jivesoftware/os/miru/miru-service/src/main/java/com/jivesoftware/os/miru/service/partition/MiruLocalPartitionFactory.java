@@ -85,6 +85,8 @@ public class MiruLocalPartitionFactory {
             config.getPartitionWakeOnIndex(),
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),
+            config.getMergeAfterLiveCount(),
+            config.getMergeAfterRebuildCount(),
             new MiruLocalHostedPartition.Timings(
                 config.getPartitionRebuildFailureSleepMillis(),
                 config.getPartitionBootstrapIntervalInMillis(),

@@ -41,19 +41,6 @@ public class MiruFieldIndexTest {
     }
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testEmptyIndexSize(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
-        long sizeInBytes = miruFieldIndex.sizeInMemory() + miruFieldIndex.sizeOnDisk();
-        if (miruBackingStorage.equals(MiruBackingStorage.memory)) {
-            assertEquals(sizeInBytes, 0);
-        } else if (miruBackingStorage.equals(MiruBackingStorage.disk)) {
-            // Nothing added to MapStore, so nothing is allocated on disk
-            long initialMapStoreSizeInBytes = 0;
-
-            assertEquals(sizeInBytes, initialMapStoreSizeInBytes); // chunk store is shared and not included in index size
-        }
-    }
-
-    @Test(dataProvider = "miruIndexDataProvider")
     public <BM> void testIndexFieldTerm(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
         miruFieldIndex.append(0, new MiruTermId(FilerIO.intBytes(2)), 3);
         MiruInvertedIndex<BM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));

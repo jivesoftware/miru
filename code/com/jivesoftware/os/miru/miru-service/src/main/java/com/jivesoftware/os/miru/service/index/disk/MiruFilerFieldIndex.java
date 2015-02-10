@@ -41,16 +41,6 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
     }
 
     @Override
-    public long sizeInMemory() throws Exception {
-        return 0;
-    }
-
-    @Override
-    public long sizeOnDisk() throws Exception {
-        return 0;
-    }
-
-    @Override
     public void append(int fieldId, MiruTermId termId, int... ids) throws Exception {
         getOrAllocate(fieldId, termId).append(ids);
     }

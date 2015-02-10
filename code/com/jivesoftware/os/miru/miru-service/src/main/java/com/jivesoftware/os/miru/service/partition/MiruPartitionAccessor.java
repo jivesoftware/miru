@@ -10,12 +10,16 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaActivityIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaFieldIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaSipIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
@@ -61,6 +65,8 @@ public class MiruPartitionAccessor<BM> {
     private final AtomicLong rebuildTimestamp;
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM> indexer;
+
+    private final AtomicLong indexedSinceMerge = new AtomicLong(0);
 
     private MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
@@ -156,12 +162,30 @@ public class MiruPartitionAccessor<BM> {
         return (context.isPresent() && context.get().sipIndex.setSip(sip));
     }
 
+    boolean merge() throws Exception {
+        if (context.isPresent()) {
+            MiruContext<BM> got = context.get();
+            synchronized (got.writeLock) {
+                for (MiruFieldType fieldType : MiruFieldType.values()) {
+                    ((MiruDeltaFieldIndex<BM>) got.fieldIndexProvider.getFieldIndex(fieldType)).merge();
+                }
+                ((MiruDeltaActivityIndex) got.activityIndex).merge();
+                ((MiruDeltaSipIndex) got.sipIndex).merge();
+            }
+        }
+        return true;
+    }
+
     public static enum IndexStrategy {
 
         ingress, rebuild, sip;
     }
 
-    int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities, IndexStrategy strategy, boolean recovery, ExecutorService indexExecutor)
+    int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities,
+        IndexStrategy strategy,
+        boolean recovery,
+        long mergeAfterCount,
+        ExecutorService indexExecutor)
         throws Exception {
 
         int count = 0;
@@ -172,7 +196,7 @@ public class MiruPartitionAccessor<BM> {
             }
 
             MiruContext<BM> got = context.get();
-            synchronized (got) {
+            synchronized (got.writeLock) {
                 MiruPartitionedActivity.Type batchType = null;
                 List<MiruPartitionedActivity> batch = Lists.newArrayList();
                 int activityCount = 0;
@@ -217,6 +241,11 @@ public class MiruPartitionAccessor<BM> {
         } finally {
             semaphore.release();
         }
+
+        if (indexedSinceMerge.addAndGet(count) > mergeAfterCount && merge()) {
+            indexedSinceMerge.set(0);
+        }
+
         return count;
     }
 

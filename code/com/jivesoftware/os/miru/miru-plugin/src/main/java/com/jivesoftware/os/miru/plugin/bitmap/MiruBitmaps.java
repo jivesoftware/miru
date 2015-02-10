@@ -37,7 +37,7 @@ public interface MiruBitmaps<BM> {
 
     void set(BM container, BM bitmap, int... indexes);
 
-    void remove(BM container, BM bitmap, int index);
+    void remove(BM container, BM bitmap, int... indexes);
 
     boolean isSet(BM bitmap, int index);
 

@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.bitmap.AnswerCardinalityLastSetBitmapStorage;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaInvertedIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruFilerInvertedIndex;
 import java.util.Collections;
 import java.util.List;
@@ -171,7 +172,8 @@ public class MiruInvertedIndexTest {
         int diskSets = 1_000;
 
         return new Object[][] {
-            { buildOnDiskInvertedIndex(bitmaps), diskAppends, diskSets }
+            { buildFilerInvertedIndex(bitmaps), diskAppends, diskSets },
+            { buildDeltaInvertedIndex(bitmaps), diskAppends, diskSets }
         };
     }
 
@@ -179,7 +181,8 @@ public class MiruInvertedIndexTest {
     public Object[][] miruInvertedIndexDataProvider() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
         return new Object[][] {
-            { buildOnDiskInvertedIndex(bitmaps) }
+            { buildFilerInvertedIndex(bitmaps) },
+            { buildDeltaInvertedIndex(bitmaps) }
         };
     }
 
@@ -188,15 +191,19 @@ public class MiruInvertedIndexTest {
         MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
 
-        MiruFilerInvertedIndex<EWAHCompressedBitmap> miruFilerInvertedIndex = buildOnDiskInvertedIndex(bitmaps);
+        MiruFilerInvertedIndex<EWAHCompressedBitmap> miruFilerInvertedIndex = buildFilerInvertedIndex(bitmaps);
         miruFilerInvertedIndex.append(1, 2, 3);
 
+        MiruDeltaInvertedIndex<EWAHCompressedBitmap> miruDeltaInvertedIndex = buildDeltaInvertedIndex(bitmaps);
+        miruDeltaInvertedIndex.append(1, 2, 3);
+
         return new Object[][] {
-            { miruFilerInvertedIndex, Sets.newHashSet(1, 2, 3) }
+            { miruFilerInvertedIndex, Sets.newHashSet(1, 2, 3) },
+            { miruDeltaInvertedIndex, Sets.newHashSet(1, 2, 3) }
         };
     }
 
-    private <BM> MiruFilerInvertedIndex<BM> buildOnDiskInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
+    private <BM> MiruFilerInvertedIndex<BM> buildFilerInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps,
             null,
             new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
@@ -206,12 +213,18 @@ public class MiruInvertedIndexTest {
             new Object());
     }
 
+    private <BM> MiruDeltaInvertedIndex<BM> buildDeltaInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
+        return new MiruDeltaInvertedIndex<>(bitmaps,
+            buildFilerInvertedIndex(bitmaps),
+            new MiruDeltaInvertedIndex.Delta<BM>());
+    }
+
     @Test(groups = "slow", enabled = false, description = "Concurrency test")
     public void testConcurrency() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
         ExecutorService executorService = Executors.newFixedThreadPool(8);
 
-        final MiruFilerInvertedIndex<EWAHCompressedBitmap> invertedIndex = buildOnDiskInvertedIndex(bitmaps);
+        final MiruFilerInvertedIndex<EWAHCompressedBitmap> invertedIndex = buildFilerInvertedIndex(bitmaps);
         final AtomicInteger idProvider = new AtomicInteger();
         final AtomicInteger done = new AtomicInteger();
         final int runs = 10_000;
@@ -291,7 +304,7 @@ public class MiruInvertedIndexTest {
 
     @Test(groups = "slow", enabled = false, description = "Performance test")
     public void testInMemoryAppenderSpeed() throws Exception {
-        MiruFilerInvertedIndex<EWAHCompressedBitmap> invertedIndex = buildOnDiskInvertedIndex(new MiruBitmapsEWAH(100));
+        MiruFilerInvertedIndex<EWAHCompressedBitmap> invertedIndex = buildFilerInvertedIndex(new MiruBitmapsEWAH(100));
 
         Random r = new Random(1_249_871_239_817_231_827l);
         long t = System.currentTimeMillis();

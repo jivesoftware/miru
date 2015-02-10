@@ -39,6 +39,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     public final MiruActivityInternExtern activityInternExtern;
     public final StripingLocksProvider<MiruStreamId> streamLocks;
     public final ChunkStore[] chunkStores;
+    public final Object writeLock = new Object();
 
     public MiruContext(MiruSchema schema,
         MiruTermComposer termComposer,

@@ -60,8 +60,8 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public void remove(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int index) {
-        andNot(container, bitmap, Arrays.asList(createWithBits(index)));
+    public void remove(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int... indexes) {
+        andNot(container, bitmap, Arrays.asList(createWithBits(indexes)));
     }
 
     @Override

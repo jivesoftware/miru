@@ -79,6 +79,13 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
     }
 
+    @Override
+    public void replaceIndex(BM index, int setLastId) throws Exception {
+        synchronized (mutationLock) {
+            setIndex(index, setLastId);
+        }
+    }
+
     private BitmapAndLastId<BM> deser(byte[] bytes) throws IOException {
         //TODO just add a byte marker, this sucks
         if (bytes != null && bytes.length > LAST_ID_LENGTH + 4) {

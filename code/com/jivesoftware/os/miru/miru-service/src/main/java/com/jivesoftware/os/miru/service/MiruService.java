@@ -191,7 +191,7 @@ public class MiruService implements Miru {
         log.inc("askAndMerge", tenantId.toString());
         log.inc("askAndMerge>query>" + solvableFactory.getQueryKey());
         log.inc("askAndMerge>query>" + solvableFactory.getQueryKey(), tenantId.toString());
-        
+
         return new MiruResponse<>(answer, solutions, totalElapsed, false, incompletePartitionIds, solutionLog.asList());
     }
 
@@ -214,7 +214,7 @@ public class MiruService implements Miru {
             log.inc("askImmediate", tenantId.toString());
             log.inc("askImmediate>query" + factory.getQueryKey());
             log.inc("askImmediate>query" + factory.getQueryKey(), tenantId.toString());
-         
+
             return answer;
         } else {
             throw new MiruPartitionUnavailableException("partition is NOT present. partitionId:" + partitionId);

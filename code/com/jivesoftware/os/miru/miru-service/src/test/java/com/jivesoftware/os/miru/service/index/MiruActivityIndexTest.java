@@ -83,9 +83,9 @@ public class MiruActivityIndexTest {
         MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
         MiruActivityIndex onDiskActivityIndex = buildOnDiskActivityIndex();
 
-        return new Object[][]{
-            {hybridActivityIndex, false},
-            {onDiskActivityIndex, false}};
+        return new Object[][] {
+            { hybridActivityIndex, false },
+            { onDiskActivityIndex, false } };
     }
 
     @DataProvider(name = "miruActivityIndexDataProviderWithData")
@@ -93,8 +93,8 @@ public class MiruActivityIndexTest {
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
         MiruInternalActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[0], 3);
         MiruInternalActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[0], 4);
-        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[]{"abcde"}, 1);
-        final MiruInternalActivity[] miruActivities = new MiruInternalActivity[]{miruActivity1, miruActivity2, miruActivity3};
+        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" }, 1);
+        final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
 
         // Add activities to in-memory index
         MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
@@ -109,9 +109,9 @@ public class MiruActivityIndexTest {
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2)));
 
-        return new Object[][]{
-            {hybridActivityIndex, miruActivities},
-            {onDiskActivityIndex, miruActivities}
+        return new Object[][] {
+            { hybridActivityIndex, miruActivities },
+            { onDiskActivityIndex, miruActivities }
         };
     }
 

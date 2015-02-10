@@ -27,6 +27,8 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
      */
     Optional<BM> getIndexUnsafe() throws Exception;
 
+    void replaceIndex(BM index, int setLastId) throws Exception;
+
     void remove(int id) throws Exception;
 
     /**
