@@ -13,6 +13,8 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.Arrays;
@@ -24,6 +26,8 @@ import java.util.concurrent.Callable;
  * @author jonathan
  */
 public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
+
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private static final int LAST_ID_LENGTH = 4;
 
@@ -53,6 +57,13 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         @Override
         public Optional<BM> call() throws Exception {
             byte[] rawBytes = keyedFilerStore.read(indexKey.keyBytes, -1, getTransaction);
+            if (rawBytes != null) {
+                log.inc("get>total");
+                log.inc("get>bytes", rawBytes.length);
+            } else {
+                log.inc("get>null");
+            }
+
             BitmapAndLastId<BM> bitmapAndLastId = deser(rawBytes);
             if (bitmapAndLastId != null) {
                 if (lastId == Integer.MIN_VALUE) {
@@ -119,7 +130,10 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         dataOutput.write(FilerIO.intBytes(setLastId));
         bitmaps.serialize(index, dataOutput);
         final byte[] bytes = dataOutput.toByteArray();
+
         keyedFilerStore.writeNewReplace(indexKey.keyBytes, filerSizeInBytes, new SetTransaction(bytes));
+        log.inc("set>total");
+        log.inc("set>bytes", bytes.length);
         if (fieldIndexCache != null) {
             fieldIndexCache.put(indexKey, Optional.of(index));
         }
@@ -202,6 +216,9 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             synchronized (mutationLock) {
                 lastId = keyedFilerStore.read(indexKey.keyBytes, -1, lastIdTransaction);
             }
+            log.inc("lastId>total");
+            log.inc("lastId>bytes", 4);
+
         }
         return lastId;
     }

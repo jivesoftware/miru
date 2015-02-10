@@ -77,10 +77,13 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                         MiruFilerTimeIndex.this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
                         initialized.set(true);
                     }
+
                 }
                 return null;
             }
         });
+        log.inc("init-read>total");
+        log.inc("init-read>bytes", HEADER_SIZE_IN_BYTES);
 
         if (!initialized.get()) {
             this.id.set(-1);
@@ -106,6 +109,10 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                     return null;
                 }
             });
+
+            log.inc("init-write>total");
+            log.inc("init-write>bytes", HEADER_SIZE_IN_BYTES);
+
         }
     }
 
@@ -206,15 +213,21 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             return 0l;
         }
         try {
-            return filerProvider.read(-1, new FilerTransaction<Filer, Long>() {
+            long ts = filerProvider.read(-1, new FilerTransaction<Filer, Long>() {
                 @Override
                 public Long commit(Object lock, Filer filer) throws IOException {
+                    long timestamp;
                     synchronized (lock) {
                         filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
-                        return FilerIO.readLong(filer, "ts");
+                        timestamp = FilerIO.readLong(filer, "ts");
                     }
+
+                    return timestamp;
                 }
             });
+            log.inc("get>total");
+            log.inc("get>bytes", 8);
+            return ts;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -291,8 +304,12 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                         return null;
                     }
                 });
+                log.inc("nextId>total");
+                log.inc("nextId>bytes", HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs);
+
                 for (int i = 0; i < nextIds.length; i++) {
                     if (timestamps[i] != -1) {
+                        log.inc("nextId>sets");
                         final int nextId = nextIds[i];
                         // TODO would be nice to batch here :)
                         timestampToIndex.execute(timestamps[i], true, new KeyValueTransaction<Integer, Void>() {

@@ -125,6 +125,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                         return null;
                     }
                 });
+                log.inc("set>total");
+                log.inc("set>bytes", bytes.length);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -148,6 +150,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                         return null;
                     }
                 });
+                log.inc("ready>total");
+                log.inc("ready>bytes", 4);
                 log.debug("Capacity extended to {}", size);
                 indexSize.set(size);
             }
@@ -162,15 +166,19 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                     @Override
                     public Integer commit(Object lock, Filer filer) throws IOException {
                         if (filer != null) {
+                            int size;
                             synchronized (lock) {
                                 filer.seek(0);
-                                return FilerIO.readInt(filer, "size");
+                                size = FilerIO.readInt(filer, "size");
                             }
+                            return size;
                         } else {
                             return 0;
                         }
                     }
                 });
+                log.inc("capacity>total");
+                log.inc("capacity>bytes", 4);
                 indexSize.set(size);
             }
             return size;
