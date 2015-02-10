@@ -188,7 +188,7 @@ public class MiruPartitionAccessor<BM> {
         ExecutorService indexExecutor)
         throws Exception {
 
-        int count = 0;
+        int consumedCount = 0;
         semaphore.acquire();
         try {
             if (closed.get() || !context.isPresent()) {
@@ -199,7 +199,6 @@ public class MiruPartitionAccessor<BM> {
             synchronized (got.writeLock) {
                 MiruPartitionedActivity.Type batchType = null;
                 List<MiruPartitionedActivity> batch = Lists.newArrayList();
-                int activityCount = 0;
                 while (partitionedActivities.hasNext()) {
                     MiruPartitionedActivity partitionedActivity = partitionedActivities.next();
                     MiruPartitionedActivity.Type activityType = partitionedActivity.type;
@@ -214,7 +213,7 @@ public class MiruPartitionAccessor<BM> {
 
                         if (activityType != batchType) {
                             // this also clears the batch
-                            activityCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor);
+                            consumedCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor);
                             batchType = activityType;
                         }
 
@@ -223,12 +222,11 @@ public class MiruPartitionAccessor<BM> {
                         // This activity has been handled, so remove it from the backing list
                         partitionedActivities.remove();
                     }
-                    count++;
                 }
 
-                activityCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor);
-                if (activityCount > 0) {
-                    indexRepairs.repaired(strategy, coord, activityCount);
+                consumedCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor);
+                if (consumedCount > 0) {
+                    indexRepairs.repaired(strategy, coord, consumedCount);
                 } else {
                     indexRepairs.current(strategy, coord);
                 }
@@ -242,11 +240,11 @@ public class MiruPartitionAccessor<BM> {
             semaphore.release();
         }
 
-        if (indexedSinceMerge.addAndGet(count) > mergeAfterCount && merge()) {
+        if (indexedSinceMerge.addAndGet(consumedCount) > mergeAfterCount && merge()) {
             indexedSinceMerge.set(0);
         }
 
-        return count;
+        return consumedCount;
     }
 
     /**

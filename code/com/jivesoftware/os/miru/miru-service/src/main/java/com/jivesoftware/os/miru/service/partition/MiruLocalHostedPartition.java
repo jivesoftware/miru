@@ -713,9 +713,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             );
 
             boolean repair = firstSip.compareAndSet(true, false);
+            int initialCount = partitionedActivities.size();
             int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip,
-                repair, mergeAfterLiveCount,
-                sipIndexExecutor);
+                repair, mergeAfterLiveCount, sipIndexExecutor);
 
             Sip suggestion = sipTracker.suggest(sip);
             if (accessor.setSip(suggestion)) {
@@ -732,6 +732,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 log.inc("sip>count>power>" + FilerIO.chunkPower(count, 0), 1);
                 log.inc("sip>count", count, coord.tenantId.toString());
                 log.inc("sip>partition>" + coord.partitionId, count, coord.tenantId.toString());
+            }
+            if (initialCount > 0) {
+                log.inc("sip>count>skip", (initialCount - count));
             }
 
             if (!accessor.hasOpenWriters()) {
