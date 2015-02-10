@@ -8,7 +8,7 @@ package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import java.util.List;
+import java.util.Collection;
 
 /** @author jonathan */
 public interface MiruActivityIndex {
@@ -44,7 +44,7 @@ public interface MiruActivityIndex {
      *
      * @param activityAndIds the activities to be stored and their indexes
      */
-    void setAndReady(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception;
+    void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception;
 
     /**
      * Store the given activity at the provided index value, but does not make ready the new ids.
@@ -53,7 +53,7 @@ public interface MiruActivityIndex {
      *
      * @param activityAndIds the activities to be stored and their indexes
      */
-    void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds);
+    void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds);
 
     /**
      * Readies the index up to the provided index value.

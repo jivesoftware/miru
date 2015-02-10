@@ -32,14 +32,19 @@ public class MiruDeltaSipIndex implements MiruSipIndex {
         if (existing == null) {
             existing = backingIndex.getSip();
         }
-        while (sip.compareTo(existing) > 0) {
-            if (sipReference.compareAndSet(existing, sip)) {
-                return true;
-            } else {
-                existing = sipReference.get();
+        if (existing == null) {
+            sipReference.set(sip);
+            return true;
+        } else {
+            while (sip.compareTo(existing) > 0) {
+                if (sipReference.compareAndSet(existing, sip)) {
+                    return true;
+                } else {
+                    existing = sipReference.get();
+                }
             }
+            return false;
         }
-        return false;
     }
 
     public void merge() throws Exception {

@@ -14,7 +14,7 @@ import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
-import java.util.List;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -92,17 +92,25 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public void setAndReady(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
+    public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
         if (!activityAndIds.isEmpty()) {
-            set(activityAndIds);
-            ready(activityAndIds.get(activityAndIds.size() - 1).id);
+            int lastIndex = setInternal(activityAndIds);
+            ready(lastIndex);
         }
     }
 
     @Override
-    public void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+        if (!activityAndIds.isEmpty()) {
+            setInternal(activityAndIds);
+        }
+    }
+
+    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+        int lastIndex = -1;
         for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
             int index = activityAndId.id;
+            lastIndex = Math.max(index, lastIndex);
             MiruInternalActivity activity = activityAndId.activity;
             checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
             try {
@@ -121,6 +129,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 throw new RuntimeException(e);
             }
         }
+        return lastIndex;
     }
 
     @Override

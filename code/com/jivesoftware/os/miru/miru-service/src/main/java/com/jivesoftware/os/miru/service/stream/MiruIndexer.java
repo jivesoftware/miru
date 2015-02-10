@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.stream;
 
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
@@ -98,15 +97,13 @@ public class MiruIndexer<BM> {
         otherFutures.addAll(indexPairedLatest.index(context, pairedLatestPrepared, repair, indexExecutor));
 
         // 6. Update activity index
-        for (final List<MiruActivityAndId<MiruInternalActivity>> partition : Lists.partition(internalActivityAndIds, partitionSize)) {
-            otherFutures.add(indexExecutor.submit(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    context.activityIndex.set(partition);
-                    return null;
-                }
-            }));
-        }
+        otherFutures.add(indexExecutor.submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                context.activityIndex.set(internalActivityAndIds);
+                return null;
+            }
+        }));
 
         // 7. Update removal index
         if (repair) {

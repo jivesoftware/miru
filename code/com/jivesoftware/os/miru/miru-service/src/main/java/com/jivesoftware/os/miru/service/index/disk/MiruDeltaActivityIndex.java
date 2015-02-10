@@ -1,12 +1,13 @@
 package com.jivesoftware.os.miru.service.index.disk;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
-import java.util.List;
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -17,8 +18,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 public class MiruDeltaActivityIndex implements MiruActivityIndex {
 
     private final MiruActivityIndex backingIndex;
-    private final List<MiruActivityAndId<MiruInternalActivity>> activities = Lists.newArrayList();
-    private final AtomicInteger offset = new AtomicInteger(-1);
+    private final Map<Integer, MiruActivityAndId<MiruInternalActivity>> activities = Maps.newConcurrentMap();
     private final AtomicInteger lastId = new AtomicInteger(-1);
 
     public MiruDeltaActivityIndex(MiruActivityIndex backingIndex) {
@@ -27,28 +27,22 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex {
 
     @Override
     public MiruInternalActivity get(MiruTenantId tenantId, int index) {
-        int base = offset.get();
-        if (base < 0 || index < base) {
-            return backingIndex.get(tenantId, index);
+        //TODO consider writing through to the backing index for old indexes to avoid the double lookup
+        MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
+        if (activityAndId != null) {
+            return activityAndId.activity;
         } else {
-            int pos = index - base;
-            checkArgument(pos >= 0 && index < activities.size(), "Index parameter is out of bounds. The value %s must be >=0 and <%s", 0, activities.size());
-            return activities.get(pos).activity;
+            return backingIndex.get(tenantId, index);
         }
     }
 
     @Override
     public MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId) {
-        int base = offset.get();
-        if (base < 0 || index < base) {
-            return backingIndex.get(tenantId, index, fieldId);
+        MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
+        if (activityAndId != null) {
+            return activityAndId.activity.fieldsValues[fieldId];
         } else {
-            int pos = index - base;
-            if (pos < activities.size()) {
-                return activities.get(pos).activity.fieldsValues[fieldId];
-            } else {
-                return null;
-            }
+            return backingIndex.get(tenantId, index, fieldId);
         }
     }
 
@@ -63,23 +57,28 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public void setAndReady(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
-        set(activityAndIds);
-        ready(activityAndIds.get(activityAndIds.size() - 1).id);
+    public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
+        if (!activityAndIds.isEmpty()) {
+            int lastIndex = setInternal(activityAndIds);
+            ready(lastIndex);
+        }
     }
 
     @Override
-    public void set(List<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
-        if (activityAndIds.isEmpty()) {
-            return;
+    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+        if (!activityAndIds.isEmpty()) {
+            setInternal(activityAndIds);
         }
-        int base = offset.get();
-        if (base < 0) {
-            int index = activityAndIds.get(0).id;
-            checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
-            offset.set(index);
+    }
+
+    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+        int lastIndex = -1;
+        for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
+            checkArgument(activityAndId.id >= 0, "Index parameter is out of bounds. The value %s must be >=0", activityAndId.id);
+            activities.put(activityAndId.id, activityAndId);
+            lastIndex = Math.max(lastIndex, activityAndId.id);
         }
-        activities.addAll(activityAndIds);
+        return lastIndex;
     }
 
     @Override
@@ -93,7 +92,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex {
     }
 
     public void merge() throws Exception {
-        backingIndex.setAndReady(activities);
+        backingIndex.setAndReady(activities.values());
         activities.clear();
     }
 }
