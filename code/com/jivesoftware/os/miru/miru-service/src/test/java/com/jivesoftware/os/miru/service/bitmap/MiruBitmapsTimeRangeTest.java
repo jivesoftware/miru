@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaTimeIndex;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -30,10 +31,7 @@ public class MiruBitmapsTimeRangeTest {
             int upper = size - 1 - lower;
 
             BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper);
-            if (lower == 0) {
-                // 0 case is inclusive due to ambiguity
-                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, lower, size - 2 * lower);
-            } else if (lower == upper) {
+            if (lower == upper) {
                 // the lower and upper are the same so there should be nothing left
                 assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, -1, 0);
             } else {
@@ -49,10 +47,7 @@ public class MiruBitmapsTimeRangeTest {
             int upper = size - 1 - lower;
 
             BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper);
-            if (lower == 0) {
-                // 0 case is inclusive due to ambiguity
-                assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, lower, size - 2 * lower);
-            } else if (lower == upper) {
+            if (lower == upper) {
                 fail();
             } else {
                 assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, lower + 1, size - 1 - 2 * lower);
@@ -96,19 +91,40 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
-        for (long timestamp : timestamps) {
-            miruInMemoryTimeIndex.nextId(timestamp);
-        }
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        for (long timestamp : timestamps) {
-            miruOnDiskTimeIndex.nextId(timestamp);
+        miruInMemoryTimeIndex.nextId(timestamps);
+        miruOnDiskTimeIndex.nextId(timestamps);
+
+        MiruTimeIndex miruInMemoryTimeIndexMerged = buildInMemoryTimeIndex();
+        MiruTimeIndex miruOnDiskTimeIndexMerged = buildOnDiskTimeIndex();
+        miruInMemoryTimeIndexMerged.nextId(timestamps);
+        miruOnDiskTimeIndexMerged.nextId(timestamps);
+        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge();
+        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge();
+
+        MiruTimeIndex miruInMemoryTimeIndexPartiallyMerged = buildInMemoryTimeIndex();
+        MiruTimeIndex miruOnDiskTimeIndexPartiallyMerged = buildOnDiskTimeIndex();
+        int i = 0;
+        for (; i < timestamps.length / 2; i++) {
+            miruInMemoryTimeIndexPartiallyMerged.nextId(timestamps[i]);
+            miruOnDiskTimeIndexPartiallyMerged.nextId(timestamps[i]);
+
+        }
+        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge();
+        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge();
+        for (; i < timestamps.length; i++) {
+            miruInMemoryTimeIndexPartiallyMerged.nextId(timestamps[i]);
+            miruOnDiskTimeIndexPartiallyMerged.nextId(timestamps[i]);
         }
 
         return new Object[][]{
             {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
-            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndex}
+            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndex},
+            {new MiruBitmapsEWAH(2), miruInMemoryTimeIndexMerged},
+            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndexMerged},
+            {new MiruBitmapsEWAH(2), miruInMemoryTimeIndexPartiallyMerged},
+            {new MiruBitmapsEWAH(2), miruOnDiskTimeIndexPartiallyMerged}
         };
     }
 
@@ -121,15 +137,10 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
-        for (long timestamp : timestamps) {
-            miruInMemoryTimeIndex.nextId(timestamp);
-        }
+        miruInMemoryTimeIndex.nextId(timestamps);
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        for (long timestamp : timestamps) {
-            miruOnDiskTimeIndex.nextId(timestamp);
-        }
+        miruOnDiskTimeIndex.nextId(timestamps);
 
         return new Object[][]{
             {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
@@ -141,15 +152,10 @@ public class MiruBitmapsTimeRangeTest {
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
 
         final long[] timestamps = new long[]{System.currentTimeMillis()};
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
-        for (long timestamp : timestamps) {
-            miruInMemoryTimeIndex.nextId(timestamp);
-        }
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        for (long timestamp : timestamps) {
-            miruOnDiskTimeIndex.nextId(timestamp);
-        }
+        miruOnDiskTimeIndex.nextId(timestamps);
+        miruInMemoryTimeIndex.nextId(timestamps);
 
         return new Object[][]{
             {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},

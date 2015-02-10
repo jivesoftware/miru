@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.KeyedFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
@@ -34,6 +35,7 @@ import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
 import com.jivesoftware.os.miru.service.index.disk.MiruDeltaActivityIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruDeltaFieldIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruDeltaSipIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaTimeIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruFilerActivityIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruFilerAuthzIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruFilerFieldIndex;
@@ -62,8 +64,8 @@ public class MiruContextFactory {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[] { 0 };
-    private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[] { 1 };
+    private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[]{0};
+    private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[]{1};
 
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
@@ -140,13 +142,13 @@ public class MiruContextFactory {
 
         KeyedFilerStore genericFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("generic"), false);
 
-        MiruFilerTimeIndex timeIndex = new MiruFilerTimeIndex(
+        MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new MiruFilerTimeIndex(
             Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
             new KeyedFilerProvider(genericFilerStore, GENERIC_FILER_TIME_INDEX_KEY),
             new TxKeyValueStore<>(chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
-                8, false, 4, false));
+                8, false, 4, false)));
 
         TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"), false);
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
@@ -202,7 +204,7 @@ public class MiruContextFactory {
             fieldIndexCache,
             fieldIndexIdProvider.incrementAndGet(),
             new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), false),
-            new byte[] { 0 },
+            new byte[]{0},
             -1,
             new Object());
 

@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.index.disk.MiruDeltaActivityIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruDeltaFieldIndex;
 import com.jivesoftware.os.miru.service.index.disk.MiruDeltaSipIndex;
+import com.jivesoftware.os.miru.service.index.disk.MiruDeltaTimeIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
@@ -166,9 +167,11 @@ public class MiruPartitionAccessor<BM> {
         if (context.isPresent()) {
             MiruContext<BM> got = context.get();
             synchronized (got.writeLock) {
+                ((MiruDeltaTimeIndex) got.timeIndex).merge();
                 for (MiruFieldType fieldType : MiruFieldType.values()) {
                     ((MiruDeltaFieldIndex<BM>) got.fieldIndexProvider.getFieldIndex(fieldType)).merge();
                 }
+
                 ((MiruDeltaActivityIndex) got.activityIndex).merge();
                 ((MiruDeltaSipIndex) got.sipIndex).merge();
             }
@@ -249,8 +252,7 @@ public class MiruPartitionAccessor<BM> {
     }
 
     /**
-     * <code>batchType</code> must be one of the following:
-     * {@link MiruPartitionedActivity.Type#BEGIN}
+     * <code>batchType</code> must be one of the following:      {@link MiruPartitionedActivity.Type#BEGIN}
      * {@link MiruPartitionedActivity.Type#ACTIVITY}
      * {@link MiruPartitionedActivity.Type#REPAIR}
      * {@link MiruPartitionedActivity.Type#REMOVE}

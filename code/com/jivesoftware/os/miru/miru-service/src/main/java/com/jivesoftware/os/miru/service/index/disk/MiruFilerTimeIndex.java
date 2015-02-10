@@ -319,7 +319,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     @Override
     public int getClosestId(final long timestamp) {
         try {
-            return filerProvider.read(-1, new FilerTransaction<Filer, Integer>() {
+            int i = filerProvider.read(-1, new FilerTransaction<Filer, Integer>() {
                 @Override
                 public Integer commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
@@ -328,6 +328,10 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                     return -1;
                 }
             });
+            if (i < 0) {
+                i = -(i + 1);
+            }
+            return i;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -363,10 +367,14 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
 
             int id = FilerIO.readInt(filer, "id");
             long lastId = lastId();
-            while (id <= lastId && readTimestamp(lock, filer, id) < timestamp) {
+            long readTimestamp = readTimestamp(lock, filer, id);
+            while (id <= lastId && readTimestamp < timestamp) {
                 id++;
+                readTimestamp = readTimestamp(lock, filer, id);
             }
-
+            if (timestamp != readTimestamp) {
+                return -(id + 1);
+            }
             return id;
         }
     }
@@ -392,13 +400,19 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     @Override
     public int smallestExclusiveTimestampIndex(final long timestamp) {
         try {
+            if (id.get() < 0) {
+                return 0;
+            }
             return filerProvider.read(-1, new FilerTransaction<Filer, Integer>() {
                 @Override
                 public Integer commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
                         int index = readClosestId(lock, filer, timestamp);
-                        if (index <= 0) {
+                        if (index == -1) {
                             return 0;
+                        }
+                        if (index < -1) {
+                            index = -(index + 1);
                         }
                         int lastId = lastId();
                         if (index > lastId) {
@@ -420,14 +434,18 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     @Override
     public int largestInclusiveTimestampIndex(final long timestamp) {
         try {
+            if (id.get() < 0) {
+                return -1;
+            }
             return filerProvider.read(-1, new FilerTransaction<Filer, Integer>() {
                 @Override
                 public Integer commit(Object lock, Filer filer) throws IOException {
                     if (filer != null) {
                         int index = readClosestId(lock, filer, timestamp);
-                        if (index == -1) {
-                            return -1;
+                        if (index < 0) {
+                            return -(index + 1) - 1;
                         }
+
                         if (index == timestampsLength) {
                             return timestampsLength - 1;
                         }
@@ -435,6 +453,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                         if (index > lastId) {
                             return lastId;
                         }
+
                         while (index <= lastId && readTimestamp(lock, filer, index) <= timestamp) {
                             index++;
                         }
@@ -449,43 +468,8 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public void stream(final Stream stream) throws Exception {
-        filerProvider.read(-1, new FilerTransaction<Filer, Void>() {
-            @Override
-            public Void commit(Object lock, Filer filer) throws IOException {
-                int header = HEADER_SIZE_IN_BYTES + segmentWidth(LEVELS, SEGMENTS);
-                int count = lastId() + 1;
-                for (int i = 0; i < count; i++) {
-                    long ts;
-                    synchronized (lock) {
-                        filer.seek(header + (timestampSize * i));
-                        ts = FilerIO.readLong(filer, "ts");
-                    }
-                    int index = timestampToIndex.execute(ts, false, streamTransaction);
-                    try {
-                        if (!stream.stream(new Entry(ts, index))) {
-                            break;
-                        }
-                    } catch (Exception e) {
-                        throw new IOException("Failed to stream", e);
-                    }
-                }
-                return null;
-            }
-        });
-    }
-
-    @Override
     public void close() {
     }
-
-    private static final KeyValueTransaction<Integer, Integer> streamTransaction = new KeyValueTransaction<Integer, Integer>() {
-        @Override
-        public Integer commit(KeyValueContext<Integer> context) throws IOException {
-            Integer result = context.get();
-            return result != null ? result : -1;
-        }
-    };
 
     public static interface TimeOrderAnomalyStream {
 
