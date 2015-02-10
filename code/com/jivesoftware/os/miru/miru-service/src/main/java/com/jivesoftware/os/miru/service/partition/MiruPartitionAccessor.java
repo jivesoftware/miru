@@ -172,6 +172,7 @@ public class MiruPartitionAccessor<BM> {
                 ((MiruDeltaActivityIndex) got.activityIndex).merge();
                 ((MiruDeltaSipIndex) got.sipIndex).merge();
             }
+            log.inc("merge>calls");
         }
         return true;
     }
@@ -279,19 +280,14 @@ public class MiruPartitionAccessor<BM> {
     }
 
     private int handleBoundaryType(List<MiruPartitionedActivity> partitionedActivities) {
-        int count = 0;
         for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
             if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                if (beginWriters.add(partitionedActivity.writerId)) {
-                    count++;
-                }
+                beginWriters.add(partitionedActivity.writerId);
             } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
-                if (endWriters.add(partitionedActivity.writerId)) {
-                    count++;
-                }
+                endWriters.add(partitionedActivity.writerId);
             }
         }
-        return count;
+        return 0;
     }
 
     private int handleActivityType(MiruContext<BM> got,
@@ -332,8 +328,8 @@ public class MiruPartitionAccessor<BM> {
             // free for GC before we begin indexing
             partitionedActivities.clear();
             if (!indexables.isEmpty()) {
+                activityCount = indexables.size(); // indexer consumes, so count first
                 indexer.index(got, indexables, false, indexExecutor);
-                activityCount = indexables.size();
             }
         }
         return activityCount;
@@ -380,9 +376,9 @@ public class MiruPartitionAccessor<BM> {
             // free for GC before we begin indexing
             partitionedActivities.clear();
             if (!indexables.isEmpty()) {
+                count = indexables.size(); // indexer consumes, so count first
                 Collections.sort(indexables);
                 indexer.index(got, indexables, true, indexExecutor);
-                count = indexables.size();
             }
         }
         return count;

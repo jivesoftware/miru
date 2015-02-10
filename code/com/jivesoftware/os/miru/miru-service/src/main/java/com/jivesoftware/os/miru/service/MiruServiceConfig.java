@@ -63,7 +63,7 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(1_000)
     long getMergeAfterLiveCount();
 
-    @LongDefault(100_000)
+    @LongDefault(1_000)
     long getMergeAfterRebuildCount();
 
     @LongDefault(10_000)
