@@ -262,7 +262,7 @@ public class MiruPartitionAccessor<BM> {
         long used = indexedSinceMerge.addAndGet(consumedCount);
         log.inc("chit>used>power>" + FilerIO.chunkPower(used, 0));
 
-        if (chits.merge(used, System.currentTimeMillis() - timestampOfLastMerge.get())) {
+        if (chits.merge(used, System.currentTimeMillis() - timestampOfLastMerge.get()) && merge()) {
             chits.refund(used);
             indexedSinceMerge.set(0);
             timestampOfLastMerge.set(System.currentTimeMillis());
