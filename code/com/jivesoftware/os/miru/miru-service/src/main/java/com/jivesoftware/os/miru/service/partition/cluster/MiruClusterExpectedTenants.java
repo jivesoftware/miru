@@ -140,14 +140,13 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                             tenantTopology = tenantTopologyFactory.create(tenantId);
                         }
                         expectedTopologies.putIfAbsent(tenantId, tenantTopology);
-
-                        for (MiruHostedPartition partition : tenantTopology.allPartitions()) {
-                            if (partition.isLocal()) {
-                                activePartitionCount++;
-                            }
-                        }
                     }
 
+                    for (MiruHostedPartition partition : tenantTopology.allPartitions()) {
+                        if (partition.isLocal()) {
+                            activePartitionCount++;
+                        }
+                    }
                     alignTopology(tenantTopology);
                     temporaryTopologies.invalidate(tenantId);
                 }

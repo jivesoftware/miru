@@ -30,7 +30,7 @@ public class MiruMergeChits {
 
     public void take(int count) {
         long chitsFree = chits.addAndGet(-count);
-        log.set(ValueType.COUNT, "chits>free", chitsFree);
+        log.set(ValueType.COUNT, "chit>free", chitsFree);
     }
 
     public boolean merge(long indexed, long elapse) {
@@ -73,5 +73,6 @@ public class MiruMergeChits {
             activePartitionCount = 2;
         }
         this.activePartitionCount.set(activePartitionCount);
+        log.inc("chit>activePartitionCount");
     }
 }
