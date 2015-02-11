@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.index.disk;
+package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;

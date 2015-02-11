@@ -1,6 +1,7 @@
-package com.jivesoftware.os.miru.service.index.disk;
+package com.jivesoftware.os.miru.service.index.delta;
 
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.service.index.filer.MiruFilerTimeIndex;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongIntHashMap;
 import java.util.List;

@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan
@@ -85,8 +86,7 @@ public class MiruLocalPartitionFactory {
             config.getPartitionWakeOnIndex(),
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),
-            config.getMergeAfterLiveCount(),
-            config.getMergeAfterRebuildCount(),
+            new AtomicLong(config.getMergeChitCount()),
             new MiruLocalHostedPartition.Timings(
                 config.getPartitionRebuildFailureSleepMillis(),
                 config.getPartitionBootstrapIntervalInMillis(),

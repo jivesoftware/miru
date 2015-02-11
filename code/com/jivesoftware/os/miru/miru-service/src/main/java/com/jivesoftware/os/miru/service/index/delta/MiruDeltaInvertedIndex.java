@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.index.disk;
+package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;

@@ -60,11 +60,8 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(10_000)
     int getPartitionSipBatchSize();
 
-    @LongDefault(1_000)
-    long getMergeAfterLiveCount();
-
-    @LongDefault(1_000)
-    long getMergeAfterRebuildCount();
+    @LongDefault(1_000_000)
+    long getMergeChitCount();
 
     @LongDefault(10_000)
     long getPartitionRebuildFailureSleepMillis();

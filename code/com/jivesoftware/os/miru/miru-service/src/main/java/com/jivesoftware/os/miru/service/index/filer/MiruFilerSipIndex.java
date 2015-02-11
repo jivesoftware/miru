@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.index.disk;
+package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;

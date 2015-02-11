@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.index.disk;
+package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.filer.map.store.api.KeyRange;

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -17,10 +18,10 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
-import com.jivesoftware.os.miru.service.index.disk.MiruDeltaActivityIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruDeltaFieldIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruDeltaSipIndex;
-import com.jivesoftware.os.miru.service.index.disk.MiruDeltaTimeIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaFieldIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaSipIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
@@ -188,7 +189,7 @@ public class MiruPartitionAccessor<BM> {
     int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities,
         IndexStrategy strategy,
         boolean recovery,
-        long mergeAfterCount,
+        AtomicLong chits,
         ExecutorService indexExecutor)
         throws Exception {
 
@@ -244,7 +245,22 @@ public class MiruPartitionAccessor<BM> {
             semaphore.release();
         }
 
-        if (indexedSinceMerge.addAndGet(consumedCount) > mergeAfterCount && merge()) {
+        long chitsFree = chits.addAndGet(-consumedCount);
+
+        long had = indexedSinceMerge.get();
+        if (had > 0) {
+            log.dec("chit>used>power>" + FilerIO.chunkPower(had, 0));
+        }
+        long used = indexedSinceMerge.addAndGet(consumedCount);
+        log.inc("chit>used>power>" + FilerIO.chunkPower(used, 0));
+
+        log.set(ValueType.COUNT, "chits>free", chitsFree);
+        log.set(ValueType.COUNT, "chits>used", used, coord.tenantId.toString());
+
+        if (used > chitsFree && merge()) {
+            log.dec("chit>used>power>" + FilerIO.chunkPower(used, 0));
+            log.inc("chit>merged>power>" + FilerIO.chunkPower(used, 0));
+            chits.addAndGet(used);
             indexedSinceMerge.set(0);
         }
 
@@ -252,7 +268,7 @@ public class MiruPartitionAccessor<BM> {
     }
 
     /**
-     * <code>batchType</code> must be one of the following:      {@link MiruPartitionedActivity.Type#BEGIN}
+     * <code>batchType</code> must be one of the following: null null     {@link MiruPartitionedActivity.Type#BEGIN}
      * {@link MiruPartitionedActivity.Type#ACTIVITY}
      * {@link MiruPartitionedActivity.Type#REPAIR}
      * {@link MiruPartitionedActivity.Type#REMOVE}

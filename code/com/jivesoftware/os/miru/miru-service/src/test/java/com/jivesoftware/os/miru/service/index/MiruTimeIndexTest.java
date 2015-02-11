@@ -7,7 +7,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
-import com.jivesoftware.os.miru.service.index.disk.MiruDeltaTimeIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import org.testng.annotations.DataProvider;
