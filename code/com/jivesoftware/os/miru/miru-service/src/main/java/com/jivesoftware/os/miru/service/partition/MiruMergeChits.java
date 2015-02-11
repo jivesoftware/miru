@@ -18,10 +18,12 @@ public class MiruMergeChits {
     private final AtomicLong chits;
     private final AtomicDouble movingAvgOfMillisPerIndexed = new AtomicDouble(0);
     private final double mergeRateRatio;
+    private final long maxElapseWithoutMergeInMillis;
 
-    public MiruMergeChits(long free, double mergeRateRatio) {
+    public MiruMergeChits(long free, double mergeRateRatio, long maxElapseWithoutMergeInMillis) {
         chits = new AtomicLong(free);
         this.mergeRateRatio = mergeRateRatio;
+        this.maxElapseWithoutMergeInMillis = maxElapseWithoutMergeInMillis;
     }
 
     public void take(int count) {
@@ -30,6 +32,10 @@ public class MiruMergeChits {
     }
 
     public boolean merge(long indexed, long elapse) {
+        if (elapse > maxElapseWithoutMergeInMillis) {
+            log.inc("chits>merged>force>maxElapse");
+            return true;
+        }
         if (indexed <= 0) {
             return false;
         }
@@ -37,7 +43,8 @@ public class MiruMergeChits {
             elapse = 0;
         }
         double millisPerIndexed = (double) elapse / (double) indexed;
-        movingAvgOfMillisPerIndexed.set((movingAvgOfMillisPerIndexed.get() + millisPerIndexed) / 2);
+        double weight = 0.99d; // TODO expose to config
+        movingAvgOfMillisPerIndexed.set(((movingAvgOfMillisPerIndexed.get() * weight) + (millisPerIndexed * (1d - weight))));
 
         double movingAvg = movingAvgOfMillisPerIndexed.get();
         log.set(ValueType.VALUE, "chit>millisPerIndex", (long) movingAvg);
@@ -49,6 +56,7 @@ public class MiruMergeChits {
         long chitsFree = chits.get();
         boolean merge = (indexed * scalar) > chitsFree;
         if (merge) {
+            log.inc("chit>merged>total");
             log.inc("chit>merged>power>" + FilerIO.chunkPower(indexed, 0));
         }
         return merge;

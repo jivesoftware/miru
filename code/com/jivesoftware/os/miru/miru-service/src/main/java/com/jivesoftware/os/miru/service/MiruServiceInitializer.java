@@ -203,7 +203,7 @@ public class MiruServiceInitializer {
             sipIndexExecutor,
             config.getRebuildIndexerThreads(),
             indexRepairs,
-            new MiruMergeChits(config.getMergeChitCount(), config.getMergeRateRatio()));
+            new MiruMergeChits(config.getMergeChitCount(), config.getMergeRateRatio(), config.getMaxElapseWithoutMergeInMillis()));
 
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
             httpClientFactory,

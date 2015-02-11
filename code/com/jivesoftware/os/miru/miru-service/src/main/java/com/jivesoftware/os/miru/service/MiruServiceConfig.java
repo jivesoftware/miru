@@ -165,4 +165,8 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(512)
     int getFieldIndexCacheConcurrencyLevel();
+
+
+    @LongDefault(600_000)
+    public long getMaxElapseWithoutMergeInMillis();
 }

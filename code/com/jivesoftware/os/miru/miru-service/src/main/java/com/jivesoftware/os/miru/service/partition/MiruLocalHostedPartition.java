@@ -715,10 +715,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 }
             );
 
-            if (!partitionedActivities.isEmpty()) {
-                deliver(partitionedActivities, accessor, sipTracker, sip);
-            }
-
+            deliver(partitionedActivities, accessor, sipTracker, sip);
+            
             if (!accessor.hasOpenWriters()) {
                 accessor.merge();
             }

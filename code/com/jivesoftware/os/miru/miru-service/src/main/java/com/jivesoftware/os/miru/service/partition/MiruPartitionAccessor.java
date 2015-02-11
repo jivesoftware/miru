@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -185,7 +184,6 @@ public class MiruPartitionAccessor<BM> {
                 ((MiruDeltaActivityIndex) got.activityIndex).merge();
                 ((MiruDeltaSipIndex) got.sipIndex).merge();
             }
-            log.inc("merge>calls");
         }
         return true;
     }
@@ -255,24 +253,22 @@ public class MiruPartitionAccessor<BM> {
         }
 
         chits.take(consumedCount);
-        long had = indexedSinceMerge.get();
-        if (had > 0) {
-            log.dec("chit>used>power>" + FilerIO.chunkPower(had, 0));
-        }
         long used = indexedSinceMerge.addAndGet(consumedCount);
-        log.inc("chit>used>power>" + FilerIO.chunkPower(used, 0));
-
-        if (chits.merge(used, System.currentTimeMillis() - timestampOfLastMerge.get()) && merge()) {
-            chits.refund(used);
-            indexedSinceMerge.set(0);
+        if (used == 0) {
             timestampOfLastMerge.set(System.currentTimeMillis());
+        } else {
+            if (chits.merge(used, System.currentTimeMillis() - timestampOfLastMerge.get()) && merge()) {
+                chits.refund(used);
+                indexedSinceMerge.set(0);
+                timestampOfLastMerge.set(System.currentTimeMillis());
+            }
         }
 
         return consumedCount;
     }
 
     /**
-     * <code>batchType</code> must be one of the following: null null null null null null     {@link MiruPartitionedActivity.Type#BEGIN}
+     * <code>batchType</code> must be one of the following: null null null null null null null     {@link MiruPartitionedActivity.Type#BEGIN}
      * {@link MiruPartitionedActivity.Type#ACTIVITY}
      * {@link MiruPartitionedActivity.Type#REPAIR}
      * {@link MiruPartitionedActivity.Type#REMOVE}
