@@ -30,19 +30,24 @@ public class MiruMergeChits {
     }
 
     public boolean merge(long indexed, long elapse) {
-        double millisPerIndexed = 0;
-        if (indexed > 0) {
-            millisPerIndexed = (double) elapse / (double) indexed;
-            movingAvgOfMillisPerIndexed.set((movingAvgOfMillisPerIndexed.get() + millisPerIndexed) / 2);
-            log.set(ValueType.VALUE, "chit>millisPerIndex", (long) movingAvgOfMillisPerIndexed.get());
+        if (indexed <= 0) {
+            return false;
         }
+        if (elapse < 0) {
+            elapse = 0;
+        }
+        double millisPerIndexed = (double) elapse / (double) indexed;
+        movingAvgOfMillisPerIndexed.set((movingAvgOfMillisPerIndexed.get() + millisPerIndexed) / 2);
+
+        double movingAvg = movingAvgOfMillisPerIndexed.get();
+        log.set(ValueType.VALUE, "chit>millisPerIndex", (long) movingAvg);
         double scalar = 1;
-        if (movingAvgOfMillisPerIndexed.get() > 0) {
-            scalar += (millisPerIndexed / movingAvgOfMillisPerIndexed.get()) * (mergeRateRatio * 2); // * 2 magic inverse of div by 2 moving avg above.
+        if (movingAvg > 0) {
+            scalar += (millisPerIndexed / movingAvg) * (mergeRateRatio * 2); // * 2 magic inverse of div by 2 moving avg above.
         }
 
         long chitsFree = chits.get();
-        boolean merge = indexed * scalar > chitsFree;
+        boolean merge = (indexed * scalar) > chitsFree;
         if (merge) {
             log.inc("chit>merged>power>" + FilerIO.chunkPower(indexed, 0));
         }
