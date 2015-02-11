@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
+import com.jivesoftware.os.miru.service.partition.MiruMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.MiruRemoteHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopology;
@@ -54,8 +55,8 @@ public class MiruClusterExpectedTenantsTest {
 
         when(topologyFactory.create(any(MiruTenantId.class))).thenAnswer(topologyFactoryAnswer);
         when(clusterRegistry.getPartitionsForTenant(any(MiruTenantId.class))).thenAnswer(clusterRegistryAnswer);
-
-        expectedTenants = new MiruClusterExpectedTenants(partitionInfoProvider, topologyFactory, clusterRegistry);
+        MiruMergeChits miruMergeChits = new MiruMergeChits(100_000, 10, Long.MAX_VALUE);
+        expectedTenants = new MiruClusterExpectedTenants(partitionInfoProvider, topologyFactory, clusterRegistry, miruMergeChits);
     }
 
     private final Answer<List<MiruPartition>> clusterRegistryAnswer =

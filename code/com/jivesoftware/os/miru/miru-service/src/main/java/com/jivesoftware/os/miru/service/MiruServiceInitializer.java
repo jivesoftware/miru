@@ -191,6 +191,7 @@ public class MiruServiceInitializer {
             }
         };
 
+        MiruMergeChits miruMergeChits = new MiruMergeChits(config.getMergeChitCount(), config.getMergeRateRatio(), config.getMaxElapseWithoutMergeInMillis());
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(config,
             streamFactory,
             activityWALReader,
@@ -203,7 +204,7 @@ public class MiruServiceInitializer {
             sipIndexExecutor,
             config.getRebuildIndexerThreads(),
             indexRepairs,
-            new MiruMergeChits(config.getMergeChitCount(), config.getMergeRateRatio(), config.getMaxElapseWithoutMergeInMillis()));
+            miruMergeChits);
 
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
             httpClientFactory,
@@ -218,7 +219,8 @@ public class MiruServiceInitializer {
 
         MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(partitionInfoProvider,
             tenantTopologyFactory,
-            clusterRegistry);
+            clusterRegistry,
+            miruMergeChits);
 
         final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, clusterRegistry, expectedTenants);
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());

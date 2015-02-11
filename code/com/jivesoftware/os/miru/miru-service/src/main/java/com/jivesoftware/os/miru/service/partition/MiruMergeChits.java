@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -19,6 +20,7 @@ public class MiruMergeChits {
     private final AtomicDouble movingAvgOfMillisPerIndexed = new AtomicDouble(0);
     private final double mergeRateRatio;
     private final long maxElapseWithoutMergeInMillis;
+    private final AtomicInteger activePartitionCount = new AtomicInteger(2);
 
     public MiruMergeChits(long free, double mergeRateRatio, long maxElapseWithoutMergeInMillis) {
         chits = new AtomicLong(free);
@@ -43,7 +45,7 @@ public class MiruMergeChits {
             elapse = 0;
         }
         double millisPerIndexed = (double) elapse / (double) indexed;
-        double weight = 0.99d; // TODO expose to config
+        double weight = 1d / activePartitionCount.get();
         movingAvgOfMillisPerIndexed.set(((movingAvgOfMillisPerIndexed.get() * weight) + (millisPerIndexed * (1d - weight))));
 
         double movingAvg = movingAvgOfMillisPerIndexed.get();
@@ -64,5 +66,12 @@ public class MiruMergeChits {
 
     public void refund(long count) {
         chits.addAndGet(count);
+    }
+
+    public void setActivePartitionCount(int activePartitionCount) {
+        if (activePartitionCount < 2) {
+            activePartitionCount = 2;
+        }
+        this.activePartitionCount.set(activePartitionCount);
     }
 }

@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
+import com.jivesoftware.os.miru.service.partition.MiruMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopology;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
@@ -50,42 +51,45 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     private final StripingLocksProvider<MiruTenantId> tenantLocks = new StripingLocksProvider<>(64);
 
     private final Cache<MiruTenantId, MiruTenantTopology<?>> temporaryTopologies = CacheBuilder.newBuilder()
-            .concurrencyLevel(24)
-            .expireAfterAccess(1, TimeUnit.HOURS)
-            .maximumSize(10_000) //TODO configure
-            .removalListener(new RemovalListener<MiruTenantId, MiruTenantTopology<?>>() {
-                @Override
-                public void onRemoval(@Nonnull RemovalNotification<MiruTenantId, MiruTenantTopology<?>> notification) {
-                    MiruTenantId tenantId = notification.getKey();
-                    MiruTenantTopology<?> tenantTopology = notification.getValue();
+        .concurrencyLevel(24)
+        .expireAfterAccess(1, TimeUnit.HOURS)
+        .maximumSize(10_000) //TODO configure
+        .removalListener(new RemovalListener<MiruTenantId, MiruTenantTopology<?>>() {
+            @Override
+            public void onRemoval(@Nonnull RemovalNotification<MiruTenantId, MiruTenantTopology<?>> notification) {
+                MiruTenantId tenantId = notification.getKey();
+                MiruTenantTopology<?> tenantTopology = notification.getValue();
 
-                    if (tenantTopology != null && tenantId != null) {
-                        if (expectedTopologies.get(tenantId) != tenantTopology) {
-                            LOG.info("Removed temporary topology for {}: {}", tenantId, notification.getCause());
-                            Iterator<MiruPartitionCoord> iter = partitionInfoProvider.getKeysIterator();
-                            while (iter.hasNext()) {
-                                MiruPartitionCoord coord = iter.next();
-                                if (coord.tenantId.equals(tenantId)) {
-                                    iter.remove();
-                                }
+                if (tenantTopology != null && tenantId != null) {
+                    if (expectedTopologies.get(tenantId) != tenantTopology) {
+                        LOG.info("Removed temporary topology for {}: {}", tenantId, notification.getCause());
+                        Iterator<MiruPartitionCoord> iter = partitionInfoProvider.getKeysIterator();
+                        while (iter.hasNext()) {
+                            MiruPartitionCoord coord = iter.next();
+                            if (coord.tenantId.equals(tenantId)) {
+                                iter.remove();
                             }
-                            tenantTopology.remove();
-                        } else {
-                            LOG.info("Migrated temporary topology for {}", tenantId);
                         }
+                        tenantTopology.remove();
+                    } else {
+                        LOG.info("Migrated temporary topology for {}", tenantId);
                     }
                 }
-            })
-            .build();
+            }
+        })
+        .build();
     private final ConcurrentLinkedDeque<MiruTenantTopology<?>> temporaryUpdateDeque = new ConcurrentLinkedDeque<>();
+    private final MiruMergeChits miruMergeChits;
 
     public MiruClusterExpectedTenants(MiruPartitionInfoProvider partitionInfoProvider,
-            MiruTenantTopologyFactory tenantTopologyFactory,
-            MiruClusterRegistry clusterRegistry) {
+        MiruTenantTopologyFactory tenantTopologyFactory,
+        MiruClusterRegistry clusterRegistry,
+        MiruMergeChits miruMergeChits) {
 
         this.partitionInfoProvider = partitionInfoProvider;
         this.tenantTopologyFactory = tenantTopologyFactory;
         this.clusterRegistry = clusterRegistry;
+        this.miruMergeChits = miruMergeChits;
 
     }
 
@@ -122,7 +126,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     @Override
     public void expect(List<MiruTenantId> expectedTenantsForHost) throws Exception {
         checkArgument(expectedTenantsForHost != null);
-
+        int activePartitionCount = 0;
         Set<MiruTenantId> synced = Sets.newHashSet();
         for (MiruTenantId tenantId : expectedTenantsForHost) {
             synchronized (tenantLocks.lock(tenantId)) {
@@ -136,6 +140,12 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                             tenantTopology = tenantTopologyFactory.create(tenantId);
                         }
                         expectedTopologies.putIfAbsent(tenantId, tenantTopology);
+
+                        for (MiruHostedPartition partition : tenantTopology.allPartitions()) {
+                            if (partition.isLocal()) {
+                                activePartitionCount++;
+                            }
+                        }
                     }
 
                     alignTopology(tenantTopology);
@@ -171,6 +181,8 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 }
             }
         }
+        miruMergeChits.setActivePartitionCount(activePartitionCount);
+
     }
 
     @Override

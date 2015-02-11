@@ -716,7 +716,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             );
 
             deliver(partitionedActivities, accessor, sipTracker, sip);
-            
+
             if (!accessor.hasOpenWriters()) {
                 accessor.merge();
             }
