@@ -22,20 +22,29 @@ import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
+import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.KeyedFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaFieldIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInboxIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInvertedIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaRemovalIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaSipIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerActivityIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerAuthzIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerFieldIndex;
@@ -64,8 +73,8 @@ public class MiruContextFactory {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[]{0};
-    private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[]{1};
+    private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[] { 0 };
+    private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[] { 1 };
 
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
@@ -185,42 +194,51 @@ public class MiruContextFactory {
 
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
-        //TODO share the cache?
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
             .maximumSize(partitionAuthzCacheSize)
             .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
             .build();
+        MiruAuthzCache<BM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
 
-        MiruFilerAuthzIndex<BM> authzIndex = new MiruFilerAuthzIndex<>(
-            bitmaps,
-            fieldIndexCache,
-            fieldIndexIdProvider.incrementAndGet(),
-            new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex"), false),
-            new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils),
-            authzStripingLocksProvider);
+        MiruAuthzIndex<BM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
+            miruAuthzCache,
+            new MiruFilerAuthzIndex<>(
+                bitmaps,
+                fieldIndexCache,
+                fieldIndexIdProvider.incrementAndGet(),
+                new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex"), false),
+                miruAuthzCache,
+                authzStripingLocksProvider));
 
-        MiruFilerRemovalIndex<BM> removalIndex = new MiruFilerRemovalIndex<>(
+        MiruRemovalIndex<BM> removalIndex = new MiruDeltaRemovalIndex<>(
             bitmaps,
-            fieldIndexCache,
-            fieldIndexIdProvider.incrementAndGet(),
-            new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), false),
-            new byte[]{0},
-            -1,
-            new Object());
+            new MiruFilerRemovalIndex<>(
+                bitmaps,
+                fieldIndexCache,
+                fieldIndexIdProvider.incrementAndGet(),
+                new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), false),
+                new byte[] { 0 },
+                -1,
+                new Object()),
+            new MiruDeltaInvertedIndex.Delta<BM>());
 
-        MiruFilerUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
+        MiruUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
             bitmaps,
-            fieldIndexCache,
-            fieldIndexIdProvider.incrementAndGet(),
-            new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex"), false),
-            streamStripingLocksProvider);
+            new MiruFilerUnreadTrackingIndex<>(
+                bitmaps,
+                fieldIndexCache,
+                fieldIndexIdProvider.incrementAndGet(),
+                new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex"), false),
+                streamStripingLocksProvider));
 
-        MiruFilerInboxIndex<BM> inboxIndex = new MiruFilerInboxIndex<>(
+        MiruInboxIndex<BM> inboxIndex = new MiruDeltaInboxIndex<>(
             bitmaps,
-            fieldIndexCache,
-            fieldIndexIdProvider.incrementAndGet(),
-            new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex"), false),
-            streamStripingLocksProvider);
+            new MiruFilerInboxIndex<>(
+                bitmaps,
+                fieldIndexCache,
+                fieldIndexIdProvider.incrementAndGet(),
+                new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex"), false),
+                streamStripingLocksProvider));
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 

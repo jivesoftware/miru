@@ -1,37 +1,24 @@
-package com.jivesoftware.os.miru.service.index.filer;
+package com.jivesoftware.os.miru.service.index.delta;
 
-import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
-import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import java.util.Collections;
+import java.util.concurrent.ConcurrentMap;
 
 /** @author jonathan */
-public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM> {
+public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
-    private final long indexId;
-    private final KeyedFilerStore store;
-    private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
+    private final MiruUnreadTrackingIndex<BM> backingIndex;
+    private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM>> unreadDeltas = Maps.newConcurrentMap();
 
-    public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
-        long indexId,
-        KeyedFilerStore store,
-        StripingLocksProvider<MiruStreamId> stripingLocksProvider)
-        throws Exception {
+    public MiruDeltaUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, MiruUnreadTrackingIndex<BM> backingIndex) {
         this.bitmaps = bitmaps;
-        this.fieldIndexCache = fieldIndexCache;
-        this.indexId = indexId;
-        this.store = store;
-        this.stripingLocksProvider = stripingLocksProvider;
+        this.backingIndex = backingIndex;
     }
 
     @Override
@@ -41,8 +28,15 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
 
     @Override
     public MiruInvertedIndex<BM> getUnread(MiruStreamId streamId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), store, -1,
-            stripingLocksProvider.lock(streamId));
+        MiruDeltaInvertedIndex<BM> delta = unreadDeltas.get(streamId);
+        if (delta == null) {
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<BM>());
+            MiruDeltaInvertedIndex<BM> existing = unreadDeltas.putIfAbsent(streamId, delta);
+            if (existing != null) {
+                delta = existing;
+            }
+        }
+        return delta;
     }
 
     @Override
@@ -64,6 +58,13 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
 
     @Override
     public void close() {
-        store.close();
+        backingIndex.close();
+    }
+
+    public void merge() throws Exception {
+        for (MiruDeltaInvertedIndex<BM> delta : unreadDeltas.values()) {
+            delta.merge();
+        }
+        unreadDeltas.clear();
     }
 }

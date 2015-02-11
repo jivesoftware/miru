@@ -19,9 +19,13 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaFieldIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInboxIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaRemovalIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaSipIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
@@ -174,6 +178,10 @@ public class MiruPartitionAccessor<BM> {
                     ((MiruDeltaFieldIndex<BM>) got.fieldIndexProvider.getFieldIndex(fieldType)).merge();
                 }
 
+                ((MiruDeltaAuthzIndex<BM>) got.authzIndex).merge();
+                ((MiruDeltaRemovalIndex<BM>) got.removalIndex).merge();
+                ((MiruDeltaInboxIndex<BM>) got.inboxIndex).merge();
+                ((MiruDeltaUnreadTrackingIndex<BM>) got.unreadTrackingIndex).merge();
                 ((MiruDeltaActivityIndex) got.activityIndex).merge();
                 ((MiruDeltaSipIndex) got.sipIndex).merge();
             }

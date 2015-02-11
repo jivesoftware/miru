@@ -70,7 +70,7 @@ public class AggregateCounts {
         if (fieldId >= 0) {
             BM unreadIndex = null;
             if (!MiruStreamId.NULL.equals(request.query.streamId)) {
-                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(request.query.streamId);
+                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex();
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }

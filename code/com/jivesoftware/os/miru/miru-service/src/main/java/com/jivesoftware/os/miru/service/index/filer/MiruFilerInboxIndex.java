@@ -33,11 +33,11 @@ public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
     }
 
     @Override
-    public void index(MiruStreamId streamId, int id) throws Exception {
-        getAppender(streamId).append(id);
+    public void append(MiruStreamId streamId, int... ids) throws Exception {
+        getAppender(streamId).append(ids);
     }
 
-    private MiruFilerInvertedIndex<BM> indexFor(MiruStreamId streamId) {
+    public MiruFilerInvertedIndex<BM> getInbox(MiruStreamId streamId) {
         return new MiruFilerInvertedIndex<>(bitmaps,
             fieldIndexCache,
             new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()),
@@ -47,18 +47,13 @@ public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
     }
 
     @Override
-    public Optional<BM> getInbox(MiruStreamId streamId) throws Exception {
-        return indexFor(streamId).getIndex();
-    }
-
-    @Override
     public MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception {
-        return indexFor(streamId);
+        return getInbox(streamId);
     }
 
     @Override
     public int getLastActivityIndex(MiruStreamId streamId) throws Exception {
-        return indexFor(streamId).lastId();
+        return getInbox(streamId).lastId();
     }
 
     @Override

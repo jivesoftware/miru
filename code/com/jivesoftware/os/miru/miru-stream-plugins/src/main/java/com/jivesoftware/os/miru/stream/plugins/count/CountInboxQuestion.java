@@ -75,7 +75,7 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
-        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId);
+        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex();
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -94,7 +94,7 @@ public class CountInboxQuestion implements Question<DistinctCountAnswer, Distinc
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
         if (unreadOnly) {
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId);
+            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex();
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }

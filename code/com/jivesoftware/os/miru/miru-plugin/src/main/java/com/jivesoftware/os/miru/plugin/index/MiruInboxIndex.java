@@ -6,20 +6,18 @@
 
 package com.jivesoftware.os.miru.plugin.index;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 
 /** @author jonathan */
 public interface MiruInboxIndex<BM> {
 
     /**
-     * Get the inbox index for a given streamId. If the inbox doesn't exist then we will
-     * return Optional.absent();
+     * Get the inbox index for a given streamId.
      *
      * @param streamId the streamId that represents a given inbox
-     * @return the index representing this inbox or Optional.absent() if it doesn't exist
+     * @return the index representing this inbox
      */
-    Optional<BM> getInbox(MiruStreamId streamId) throws Exception;
+    MiruInvertedIndex<BM> getInbox(MiruStreamId streamId) throws Exception;
 
     /**
      * Get the inbox index for a given streamId, creating if it doesn't already exist.
@@ -44,10 +42,9 @@ public interface MiruInboxIndex<BM> {
      * automatically.
      *
      * @param streamId the inbox to index this activity in
-     * @param id       the activity id to index
+     * @param ids      the activity ids to index
      */
-    void index(MiruStreamId streamId, int id) throws Exception;
-
+    void append(MiruStreamId streamId, int... ids) throws Exception;
 
     /** Frees resources used by this index. */
     void close();

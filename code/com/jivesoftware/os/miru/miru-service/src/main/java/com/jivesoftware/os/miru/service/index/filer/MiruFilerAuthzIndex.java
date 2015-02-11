@@ -40,29 +40,7 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
     }
 
     @Override
-    public void append(String authz, int id) throws Exception {
-        get(authz).append(id);
-    }
-
-    @Override
-    public void set(String authz, int id) throws Exception {
-        get(authz).set(id);
-        cache.increment(authz);
-    }
-
-    @Override
-    public void remove(String authz, int id) throws Exception {
-        get(authz).remove(id);
-        cache.increment(authz);
-    }
-
-    @Override
-    public void close() {
-        keyedStore.close();
-        cache.clear();
-    }
-
-    private MiruInvertedIndex<BM> get(String authz) throws Exception {
+    public MiruInvertedIndex<BM> getAuthz(String authz) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), keyedStore, -1,
             stripingLocksProvider.lock(authz));
     }
@@ -72,8 +50,38 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
         return cache.getOrCompose(authzExpression, new MiruAuthzUtils.IndexRetriever<BM>() {
             @Override
             public BM getIndex(String authz) throws Exception {
-                return get(authz).getIndex().orNull();
+                return getAuthz(authz).getIndex().orNull();
             }
         });
     }
+
+    @Override
+    public void append(String authz, int... ids) throws Exception {
+        getAuthz(authz).append(ids);
+    }
+
+    @Override
+    public void set(String authz, int... ids) throws Exception {
+        getAuthz(authz).set(ids);
+        cache.increment(authz);
+    }
+
+    @Override
+    public void remove(String authz, int id) throws Exception {
+        getAuthz(authz).remove(id);
+        cache.increment(authz);
+    }
+
+    @Override
+    public void close() {
+        keyedStore.close();
+        cache.clear();
+    }
+
+    private static final String IDEA_TYPE_CODE = "idea";
+    public static final int IDEA_TYPE_ID = IDEA_TYPE_CODE.hashCode();
+    public static void main(String[] args) {
+        System.out.println("" + IDEA_TYPE_ID);
+    }
+
 }

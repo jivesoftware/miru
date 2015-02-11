@@ -72,8 +72,8 @@ public class MiruJustInTimeBackfillerizer {
                             log.debug("before:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                                 localHost,
                                 streamId.getBytes(),
-                                requestContext.getInboxIndex().getInbox(streamId),
-                                requestContext.getUnreadTrackingIndex().getUnread(streamId),
+                                requestContext.getInboxIndex().getInbox(streamId).getIndex(),
+                                requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(),
                                 lastActivityIndex);
                         }
 
@@ -111,8 +111,8 @@ public class MiruJustInTimeBackfillerizer {
                             log.debug("after:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                                 localHost,
                                 streamId.getBytes(),
-                                requestContext.getInboxIndex().getInbox(streamId),
-                                requestContext.getUnreadTrackingIndex().getUnread(streamId),
+                                requestContext.getInboxIndex().getInbox(streamId).getIndex(),
+                                requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(),
                                 lastActivityIndex);
                         }
 

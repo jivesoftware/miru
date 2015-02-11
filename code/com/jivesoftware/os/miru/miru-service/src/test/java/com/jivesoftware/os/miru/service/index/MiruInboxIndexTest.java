@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -13,9 +12,9 @@ import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInboxIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import java.util.Collections;
-import java.util.List;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -30,7 +29,7 @@ public class MiruInboxIndexTest {
     public void testGetEmptyInboxWithoutCreating(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId miruStreamId)
         throws Exception {
 
-        Optional<EWAHCompressedBitmap> inbox = miruInboxIndex.getInbox(miruStreamId);
+        Optional<EWAHCompressedBitmap> inbox = miruInboxIndex.getInbox(miruStreamId).getIndex();
         assertNotNull(inbox);
         assertFalse(inbox.isPresent());
     }
@@ -41,7 +40,7 @@ public class MiruInboxIndexTest {
 
         MiruInvertedIndexAppender inbox = miruInboxIndex.getAppender(miruStreamId);
         assertNotNull(inbox);
-        Optional<EWAHCompressedBitmap> inboxIndex = miruInboxIndex.getInbox(miruStreamId);
+        Optional<EWAHCompressedBitmap> inboxIndex = miruInboxIndex.getInbox(miruStreamId).getIndex();
         assertNotNull(inboxIndex);
         assertFalse(inboxIndex.isPresent());
         //assertEquals(inboxIndex.get().sizeInBytes(), 8);
@@ -49,38 +48,38 @@ public class MiruInboxIndexTest {
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
     public void testIndexIds(MiruInboxIndex miruInboxIndex, MiruStreamId miruStreamId) throws Exception {
-        miruInboxIndex.index(miruStreamId, 1);
+        miruInboxIndex.append(miruStreamId, 1);
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testIndexedData(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
-        Optional<EWAHCompressedBitmap> inbox = miruInboxIndex.getInbox(streamId);
+    public void testIndexedData(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, int[] indexedIds) throws Exception {
+        Optional<EWAHCompressedBitmap> inbox = miruInboxIndex.getInbox(streamId).getIndex();
         assertNotNull(inbox);
         assertTrue(inbox.isPresent());
-        assertTrue(inbox.get().get(indexedIds.get(0)));
-        assertTrue(inbox.get().get(indexedIds.get(1)));
-        assertTrue(inbox.get().get(indexedIds.get(2)));
+        for (int indexedId : indexedIds) {
+            assertTrue(inbox.get().get(indexedId));
+        }
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
     public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId,
-        List<Integer> indexedIds) throws Exception {
+        int[] indexedIds) throws Exception {
 
         MiruStreamId newStreamId = new MiruStreamId(new Id(1_337).toBytes());
         int lastActivityIndex = miruInboxIndex.getLastActivityIndex(newStreamId);
         assertEquals(lastActivityIndex, -1);
 
         int nextId = Integer.MAX_VALUE / 2;
-        miruInboxIndex.index(newStreamId, nextId);
+        miruInboxIndex.append(newStreamId, nextId);
         lastActivityIndex = miruInboxIndex.getLastActivityIndex(newStreamId);
         assertEquals(lastActivityIndex, nextId);
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testLastActivityIndex(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, List<Integer> indexedIds) throws Exception {
+    public void testLastActivityIndex(MiruInboxIndex<EWAHCompressedBitmap> miruInboxIndex, MiruStreamId streamId, int[] indexedIds) throws Exception {
 
         int expected = miruInboxIndex.getLastActivityIndex(streamId);
-        assertEquals(expected, indexedIds.get(indexedIds.size() - 1).intValue());
+        assertEquals(expected, indexedIds[indexedIds.length - 1]);
 
         int nextId = Integer.MAX_VALUE / 3;
         miruInboxIndex.getAppender(streamId).appendAndExtend(Collections.<Integer>emptyList(), nextId);
@@ -95,15 +94,15 @@ public class MiruInboxIndexTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
-        MiruInboxIndex<EWAHCompressedBitmap> miruHybridInboxIndex = hybridContext.inboxIndex;
+        MiruContext<EWAHCompressedBitmap> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruInboxIndex<EWAHCompressedBitmap> inMemoryIndex = inMemoryContext.inboxIndex;
 
         MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
-        MiruInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = onDiskContext.inboxIndex;
+        MiruInboxIndex<EWAHCompressedBitmap> onDiskIndex = onDiskContext.inboxIndex;
 
         return new Object[][] {
-            { miruHybridInboxIndex, miruStreamId },
-            { miruOnDiskInboxIndex, miruStreamId }
+            { inMemoryIndex, miruStreamId },
+            { onDiskIndex, miruStreamId }
         };
     }
 
@@ -116,23 +115,47 @@ public class MiruInboxIndexTest {
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruContext<EWAHCompressedBitmap> hybridContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
-        MiruInboxIndex<EWAHCompressedBitmap> miruHybridInboxIndex = hybridContext.inboxIndex;
+        int[] data = new int[] { 1, 2, 3, 4 };
+        int[] data1_2 = new int[] { 1, 2 };
+        int[] data2_2 = new int[] { 3, 4 };
 
-        miruHybridInboxIndex.index(streamId, 1);
-        miruHybridInboxIndex.index(streamId, 2);
-        miruHybridInboxIndex.index(streamId, 3);
+        MiruContext<EWAHCompressedBitmap> unmergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruInboxIndex<EWAHCompressedBitmap> unmergedInMemoryIndex = unmergedInMemoryContext.inboxIndex;
+        unmergedInMemoryIndex.append(streamId, data);
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
-        MiruInboxIndex<EWAHCompressedBitmap> miruOnDiskInboxIndex = onDiskContext.inboxIndex;
+        MiruContext<EWAHCompressedBitmap> unmergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruInboxIndex<EWAHCompressedBitmap> unmergedOnDiskIndex = unmergedOnDiskContext.inboxIndex;
+        unmergedOnDiskIndex.append(streamId, data);
 
-        miruOnDiskInboxIndex.index(streamId, 1);
-        miruOnDiskInboxIndex.index(streamId, 2);
-        miruOnDiskInboxIndex.index(streamId, 3);
+        MiruContext<EWAHCompressedBitmap> mergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruInboxIndex<EWAHCompressedBitmap> mergedInMemoryIndex = mergedInMemoryContext.inboxIndex;
+        mergedInMemoryIndex.append(streamId, data);
+        ((MiruDeltaInboxIndex<EWAHCompressedBitmap>) mergedInMemoryIndex).merge();
+
+        MiruContext<EWAHCompressedBitmap> mergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruInboxIndex<EWAHCompressedBitmap> mergedOnDiskIndex = mergedOnDiskContext.inboxIndex;
+        mergedOnDiskIndex.append(streamId, data);
+        ((MiruDeltaInboxIndex<EWAHCompressedBitmap>) mergedOnDiskIndex).merge();
+
+        MiruContext<EWAHCompressedBitmap> partiallyMergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruInboxIndex<EWAHCompressedBitmap> partiallyMergedInMemoryIndex = partiallyMergedInMemoryContext.inboxIndex;
+        partiallyMergedInMemoryIndex.append(streamId, data1_2);
+        ((MiruDeltaInboxIndex<EWAHCompressedBitmap>) partiallyMergedInMemoryIndex).merge();
+        partiallyMergedInMemoryIndex.append(streamId, data2_2);
+
+        MiruContext<EWAHCompressedBitmap> partiallyMergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruInboxIndex<EWAHCompressedBitmap> partiallyMergedOnDiskIndex = partiallyMergedOnDiskContext.inboxIndex;
+        partiallyMergedOnDiskIndex.append(streamId, data1_2);
+        ((MiruDeltaInboxIndex<EWAHCompressedBitmap>) partiallyMergedOnDiskIndex).merge();
+        partiallyMergedOnDiskIndex.append(streamId, data2_2);
 
         return new Object[][] {
-            { miruHybridInboxIndex, streamId, ImmutableList.of(1, 2, 3) },
-            { miruOnDiskInboxIndex, streamId, ImmutableList.of(1, 2, 3) }
+            { unmergedInMemoryIndex, streamId, data },
+            { unmergedOnDiskIndex, streamId, data },
+            { mergedInMemoryIndex, streamId, data },
+            { mergedOnDiskIndex, streamId, data },
+            { partiallyMergedInMemoryIndex, streamId, data },
+            { partiallyMergedOnDiskIndex, streamId, data }
         };
     }
 }

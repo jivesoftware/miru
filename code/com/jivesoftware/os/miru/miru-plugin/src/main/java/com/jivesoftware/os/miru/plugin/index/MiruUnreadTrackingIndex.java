@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.plugin.index;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 
 /**
@@ -9,11 +8,11 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
  */
 public interface MiruUnreadTrackingIndex<BM> {
 
-    Optional<BM> getUnread(MiruStreamId streamId) throws Exception;
+    MiruInvertedIndex<BM> getUnread(MiruStreamId streamId) throws Exception;
 
     MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception;
 
-    void index(MiruStreamId streamId, int id) throws Exception;
+    void append(MiruStreamId streamId, int... ids) throws Exception;
 
     void applyRead(MiruStreamId streamId, BM readMask) throws Exception;
 

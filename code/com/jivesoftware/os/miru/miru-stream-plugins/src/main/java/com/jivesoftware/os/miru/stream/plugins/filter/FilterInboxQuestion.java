@@ -90,7 +90,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
                 context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp));
         }
 
-        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId);
+        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex();
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -113,7 +113,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         }
 
         if (unreadOnly) {
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId);
+            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex();
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
@@ -127,7 +127,7 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
         counterAnds.add(answer);
         if (!unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId);
+            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex();
             if (unreadIndex.isPresent()) {
                 counterAnds.add(unreadIndex.get());
             }
