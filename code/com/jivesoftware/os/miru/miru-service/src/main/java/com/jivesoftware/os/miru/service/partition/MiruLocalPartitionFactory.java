@@ -36,6 +36,7 @@ public class MiruLocalPartitionFactory {
     private final ExecutorService sipIndexExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
+    private final AtomicLong mergeChits;
 
     public MiruLocalPartitionFactory(MiruServiceConfig config,
         MiruContextFactory miruContextFactory,
@@ -48,7 +49,8 @@ public class MiruLocalPartitionFactory {
         ExecutorService rebuildExecutors,
         ExecutorService sipIndexExecutor,
         int rebuildIndexerThreads,
-        MiruIndexRepairs indexRepairs) {
+        MiruIndexRepairs indexRepairs,
+        AtomicLong mergeChits) {
         this.config = config;
         this.miruContextFactory = miruContextFactory;
         this.activityWALReader = activityWALReader;
@@ -61,6 +63,7 @@ public class MiruLocalPartitionFactory {
         this.sipIndexExecutor = sipIndexExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
+        this.mergeChits = mergeChits;
     }
 
     public <BM> MiruHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
@@ -86,7 +89,7 @@ public class MiruLocalPartitionFactory {
             config.getPartitionWakeOnIndex(),
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),
-            new AtomicLong(config.getMergeChitCount()),
+            mergeChits,
             new MiruLocalHostedPartition.Timings(
                 config.getPartitionRebuildFailureSleepMillis(),
                 config.getPartitionBootstrapIntervalInMillis(),

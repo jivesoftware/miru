@@ -149,9 +149,9 @@ public class MiruServiceInitializer {
             internExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
@@ -201,7 +201,9 @@ public class MiruServiceInitializer {
             rebuildExecutors,
             sipIndexExecutor,
             config.getRebuildIndexerThreads(),
-            indexRepairs);
+            indexRepairs,
+            new AtomicLong(config.getMergeChitCount()));
+
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
             httpClientFactory,
             objectMapper);

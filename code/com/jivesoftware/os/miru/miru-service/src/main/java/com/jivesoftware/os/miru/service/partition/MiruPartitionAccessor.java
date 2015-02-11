@@ -246,7 +246,6 @@ public class MiruPartitionAccessor<BM> {
         }
 
         long chitsFree = chits.addAndGet(-consumedCount);
-
         long had = indexedSinceMerge.get();
         if (had > 0) {
             log.dec("chit>used>power>" + FilerIO.chunkPower(had, 0));
