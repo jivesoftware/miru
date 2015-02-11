@@ -69,6 +69,7 @@ public class MiruPartitionAccessor<BM> {
     private final MiruIndexer<BM> indexer;
 
     private final AtomicLong indexedSinceMerge = new AtomicLong(0);
+    private final AtomicLong timestampOfLastMerge = new AtomicLong(0);
 
     private MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
@@ -189,7 +190,7 @@ public class MiruPartitionAccessor<BM> {
     int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities,
         IndexStrategy strategy,
         boolean recovery,
-        AtomicLong chits,
+        MiruMergeChits chits,
         ExecutorService indexExecutor)
         throws Exception {
 
@@ -245,7 +246,7 @@ public class MiruPartitionAccessor<BM> {
             semaphore.release();
         }
 
-        long chitsFree = chits.addAndGet(-consumedCount);
+        chits.take(-consumedCount);
         long had = indexedSinceMerge.get();
         if (had > 0) {
             log.dec("chit>used>power>" + FilerIO.chunkPower(had, 0));
@@ -253,21 +254,17 @@ public class MiruPartitionAccessor<BM> {
         long used = indexedSinceMerge.addAndGet(consumedCount);
         log.inc("chit>used>power>" + FilerIO.chunkPower(used, 0));
 
-        log.set(ValueType.COUNT, "chits>free", chitsFree);
-        log.set(ValueType.COUNT, "chits>used", used, coord.tenantId.toString());
-
-        if (used > chitsFree && merge()) {
-            log.dec("chit>used>power>" + FilerIO.chunkPower(used, 0));
-            log.inc("chit>merged>power>" + FilerIO.chunkPower(used, 0));
-            chits.addAndGet(used);
+        if (chits.merge(used, System.currentTimeMillis() - timestampOfLastMerge.get())) {
+            chits.refund(used);
             indexedSinceMerge.set(0);
+            timestampOfLastMerge.set(System.currentTimeMillis());
         }
 
         return consumedCount;
     }
 
     /**
-     * <code>batchType</code> must be one of the following: null null     {@link MiruPartitionedActivity.Type#BEGIN}
+     * <code>batchType</code> must be one of the following: null null null null null null     {@link MiruPartitionedActivity.Type#BEGIN}
      * {@link MiruPartitionedActivity.Type#ACTIVITY}
      * {@link MiruPartitionedActivity.Type#REPAIR}
      * {@link MiruPartitionedActivity.Type#REMOVE}

@@ -63,17 +63,8 @@ public class MiruMetricSamplerInitializer {
                 sampleSenders,
                 config.getSampleIntervalInMillis(),
                 config.getMaxBacklog(),
-                config.getEnableTenantMetrics()) {
-
-                    @Override
-                    public void run() {
-                        if (config.getEnableJVMMetrics()) {
-                            JVMMetrics.INSTANCE.logJMVMetrics();
-                        }
-                        super.run(); //To change body of generated methods, choose Tools | Templates.
-                    }
-
-                };
+                config.getEnableTenantMetrics(),
+                config.getEnableJVMMetrics());
         } else {
             return new MiruMetricSampler() {
 

@@ -34,9 +34,11 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
     private final int maxBacklog;
     private final int sampleIntervalInMillis;
     private final boolean tenantLevelMetricsEnable;
+    private final boolean jvmMetricsEnabled;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final ScheduledExecutorService sampler = Executors.newSingleThreadScheduledExecutor();
+    private final JVMMetrics jvmMetrics;
 
     public HttpMiruMetricSampler(String datacenter,
         String cluster,
@@ -47,7 +49,8 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         MiruMetricSampleSender[] logSenders,
         int sampleIntervalInMillis,
         int maxBacklog,
-        boolean tenantLevelMetricsEnable) {
+        boolean tenantLevelMetricsEnable,
+        boolean jvmMetricsEnabled) {
         this.datacenter = datacenter;
         this.host = host;
         this.service = service;
@@ -58,6 +61,12 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         this.sampleIntervalInMillis = sampleIntervalInMillis;
         this.maxBacklog = maxBacklog;
         this.tenantLevelMetricsEnable = tenantLevelMetricsEnable;
+        this.jvmMetricsEnabled = jvmMetricsEnabled;
+        if (this.jvmMetricsEnabled) {
+            this.jvmMetrics = new JVMMetrics();
+        } else {
+            this.jvmMetrics = null;
+        }
     }
 
     @Override
@@ -112,6 +121,9 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
                     gather(tenant, c, metrics, time);
                 }
             }
+        }
+        if (jvmMetricsEnabled) {
+            metrics.addAll(jvmMetrics.sample(datacenter, cluster, host, service, instance, version));
         }
         return metrics;
     }

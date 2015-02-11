@@ -74,7 +74,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final boolean partitionWakeOnIndex;
     private final int partitionRebuildBatchSize;
     private final int partitionSipBatchSize;
-    private final AtomicLong mergeChits;
+    private final MiruMergeChits mergeChits;
     private final Timings timings;
     private final long maxSipClockSkew;
     private final int maxSipReplaySize;
@@ -123,7 +123,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         boolean partitionWakeOnIndex,
         int partitionRebuildBatchSize,
         int partitionSipBatchSize,
-        AtomicLong mergeChits,
+        MiruMergeChits mergeChits,
         Timings timings)
         throws Exception {
 

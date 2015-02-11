@@ -1,7 +1,5 @@
 package com.jivesoftware.os.miru.metric.sampler;
 
-import com.jivesoftware.os.mlogger.core.MetricLogger;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -9,6 +7,7 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -18,144 +17,136 @@ import java.util.List;
  */
 public class JVMMetrics {
 
-    public static final JVMMetrics INSTANCE = new JVMMetrics();
-    private final static MetricLogger logger = MetricLoggerFactory.getLogger();
     private final List<GarbageCollectorMXBean> garbageCollectors;
     private final OperatingSystemMXBean osBean;
     private final ThreadMXBean threadBean;
     private final MemoryMXBean memoryBean;
     private final RuntimeMXBean runtimeBean;
-    private final List<JVMStat> stats;
+    private final List<JVMMetric> metrics;
 
-    private JVMMetrics() {
+    public JVMMetrics() {
 
         garbageCollectors = ManagementFactory.getGarbageCollectorMXBeans();
         osBean = ManagementFactory.getOperatingSystemMXBean();
         threadBean = ManagementFactory.getThreadMXBean();
         memoryBean = ManagementFactory.getMemoryMXBean();
         runtimeBean = ManagementFactory.getRuntimeMXBean();
-        stats = new LinkedList<>();
 
-        add(new JVMStat("jvm>startTime:millis") {
+        metrics = new LinkedList<>();
+
+        add(new JVMMetric("jvm>startTime:millis") {
 
             @Override
             public long stat() {
                 return runtimeBean.getStartTime();
             }
         });
-        add(new JVMStat("jvm>upTime:millis") {
+        add(new JVMMetric("jvm>upTime:millis") {
 
             @Override
             public long stat() {
                 return runtimeBean.getUptime();
             }
         });
-        add(new JVMStat("jvm>os>loadAverage") {
-
-            @Override
-            public long stat() {
-                return (long) (osBean.getSystemLoadAverage() * 100);
-            }
-        });
-        add(new JVMStat("jvm>threads>currentThreadCpuTime") {
+        add(new JVMMetric("jvm>threads>currentThreadCpuTime") {
 
             @Override
             public long stat() {
                 return threadBean.getCurrentThreadCpuTime();
             }
         });
-        add(new JVMStat("jvm>threads>currentThreadUserTime") {
+        add(new JVMMetric("jvm>threads>currentThreadUserTime") {
 
             @Override
             public long stat() {
                 return threadBean.getCurrentThreadUserTime();
             }
         });
-        add(new JVMStat("jvm>threads>daemonThreadCount") {
+        add(new JVMMetric("jvm>threads>daemonThreadCount") {
 
             @Override
             public long stat() {
                 return threadBean.getDaemonThreadCount();
             }
         });
-        add(new JVMStat("jvm>threads>peakThreadCount") {
+        add(new JVMMetric("jvm>threads>peakThreadCount") {
 
             @Override
             public long stat() {
                 return threadBean.getPeakThreadCount();
             }
         });
-        add(new JVMStat("jvm>threads>threadCount") {
+        add(new JVMMetric("jvm>threads>threadCount") {
 
             @Override
             public long stat() {
                 return threadBean.getThreadCount();
             }
         });
-        add(new JVMStat("jvm>threads>totalStartedThreadCount") {
+        add(new JVMMetric("jvm>threads>totalStartedThreadCount") {
 
             @Override
             public long stat() {
                 return threadBean.getTotalStartedThreadCount();
             }
         });
-        add(new JVMStat("jvm>memory>heap>commited:bytes") {
+        add(new JVMMetric("jvm>memory>heap>commited:bytes") {
 
             @Override
             public long stat() {
                 return memoryBean.getHeapMemoryUsage().getCommitted();
             }
         });
-        add(new JVMStat("jvm>memory>heap>init:bytes") {
+        add(new JVMMetric("jvm>memory>heap>init:bytes") {
 
             @Override
             public long stat() {
                 return memoryBean.getHeapMemoryUsage().getInit();
             }
         });
-        add(new JVMStat("jvm>memory>heap>max:bytes") {
+        add(new JVMMetric("jvm>memory>heap>max:bytes") {
 
             @Override
             public long stat() {
                 return memoryBean.getHeapMemoryUsage().getMax();
             }
         });
-        add(new JVMStat("jvm>memory>heap>used:bytes") {
+        add(new JVMMetric("jvm>memory>heap>used:bytes") {
 
             @Override
             public long stat() {
                 return memoryBean.getHeapMemoryUsage().getUsed();
             }
         });
-        add(new JVMStat("jvm>memory>nonheap>commited:bytes") {
+        add(new JVMMetric("jvm>memory>nonheap>commited:bytes") {
 
             @Override
             public long stat() {
                 return memoryBean.getNonHeapMemoryUsage().getCommitted();
             }
         });
-        add(new JVMStat("jvm>memory>nonheap>init:bytes") {
+        add(new JVMMetric("jvm>memory>nonheap>init:bytes") {
 
             @Override
             public long stat() {
                 return memoryBean.getNonHeapMemoryUsage().getInit();
             }
         });
-        add(new JVMStat("jvm>memory>nonheap>max:bytes") {
+        add(new JVMMetric("jvm>memory>nonheap>max:bytes") {
 
             @Override
             public long stat() {
                 return memoryBean.getNonHeapMemoryUsage().getMax();
             }
         });
-        add(new JVMStat("jvm>memory>nonheap>used:bytes") {
+        add(new JVMMetric("jvm>memory>nonheap>used:bytes") {
 
             @Override
             public long stat() {
                 return memoryBean.getNonHeapMemoryUsage().getUsed();
             }
         });
-        add(new JVMStat("jvm>gc>collectionTime:millis") {
+        add(new JVMMetric("jvm>gc>collectionTime:millis") {
 
             @Override
             public long stat() {
@@ -166,7 +157,7 @@ public class JVMMetrics {
                 return s;
             }
         });
-        add(new JVMStat("jvm>gc>collectionCount") {
+        add(new JVMMetric("jvm>gc>collectionCount") {
 
             @Override
             public long stat() {
@@ -179,27 +170,46 @@ public class JVMMetrics {
         });
     }
 
-    public void add(JVMStat jVMStat) {
-        stats.add(jVMStat);
+    public void add(JVMMetric metric) {
+        metrics.add(metric);
     }
 
-    public void logJMVMetrics() {
-        for (JVMStat stat : stats) {
-            if (stat == null) {
+    public List<AnomalyMetric> sample(String datacenter,
+        String cluster,
+        String host,
+        String service,
+        String instance,
+        String version) {
+        List<AnomalyMetric> anomalyMetric = new ArrayList<>();
+        long timestamp = System.currentTimeMillis();
+        for (JVMMetric m : metrics) {
+            if (m == null) {
                 continue;
             }
-            long v = stat.stat();
-            logger.set(ValueType.VALUE, stat.key, v);
+            long v = m.stat();
+            anomalyMetric.add(new AnomalyMetric(datacenter,
+                cluster,
+                host,
+                service,
+                instance,
+                version,
+                "null",
+                "jvm",
+                m.key.split(">"),
+                ValueType.VALUE.toString(),
+                v,
+                String.valueOf(timestamp)));
         }
+        return anomalyMetric;
     }
 
-    public static abstract class JVMStat {
+    public static abstract class JVMMetric {
 
         public String key;
 
         abstract public long stat();
 
-        public JVMStat(String key) {
+        public JVMMetric(String key) {
             this.key = key;
         }
     }

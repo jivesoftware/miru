@@ -17,7 +17,6 @@ import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan
@@ -36,7 +35,7 @@ public class MiruLocalPartitionFactory {
     private final ExecutorService sipIndexExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
-    private final AtomicLong mergeChits;
+    private final MiruMergeChits mergeChits;
 
     public MiruLocalPartitionFactory(MiruServiceConfig config,
         MiruContextFactory miruContextFactory,
@@ -50,7 +49,7 @@ public class MiruLocalPartitionFactory {
         ExecutorService sipIndexExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
-        AtomicLong mergeChits) {
+        MiruMergeChits mergeChits) {
         this.config = config;
         this.miruContextFactory = miruContextFactory;
         this.activityWALReader = activityWALReader;

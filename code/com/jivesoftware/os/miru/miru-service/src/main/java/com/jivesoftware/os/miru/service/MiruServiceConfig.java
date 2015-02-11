@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service;
 
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
+import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -60,8 +61,11 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(10_000)
     int getPartitionSipBatchSize();
 
-    @LongDefault(1_000_000)
+    @LongDefault(500_000)
     long getMergeChitCount();
+
+    @DoubleDefault(100d)
+    double getMergeRateRatio();
 
     @LongDefault(10_000)
     long getPartitionRebuildFailureSleepMillis();

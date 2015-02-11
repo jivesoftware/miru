@@ -34,6 +34,7 @@ import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.partition.MiruIndexRepairs;
 import com.jivesoftware.os.miru.service.partition.MiruLocalPartitionFactory;
+import com.jivesoftware.os.miru.service.partition.MiruMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionAccessor.IndexStrategy;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionEventHandler;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
@@ -202,7 +203,7 @@ public class MiruServiceInitializer {
             sipIndexExecutor,
             config.getRebuildIndexerThreads(),
             indexRepairs,
-            new AtomicLong(config.getMergeChitCount()));
+            new MiruMergeChits(config.getMergeChitCount(), config.getMergeRateRatio()));
 
         MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
             httpClientFactory,
