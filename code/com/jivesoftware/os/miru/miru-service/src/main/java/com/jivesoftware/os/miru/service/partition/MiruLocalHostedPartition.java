@@ -32,6 +32,7 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -570,7 +571,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             log.info("Aborting rebuild end of stream from WAL for {}", coord);
                         }
                     } catch (Exception x) {
-                        log.error("Failure while rebuilding {}", new Object[] { coord }, x);
+                        log.error("Failure while rebuilding {}", new Object[]{coord}, x);
                     } finally {
                         streaming.set(false);
                     }
@@ -681,11 +682,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
             final MiruSipTracker sipTracker = new MiruSipTracker(maxSipReplaySize, maxSipClockSkew, accessor.seenLastSip.get());
 
-            Sip sip = accessor.getSip();
+            final AtomicReference<Sip> sip = new AtomicReference<>(accessor.getSip());
             final List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList();
             activityWALReader.streamSip(coord.tenantId,
                 coord.partitionId,
-                sip,
+                sip.get(),
                 partitionSipBatchSize,
                 timings.partitionRebuildFailureSleepMillis,
                 new MiruActivityWALReader.StreamMiruActivityWAL() {
@@ -703,19 +704,38 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             sipTracker.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
                         }
 
+                        if (partitionedActivities.size() > partitionSipBatchSize) {
+                            deliver(partitionedActivities, accessor, sipTracker, sip);
+                            partitionedActivities.clear();
+                        }
+
                         // stop if the accessor has changed
                         return accessorRef.get() == accessor;
                     }
                 }
             );
 
+            if (!partitionedActivities.isEmpty()) {
+                deliver(partitionedActivities, accessor, sipTracker, sip);
+            }
+
+            if (!accessor.hasOpenWriters()) {
+                accessor.merge();
+            }
+
+            return accessorRef.get() == accessor;
+        }
+
+        private void deliver(final List<MiruPartitionedActivity> partitionedActivities, final MiruPartitionAccessor<BM> accessor,
+            final MiruSipTracker sipTracker, AtomicReference<Sip> sip) throws Exception, IOException {
             boolean repair = firstSip.compareAndSet(true, false);
             int initialCount = partitionedActivities.size();
             int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip,
                 repair, mergeChits, sipIndexExecutor);
 
-            Sip suggestion = sipTracker.suggest(sip);
+            Sip suggestion = sipTracker.suggest(sip.get());
             if (accessor.setSip(suggestion)) {
+                sip.set(suggestion);
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
                 log.set(ValueType.COUNT, "sipTimestamp>partition>" + coord.partitionId + ">clock",
                     suggestion.clockTimestamp, coord.tenantId.toString());
@@ -733,12 +753,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             if (initialCount > 0) {
                 log.inc("sip>count>skip", (initialCount - count));
             }
-
-            if (!accessor.hasOpenWriters()) {
-                accessor.merge();
-            }
-
-            return accessorRef.get() == accessor;
         }
 
         private boolean migrate(MiruPartitionAccessor<BM> accessor) throws Exception {
@@ -756,6 +770,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     }
 
     public static final class Timings {
+
         private final long partitionRebuildFailureSleepMillis;
         private final long partitionBootstrapIntervalInMillis;
         private final long partitionRebuildIntervalInMillis;
