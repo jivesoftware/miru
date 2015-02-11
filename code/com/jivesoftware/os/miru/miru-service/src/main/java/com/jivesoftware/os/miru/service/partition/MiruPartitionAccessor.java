@@ -73,7 +73,7 @@ public class MiruPartitionAccessor<BM> {
     private final MiruIndexer<BM> indexer;
 
     private final AtomicLong indexedSinceMerge = new AtomicLong(0);
-    private final AtomicLong timestampOfLastMerge = new AtomicLong(0);
+    private final AtomicLong timestampOfLastMerge = new AtomicLong(System.currentTimeMillis());
 
     private MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
