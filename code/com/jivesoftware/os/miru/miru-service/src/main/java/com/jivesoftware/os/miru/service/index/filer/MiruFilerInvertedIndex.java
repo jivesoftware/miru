@@ -94,6 +94,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     public void replaceIndex(BM index, int setLastId) throws Exception {
         synchronized (mutationLock) {
             setIndex(index, setLastId);
+            lastId = Math.max(setLastId, lastId);
         }
     }
 

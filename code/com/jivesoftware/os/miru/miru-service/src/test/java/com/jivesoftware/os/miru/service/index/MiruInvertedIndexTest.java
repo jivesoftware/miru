@@ -1,11 +1,8 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -14,10 +11,10 @@ import com.jivesoftware.os.miru.service.bitmap.AnswerCardinalityLastSetBitmapSto
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInvertedIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerInvertedIndex;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -34,7 +31,7 @@ import static org.testng.Assert.assertTrue;
  */
 public class MiruInvertedIndexTest {
 
-    @Test(dataProvider = "miruInvertedIndexDataProvider",
+    @Test(dataProvider = "miruInvertedIndexDataProviderWithData",
         groups = "slow", enabled = false, description = "Performance test")
     public void testSetId(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, int appends, int sets) throws Exception {
         Random r = new Random(1_234);
@@ -72,134 +69,175 @@ public class MiruInvertedIndexTest {
         System.out.println("elapsed: " + (System.currentTimeMillis() - timestamp) + " ms");
     }
 
-    @Test(dataProvider = "miruInvertedIndexDataProvider")
-    public void testAppend(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex) throws Exception {
+    @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
+    public void testAppend(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
-        miruInvertedIndex.append(1);
-        miruInvertedIndex.append(2);
-        miruInvertedIndex.append(3);
-        miruInvertedIndex.append(5);
-        miruInvertedIndex.append(8);
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 2));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 3));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 5));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 8));
+
+        int lastId = ids.get(ids.size() - 1);
+        miruInvertedIndex.append(lastId + 1);
+        miruInvertedIndex.append(lastId + 3);
+
+        for (int id : ids) {
+            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), id));
+        }
+
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 1));
+        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 2));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 3));
+        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 4));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testRemove(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, Set<Integer> ids) throws Exception {
+    public void testRemove(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         EWAHCompressedBitmap index = miruInvertedIndex.getIndex().get();
         assertEquals(index.cardinality(), ids.size());
-        for (Integer id : ids) {
+
+        for (int id : ids) {
             assertTrue(index.get(id));
         }
 
-        miruInvertedIndex.remove(2);
-        ids.remove(2);
+        for (int i = 0; i < ids.size() / 2; i++) {
+            miruInvertedIndex.remove(ids.get(i));
+        }
+        ids = ids.subList(ids.size() / 2, ids.size());
 
         index = miruInvertedIndex.getIndex().get();
         assertEquals(index.cardinality(), ids.size());
-        for (Integer id : ids) {
+        for (int id : ids) {
             assertTrue(index.get(id));
         }
     }
 
-    @Test(dataProvider = "miruInvertedIndexDataProvider")
-    public void testSet(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex) throws Exception {
+    @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
+    public void testSet(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
-        miruInvertedIndex.append(1);
-        miruInvertedIndex.append(5);
-        miruInvertedIndex.set(3);
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 5));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 3));
+
+        int lastId = ids.get(ids.size() - 1);
+
+        miruInvertedIndex.append(lastId + 2);
+        miruInvertedIndex.set(lastId + 1);
+
+        for (int id : ids) {
+            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), id));
+        }
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 2));
     }
 
-    @Test(dataProvider = "miruInvertedIndexDataProvider")
-    public void testSetNonIntermediateBit(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex) throws Exception {
+    @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
+    public void testSetNonIntermediateBit(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
-        miruInvertedIndex.append(1);
-        miruInvertedIndex.set(2);
 
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 2));
+        int lastId = ids.get(ids.size() - 1);
+
+        miruInvertedIndex.append(lastId + 1);
+        miruInvertedIndex.set(lastId + 2);
+
+        for (int id : ids) {
+            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), id));
+        }
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 2));
     }
 
-    @Test(dataProvider = "miruInvertedIndexDataProvider")
-    public void testAndNot(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex) throws Exception {
+    @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
+    public void testAndNot(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
-        miruInvertedIndex.append(1);
-        miruInvertedIndex.append(2);
-        miruInvertedIndex.append(3);
 
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
-        bitmap.set(1);
-        bitmap.set(3);
+        for (int i = 0; i < ids.size() / 2; i++) {
+            bitmap.set(ids.get(i));
+        }
+        miruInvertedIndex.andNot(bitmap);
+
+        for (int i = 0; i < ids.size() / 2; i++) {
+            assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), ids.get(i)));
+        }
+        for (int i = ids.size() / 2; i < ids.size(); i++) {
+            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), ids.get(i)));
+        }
+    }
+
+    @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
+    public void testAndNotToSourceSize(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+        MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
+
+        EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
+        for (int i = 0; i < ids.size() / 2; i++) {
+            bitmap.set(ids.get(i));
+        }
         miruInvertedIndex.andNotToSourceSize(Collections.singletonList(bitmap));
 
-        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 2));
-        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 3));
+        for (int i = 0; i < ids.size() / 2; i++) {
+            assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), ids.get(i)));
+        }
+        for (int i = ids.size() / 2; i < ids.size(); i++) {
+            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), ids.get(i)));
+        }
     }
 
-    @Test(dataProvider = "miruInvertedIndexDataProvider")
-    public void testOr(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex) throws Exception {
+    @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
+    public void testOr(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
-        miruInvertedIndex.append(1);
-        miruInvertedIndex.append(2);
-        miruInvertedIndex.append(3);
+
+        int lastId = ids.get(ids.size() - 1);
+
+        miruInvertedIndex.append(lastId + 2);
 
         EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
-        bitmap.set(1);
-        bitmap.set(3);
-        bitmap.set(5);
+        bitmap.set(lastId + 1);
+        bitmap.set(lastId + 3);
+        miruInvertedIndex.or(bitmap);
+
+        for (int id : ids) {
+            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), id));
+        }
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 2));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 3));
+    }
+
+    @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
+    public void testOrToSourceSize(MiruInvertedIndex<EWAHCompressedBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+        MiruBitmaps<EWAHCompressedBitmap> bitmaps = new MiruBitmapsEWAH(100);
+
+        int lastId = ids.get(ids.size() - 1);
+
+        miruInvertedIndex.append(lastId + 2);
+
+        EWAHCompressedBitmap bitmap = new EWAHCompressedBitmap();
+        bitmap.set(lastId + 1);
+        bitmap.set(lastId + 3);
         miruInvertedIndex.orToSourceSize(bitmap);
 
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 2));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 3));
-        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 4));
-        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), 5)); // extra bit is ignored
-    }
-
-    @DataProvider(name = "miruInvertedIndexDataProviderWithScale")
-    public Object[][] miruInvertedIndexDataProviderWithScale() throws Exception {
-        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
-        int memoryAppends = 1_000;
-        int memorySets = 100_000;
-        int diskAppends = 100;
-        int diskSets = 1_000;
-
-        return new Object[][] {
-            { buildFilerInvertedIndex(bitmaps), diskAppends, diskSets },
-            { buildDeltaInvertedIndex(bitmaps), diskAppends, diskSets }
-        };
-    }
-
-    @DataProvider(name = "miruInvertedIndexDataProvider")
-    public Object[][] miruInvertedIndexDataProvider() throws Exception {
-        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
-        return new Object[][] {
-            { buildFilerInvertedIndex(bitmaps) },
-            { buildDeltaInvertedIndex(bitmaps) }
-        };
+        for (int id : ids) {
+            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), id));
+        }
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 1));
+        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 2));
+        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex().get(), lastId + 3)); // extra bit is ignored
     }
 
     @DataProvider(name = "miruInvertedIndexDataProviderWithData")
     public Object[][] miruInvertedIndexDataProviderWithData() throws Exception {
-        MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
 
-        MiruFilerInvertedIndex<EWAHCompressedBitmap> miruFilerInvertedIndex = buildFilerInvertedIndex(bitmaps);
-        miruFilerInvertedIndex.append(1, 2, 3);
+        MiruDeltaInvertedIndex<EWAHCompressedBitmap> mergedIndex = buildDeltaInvertedIndex(bitmaps);
+        mergedIndex.append(1, 2, 3, 4);
+        mergedIndex.merge();
 
-        MiruDeltaInvertedIndex<EWAHCompressedBitmap> miruDeltaInvertedIndex = buildDeltaInvertedIndex(bitmaps);
-        miruDeltaInvertedIndex.append(1, 2, 3);
+        MiruDeltaInvertedIndex<EWAHCompressedBitmap> unmergedIndex = buildDeltaInvertedIndex(bitmaps);
+        unmergedIndex.append(1, 2, 3, 4);
+
+        MiruDeltaInvertedIndex<EWAHCompressedBitmap> partiallyMergedIndex = buildDeltaInvertedIndex(bitmaps);
+        partiallyMergedIndex.append(1, 2);
+        partiallyMergedIndex.merge();
+        partiallyMergedIndex.append(3, 4);
 
         return new Object[][] {
-            { miruFilerInvertedIndex, Sets.newHashSet(1, 2, 3) },
-            { miruDeltaInvertedIndex, Sets.newHashSet(1, 2, 3) }
+            { mergedIndex, Arrays.asList(1, 2, 3, 4) },
+            { unmergedIndex, Arrays.asList(1, 2, 3, 4) },
+            { partiallyMergedIndex, Arrays.asList(1, 2, 3, 4) }
         };
     }
 

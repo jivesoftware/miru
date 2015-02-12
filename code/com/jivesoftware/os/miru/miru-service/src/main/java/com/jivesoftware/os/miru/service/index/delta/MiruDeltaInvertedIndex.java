@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import java.util.Arrays;
@@ -22,6 +21,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         private int lastId = -1;
         private BM andNot;
         private BM or;
+        private boolean replaced = false;
     }
 
     public void merge() throws Exception {
@@ -34,6 +34,10 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             if (index.isPresent()) {
                 backingIndex.replaceIndex(index.get(), Math.max(backingIndex.lastId(), delta.lastId));
             }
+            delta.lastId = -1;
+            delta.andNot = null;
+            delta.or = null;
+            delta.replaced = false;
         }
     }
 
@@ -47,7 +51,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
 
     @Override
     public Optional<BM> getIndex() throws Exception {
-        Optional<BM> index = backingIndex.getIndex();
+        Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex();
         if (index.isPresent()) {
             BM got = index.get();
             BM exclude = delta.andNot;
@@ -76,6 +80,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     @Override
     public void replaceIndex(BM index, int setLastId) throws Exception {
         synchronized (delta) {
+            delta.replaced = true;
             delta.andNot = null;
             delta.or = index;
             delta.lastId = Math.max(delta.lastId, setLastId);
@@ -185,21 +190,38 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
                 delta.or = container;
             }
 
-            BM container = bitmaps.create();
-            List<BM> ors = Lists.newArrayListWithCapacity(masks.size() + 1);
-            ors.addAll(masks);
-            if (delta.andNot != null) {
-                ors.add(delta.andNot);
+            Optional<BM> index = backingIndex.getIndex();
+            if (index.isPresent() || delta.replaced) {
+                BM container = bitmaps.create();
+                bitmaps.or(container, masks);
+
+                if (!delta.replaced) {
+                    // first find the actual bits that matter
+                    BM existing = index.get();
+                    BM actualBits = bitmaps.create();
+                    //TODO toSourceSize
+                    bitmaps.and(actualBits, Arrays.asList(existing, container));
+                    container = actualBits;
+                }
+
+                if (delta.andNot != null) {
+                    BM combined = bitmaps.create();
+                    //TODO toSourceSize
+                    bitmaps.or(combined, Arrays.asList(delta.andNot, container));
+                    container = combined;
+                }
+                delta.andNot = container;
+            } else {
+                // if index is empty, andNot is pointless!
+                delta.andNot = null;
             }
-            bitmaps.or(container, ors);
-            delta.andNot = container;
         }
     }
 
     @Override
     public void orToSourceSize(BM mask) throws Exception {
         synchronized (delta) {
-            //TODO technically the delta.andNot portion is unnecessary since delta.or is applied second
+            // technically removing from delta.andNot is unnecessary (since delta.or is applied on top), but reducing its size saves memory
             if (delta.andNot != null) {
                 BM container = bitmaps.create();
                 bitmaps.andNotToSourceSize(container, delta.andNot, Collections.singletonList(mask));
@@ -213,6 +235,16 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             } else {
                 container = mask;
             }
+
+            Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex();
+            if (index.isPresent()) {
+                // reduce size of delta
+                BM got = index.get();
+                BM actualBits = bitmaps.create();
+                bitmaps.andNotToSourceSize(actualBits, container, Collections.singletonList(got));
+                container = actualBits;
+            }
+
             delta.or = container;
         }
     }
@@ -226,21 +258,35 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
                 delta.or = container;
             }
 
-            BM container;
-            if (delta.andNot != null) {
-                container = bitmaps.create();
-                bitmaps.or(container, Arrays.asList(delta.andNot, mask));
+            Optional<BM> index = backingIndex.getIndex();
+            if (index.isPresent() || delta.replaced) {
+                BM container = mask;
+
+                if (!delta.replaced) {
+                    // first find the actual bits that matter
+                    BM existing = index.get();
+                    BM actualBits = bitmaps.create();
+                    bitmaps.and(actualBits, Arrays.asList(existing, container));
+                    container = actualBits;
+                }
+
+                if (delta.andNot != null) {
+                    BM combined = bitmaps.create();
+                    bitmaps.or(combined, Arrays.asList(delta.andNot, container));
+                    container = combined;
+                }
+                delta.andNot = container;
             } else {
-                container = mask;
+                // if index is empty, andNot is pointless!
+                delta.andNot = null;
             }
-            delta.andNot = container;
         }
     }
 
     @Override
     public void or(BM mask) throws Exception {
         synchronized (delta) {
-            //TODO technically the delta.andNot portion is unnecessary since delta.or is applied second
+            // technically removing from delta.andNot is unnecessary (since delta.or is applied on top), but reducing its size saves memory
             if (delta.andNot != null) {
                 BM container = bitmaps.create();
                 bitmaps.andNot(container, delta.andNot, Collections.singletonList(mask));
@@ -254,6 +300,16 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             } else {
                 container = mask;
             }
+
+            Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex();
+            if (index.isPresent()) {
+                // reduce size of delta
+                BM got = index.get();
+                BM actualBits = bitmaps.create();
+                bitmaps.andNot(actualBits, container, Collections.singletonList(got));
+                container = actualBits;
+            }
+
             delta.or = container;
         }
     }
