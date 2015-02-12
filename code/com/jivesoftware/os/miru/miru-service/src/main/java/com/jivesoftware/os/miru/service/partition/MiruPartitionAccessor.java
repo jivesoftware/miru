@@ -257,7 +257,7 @@ public class MiruPartitionAccessor<BM> {
         if (used == 0) {
             timestampOfLastMerge.set(System.currentTimeMillis());
         } else {
-            if (chits.merge(used, System.currentTimeMillis() - timestampOfLastMerge.get()) && merge()) {
+            if (chits.merge(coord, used, System.currentTimeMillis() - timestampOfLastMerge.get()) && merge()) {
                 chits.refund(used);
                 indexedSinceMerge.set(0);
                 timestampOfLastMerge.set(System.currentTimeMillis());
