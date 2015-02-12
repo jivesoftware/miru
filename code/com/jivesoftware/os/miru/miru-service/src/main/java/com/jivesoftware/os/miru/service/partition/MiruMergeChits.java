@@ -7,6 +7,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
 import java.util.Collections;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,8 +37,9 @@ public class MiruMergeChits {
         log.set(ValueType.COUNT, "chit>free", chitsFree);
     }
 
-    public boolean merge(long indexed, long elapse) {
-        if (elapse > maxElapseWithoutMergeInMillis) {
+    public boolean merge(MiruPartitionCoord coord, long indexed, long elapse) {
+        long hysteresis = (long) (maxElapseWithoutMergeInMillis * new Random(coord.hashCode()).nextDouble());
+        if (elapse > maxElapseWithoutMergeInMillis + hysteresis) {
             log.inc("chits>merged>force>maxElapse");
             return true;
         }
