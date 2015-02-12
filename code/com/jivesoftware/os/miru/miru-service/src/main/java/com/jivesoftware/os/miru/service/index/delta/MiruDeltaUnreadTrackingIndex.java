@@ -1,8 +1,11 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
+import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
@@ -13,12 +16,19 @@ import java.util.concurrent.ConcurrentMap;
 public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
+    private final long indexId;
     private final MiruUnreadTrackingIndex<BM> backingIndex;
+    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
     private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM>> unreadDeltas = Maps.newConcurrentMap();
 
-    public MiruDeltaUnreadTrackingIndex(MiruBitmaps<BM> bitmaps, MiruUnreadTrackingIndex<BM> backingIndex) {
+    public MiruDeltaUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
+        long indexId,
+        MiruUnreadTrackingIndex<BM> backingIndex,
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
         this.bitmaps = bitmaps;
+        this.indexId = indexId;
         this.backingIndex = backingIndex;
+        this.fieldIndexCache = fieldIndexCache;
     }
 
     @Override
@@ -30,7 +40,8 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     public MiruInvertedIndex<BM> getUnread(MiruStreamId streamId) throws Exception {
         MiruDeltaInvertedIndex<BM> delta = unreadDeltas.get(streamId);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<BM>());
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<BM>(),
+                new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache);
             MiruDeltaInvertedIndex<BM> existing = unreadDeltas.putIfAbsent(streamId, delta);
             if (existing != null) {
                 delta = existing;

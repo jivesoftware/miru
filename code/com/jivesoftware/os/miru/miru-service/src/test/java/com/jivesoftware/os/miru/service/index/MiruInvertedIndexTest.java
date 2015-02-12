@@ -243,7 +243,6 @@ public class MiruInvertedIndexTest {
 
     private <BM> MiruFilerInvertedIndex<BM> buildFilerInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps,
-            null,
             new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
             IndexTestUtil.buildKeyedFilerStore("index",
                 IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096)),
@@ -254,7 +253,9 @@ public class MiruInvertedIndexTest {
     private <BM> MiruDeltaInvertedIndex<BM> buildDeltaInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
         return new MiruDeltaInvertedIndex<>(bitmaps,
             buildFilerInvertedIndex(bitmaps),
-            new MiruDeltaInvertedIndex.Delta<BM>());
+            new MiruDeltaInvertedIndex.Delta<BM>(),
+            new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
+            null);
     }
 
     @Test(groups = "slow", enabled = false, description = "Concurrency test")

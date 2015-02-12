@@ -185,8 +185,10 @@ public class MiruContextFactory {
             }
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
-                new MiruFilerFieldIndex<>(bitmaps, fieldIndexCache, indexIds, indexes, fieldIndexStripingLocksProvider),
-                schema.fieldCount());
+                indexIds,
+                new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, fieldIndexStripingLocksProvider),
+                schema.fieldCount(),
+                fieldIndexCache);
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -200,45 +202,54 @@ public class MiruContextFactory {
             .build();
         MiruAuthzCache<BM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
 
+        long authzIndexId = fieldIndexIdProvider.incrementAndGet();
         MiruAuthzIndex<BM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
+            authzIndexId,
             miruAuthzCache,
             new MiruFilerAuthzIndex<>(
                 bitmaps,
-                fieldIndexCache,
-                fieldIndexIdProvider.incrementAndGet(),
+                authzIndexId,
                 new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex"), false),
                 miruAuthzCache,
-                authzStripingLocksProvider));
+                authzStripingLocksProvider),
+            fieldIndexCache);
 
+        long removalIndexId = fieldIndexIdProvider.incrementAndGet();
         MiruRemovalIndex<BM> removalIndex = new MiruDeltaRemovalIndex<>(
             bitmaps,
+            fieldIndexCache,
+            removalIndexId,
+            new byte[] { 0 },
             new MiruFilerRemovalIndex<>(
                 bitmaps,
-                fieldIndexCache,
-                fieldIndexIdProvider.incrementAndGet(),
+                removalIndexId,
                 new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), false),
                 new byte[] { 0 },
                 -1,
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<BM>());
 
+        long unreadTrackingIndexId = fieldIndexIdProvider.incrementAndGet();
         MiruUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
             bitmaps,
+            unreadTrackingIndexId,
             new MiruFilerUnreadTrackingIndex<>(
                 bitmaps,
-                fieldIndexCache,
-                fieldIndexIdProvider.incrementAndGet(),
+                unreadTrackingIndexId,
                 new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex"), false),
-                streamStripingLocksProvider));
+                streamStripingLocksProvider),
+            fieldIndexCache);
 
+        long inboxIndexId = fieldIndexIdProvider.incrementAndGet();
         MiruInboxIndex<BM> inboxIndex = new MiruDeltaInboxIndex<>(
             bitmaps,
+            inboxIndexId,
             new MiruFilerInboxIndex<>(
                 bitmaps,
-                fieldIndexCache,
-                fieldIndexIdProvider.incrementAndGet(),
+                inboxIndexId,
                 new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex"), false),
-                streamStripingLocksProvider));
+                streamStripingLocksProvider),
+            fieldIndexCache);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 

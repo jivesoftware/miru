@@ -1,9 +1,12 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
+import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
@@ -16,14 +19,22 @@ import java.util.concurrent.ConcurrentMap;
 public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
+    private final long indexId;
     private final MiruAuthzCache<BM> cache;
     private final MiruAuthzIndex<BM> backingIndex;
+    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
     private final ConcurrentMap<String, MiruDeltaInvertedIndex<BM>> authzDeltas = Maps.newConcurrentMap();
 
-    public MiruDeltaAuthzIndex(MiruBitmaps<BM> bitmaps, MiruAuthzCache<BM> cache, MiruAuthzIndex<BM> backingIndex) {
+    public MiruDeltaAuthzIndex(MiruBitmaps<BM> bitmaps,
+        long indexId,
+        MiruAuthzCache<BM> cache,
+        MiruAuthzIndex<BM> backingIndex,
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
         this.bitmaps = bitmaps;
+        this.indexId = indexId;
         this.cache = cache;
         this.backingIndex = backingIndex;
+        this.fieldIndexCache = fieldIndexCache;
     }
 
     @Override
@@ -67,7 +78,8 @@ public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM> {
     private MiruDeltaInvertedIndex<BM> getOrCreate(String authz) throws Exception {
         MiruDeltaInvertedIndex<BM> delta = authzDeltas.get(authz);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getAuthz(authz), new MiruDeltaInvertedIndex.Delta<BM>());
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getAuthz(authz), new MiruDeltaInvertedIndex.Delta<BM>(),
+                new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), fieldIndexCache);
             MiruDeltaInvertedIndex<BM> existing = authzDeltas.putIfAbsent(authz, delta);
             if (existing != null) {
                 delta = existing;

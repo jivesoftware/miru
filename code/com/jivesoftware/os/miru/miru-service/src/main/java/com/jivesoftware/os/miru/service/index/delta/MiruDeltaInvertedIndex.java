@@ -1,11 +1,14 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * DELTA FORCE
@@ -15,60 +18,58 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     private final MiruBitmaps<BM> bitmaps;
     private final MiruInvertedIndex<BM> backingIndex;
     private final Delta<BM> delta;
-
-    public static class Delta<BM> {
-
-        private int lastId = -1;
-        private BM andNot;
-        private BM or;
-        private boolean replaced = false;
-    }
-
-    public void merge() throws Exception {
-        if (delta.andNot == null && delta.or == null) {
-            return;
-        }
-
-        synchronized (delta) {
-            Optional<BM> index = getIndex();
-            if (index.isPresent()) {
-                backingIndex.replaceIndex(index.get(), Math.max(backingIndex.lastId(), delta.lastId));
-            }
-            delta.lastId = -1;
-            delta.andNot = null;
-            delta.or = null;
-            delta.replaced = false;
-        }
-    }
+    private final MiruFieldIndex.IndexKey indexKey;
+    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
 
     public MiruDeltaInvertedIndex(MiruBitmaps<BM> bitmaps,
         MiruInvertedIndex<BM> backingIndex,
-        Delta<BM> delta) {
+        Delta<BM> delta,
+        MiruFieldIndex.IndexKey indexKey,
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
         this.bitmaps = bitmaps;
         this.backingIndex = backingIndex;
         this.delta = delta;
+        this.indexKey = indexKey;
+        this.fieldIndexCache = fieldIndexCache;
     }
+
+    private final Callable<Optional<BM>> indexLoader = new Callable<Optional<BM>>() {
+        @Override
+        public Optional<BM> call() throws Exception {
+            Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex();
+            if (index.isPresent()) {
+                BM got = index.get();
+                BM exclude = delta.andNot;
+                if (exclude != null) {
+                    BM container = bitmaps.create();
+                    bitmaps.andNot(container, got, Collections.singletonList(exclude));
+                    got = container;
+                }
+                BM include = delta.or;
+                if (include != null) {
+                    BM container = bitmaps.create();
+                    bitmaps.or(container, Arrays.asList(got, include));
+                    got = container;
+                }
+                return Optional.of(got);
+            } else {
+                return Optional.fromNullable(delta.or);
+            }
+        }
+    };
 
     @Override
     public Optional<BM> getIndex() throws Exception {
-        Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex();
-        if (index.isPresent()) {
-            BM got = index.get();
-            BM exclude = delta.andNot;
-            if (exclude != null) {
-                BM container = bitmaps.create();
-                bitmaps.andNot(container, got, Collections.singletonList(exclude));
-                got = container;
-            }
-            BM include = delta.or;
-            if (include != null) {
-                BM container = bitmaps.create();
-                bitmaps.or(container, Arrays.asList(got, include));
-                got = container;
-            }
-            return Optional.of(got);
+        if (fieldIndexCache != null) {
+            return (Optional<BM>) fieldIndexCache.get(indexKey, indexLoader);
         } else {
-            return Optional.fromNullable(delta.or);
+            return indexLoader.call();
+        }
+    }
+
+    private void invalidateCache() {
+        if (fieldIndexCache != null) {
+            fieldIndexCache.invalidate(indexKey);
         }
     }
 
@@ -85,6 +86,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             delta.or = index;
             delta.lastId = Math.max(delta.lastId, setLastId);
         }
+        invalidateCache();
     }
 
     @Override
@@ -103,6 +105,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             delta.or = container;
             delta.lastId = Math.max(delta.lastId, ids[ids.length - 1]);
         }
+        invalidateCache();
     }
 
     @Override
@@ -122,6 +125,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             delta.or = container;
             delta.lastId = Math.max(delta.lastId, lastId);
         }
+        invalidateCache();
     }
 
     @Override
@@ -141,6 +145,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
                 delta.andNot = bitmaps.createWithBits(id);
             }
         }
+        invalidateCache();
     }
 
     @Override
@@ -168,6 +173,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
                 }
             }
         }
+        invalidateCache();
     }
 
     @Override
@@ -216,6 +222,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
                 delta.andNot = null;
             }
         }
+        invalidateCache();
     }
 
     @Override
@@ -247,6 +254,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
 
             delta.or = container;
         }
+        invalidateCache();
     }
 
     @Override
@@ -281,6 +289,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
                 delta.andNot = null;
             }
         }
+        invalidateCache();
     }
 
     @Override
@@ -312,5 +321,32 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
 
             delta.or = container;
         }
+        invalidateCache();
+    }
+
+    public void merge() throws Exception {
+        if (delta.andNot == null && delta.or == null) {
+            return;
+        }
+
+        synchronized (delta) {
+            Optional<BM> index = getIndex();
+            if (index.isPresent()) {
+                backingIndex.replaceIndex(index.get(), Math.max(backingIndex.lastId(), delta.lastId));
+            }
+            delta.lastId = -1;
+            delta.andNot = null;
+            delta.or = null;
+            delta.replaced = false;
+        }
+        invalidateCache();
+    }
+
+    public static class Delta<BM> {
+
+        private int lastId = -1;
+        private BM andNot;
+        private BM or;
+        private boolean replaced = false;
     }
 }

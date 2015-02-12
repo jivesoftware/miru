@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.index.filer;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.Filer;
@@ -32,7 +31,6 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     private static final int LAST_ID_LENGTH = 4;
 
     private final MiruBitmaps<BM> bitmaps;
-    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
     private final MiruFieldIndex.IndexKey indexKey;
     private final KeyedFilerStore keyedFilerStore;
     private final int considerIfIndexIdGreaterThanN;
@@ -40,13 +38,11 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     private volatile int lastId = Integer.MIN_VALUE;
 
     public MiruFilerInvertedIndex(MiruBitmaps<BM> bitmaps,
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
         MiruFieldIndex.IndexKey indexKey,
         KeyedFilerStore keyedFilerStore,
         int considerIfIndexIdGreaterThanN,
         Object mutationLock) {
         this.bitmaps = bitmaps;
-        this.fieldIndexCache = fieldIndexCache;
         this.indexKey = Preconditions.checkNotNull(indexKey);
         this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
         this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
@@ -83,10 +79,23 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             return Optional.absent();
         }
 
-        if (fieldIndexCache != null) {
-            return (Optional<BM>) fieldIndexCache.get(indexKey, indexLoader);
+        byte[] rawBytes = keyedFilerStore.read(indexKey.keyBytes, -1, getTransaction);
+        if (rawBytes != null) {
+            log.inc("get>total");
+            log.inc("get>bytes", rawBytes.length);
         } else {
-            return indexLoader.call();
+            log.inc("get>null");
+        }
+
+        BitmapAndLastId<BM> bitmapAndLastId = deser(rawBytes);
+        if (bitmapAndLastId != null) {
+            if (lastId == Integer.MIN_VALUE) {
+                lastId = bitmapAndLastId.lastId;
+            }
+            return Optional.of(bitmapAndLastId.bitmap);
+        } else {
+            lastId = -1;
+            return Optional.absent();
         }
     }
 
@@ -135,9 +144,6 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         keyedFilerStore.writeNewReplace(indexKey.keyBytes, filerSizeInBytes, new SetTransaction(bytes));
         log.inc("set>total");
         log.inc("set>bytes", bytes.length);
-        if (fieldIndexCache != null) {
-            fieldIndexCache.put(indexKey, Optional.of(index));
-        }
     }
 
     @Override

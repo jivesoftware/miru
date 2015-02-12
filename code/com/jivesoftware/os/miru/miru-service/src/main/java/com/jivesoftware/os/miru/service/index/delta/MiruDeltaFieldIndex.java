@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
+import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.filer.map.store.api.KeyRange;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -20,8 +22,10 @@ import java.util.concurrent.ConcurrentSkipListMap;
 public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
+    private final long[] indexIds;
     private final MiruFieldIndex<BM> backingFieldIndex;
     private final ConcurrentSkipListMap<MiruTermId, MiruDeltaInvertedIndex.Delta<BM>>[] fieldIndexDeltas;
+    private final Cache<IndexKey, Optional<?>> fieldIndexCache;
 
     private static final Comparator<MiruTermId> COMPARATOR = new Comparator<MiruTermId>() {
 
@@ -34,14 +38,18 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM> {
     };
 
     public MiruDeltaFieldIndex(MiruBitmaps<BM> bitmaps,
+        long[] indexIds,
         MiruFieldIndex<BM> backingFieldIndex,
-        int numFields) {
+        int numFields,
+        Cache<IndexKey, Optional<?>> fieldIndexCache) {
         this.bitmaps = bitmaps;
+        this.indexIds = indexIds;
         this.backingFieldIndex = backingFieldIndex;
         this.fieldIndexDeltas = new ConcurrentSkipListMap[numFields];
         for (int i = 0; i < numFields; i++) {
             fieldIndexDeltas[i] = new ConcurrentSkipListMap<>(COMPARATOR);
         }
+        this.fieldIndexCache = fieldIndexCache;
     }
 
     @Override
@@ -105,7 +113,12 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM> {
                 delta = existing;
             }
         }
-        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.get(fieldId, termId), delta);
+        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.get(fieldId, termId), delta, getIndexKey(fieldId, termId),
+            fieldIndexCache);
+    }
+
+    private IndexKey getIndexKey(int fieldId, MiruTermId termId) {
+        return new IndexKey(indexIds[fieldId], termId.getBytes());
     }
 
     @Override
@@ -118,7 +131,8 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM> {
                 delta = existing;
             }
         }
-        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.get(fieldId, termId, considerIfIndexIdGreaterThanN), delta);
+        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.get(fieldId, termId, considerIfIndexIdGreaterThanN), delta,
+            getIndexKey(fieldId, termId), fieldIndexCache);
     }
 
     @Override
@@ -135,7 +149,8 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM> {
                 delta = existing;
             }
         }
-        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.getOrCreateInvertedIndex(fieldId, termId), delta);
+        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.getOrCreateInvertedIndex(fieldId, termId), delta, getIndexKey(fieldId, termId),
+            fieldIndexCache);
     }
 
     public void merge() throws Exception {
@@ -145,7 +160,9 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM> {
                 MiruDeltaInvertedIndex.Delta<BM> delta = entry.getValue();
                 MiruDeltaInvertedIndex<BM> invertedIndex = new MiruDeltaInvertedIndex<>(bitmaps,
                     backingFieldIndex.getOrCreateInvertedIndex(fieldId, entry.getKey()),
-                    delta);
+                    delta,
+                    getIndexKey(fieldId, entry.getKey()),
+                    fieldIndexCache);
                 invertedIndex.merge();
             }
             deltaMap.clear();

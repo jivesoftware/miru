@@ -1,7 +1,5 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
-import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -16,19 +14,16 @@ import java.util.Collections;
 public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
-    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
     private final long indexId;
     private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
         long indexId,
         KeyedFilerStore store,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
-        this.fieldIndexCache = fieldIndexCache;
         this.indexId = indexId;
         this.store = store;
         this.stripingLocksProvider = stripingLocksProvider;
@@ -41,7 +36,7 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
 
     @Override
     public MiruInvertedIndex<BM> getUnread(MiruStreamId streamId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, fieldIndexCache, new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), store, -1,
+        return new MiruFilerInvertedIndex<>(bitmaps, new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), store, -1,
             stripingLocksProvider.lock(streamId));
     }
 
