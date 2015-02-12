@@ -2,10 +2,13 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -20,7 +23,7 @@ public class MiruMergeChits {
     private final AtomicDouble movingAvgOfMillisPerIndexed = new AtomicDouble(0);
     private final double mergeRateRatio;
     private final long maxElapseWithoutMergeInMillis;
-    private final AtomicInteger activePartitionCount = new AtomicInteger(2);
+    private final Set<MiruPartitionCoord> activeCoords = Collections.newSetFromMap(new ConcurrentHashMap<MiruPartitionCoord, Boolean>());
 
     public MiruMergeChits(long free, double mergeRateRatio, long maxElapseWithoutMergeInMillis) {
         chits = new AtomicLong(free);
@@ -45,7 +48,7 @@ public class MiruMergeChits {
             elapse = 0;
         }
         double millisPerIndexed = (double) elapse / (double) indexed;
-        double weight = 1d / activePartitionCount.get();
+        double weight = 1d - (1d / activeCoords.size());
         movingAvgOfMillisPerIndexed.set(((movingAvgOfMillisPerIndexed.get() * weight) + (millisPerIndexed * (1d - weight))));
 
         double movingAvg = movingAvgOfMillisPerIndexed.get();
@@ -68,11 +71,13 @@ public class MiruMergeChits {
         chits.addAndGet(count);
     }
 
-    public void setActivePartitionCount(int activePartitionCount) {
-        if (activePartitionCount < 2) {
-            activePartitionCount = 2;
-        }
-        this.activePartitionCount.set(activePartitionCount);
-        log.inc("chit>activePartitionCount");
+    void active(MiruPartitionCoord coord) {
+        activeCoords.add(coord);
+        log.set(ValueType.VALUE, "chit>activePartitions", activeCoords.size());
+    }
+
+    void inactive(MiruPartitionCoord coord) {
+        activeCoords.remove(coord);
+        log.set(ValueType.VALUE, "chit>activePartitions", activeCoords.size());
     }
 }

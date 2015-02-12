@@ -18,7 +18,6 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
-import com.jivesoftware.os.miru.service.partition.MiruMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopology;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
@@ -79,18 +78,14 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         })
         .build();
     private final ConcurrentLinkedDeque<MiruTenantTopology<?>> temporaryUpdateDeque = new ConcurrentLinkedDeque<>();
-    private final MiruMergeChits miruMergeChits;
 
     public MiruClusterExpectedTenants(MiruPartitionInfoProvider partitionInfoProvider,
         MiruTenantTopologyFactory tenantTopologyFactory,
-        MiruClusterRegistry clusterRegistry,
-        MiruMergeChits miruMergeChits) {
+        MiruClusterRegistry clusterRegistry) {
 
         this.partitionInfoProvider = partitionInfoProvider;
         this.tenantTopologyFactory = tenantTopologyFactory;
         this.clusterRegistry = clusterRegistry;
-        this.miruMergeChits = miruMergeChits;
-
     }
 
     @Override
@@ -126,7 +121,6 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     @Override
     public void expect(List<MiruTenantId> expectedTenantsForHost) throws Exception {
         checkArgument(expectedTenantsForHost != null);
-        int activePartitionCount = 0;
         Set<MiruTenantId> synced = Sets.newHashSet();
         for (MiruTenantId tenantId : expectedTenantsForHost) {
             synchronized (tenantLocks.lock(tenantId)) {
@@ -142,11 +136,6 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                         expectedTopologies.putIfAbsent(tenantId, tenantTopology);
                     }
 
-                    for (MiruHostedPartition partition : tenantTopology.allPartitions()) {
-                        if (partition.isLocal()) {
-                            activePartitionCount++;
-                        }
-                    }
                     alignTopology(tenantTopology);
                     temporaryTopologies.invalidate(tenantId);
                 }
@@ -180,8 +169,6 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 }
             }
         }
-        miruMergeChits.setActivePartitionCount(activePartitionCount);
-
     }
 
     @Override

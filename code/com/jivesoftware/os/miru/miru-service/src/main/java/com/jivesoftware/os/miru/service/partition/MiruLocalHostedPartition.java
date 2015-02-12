@@ -181,6 +181,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             opened = updatePartition(accessor, opened);
             if (opened != null) {
                 if (accessor.info.state == MiruPartitionState.offline && openingState != MiruPartitionState.offline) {
+                    mergeChits.inactive(coord);
                     clearFutures();
                     futures.add(scheduledRebuildExecutor.scheduleWithFixedDelay(new RebuildIndexRunnable(),
                         0, timings.partitionRebuildIntervalInMillis, TimeUnit.MILLISECONDS));
@@ -226,6 +227,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             contextFactory.close(closedContext.get(), accessor.info.storage);
                         }
                     }
+                    mergeChits.inactive(coord);
                     clearFutures();
                 }
             }
@@ -660,12 +662,19 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.online) {
                     try {
-                        sip(accessor);
+                        if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
+                            mergeChits.active(accessor.coord);
+                            sip(accessor);
+                        } else {
+                            mergeChits.inactive(accessor.coord);
+                        }
                     } catch (Throwable t) {
                         log.error("Sip encountered a problem", t);
                     }
                     try {
-                        migrate(accessor);
+                        if (accessor.canAutoMigrate()) {
+                            updateStorage(accessor, MiruBackingStorage.disk, false);
+                        }
                     } catch (Throwable t) {
                         log.error("Migrate encountered a problem", t);
                     }
@@ -676,9 +685,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
 
         private boolean sip(final MiruPartitionAccessor<BM> accessor) throws Exception {
-            if (!accessor.isOpenForWrites() || !accessor.hasOpenWriters()) {
-                return false;
-            }
 
             final MiruSipTracker sipTracker = new MiruSipTracker(maxSipReplaySize, maxSipClockSkew, accessor.seenLastSip.get());
 
@@ -751,10 +757,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             if (initialCount > 0) {
                 log.inc("sip>count>skip", (initialCount - count));
             }
-        }
-
-        private boolean migrate(MiruPartitionAccessor<BM> accessor) throws Exception {
-            return accessor.canAutoMigrate() && updateStorage(accessor, MiruBackingStorage.disk, false);
         }
 
     }

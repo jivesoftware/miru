@@ -219,8 +219,7 @@ public class MiruServiceInitializer {
 
         MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(partitionInfoProvider,
             tenantTopologyFactory,
-            clusterRegistry,
-            miruMergeChits);
+            clusterRegistry);
 
         final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, clusterRegistry, expectedTenants);
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
