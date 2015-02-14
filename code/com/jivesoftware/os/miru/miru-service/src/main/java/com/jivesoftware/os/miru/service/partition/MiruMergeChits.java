@@ -1,15 +1,10 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
-import java.util.Collections;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -20,48 +15,41 @@ public class MiruMergeChits {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final AtomicLong chits;
-    private final AtomicDouble movingAvgOfMillisPerIndexed = new AtomicDouble(0);
-    private final double mergeRateRatio;
-    private final long maxElapseWithoutMergeInMillis;
-    private final Set<MiruPartitionCoord> activeCoords = Collections.newSetFromMap(new ConcurrentHashMap<MiruPartitionCoord, Boolean>());
+    private final long targetChits;
+    private final double rateOfConvergence;
+    private final AtomicLong numberOfChitsRemaining;
+    private final AtomicLong maxElapseWithoutMergeInMillis = new AtomicLong(TimeUnit.MINUTES.toMillis(1));
 
-    public MiruMergeChits(long free, double mergeRateRatio, long maxElapseWithoutMergeInMillis) {
-        chits = new AtomicLong(free);
-        this.mergeRateRatio = mergeRateRatio;
-        this.maxElapseWithoutMergeInMillis = maxElapseWithoutMergeInMillis;
+    public MiruMergeChits(long maxChits, double rateOfConvergence) {
+        this.targetChits = (long) (maxChits * 0.5);
+        this.numberOfChitsRemaining = new AtomicLong(maxChits);
+        this.rateOfConvergence = rateOfConvergence;
     }
 
-    public void take(int count) {
-        long chitsFree = chits.addAndGet(-count);
-        log.set(ValueType.COUNT, "chit>free", chitsFree);
-    }
+    public boolean merge(long indexed, long elapse) {
+        long maxElapse = maxElapseWithoutMergeInMillis.get();
+        long chitsFree = numberOfChitsRemaining.get();
 
-    public boolean merge(MiruPartitionCoord coord, long indexed, long elapse) {
-        long hysteresis = (long) (maxElapseWithoutMergeInMillis * new Random(coord.hashCode()).nextDouble());
-        if (elapse > maxElapseWithoutMergeInMillis + hysteresis) {
-            log.inc("chits>merged>force>maxElapse");
-            return true;
-        }
-        if (indexed <= 0) {
-            return false;
-        }
-        if (elapse < 0) {
-            elapse = 0;
-        }
-        double millisPerIndexed = (double) elapse / (double) indexed;
-        double weight = 1d - (1d / activeCoords.size());
-        movingAvgOfMillisPerIndexed.set(((movingAvgOfMillisPerIndexed.get() * weight) + (millisPerIndexed * (1d - weight))));
+        // max = 1000
+        // target = 500
+        // free = 250  -> delta = (250-500)/500 = -0.5
+        // free = 750  -> delta = (750-500)/500 = 0.5
+        // free = 0    -> delta = -1.0
+        // free = 1000 -> delta = 1.0
+        double deltaAsPercent = (chitsFree - targetChits) / targetChits;
 
-        double movingAvg = movingAvgOfMillisPerIndexed.get();
-        log.set(ValueType.VALUE, "chit>millisPerIndex", (long) movingAvg);
-        double scalar = 1;
-        if (movingAvg > 0) {
-            scalar += (millisPerIndexed / movingAvg) * (mergeRateRatio * 2); // * 2 magic inverse of div by 2 moving avg above.
-        }
+        // maxElapse = 60,000 ms
+        // maxChits = 1000
+        // cost = 60 ms
+        //
+        // free = 250  -> 45,000 ms
+        // free = 750  -> 75,000 ms
+        // free = 0    -> 30,000 ms
+        // free = 1000 -> 90,000 ms
+        maxElapse = maxElapseWithoutMergeInMillis.addAndGet((long) (deltaAsPercent * maxElapse * rateOfConvergence));
+        log.set(ValueType.VALUE, "chit>maxElapse", maxElapse);
 
-        long chitsFree = chits.get();
-        boolean merge = (indexed * scalar) > chitsFree;
+        boolean merge = elapse > maxElapse;
         if (merge) {
             log.inc("chit>merged>total");
             log.inc("chit>merged>power>" + FilerIO.chunkPower(indexed, 0));
@@ -69,17 +57,13 @@ public class MiruMergeChits {
         return merge;
     }
 
+    public void take(int count) {
+        long chitsFree = numberOfChitsRemaining.addAndGet(-count);
+        log.set(ValueType.COUNT, "chit>free", chitsFree);
+    }
+
     public void refund(long count) {
-        chits.addAndGet(count);
-    }
-
-    void active(MiruPartitionCoord coord) {
-        activeCoords.add(coord);
-        log.set(ValueType.VALUE, "chit>activePartitions", activeCoords.size());
-    }
-
-    void inactive(MiruPartitionCoord coord) {
-        activeCoords.remove(coord);
-        log.set(ValueType.VALUE, "chit>activePartitions", activeCoords.size());
+        long chitsFree = numberOfChitsRemaining.addAndGet(count);
+        log.set(ValueType.COUNT, "chit>free", chitsFree);
     }
 }

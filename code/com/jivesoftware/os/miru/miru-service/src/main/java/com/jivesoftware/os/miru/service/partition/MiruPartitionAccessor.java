@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -71,8 +72,8 @@ public class MiruPartitionAccessor<BM> {
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM> indexer;
 
-    private final AtomicLong indexedSinceMerge = new AtomicLong(0);
-    private final AtomicLong timestampOfLastMerge = new AtomicLong(System.currentTimeMillis());
+    private final AtomicLong indexedSinceMerge;
+    private final AtomicLong timestampOfLastMerge;
 
     private MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
@@ -86,7 +87,9 @@ public class MiruPartitionAccessor<BM> {
         Semaphore semaphore,
         AtomicBoolean closed,
         MiruIndexRepairs indexRepairs,
-        MiruIndexer<BM> indexer) {
+        MiruIndexer<BM> indexer,
+        AtomicLong indexedSinceMerge,
+        AtomicLong timestampOfLastMerge) {
         this.bitmaps = bitmaps;
         this.coord = coord;
         this.info = info;
@@ -100,6 +103,8 @@ public class MiruPartitionAccessor<BM> {
         this.closed = closed;
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
+        this.indexedSinceMerge = indexedSinceMerge;
+        this.timestampOfLastMerge = timestampOfLastMerge;
     }
 
     MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
@@ -110,12 +115,12 @@ public class MiruPartitionAccessor<BM> {
         MiruIndexer<BM> indexer) {
         this(bitmaps, coord, info, context, new AtomicLong(), new AtomicReference<Optional<Long>>(),
             Sets.<TimeAndVersion>newHashSet(), Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean(),
-            indexRepairs, indexer);
+            indexRepairs, indexer, new AtomicLong(0), new AtomicLong(System.currentTimeMillis()));
     }
 
     MiruPartitionAccessor<BM> copyToState(MiruPartitionState toState) {
         return new MiruPartitionAccessor<>(bitmaps, coord, info.copyToState(toState), context, rebuildTimestamp, refreshTimestamp,
-            seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs, indexer);
+            seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs, indexer, indexedSinceMerge, timestampOfLastMerge);
     }
 
     Optional<MiruContext<BM>> close() throws InterruptedException {
@@ -171,7 +176,9 @@ public class MiruPartitionAccessor<BM> {
     boolean merge() throws Exception {
         if (context.isPresent()) {
             MiruContext<BM> got = context.get();
+            long elapsed;
             synchronized (got.writeLock) {
+                long start = System.currentTimeMillis();
                 ((MiruDeltaTimeIndex) got.timeIndex).merge();
                 for (MiruFieldType fieldType : MiruFieldType.values()) {
                     ((MiruDeltaFieldIndex<BM>) got.fieldIndexProvider.getFieldIndex(fieldType)).merge();
@@ -183,9 +190,15 @@ public class MiruPartitionAccessor<BM> {
                 ((MiruDeltaUnreadTrackingIndex<BM>) got.unreadTrackingIndex).merge();
                 ((MiruDeltaActivityIndex) got.activityIndex).merge();
                 ((MiruDeltaSipIndex) got.sipIndex).merge();
+                elapsed = System.currentTimeMillis() - start;
             }
+            log.inc("merge>time>pow>" + FilerIO.chunkPower(elapsed, 0));
         }
         return true;
+    }
+
+    void refundChits(MiruMergeChits mergeChits) {
+        mergeChits.refund(indexedSinceMerge.getAndSet(0));
     }
 
     public static enum IndexStrategy {
@@ -252,14 +265,26 @@ public class MiruPartitionAccessor<BM> {
             semaphore.release();
         }
 
+        if (Thread.interrupted()) {
+            throw new InterruptedException("Interrupted while indexing");
+        }
+
         chits.take(consumedCount);
-        long used = indexedSinceMerge.addAndGet(consumedCount);
+        long used;
+        try {
+            used = indexedSinceMerge.addAndGet(consumedCount);
+        } catch (Throwable t) {
+            // make sure we never leak chits
+            chits.refund(consumedCount);
+            throw t;
+        }
+
         if (used == 0) {
             timestampOfLastMerge.set(System.currentTimeMillis());
         } else {
-            if (chits.merge(coord, used, System.currentTimeMillis() - timestampOfLastMerge.get()) && merge()) {
-                chits.refund(used);
-                indexedSinceMerge.set(0);
+            if (chits.merge(used, System.currentTimeMillis() - timestampOfLastMerge.get()) && merge()) {
+                // might be different than 'used', but we need to be atomic when resetting to zero
+                chits.refund(indexedSinceMerge.getAndSet(0));
                 timestampOfLastMerge.set(System.currentTimeMillis());
             }
         }
@@ -520,6 +545,11 @@ public class MiruPartitionAccessor<BM> {
             @Override
             public Optional<MiruContext<BM>> getContext() {
                 return context;
+            }
+
+            @Override
+            public void merge() throws Exception {
+                MiruPartitionAccessor.this.merge();
             }
 
             @Override

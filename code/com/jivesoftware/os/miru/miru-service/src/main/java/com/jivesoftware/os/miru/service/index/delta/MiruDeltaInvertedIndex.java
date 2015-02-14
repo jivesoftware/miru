@@ -330,7 +330,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
 
         synchronized (delta) {
-            Optional<BM> index = getIndex();
+            Optional<BM> index = indexLoader.call();
             if (index.isPresent()) {
                 backingIndex.replaceIndex(index.get(), Math.max(backingIndex.lastId(), delta.lastId));
             }
@@ -339,7 +339,6 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             delta.or = null;
             delta.replaced = false;
         }
-        invalidateCache();
     }
 
     public static class Delta<BM> {

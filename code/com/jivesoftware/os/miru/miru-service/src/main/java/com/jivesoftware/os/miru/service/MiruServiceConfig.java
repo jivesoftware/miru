@@ -64,8 +64,8 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(500_000)
     long getMergeChitCount();
 
-    @DoubleDefault(100d)
-    double getMergeRateRatio();
+    @DoubleDefault(0.5d)
+    double getMergeRateOfConvergence();
 
     @LongDefault(10_000)
     long getPartitionRebuildFailureSleepMillis();
@@ -166,7 +166,4 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(512)
     int getFieldIndexCacheConcurrencyLevel();
 
-
-    @LongDefault(600_000)
-    public long getMaxElapseWithoutMergeInMillis();
 }
