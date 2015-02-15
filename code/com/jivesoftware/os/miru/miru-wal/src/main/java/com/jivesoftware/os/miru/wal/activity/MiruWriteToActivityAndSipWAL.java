@@ -2,12 +2,15 @@ package com.jivesoftware.os.miru.wal.activity;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriterImpl.ActivityTimestamper;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriterImpl.CollisionId;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriterImpl.ColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
+import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
+import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import java.util.List;
 
 /** @author jonathan */
@@ -21,11 +24,13 @@ public class MiruWriteToActivityAndSipWAL implements MiruActivityWALWriter {
 
         this.activityWALWriter = new MiruActivityWALWriterImpl<>(activityWAL,
             ACTIVITY_WAL_COLUMN_KEY,
-            ACTIVITY_WAL_COLLISIONID);
+            ACTIVITY_WAL_COLLISIONID,
+            ACTIVITY_WAL_TIMESTAMPER);
 
         this.activitySipWALWriter = new MiruActivityWALWriterImpl<>(activitySipWAL,
             ACTIVITY_SIP_WAL_COLUMN_KEY,
-            ACTIVITY_SIP_WAL_COLLISIONID);
+            ACTIVITY_SIP_WAL_COLLISIONID,
+            ACTIVITY_SIP_WAL_TIMESTAMPER);
     }
 
     @Override
@@ -53,6 +58,15 @@ public class MiruWriteToActivityAndSipWAL implements MiruActivityWALWriter {
         }
     };
 
+    private static final ActivityTimestamper ACTIVITY_WAL_TIMESTAMPER = new ActivityTimestamper() {
+        @Override
+        public Timestamper get(MiruPartitionedActivity partitionedActivity) {
+            return partitionedActivity.activity.isPresent()
+                ? new ConstantTimestamper(partitionedActivity.activity.get().version)
+                : null; // CurrentTimestamper
+        }
+    };
+
     // ActivitySipWAL
     private static final ColumnKey<MiruActivitySipWALColumnKey> ACTIVITY_SIP_WAL_COLUMN_KEY = new ColumnKey<MiruActivitySipWALColumnKey>() {
         @Override
@@ -69,6 +83,13 @@ public class MiruWriteToActivityAndSipWAL implements MiruActivityWALWriter {
             } else {
                 return activity.writerId;
             }
+        }
+    };
+
+    private static final ActivityTimestamper ACTIVITY_SIP_WAL_TIMESTAMPER = new ActivityTimestamper() {
+        @Override
+        public Timestamper get(MiruPartitionedActivity partitionedActivity) {
+            return null; // CurrentTimestamper
         }
     };
 }

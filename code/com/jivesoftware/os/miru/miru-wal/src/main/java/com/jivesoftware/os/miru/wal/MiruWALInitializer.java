@@ -39,7 +39,8 @@ public class MiruWALInitializer {
                 new MiruTenantIdMarshaller(),
                 new SaltingDelegatingMarshaller<>(new MiruActivityWALRowMarshaller()),
                 new MiruActivityWALColumnKeyMarshaller(),
-                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)), new CurrentTimestamper()
+                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)),
+            new CurrentTimestamper()
         );
 
         // Miru ActivitySipWAL
@@ -50,7 +51,8 @@ public class MiruWALInitializer {
                 new MiruTenantIdMarshaller(),
                 new SaltingDelegatingMarshaller<>(new MiruActivityWALRowMarshaller()),
                 new MiruActivitySipWALColumnKeyMarshaller(),
-                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)), new CurrentTimestamper()
+                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)),
+            new CurrentTimestamper()
         );
 
         // Miru ReadTrackingWAL
@@ -61,7 +63,8 @@ public class MiruWALInitializer {
                 new MiruTenantIdMarshaller(),
                 new SaltingDelegatingMarshaller<>(new MiruReadTrackingWALRowMarshaller()),
                 new MiruReadTrackingWALColumnKeyMarshaller(),
-                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)), new CurrentTimestamper()
+                new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, objectMapper)),
+            new CurrentTimestamper()
         );
 
         // Miru ReadTrackingSipWAL
@@ -72,7 +75,8 @@ public class MiruWALInitializer {
                     new MiruTenantIdMarshaller(),
                     new SaltingDelegatingMarshaller<>(new MiruReadTrackingWALRowMarshaller()),
                     new MiruReadTrackingSipWALColumnKeyMarshaller(),
-                    new LongTypeMarshaller()), new CurrentTimestamper()
+                    new LongTypeMarshaller()),
+                new CurrentTimestamper()
             );
 
         return new MiruWAL(activityWAL, activitySipWAL, readTrackingWAL, readTrackingSipWAL);
