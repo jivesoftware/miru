@@ -12,7 +12,7 @@ import org.testng.annotations.Test;
 
 public class MiruMergeChitsTest {
 
-    @Test(enabled = true, description = "Tests convergence behavior")
+    @Test(enabled = false, description = "Tests convergence behavior")
     public void testMerge() throws Exception {
 
         final MiruMergeChits mergeChits = new MiruMergeChits(2_000_000, 0.5, 1_000);
