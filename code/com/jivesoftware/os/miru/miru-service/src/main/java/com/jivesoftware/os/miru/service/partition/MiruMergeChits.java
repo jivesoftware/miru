@@ -94,11 +94,7 @@ public class MiruMergeChits {
             }
         }
 
-        long maxElapsed = maxElapsedWithoutMergeInMillis.get();
-        double millisPerChit = (double) maxElapsed / (double) targetChits;
-        long effectiveElapsed = elapsed + (long) (millisPerChit * indexed);
-
-        boolean merge = effectiveElapsed > maxElapsedWithoutMergeInMillis.get();
+        boolean merge = elapsed > maxElapsedWithoutMergeInMillis.get();
         if (merge) {
             log.inc("chit>merged>total");
             log.inc("chit>merged>power>" + FilerIO.chunkPower(indexed, 0));
