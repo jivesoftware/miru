@@ -15,7 +15,7 @@ public class MiruMergeChitsTest {
     @Test(enabled = false, description = "Tests convergence behavior")
     public void testMerge() throws Exception {
 
-        final MiruMergeChits mergeChits = new MiruMergeChits(2_000_000, 0.5);
+        final MiruMergeChits mergeChits = new MiruMergeChits(2_000_000, 0.5, 1_000);
 
         ScheduledExecutorService scheduledInfo = Executors.newScheduledThreadPool(1);
         ScheduledExecutorService scheduledMergers = Executors.newScheduledThreadPool(8);

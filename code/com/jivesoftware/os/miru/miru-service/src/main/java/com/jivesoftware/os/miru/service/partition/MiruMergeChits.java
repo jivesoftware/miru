@@ -4,7 +4,6 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -26,11 +25,11 @@ public class MiruMergeChits {
     private final AtomicBoolean targetSeen = new AtomicBoolean(false);
     private final AtomicLong highestElapsed = new AtomicLong(0);
 
-    public MiruMergeChits(long maxChits, double rateOfConvergence) {
+    public MiruMergeChits(long maxChits, double rateOfConvergence, long convergenceInterval) {
         this.targetChits = (long) (maxChits * 0.5);
         this.numberOfChitsRemaining = new AtomicLong(maxChits);
         this.rateOfConvergence = rateOfConvergence;
-        this.convergenceInterval = TimeUnit.SECONDS.toMillis(1); //TODO pass in
+        this.convergenceInterval = convergenceInterval;
     }
 
     public void take(long count) {
@@ -57,9 +56,11 @@ public class MiruMergeChits {
             }
 
             if (chitsFree < targetChits) {
-                if (targetSeen.compareAndSet(false, true)) {
-                    maxElapsedWithoutMergeInMillis.set(highest);
-                    lastConvergenceTime.set(currentTime);
+                synchronized (lastConvergenceTime) {
+                    if (targetSeen.compareAndSet(false, true)) {
+                        maxElapsedWithoutMergeInMillis.set(highest);
+                        lastConvergenceTime.set(currentTime);
+                    }
                 }
             }
         }

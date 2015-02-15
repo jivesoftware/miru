@@ -191,7 +191,8 @@ public class MiruServiceInitializer {
             }
         };
 
-        MiruMergeChits miruMergeChits = new MiruMergeChits(config.getMergeChitCount(), config.getMergeRateOfConvergence());
+        MiruMergeChits miruMergeChits = new MiruMergeChits(config.getMergeChitCount(), config.getMergeRateOfConvergence(),
+            config.getPartitionSipMigrateIntervalInMillis());
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(config,
             streamFactory,
             activityWALReader,
