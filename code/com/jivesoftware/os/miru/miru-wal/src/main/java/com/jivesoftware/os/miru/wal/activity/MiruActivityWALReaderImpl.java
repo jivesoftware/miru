@@ -8,6 +8,8 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.List;
@@ -15,6 +17,8 @@ import org.apache.commons.lang.mutable.MutableLong;
 
 /** @author jonathan */
 public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
+
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final RowColumnValueStore<MiruTenantId,
         MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
@@ -82,7 +86,12 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                     }
                 }
                 cvats.clear();
+            } catch (InterruptedException e) {
+                // interrupts are rethrown
+                throw e;
             } catch (Exception e) {
+                // non-interrupts are retried
+                log.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
                 try {
                     Thread.sleep(sleepOnFailureMillis);
                 } catch (InterruptedException ie) {
@@ -144,7 +153,12 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                     }
                 }
                 cvats.clear();
+            } catch (InterruptedException e) {
+                // interrupts are rethrown
+                throw e;
             } catch (Exception e) {
+                // non-interrupts are retried
+                log.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
                 try {
                     Thread.sleep(sleepOnFailureMillis);
                 } catch (InterruptedException ie) {

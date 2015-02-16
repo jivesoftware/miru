@@ -2,12 +2,15 @@ package com.jivesoftware.os.miru.plugin.index;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interner;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +20,10 @@ import java.util.Map;
  *
  */
 public class MiruActivityInternExtern {
+
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
+    private static final int MAX_TERM_LENGTH = 4_096; //TODO add to schema
 
     private final Interner<MiruIBA> ibaInterner;
     private final Interner<MiruTermId> termInterner;
@@ -87,6 +94,17 @@ public class MiruActivityInternExtern {
             if (fieldId >= 0) {
                 MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
                 List<String> fieldValues = fields.get(fieldName);
+                for (int i = 0; i < fieldValues.size(); i++) {
+                    String fieldValue = fieldValues.get(i);
+                    if (fieldValue.length() > MAX_TERM_LENGTH) {
+                        log.warn("Ignored long term {} > {}", fieldValue.length(), MAX_TERM_LENGTH);
+                        // heavy-handed copy for removal from list, but the original list may be immutable, and this should be a rare occurrence
+                        List<String> snip = Lists.newArrayListWithCapacity(fieldValues.size() - 1);
+                        snip.addAll(fieldValues.subList(0, i));
+                        snip.addAll(fieldValues.subList(i + 1, fieldValues.size()));
+                        fieldValues = snip;
+                    }
+                }
                 MiruTermId[] values = new MiruTermId[fieldValues.size()];
                 for (int i = 0; i < values.length; i++) {
                     values[i] = termInterner.intern(termComposer.compose(fieldDefinition, fieldValues.get(i)));
