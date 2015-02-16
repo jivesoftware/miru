@@ -19,11 +19,13 @@ public class MiruMergeChits {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final AtomicLong numberOfChitsRemaining;
+    private final long maxOverage;
     private final StripingLocksProvider<MiruPartitionCoord> stripingLocks = new StripingLocksProvider<>(128);
     private final Map<MiruPartitionCoord, AtomicLong> mergeQueue = Collections.synchronizedMap(Maps.<MiruPartitionCoord, AtomicLong>newLinkedHashMap());
 
-    public MiruMergeChits(long maxChits) {
+    public MiruMergeChits(long maxChits, long maxOverage) {
         this.numberOfChitsRemaining = new AtomicLong(maxChits);
+        this.maxOverage = maxOverage >= 0 ? maxOverage : maxChits;
     }
 
     public void take(MiruPartitionCoord coord, long count) {
@@ -66,7 +68,7 @@ public class MiruMergeChits {
         synchronized (mergeQueue) {
             for (Map.Entry<MiruPartitionCoord, AtomicLong> entry : mergeQueue.entrySet()) {
                 long got = entry.getValue().get();
-                long requiredOverage = got / 2;
+                long requiredOverage = Math.min(maxOverage, got / 2);
                 if (entry.getKey().equals(coord)) {
                     if (overage >= requiredOverage) {
                         log.inc("chit>merged>total");

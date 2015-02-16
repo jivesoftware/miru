@@ -406,10 +406,10 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     log.warn("Tenant is active but schema not available for {}", coord.tenantId);
                     log.debug("Tenant is active but schema not available", sue);
                 } catch (Throwable t) {
-                    log.error("CheckActive encountered a problem", t);
+                    log.error("CheckActive encountered a problem for {}", new Object[] { coord }, t);
                 }
             } catch (Throwable t) {
-                log.error("Bootstrap encountered a problem", t);
+                log.error("Bootstrap encountered a problem for {}", new Object[] { coord }, t);
             }
         }
 
@@ -492,7 +492,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                                         }
                                     }
                                 } catch (Throwable t) {
-                                    log.error("Rebuild encountered a problem", t);
+                                    log.error("Rebuild encountered a problem for {}", new Object[] { coord }, t);
                                 }
                             }
                         } catch (MiruPartitionUnavailableException e) {
@@ -507,7 +507,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     }
                 }
             } catch (Throwable t) {
-                log.error("RebuildIndex encountered a problem", t);
+                log.error("RebuildIndex encountered a problem for {}", new Object[] { coord }, t);
             }
         }
 
@@ -648,7 +648,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             updateStorage(accessor, MiruBackingStorage.disk, false);
                         }
                     } catch (Throwable t) {
-                        log.error("Migrate encountered a problem", t);
+                        log.error("Migrate encountered a problem for {}", new Object[] { coord }, t);
                     }
                     try {
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
@@ -657,11 +657,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             accessor.refundChits(mergeChits);
                         }
                     } catch (Throwable t) {
-                        log.error("Sip encountered a problem", t);
+                        log.error("Sip encountered a problem for {}", new Object[] { coord }, t);
                     }
                 }
             } catch (Throwable t) {
-                log.error("SipIndex encountered a problem", t);
+                log.error("SipMigrateIndex encountered a problem for {}", new Object[] { coord }, t);
             }
         }
 

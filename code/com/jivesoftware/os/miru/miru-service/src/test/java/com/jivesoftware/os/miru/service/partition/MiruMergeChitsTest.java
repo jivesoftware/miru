@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
@@ -20,7 +19,7 @@ public class MiruMergeChitsTest {
     @Test(enabled = false, description = "Tests convergence behavior")
     public void testMerge() throws Exception {
 
-        final MiruMergeChits mergeChits = new MiruMergeChits(500_000);
+        final MiruMergeChits mergeChits = new MiruMergeChits(500_000, -1);
 
         ScheduledExecutorService scheduledInfo = Executors.newScheduledThreadPool(1);
         ScheduledExecutorService scheduledMergers = Executors.newScheduledThreadPool(8);
@@ -32,8 +31,6 @@ public class MiruMergeChitsTest {
                 System.out.println("free=" + mergeChits.remaining());
             }
         }, 1_000, 1_000, TimeUnit.MILLISECONDS));
-
-        final Semaphore mergeLock = new Semaphore(3);
 
         int[][] callersAndRates = new int[][] {
             { 1024, 1 },
@@ -68,18 +65,6 @@ public class MiruMergeChitsTest {
                                 notifyMerged(elapsed);
                                 mergeChits.refundAll(coord);
                                 lastMerge.set(currentTime);
-                                try {
-                                    mergeLock.acquire();
-                                } catch (InterruptedException e) {
-                                    throw new RuntimeException(e);
-                                }
-                                try {
-                                    Thread.sleep(100);
-                                } catch (InterruptedException e) {
-                                    throw new RuntimeException(e);
-                                } finally {
-                                    mergeLock.release();
-                                }
                             }
                         } catch (Throwable t) {
                             System.out.println("Caller died");
@@ -87,7 +72,6 @@ public class MiruMergeChitsTest {
                         }
                     }
                 }, 1_000, 1_000, TimeUnit.MILLISECONDS));
-                Thread.sleep(10);
             }
         }
 
