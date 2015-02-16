@@ -60,8 +60,7 @@ public class MiruMergeChitsTest {
                             long currentTime = System.currentTimeMillis();
                             long elapsed = currentTime - lastMerge.get();
                             long count = (long) ((double) rate * (double) (currentTime - lastTake.getAndSet(currentTime)) / 1_000d);
-                            mergeChits.take(coord, count);
-                            if (mergeChits.merge(coord)) {
+                            if (mergeChits.take(coord, count)) {
                                 notifyMerged(elapsed);
                                 mergeChits.refundAll(coord);
                                 lastMerge.set(currentTime);

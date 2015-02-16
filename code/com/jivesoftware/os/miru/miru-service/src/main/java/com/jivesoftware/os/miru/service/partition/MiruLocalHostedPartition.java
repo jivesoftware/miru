@@ -333,7 +333,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                         MiruContext<BM> toContext;
                         synchronized (fromContext.writeLock) {
-                            handle.merge();
+                            handle.merge(mergeChits);
                             toContext = contextFactory.copy(bitmaps, coord, fromContext, destinationStorage);
                         }
 
@@ -488,7 +488,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                                         MiruPartitionAccessor<BM> online = rebuilding.copyToState(MiruPartitionState.online);
                                         MiruPartitionAccessor<BM> updated = updatePartition(rebuilding, online);
                                         if (updated != null) {
-                                            updated.merge();
+                                            updated.merge(mergeChits);
                                         }
                                     }
                                 } catch (Throwable t) {
@@ -607,6 +607,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     boolean repair = firstRebuild.compareAndSet(true, false);
                     accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, repair, mergeChits,
                         rebuildIndexExecutor);
+                    accessor.merge(mergeChits);
                     accessor.setRebuildTimestamp(rebuildTimestamp.get());
                     accessor.setSip(sip.get());
                 } catch (Exception e) {
@@ -709,7 +710,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             deliver(partitionedActivities, accessor, sipTracker, sip);
 
             if (!accessor.hasOpenWriters()) {
-                accessor.merge();
+                accessor.merge(mergeChits);
             }
 
             return accessorRef.get() == accessor;

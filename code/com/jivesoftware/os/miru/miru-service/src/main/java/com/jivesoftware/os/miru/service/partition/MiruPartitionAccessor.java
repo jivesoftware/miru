@@ -170,7 +170,7 @@ public class MiruPartitionAccessor<BM> {
         return (context.isPresent() && context.get().sipIndex.setSip(sip));
     }
 
-    boolean merge() throws Exception {
+    void merge(MiruMergeChits chits) throws Exception {
         if (context.isPresent()) {
             MiruContext<BM> got = context.get();
             long elapsed;
@@ -188,10 +188,12 @@ public class MiruPartitionAccessor<BM> {
                 ((MiruDeltaActivityIndex) got.activityIndex).merge();
                 ((MiruDeltaSipIndex) got.sipIndex).merge();
                 elapsed = System.currentTimeMillis() - start;
+
+                chits.refundAll(coord);
+                timestampOfLastMerge.set(System.currentTimeMillis());
             }
             log.inc("merge>time>pow>" + FilerIO.chunkPower(elapsed, 0));
         }
-        return true;
     }
 
     void refundChits(MiruMergeChits mergeChits) {
@@ -266,12 +268,8 @@ public class MiruPartitionAccessor<BM> {
             throw new InterruptedException("Interrupted while indexing");
         }
 
-        chits.take(coord, consumedCount);
-
-        if (chits.merge(coord) && merge()) {
-            // might be different than 'used', but we need to be atomic when resetting to zero
-            chits.refundAll(coord);
-            timestampOfLastMerge.set(System.currentTimeMillis());
+        if (chits.take(coord, consumedCount)) {
+            merge(chits);
         }
 
         return consumedCount;
@@ -533,8 +531,8 @@ public class MiruPartitionAccessor<BM> {
             }
 
             @Override
-            public void merge() throws Exception {
-                MiruPartitionAccessor.this.merge();
+            public void merge(MiruMergeChits chits) throws Exception {
+                MiruPartitionAccessor.this.merge(chits);
             }
 
             @Override

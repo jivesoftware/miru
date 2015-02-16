@@ -28,7 +28,15 @@ public class MiruMergeChits {
         this.maxOverage = maxOverage >= 0 ? maxOverage : maxChits;
     }
 
-    public void take(MiruPartitionCoord coord, long count) {
+    public void refundAll(MiruPartitionCoord coord) {
+        AtomicLong taken = mergeQueue.remove(coord);
+        if (taken != null) {
+            long chitsFree = numberOfChitsRemaining.addAndGet(taken.get());
+            log.set(ValueType.COUNT, "chit>free", chitsFree);
+        }
+    }
+
+    public boolean take(MiruPartitionCoord coord, long count) {
         long chitsFree = numberOfChitsRemaining.addAndGet(-count);
         AtomicLong taken = mergeQueue.get(coord);
         if (taken == null) {
@@ -42,17 +50,11 @@ public class MiruMergeChits {
         }
         taken.addAndGet(count);
         log.set(ValueType.COUNT, "chit>free", chitsFree);
+
+        return canMerge(coord);
     }
 
-    public void refundAll(MiruPartitionCoord coord) {
-        AtomicLong taken = mergeQueue.remove(coord);
-        if (taken != null) {
-            long chitsFree = numberOfChitsRemaining.addAndGet(taken.get());
-            log.set(ValueType.COUNT, "chit>free", chitsFree);
-        }
-    }
-
-    public boolean merge(MiruPartitionCoord coord) {
+    private boolean canMerge(MiruPartitionCoord coord) {
         long chitsFree = numberOfChitsRemaining.get();
 
         if (chitsFree >= 0) {
