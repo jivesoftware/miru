@@ -1,6 +1,11 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -15,7 +20,7 @@ public class MiruMergeChitsTest {
     @Test(enabled = false, description = "Tests convergence behavior")
     public void testMerge() throws Exception {
 
-        final MiruMergeChits mergeChits = new MiruMergeChits(2_000_000, 0.5, 1_000);
+        final MiruMergeChits mergeChits = new MiruMergeChits(500_000);
 
         ScheduledExecutorService scheduledInfo = Executors.newScheduledThreadPool(1);
         ScheduledExecutorService scheduledMergers = Executors.newScheduledThreadPool(8);
@@ -24,7 +29,7 @@ public class MiruMergeChitsTest {
         futures.add(scheduledInfo.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                System.out.println("free=" + mergeChits.numberOfChitsRemaining() + ", maxElapse=" + mergeChits.maxElapsedWithoutMergeInMillis());
+                System.out.println("free=" + mergeChits.remaining());
             }
         }, 1_000, 1_000, TimeUnit.MILLISECONDS));
 
@@ -32,47 +37,53 @@ public class MiruMergeChitsTest {
 
         int[][] callersAndRates = new int[][] {
             { 1024, 1 },
-            { 512,  2 },
-            { 256,  4 },
-            { 128,  8 },
-            { 64,   16 },
-            { 32,   32 },
-            { 16,   64 },
-            { 8,    128 },
-            { 4,    256 },
+            { 512, 2 },
+            { 256, 4 },
+            { 128, 8 },
+            { 64, 16 },
+            { 32, 32 },
+            { 16, 64 },
+            { 8, 128 },
+            { 4, 256 },
         };
 
         for (int i = 0; i < callersAndRates.length; i++) {
             final int callers = callersAndRates[i][0];
             final int rate = callersAndRates[i][1];
             for (int j = 0; j < callers; j++) {
-                final AtomicLong taken = new AtomicLong(0);
                 final AtomicLong lastTake = new AtomicLong(System.currentTimeMillis());
                 final AtomicLong lastMerge = new AtomicLong(System.currentTimeMillis());
+                final MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId(FilerIO.longBytes(i)),
+                    MiruPartitionId.of(j),
+                    new MiruHost("localhost:1234"));
                 futures.add(scheduledMergers.scheduleWithFixedDelay(new Runnable() {
                     @Override
                     public void run() {
-                        long currentTime = System.currentTimeMillis();
-                        long elapsed = currentTime - lastMerge.get();
-                        long count = (long) ((double) rate * (double) (currentTime - lastTake.getAndSet(currentTime)) / 1_000d);
-                        mergeChits.take(count);
-                        long have = taken.addAndGet(count);
-                        if (mergeChits.merge(have, elapsed)) {
-                            notifyMerged(elapsed);
-                            mergeChits.refund(taken.getAndSet(0));
-                            lastMerge.set(currentTime);
-                            try {
-                                mergeLock.acquire();
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
+                        try {
+                            long currentTime = System.currentTimeMillis();
+                            long elapsed = currentTime - lastMerge.get();
+                            long count = (long) ((double) rate * (double) (currentTime - lastTake.getAndSet(currentTime)) / 1_000d);
+                            mergeChits.take(coord, count);
+                            if (mergeChits.merge(coord)) {
+                                notifyMerged(elapsed);
+                                mergeChits.refundAll(coord);
+                                lastMerge.set(currentTime);
+                                try {
+                                    mergeLock.acquire();
+                                } catch (InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException e) {
+                                    throw new RuntimeException(e);
+                                } finally {
+                                    mergeLock.release();
+                                }
                             }
-                            try {
-                                Thread.sleep(100);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            } finally {
-                                mergeLock.release();
-                            }
+                        } catch (Throwable t) {
+                            System.out.println("Caller died");
+                            t.printStackTrace();
                         }
                     }
                 }, 1_000, 1_000, TimeUnit.MILLISECONDS));

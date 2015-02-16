@@ -72,7 +72,6 @@ public class MiruPartitionAccessor<BM> {
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM> indexer;
 
-    private final AtomicLong indexedSinceMerge;
     private final AtomicLong timestampOfLastMerge;
 
     private MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
@@ -88,7 +87,6 @@ public class MiruPartitionAccessor<BM> {
         AtomicBoolean closed,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer,
-        AtomicLong indexedSinceMerge,
         AtomicLong timestampOfLastMerge) {
         this.bitmaps = bitmaps;
         this.coord = coord;
@@ -103,7 +101,6 @@ public class MiruPartitionAccessor<BM> {
         this.closed = closed;
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
-        this.indexedSinceMerge = indexedSinceMerge;
         this.timestampOfLastMerge = timestampOfLastMerge;
     }
 
@@ -115,12 +112,12 @@ public class MiruPartitionAccessor<BM> {
         MiruIndexer<BM> indexer) {
         this(bitmaps, coord, info, context, new AtomicLong(), new AtomicReference<Optional<Long>>(),
             Sets.<TimeAndVersion>newHashSet(), Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean(),
-            indexRepairs, indexer, new AtomicLong(0), new AtomicLong(System.currentTimeMillis()));
+            indexRepairs, indexer, new AtomicLong(System.currentTimeMillis()));
     }
 
     MiruPartitionAccessor<BM> copyToState(MiruPartitionState toState) {
         return new MiruPartitionAccessor<>(bitmaps, coord, info.copyToState(toState), context, rebuildTimestamp, refreshTimestamp,
-            seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs, indexer, indexedSinceMerge, timestampOfLastMerge);
+            seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
     }
 
     Optional<MiruContext<BM>> close() throws InterruptedException {
@@ -198,7 +195,7 @@ public class MiruPartitionAccessor<BM> {
     }
 
     void refundChits(MiruMergeChits mergeChits) {
-        mergeChits.refund(indexedSinceMerge.getAndSet(0));
+        mergeChits.refundAll(coord);
     }
 
     public static enum IndexStrategy {
@@ -269,24 +266,12 @@ public class MiruPartitionAccessor<BM> {
             throw new InterruptedException("Interrupted while indexing");
         }
 
-        chits.take(consumedCount);
-        long used;
-        try {
-            used = indexedSinceMerge.addAndGet(consumedCount);
-        } catch (Throwable t) {
-            // make sure we never leak chits
-            chits.refund(consumedCount);
-            throw t;
-        }
+        chits.take(coord, consumedCount);
 
-        if (used == 0) {
+        if (chits.merge(coord) && merge()) {
+            // might be different than 'used', but we need to be atomic when resetting to zero
+            chits.refundAll(coord);
             timestampOfLastMerge.set(System.currentTimeMillis());
-        } else {
-            if (chits.merge(used, System.currentTimeMillis() - timestampOfLastMerge.get()) && merge()) {
-                // might be different than 'used', but we need to be atomic when resetting to zero
-                chits.refund(indexedSinceMerge.getAndSet(0));
-                timestampOfLastMerge.set(System.currentTimeMillis());
-            }
         }
 
         return consumedCount;
