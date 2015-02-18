@@ -23,12 +23,12 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SeaAnomalySchemaConstants;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.MinMaxDouble;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyConstants;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyQuery;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -232,29 +232,31 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         rawWaveforms.put(e.getKey(), e.getValue().waveform);
                     }
 
-                    data.put("waveform", "data:image/png;base64," + new PNGWaveforms().hitsToBase64PNGWaveform(1024, 200, 32, 10, rawWaveforms,
-                        Optional.<MinMaxDouble>absent()));
+                    List<String> labels = new ArrayList<>();
+                    List<Map<String, Object>> datasets = new ArrayList<>();
 
-                    final MinMaxDouble mmd = new MinMaxDouble();
-                    mmd.value(0);
+                    ArrayList<Map<String, Object>> results = new ArrayList<>();
+                    int id = 0;
                     for (Entry<String, long[]> t : rawWaveforms.entrySet()) {
-                        for (long w : t.getValue()) {
-                            mmd.value(w);
+                        if (labels.isEmpty()) {
+                            for (int i = 0; i < t.getValue().length; i++) {
+                                labels.add("\"" + String.valueOf(i) + "\"");
+                            }
                         }
-                    }
-
-                    ArrayList<Map<String, String>> results = new ArrayList<>();
-                    for (Entry<String, long[]> t : rawWaveforms.entrySet()) {
+                        Color c = new Color(Color.HSBtoRGB((float) id / (float) (rawWaveforms.size()), 1f, 1f));
+                        Map<String, Object> w = waveform(t.getKey(), c, 0.2f, t.getValue());
                         results.add(ImmutableMap.of(
-                                "rank", "nil",
-                                "field", input.expansionField,
-                                "value", t.getKey(),
-                                "waveform", "data:image/png;base64," + new PNGWaveforms()
-                                .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                    ImmutableMap.of(t.getKey(), t.getValue()),
-                                    Optional.of(mmd))));
+                            "id", String.valueOf(id),
+                            "rank", "nil",
+                            "field", input.expansionField,
+                            "value", t.getKey(),
+                            "wave", (Object) ImmutableMap.of("labels", labels, "datasets", Arrays.asList(w))));
+
+                        datasets.add(w);
+                        id++;
                     }
 
+                    data.put("waves", ImmutableMap.of("labels", labels, "datasets", datasets));
                     data.put("results", results);
 
                     ObjectMapper mapper = new ObjectMapper();
@@ -268,6 +270,23 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
         }
 
         return renderer.render(template, data);
+    }
+
+    public Map<String, Object> waveform(String label, Color color, float alpha, long[] values) {
+        Map<String, Object> waveform = new HashMap<>();
+        waveform.put("label", "\"" + label + "\"");
+        waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+        waveform.put("strokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        waveform.put("pointColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        waveform.put("pointStrokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        waveform.put("pointHighlightFill", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        waveform.put("pointHighlightStroke", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        List<Integer> ints = new ArrayList<>();
+        for (long v : values) {
+            ints.add((int) v);
+        }
+        waveform.put("data", ints);
+        return waveform;
     }
 
     private void addFieldFilter(List<MiruFieldFilter> fieldFilters, List<MiruFieldFilter> notFilters, String fieldName, String values) {
