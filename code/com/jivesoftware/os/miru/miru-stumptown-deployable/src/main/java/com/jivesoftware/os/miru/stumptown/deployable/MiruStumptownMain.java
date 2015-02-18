@@ -41,6 +41,7 @@ import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloa
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsIntializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
+import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
@@ -93,9 +94,9 @@ public class MiruStumptownMain {
         RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
             .newInstance();
         @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-//        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
+        //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+        //    .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         MiruStumptownPayloads payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(),
             rowColumnValueStoreInitializer, mapper);
 
@@ -135,16 +136,13 @@ public class MiruStumptownMain {
         MiruStumptownService queryService = new MiruQueryStumptownInitializer().initialize(renderer);
 
         List<MiruManagePlugin> plugins = Lists.newArrayList(
-            new MiruManagePlugin("Status",
-                "/stumptown/status",
+            new MiruManagePlugin("eye-open", "Status", "/stumptown/status",
                 StumptownStatusPluginEndpoints.class,
                 new StumptownStatusPluginRegion("soy.stumptown.page.stumptownStatusPluginRegion", renderer, logMill)),
-            new MiruManagePlugin("Trends",
-                "/stumptown/trends",
+            new MiruManagePlugin("stats", "Trends", "/stumptown/trends",
                 StumptownTrendsPluginEndpoints.class,
                 new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, miruReaders)),
-            new MiruManagePlugin("Query",
-                "/stumptown/query",
+            new MiruManagePlugin("search", "Query", "/stumptown/query",
                 StumptownQueryPluginEndpoints.class,
                 new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion", renderer, miruReaders, payloads)));
 

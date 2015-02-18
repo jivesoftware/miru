@@ -149,5 +149,11 @@
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-marshall-primatives</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.rcvs</groupId>
+            <artifactId>row-column-value-store-inmemory</artifactId>
+            <version>0.12</version>
+            <type>jar</type>
+        </dependency>
     </dependencies>
 </project>

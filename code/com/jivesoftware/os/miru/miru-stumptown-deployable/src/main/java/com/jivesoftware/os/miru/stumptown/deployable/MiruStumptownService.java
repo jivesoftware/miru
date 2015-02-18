@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stumptown.deployable;
 
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruHeaderRegion;
+import com.jivesoftware.os.miru.stumptown.deployable.region.MiruHomeRegion.HomeInput;
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.stumptown.deployable.region.PageRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownChromeRegion;
@@ -14,14 +15,14 @@ public class MiruStumptownService {
 
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
-    private final PageRegion<Void> homeRegion;
+    private final PageRegion<HomeInput> homeRegion;
 
     private final List<MiruManagePlugin> plugins = Lists.newCopyOnWriteArrayList();
 
     public MiruStumptownService(
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
-        PageRegion<Void> homeRegion
+        PageRegion<HomeInput> homeRegion
     ) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
@@ -29,8 +30,8 @@ public class MiruStumptownService {
 
     }
 
-    public String render() {
-        return chrome(homeRegion).render(null);
+    public String render(String intakeURL) {
+        return chrome(homeRegion).render(new HomeInput(intakeURL));
     }
 
     public void registerPlugin(MiruManagePlugin plugin) {

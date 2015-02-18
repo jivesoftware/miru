@@ -7,6 +7,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 /**
  *
@@ -24,8 +25,8 @@ public class MiruQueryStumptownEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response get() {
-        String rendered = miruQueryStumptownService.render();
+    public Response get(@Context UriInfo uriInfo) {
+        String rendered = miruQueryStumptownService.render(uriInfo.getAbsolutePath()+"miru/stumptown/intake");
         return Response.ok(rendered).build();
     }
 

@@ -27,15 +27,15 @@
                             {foreach $status in $serviceStatus}
                                 <tr>
                                     <td>
-                                        <input type="button" value="{$status.error}"
+                                        <input class="form-control" type="button" value="{$status.error}"
                                             onclick="document.location.href='query?logLevels=ERROR&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
                                     </td>
                                     <td>
-                                        <input type="button" value="{$status.warn}"
+                                        <input class="form-control" type="button" value="{$status.warn}"
                                             onclick="document.location.href='query?logLevels=WARN&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
                                     </td>
                                     <td>
-                                        <input type="button" value="{$status.info}"
+                                        <input class="form-control" type="button" value="{$status.info}"
                                             onclick="document.location.href='query?logLevels=INFO&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
                                     </td>
                                     <td>{$status.cluster}</td>

@@ -1,12 +1,41 @@
 {namespace soy.stumptown.page}
 
 /**
- * Home page
+ * @param intakeURL
  */
 {template .homeRegion}
-    
-
-<img src="http://clickalifecoachblog.com/wp-content/uploads/2015/01/Tree-Stump-Owl-Bird-HD-Wallpaper.jpg"
- alt="Fun in the lumber yard" width="400" height="225">
-    <img>
+    <div class="panel panel-default">
+        <div class="panel-heading">Stumpdown</div>
+            <div class="panel-body">
+                <pre>
+                    Welcome to Stumptown a service which allows you to chop up your logs!
+                    <br>
+                    POST json list of log events to {$intakeURL}<br>
+                    Example input:<br>
+                    &nbsp;
+                    [<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{lb}<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;datacenter: "ds1",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cluster: "dev",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;host: "128.0.0.1",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;service: "myServiceName",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;instance: "1",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;version: "1.0",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;level: "INFO",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;threadName: "thread-7",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;loggerName: "com.company.Foo",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message: "My first message",<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;timestamp: "34279234", GMT millis<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;thrownStackTrace: [<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"",<br>
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;""<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{rb}<br>
+                    ]<br>
+                    <br>
+                    Note: All fields are optional.
+                </pre>
+            </div>
+        </div>
+    </div>
 {/template}

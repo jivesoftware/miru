@@ -18,10 +18,10 @@
                 data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
                 <table>
                     <tr>
-                        <td>Log Level</td>
+                        <td>Log Level&nbsp;&nbsp</td>
                         <td>
                             <select style="width:280px; padding-left:10px;"
-                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Log Level"
+                                class="form-control" placeholder="Log Level"
                                 name="logLevel" id="logLevelPicker" data-original-title="" title="">
                                 <option value="TRACE" {if $logLevel == 'TRACE'}selected="selected"{/if}>TRACE</option>
                                 <option value="DEBUG" {if $logLevel == 'DEBUG'}selected="selected"{/if}>DEBUG</option>
@@ -32,7 +32,7 @@
                         </td>
                     </tr>
                 </table>
-                <input type="submit" value="Run"/>
+                <input class="form-control" type="submit" value="Run"/>
             </form>
         </div>
     </div>

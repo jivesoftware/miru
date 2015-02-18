@@ -1,12 +1,14 @@
 package com.jivesoftware.os.miru.stumptown.deployable.region;
 
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRenderer;
-import java.util.Collections;
+import com.jivesoftware.os.miru.stumptown.deployable.region.MiruHomeRegion.HomeInput;
+import java.util.Map;
 
 /**
  *
  */
-public class MiruHomeRegion implements PageRegion<Void> {
+public class MiruHomeRegion implements PageRegion<HomeInput> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
@@ -16,9 +18,20 @@ public class MiruHomeRegion implements PageRegion<Void> {
         this.renderer = renderer;
     }
 
+     public static class HomeInput {
+
+        final String intakeURL;
+        
+        public HomeInput(String intakeURL) {
+            this.intakeURL = intakeURL;
+        }
+    }
+
     @Override
-    public String render(Void input) {
-        return renderer.render(template, Collections.<String, Object>emptyMap());
+    public String render(HomeInput input) {
+        Map<String, Object> data = Maps.newHashMap();
+        data.put("intakeURL", input.intakeURL);
+        return renderer.render(template, data);
     }
 
     @Override
