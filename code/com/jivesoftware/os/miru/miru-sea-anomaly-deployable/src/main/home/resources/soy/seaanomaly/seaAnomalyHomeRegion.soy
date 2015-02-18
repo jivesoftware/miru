@@ -1,12 +1,22 @@
 {namespace soy.sea.anomaly.page}
 
 /**
- * Home page
+ * @param intakeURL
  */
 {template .homeRegion}
-    
-
-<img src="https://www.colourbox.com/preview/1684853-lionfish-pterois-mombasae-on-a-black-background.jpg"
- alt="Fun with metrics" width="400" height="225">
-    <img>
+    <div class="panel panel-default">
+        <div class="panel-heading">See Anomaly</div>
+            <div class="panel-body">
+                <pre>
+                    Welcome to See Anomaly a service which allows you to analize metrics!
+                    <br>
+                    POST json list of metric events to {$intakeURL}<br>
+                    Example input:<br>
+                    TODO
+                    <br>
+                    Note: All fields are optional.
+                </pre>
+            </div>
+        </div>
+    </div>
 {/template}

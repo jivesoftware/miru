@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,24 +31,21 @@ public class SeaAnomalyChromeRegion<I, R extends PageRegion<I>> implements Regio
 
     @Override
     public String render(I input) {
-        Map<String, Object> data = Maps.newHashMap();
-        data.put("header", headerRegion.render(null));
-        data.put("region", region.render(input));
-        data.put("title", region.getTitle());
-        data.put("plugins", Lists.transform(plugins, new Function<MiruManagePlugin, Map<String, String>>() {
+        List<Map<String, String>> p = Lists.transform(plugins, new Function<MiruManagePlugin, Map<String, String>>() {
             @Override
             public Map<String, String> apply(MiruManagePlugin input) {
-                return ImmutableMap.of("name", input.name, "path", input.path);
+                return ImmutableMap.of("name", input.name, "path", input.path, "glyphicon", input.glyphicon);
             }
-        }));
+        });
+        Map<String, Object> headerData = new HashMap<>();
+        headerData.put("plugins", p);
+
+        Map<String, Object> data = Maps.newHashMap();
+        data.put("header", headerRegion.render(headerData));
+        data.put("region", region.render(input));
+        data.put("title", region.getTitle());
+        data.put("plugins", p);
         return renderer.render(template, data);
-
-        /*
-        // inject js page region module data
-        List<String> jsmodulesVal = Arrays.asList(JSProcessor.classToAMDPath(region.getClass()));
-
-        context.put("jsmodules").value(jsmodulesVal);
-        */
     }
 
 }

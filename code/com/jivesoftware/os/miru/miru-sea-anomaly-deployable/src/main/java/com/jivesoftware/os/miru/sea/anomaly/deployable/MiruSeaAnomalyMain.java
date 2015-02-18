@@ -116,16 +116,13 @@ public class MiruSeaAnomalyMain {
         MiruSeaAnomalyService queryService = new MiruQuerySeaAnomalyInitializer().initialize(renderer);
 
         List<MiruManagePlugin> plugins = Lists.newArrayList(
-            new MiruManagePlugin("Status",
-                "/seaAnomaly/status",
+            new MiruManagePlugin("eye-open","Status", "/seaAnomaly/status",
                 SeaAnomalyStatusPluginEndpoints.class,
                 new SeaAnomalyStatusPluginRegion("soy.sea.anomaly.page.seaAnomalyStatusPluginRegion", renderer, logMill)),
-            new MiruManagePlugin("Trends",
-                "/seaAnomaly/trends",
+            new MiruManagePlugin("stats","Trends", "/seaAnomaly/trends",
                 SeaAnomalyTrendsPluginEndpoints.class,
                 new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, miruReaders)),
-            new MiruManagePlugin("Query",
-                "/seaAnomaly/query",
+            new MiruManagePlugin("search","Query", "/seaAnomaly/query",
                 SeaAnomalyQueryPluginEndpoints.class,
                 new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, miruReaders)));
 

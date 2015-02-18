@@ -1,10 +1,10 @@
 package com.jivesoftware.os.miru.sea.anomaly.deployable.region;
 
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
-import java.util.Collections;
+import java.util.Map;
 
 // soy.sea.anomaly.chrome.headerRegion
-public class MiruHeaderRegion implements Region<Void> {
+public class MiruHeaderRegion implements Region<Map<String, Object>> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
@@ -15,7 +15,7 @@ public class MiruHeaderRegion implements Region<Void> {
     }
 
     @Override
-    public String render(Void input) {
-        return renderer.render(template, Collections.<String, Object>emptyMap());
+    public String render(Map<String, Object> input) {
+        return renderer.render(template, input);
     }
 }

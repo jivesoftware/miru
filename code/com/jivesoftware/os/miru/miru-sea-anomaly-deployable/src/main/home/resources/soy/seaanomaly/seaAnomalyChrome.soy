@@ -4,7 +4,6 @@
  * @param title
  * @param header
  * @param region
- * @param plugins
  */
 {template .chromeRegion}
 <!DOCTYPE HTML>
@@ -20,15 +19,11 @@
         {$header|noAutoescape}
         <div class="container">
             <div class="row">
-                <div class="col-md-2">
-                    {call .nav}
-                        {param plugins: $plugins /}
-                    {/call}
-                </div>
-                <div class="col-md-10">
+                <div class="col-lg-12">
                     {$region|noAutoescape}
                 </div>
             </div>
+        </div>
         </div>
 	</body>
 </html>
@@ -63,29 +58,27 @@
 {/template}
 
 /**
- *
+ * @param plugins
  */
 {template .headerRegion}
-	<div class="navbar navbar-default" role="navigation">
+	<div class="navbar nav-pills navbar-inverse" role="navigation">
 	    <div class="navbar-header">
-            <a class="navbar-brand" href="/">
-                See Anomaly <small>(powerd by Miru)</small>
-            </a>
+             <ul class="nav navbar-nav navbar-right">
+                <li role="presentation" class="active"><a class="navbar-brand" href="/">
+                    <img src="/static/img/icon.png" alt="Fun with logs" width="24" height="24"><img>
+                    &nbsp;See Anomaly
+                </a></li>
+                {foreach $plugin in $plugins}
+                    <li role="presentation"><a href="{$plugin.path}">
+                        <span class="glyphicon glyphicon-{$plugin.glyphicon}"></span>{sp}
+                        {$plugin.name}
+                    </a></li>
+                {/foreach}
+            </ul>
 	    </div>
 	</div>
 {/template}
 
-/**
- * @param plugins
- */
-{template .nav}
-    {foreach $plugin in $plugins}
-        <a class="list-group-item" href="{$plugin.path}">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            {$plugin.name}
-        </a>
-    {/foreach}
-{/template}
 
 /**
  *
@@ -101,7 +94,7 @@
 {template .footer}
 	<div class="row">
 		<div class="col-md-8">
-			<a href="https://github.com/jivesoftware/miru">SeaAnomaly on GitHub</a>
+			<a href="https://github.com/jivesoftware/miru">See Anomaly on GitHub</a>
 		</div>
 	</div>
 {/template}

@@ -79,17 +79,6 @@
 	</div>
 {/template}
 
-/**
- * @param plugins
- */
-{template .nav}
-    {foreach $plugin in $plugins}
-        <a class="list-group-item" href="{$plugin.path}">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            {$plugin.name}
-        </a>
-    {/foreach}
-{/template}
 
 /**
  *
