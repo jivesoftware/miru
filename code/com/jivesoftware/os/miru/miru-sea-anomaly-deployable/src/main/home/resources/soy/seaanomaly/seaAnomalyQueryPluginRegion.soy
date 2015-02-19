@@ -27,7 +27,7 @@
  */
 {template .seaAnomalyQueryPluginRegion}
     <div class="panel panel-default">
-        <div class="panel-heading">Query SeaAnomaly</div>
+        <div class="panel-heading">Query See Anomaly</div>
         <div class="panel-body">
             <form id="stump-query-filters" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
                 data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
@@ -195,72 +195,76 @@
     </div>
     {if $waves}
         <div class="panel panel-default">
-            <div class="panel-heading">Waves</div>
-                <div class="panel-body">
-                    <div class="well" style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
-                        <div class="row">
-                            <div class="col-lg-2">
-                                <canvas id="radar" height="195" width="195"></canvas>
-                            </div>
-                            <div class="col-lg-10">
-                                <canvas id="wave" height="195" width="878"></canvas>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <canvas id="stacked" height="195" width="1170"></canvas>
-                            </div>
-                        </div>
-                        <script>
-                            function addLoadEvent(func) {lb}
-                            var oldonload = window.onload;
-                            if (typeof window.onload != 'function') {lb}
-                              window.onload = func;
-                            {rb} else {lb}
-                              window.onload = function() {lb}
-                                if (oldonload) {lb}
-                                  oldonload();
-                                {rb}
-                                func();
-                              {rb}
+            <div class="panel-heading">Aggregate</div>
+            <div class="panel-body">
+                <div style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
+                    <table>
+                        <tr>
+                            <td>
+                                <canvas id="radar" height="150" width="150"></canvas>
+                            </td>
+                            <td>
+                                <canvas id="wave" height="150" width="878"></canvas>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <canvas id="stacked" height="150" width="900"></canvas>
+                            </td>
+                        </tr>
+                    </table>
+                    <script>
+                        function addLoadEvent(func) {lb}
+                        var oldonload = window.onload;
+                        if (typeof window.onload != 'function') {lb}
+                          window.onload = func;
+                        {rb} else {lb}
+                          window.onload = function() {lb}
+                            if (oldonload) {lb}
+                              oldonload();
                             {rb}
+                            func();
                           {rb}
+                        {rb}
+                      {rb}
 
-                            addLoadEvent(function(){lb}
-                                var ctx = document.getElementById("wave").getContext("2d");
-                                window.myBar = new Chart(ctx).Line({$waves|noAutoescape}, {lb}
-                                    multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
-                                    scaleLineColor: "rgba(128,128,128,0.5)",
-                                    tooltipFillColor: "rgba(0,0,0,1)",
-                                    responsive : true,
-                                    animation: false
-                                {rb});
-                                var ctx = document.getElementById("radar").getContext("2d");
-                                window.myRadar = new Chart(ctx).Radar({$waves|noAutoescape}, {lb}
-                                    multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
-                                    scaleLineColor: "rgba(128,128,128,0.5)",
-                                    tooltipFillColor: "rgba(0,0,0,1)",
-                                    responsive : true,
-                                    animation: false
-                                {rb});
-                                var ctx = document.getElementById("stacked").getContext("2d");
-                                window.myStack = new Chart(ctx).StackedBar({$waves|noAutoescape}, {lb}
-                                    responsive : true,
-                                    scaleLineColor: "rgba(128,128,128,0.5)",
-                                    tooltipFillColor: "rgba(0,0,0,1)",
-                                    animation: false,
-                                    multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>"
-                                {rb});
+                        addLoadEvent(function(){lb}
+                            var ctx = document.getElementById("wave").getContext("2d");
+                            window.myBar = new Chart(ctx).Line({$waves|noAutoescape}, {lb}
+                                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                                scaleLineColor: "rgba(128,128,128,0.5)",
+                                tooltipFillColor: "rgba(0,0,0,1)",
+                                datasetFill : false,
+                                responsive : true,
+                                animation: false
                             {rb});
-                        </script>
-                    </div>
+                            var ctx = document.getElementById("radar").getContext("2d");
+                            window.myRadar = new Chart(ctx).Radar({$waves|noAutoescape}, {lb}
+                                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                                scaleLineColor: "rgba(128,128,128,0.5)",
+                                tooltipFillColor: "rgba(0,0,0,1)",
+                                datasetFill : false,
+                                responsive : true,
+                                animation: false
+                            {rb});
+                            var ctx = document.getElementById("stacked").getContext("2d");
+                            window.myStack = new Chart(ctx).StackedBar({$waves|noAutoescape}, {lb}
+                                responsive : true,
+                                scaleLineColor: "rgba(128,128,128,0.5)",
+                                tooltipFillColor: "rgba(0,0,0,1)",
+                                datasetFill : false,
+                                animation: false,
+                                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>"
+                            {rb});
+                        {rb});
+                    </script>
                 </div>
             </div>
         </div>
     {/if}
     {if $results}
         <div class="panel panel-default">
-            <div class="panel-heading">Waveforms</div>
+            <div class="panel-heading">Discrete</div>
             <div class="panel-body">
                 <table>
                     <tr>
@@ -283,14 +287,8 @@
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="4">
-                                <div class="well" style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
-                                    <div class="row">
-                                        <div class="col-lg-12">
-                                            <canvas id="singleWave{$result.id|noAutoescape}" height="100" width="1170"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
+                            <td colspan="4" style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
+                                <canvas id="singleWave{$result.id|noAutoescape}" height="100" width="900"></canvas>
                             </td>
                         </tr>
                     {/foreach}
@@ -317,6 +315,7 @@
                                 multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
                                 scaleLineColor: "rgba(128,128,128,0.5)",
                                 tooltipFillColor: "rgba(0,0,0,1)",
+                                datasetFill : false,
                                 responsive : true,
                                 animation: false
                             {rb});

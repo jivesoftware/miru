@@ -10,6 +10,13 @@ import java.lang.management.ThreadMXBean;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import javax.management.Attribute;
+import javax.management.AttributeList;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
 
 /**
  *
@@ -34,6 +41,25 @@ public class JVMMetrics {
 
         metrics = new LinkedList<>();
 
+        add(new JVMMetric("jvm>numProcs") {
+
+            @Override
+            public long stat() {
+                return osBean.getAvailableProcessors();
+            }
+        });
+
+        add(new JVMMetric("jvm>cpuLoad") {
+
+            @Override
+            public long stat() {
+                try {
+                    return (long) getProcessCpuLoad();
+                } catch (Exception x) {
+                    return -1;
+                }
+            }
+        });
         add(new JVMMetric("jvm>startTime:millis") {
 
             @Override
@@ -168,6 +194,25 @@ public class JVMMetrics {
                 return s;
             }
         });
+    }
+
+    public static double getProcessCpuLoad() throws MalformedObjectNameException, ReflectionException, InstanceNotFoundException {
+
+        MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+        ObjectName name = ObjectName.getInstance("java.lang:type=OperatingSystem");
+        AttributeList list = mbs.getAttributes(name, new String[]{"ProcessCpuLoad"});
+
+        if (list.isEmpty()) {
+            return Double.NaN;
+        }
+
+        Attribute att = (Attribute) list.get(0);
+        Double value = (Double) att.getValue();
+
+        if (value == -1.0) {
+            return Double.NaN;  // usually takes a couple of seconds before we get real values
+        }
+        return ((int) (value * 1000) / 10.0);        // returns a percentage value with 1 decimal point precision
     }
 
     public void add(JVMMetric metric) {
