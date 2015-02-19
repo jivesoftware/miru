@@ -214,7 +214,7 @@ public class MiruClientEndpoints {
         try {
             ingressUnreadTimer.startTimer();
             for (MiruReadEvent event : events) {
-                client.sendRead(event);
+                client.sendUnread(event);
             }
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
