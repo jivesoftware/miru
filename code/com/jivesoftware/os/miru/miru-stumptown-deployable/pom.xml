@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>upena-deployable-management</artifactId>
-        <version>0.315</version>
+        <version>0.316-SNAPSHOT</version>
         <relativePath>../inheritance-poms/upena-deployable-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-stumptown-deployable</artifactId>
-    <version>0.315</version>
+    <version>0.316-SNAPSHOT</version>
     <properties>
         <java.main>com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
@@ -95,28 +95,28 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.315</version>
+            <version>0.316-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-stumptown-plugins</artifactId>
-            <version>0.315</version>
+            <version>0.316-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.315</version>
+            <version>0.316-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-logappender</artifactId>
-            <version>0.315</version>
+            <version>0.316-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.315</version>
+            <version>0.316-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
@@ -130,7 +130,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-reco-plugins</artifactId>
-            <version>0.315</version>
+            <version>0.316-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
