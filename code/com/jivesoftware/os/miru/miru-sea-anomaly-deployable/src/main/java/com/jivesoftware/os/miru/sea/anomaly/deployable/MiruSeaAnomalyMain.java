@@ -56,10 +56,6 @@ public class MiruSeaAnomalyMain {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
-
-            serviceStartupHealthCheck.info("loading config...", null);
-            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-
             HealthFactory.initialize(new HealthCheckConfigBinder() {
 
                 @Override
@@ -78,13 +74,12 @@ public class MiruSeaAnomalyMain {
                     throw new UnsupportedOperationException("Not supported yet.");
                 }
             });
-
-            serviceStartupHealthCheck.info("status reporter...", null);
-
             deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.buildManageServer().start();
+
+            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
             MiruSeaAnomalyServiceConfig seaAnomalyServiceConfig = deployable.config(MiruSeaAnomalyServiceConfig.class);
 

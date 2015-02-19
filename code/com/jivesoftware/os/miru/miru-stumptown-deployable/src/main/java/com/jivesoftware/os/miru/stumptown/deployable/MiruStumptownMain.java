@@ -83,6 +83,7 @@ public class MiruStumptownMain {
 
             deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
+            deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.buildManageServer().start();
 
             MiruStumptownServiceConfig stumptownServiceConfig = deployable.config(MiruStumptownServiceConfig.class);

@@ -96,6 +96,32 @@ public class MiruReaderMain {
         try {
             final Deployable deployable = new Deployable(args);
 
+            HealthFactory.initialize(
+                new HealthCheckConfigBinder() {
+                    @Override
+                    public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                        return deployable.config(configurationInterfaceClass);
+                    }
+                },
+                new HealthCheckRegistry() {
+                    @Override
+                    public void register(HealthChecker healthChecker) {
+                        deployable.addHealthCheck(healthChecker);
+                    }
+
+                    @Override
+                    public void unregister(HealthChecker healthChecker) {
+                        throw new UnsupportedOperationException("Not supported yet.");
+                    }
+                });
+
+            deployable.buildStatusReporter(null).start();
+            deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
+            deployable.addHealthCheck(new DirectBufferHealthChecker(deployable.config(DirectBufferHealthChecker.DirectBufferHealthCheckerConfig.class)));
+            deployable.addHealthCheck(serviceStartupHealthCheck);
+            deployable.buildManageServer().start();
+
+
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             mapper.registerModule(new GuavaModule());
@@ -121,31 +147,6 @@ public class MiruReaderMain {
                 instanceConfig.getVersion(),
                 metricSamplerConfig);
             sampler.start();
-
-            HealthFactory.initialize(
-                new HealthCheckConfigBinder() {
-                    @Override
-                    public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                        return deployable.config(configurationInterfaceClass);
-                    }
-                },
-                new HealthCheckRegistry() {
-                    @Override
-                    public void register(HealthChecker healthChecker) {
-                        deployable.addHealthCheck(healthChecker);
-                    }
-
-                    @Override
-                    public void unregister(HealthChecker healthChecker) {
-                        throw new UnsupportedOperationException("Not supported yet.");
-                    }
-                });
-
-            deployable.buildStatusReporter(null).start();
-            deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
-            deployable.addHealthCheck(new DirectBufferHealthChecker(deployable.config(DirectBufferHealthChecker.DirectBufferHealthCheckerConfig.class)));
-            deployable.addHealthCheck(serviceStartupHealthCheck);
-            deployable.buildManageServer().start();
 
             MiruHost miruHost = new MiruHost(instanceConfig.getHost(), instanceConfig.getMainPort());
 
