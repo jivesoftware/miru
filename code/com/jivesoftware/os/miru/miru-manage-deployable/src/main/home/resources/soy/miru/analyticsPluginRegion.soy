@@ -120,13 +120,18 @@
     </div>
     {if $waveform}
         <div class="panel panel-default">
-            <div class="panel-heading">Waveform</div>
+            <div class="panel-heading">
+                Waveform
+                &nbsp;|&nbsp;
+                <a href="#summary">Jump to query summary</a>
+            </div>
             <div class="panel-body">
                 <img alt="waveform" src="{$waveform}">
             </div>
         </div>
     {/if}
     {if $summary}
+        <a name="summary"></a>
         <div class="panel panel-default">
             <div class="panel-heading">Query Summary {$elapse}</div>
             <div class="panel-body">

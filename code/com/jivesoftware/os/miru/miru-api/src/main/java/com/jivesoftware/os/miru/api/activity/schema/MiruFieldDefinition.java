@@ -28,7 +28,8 @@ public class MiruFieldDefinition {
     public enum Type {
         singleTerm,
         singleTermIndexLatest,
-        multiTerm
+        multiTerm,
+        nonIndexed
     }
 
     /**

@@ -164,7 +164,7 @@ public class AggregateCounts {
                         boolean unread = false;
                         if (unreadIndex != null) {
                             BM unreadAnswer = reusable.next();
-                            CardinalityAndLastSetBit storage = bitmaps.andNotWithCardinalityAndLastSetBit(unreadAnswer, unreadIndex, termIndex);
+                            CardinalityAndLastSetBit storage = bitmaps.andWithCardinalityAndLastSetBit(unreadAnswer, Arrays.asList(unreadIndex, termIndex));
                             if (storage.cardinality > 0) {
                                 unread = true;
                             }

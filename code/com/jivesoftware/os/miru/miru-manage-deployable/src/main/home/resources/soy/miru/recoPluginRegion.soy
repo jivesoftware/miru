@@ -127,7 +127,11 @@
     </div>
     {if $results}
         <div class="panel panel-default">
-            <div class="panel-heading">Results</div>
+            <div class="panel-heading">
+                Results
+                &nbsp;|&nbsp;
+                <a href="#summary">Jump to query summary</a>
+            </div>
             <div class="panel-body">
                 <table>
                     <tr>
@@ -145,6 +149,7 @@
         </div>
     {/if}
     {if $summary}
+        <a name="summary"></a>
         <div class="panel panel-default">
             <div class="panel-heading">Query Summary {$elapse}</div>
             <div class="panel-body">

@@ -36,6 +36,9 @@ public class MiruIndexFieldValues<BM> {
         MiruFieldDefinition[] fieldDefinitions = context.schema.getFieldDefinitions();
         List<Future<List<FieldValuesWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
         for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
+            if (fieldDefinition.type == MiruFieldDefinition.Type.nonIndexed) {
+                continue;
+            }
             workFutures.add(indexExecutor.submit(new Callable<List<FieldValuesWork>>() {
                 @Override
                 public List<FieldValuesWork> call() throws Exception {

@@ -103,7 +103,11 @@
     </div>
     {if $distincts}
         <div class="panel panel-default">
-            <div class="panel-heading">Distincts</div>
+            <div class="panel-heading">
+                Distincts
+                &nbsp;|&nbsp;
+                <a href="#summary">Jump to query summary</a>
+            </div>
             <div class="panel-body">
                 {if $count > 0}
                     Showing first {$maxCount} of {$count} distincts:<br/>
@@ -118,6 +122,7 @@
         </div>
     {/if}
     {if $summary}
+        <a name="summary"></a>
         <div class="panel panel-default">
             <div class="panel-heading">Query Summary {$elapse}</div>
             <div class="panel-body">
