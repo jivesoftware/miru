@@ -22,6 +22,7 @@ import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
+import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.client.MiruClient;
@@ -54,98 +55,102 @@ public class MiruWriterMain {
     }
 
     public void run(String[] args) throws Exception {
+        ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
+        try {
+            final Deployable deployable = new Deployable(args);
 
-        final Deployable deployable = new Deployable(args);
+            HealthFactory.initialize(new HealthCheckConfigBinder() {
 
-        HealthFactory.initialize(new HealthCheckConfigBinder() {
+                @Override
+                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                    return deployable.config(configurationInterfaceClass);
+                }
+            }, new HealthCheckRegistry() {
 
-            @Override
-            public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                return deployable.config(configurationInterfaceClass);
-            }
-        }, new HealthCheckRegistry() {
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
 
-            @Override
-            public void register(HealthChecker healthChecker) {
-                deployable.addHealthCheck(healthChecker);
-            }
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
 
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-        });
+            deployable.buildStatusReporter(null).start();
+            deployable.buildManageServer().start();
 
-        deployable.buildStatusReporter(null).start();
-        deployable.buildManageServer().start();
+            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            mapper.registerModule(new GuavaModule());
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        mapper.registerModule(new GuavaModule());
+            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                miruLogAppenderConfig);
+            miruLogAppender.install();
 
-        MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-        MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
-            instanceConfig.getClusterName(),
-            instanceConfig.getHost(),
-            instanceConfig.getServiceName(),
-            String.valueOf(instanceConfig.getInstanceName()),
-            instanceConfig.getVersion(),
-            miruLogAppenderConfig);
-        miruLogAppender.install();
+            MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
+            MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                metricSamplerConfig);
+            sampler.start();
 
-        MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-        MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
-            instanceConfig.getClusterName(),
-            instanceConfig.getHost(),
-            instanceConfig.getServiceName(),
-            String.valueOf(instanceConfig.getInstanceName()),
-            instanceConfig.getVersion(),
-            metricSamplerConfig);
-        sampler.start();
+            MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
-        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+                .newInstance();
+            @SuppressWarnings("unchecked")
+            RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
 
-        RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
-            .newInstance();
-        @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+            MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
 
-        MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
+            MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
+                .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
+            MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
+                registryStore.getHostsRegistry(),
+                registryStore.getExpectedTenantsRegistry(),
+                registryStore.getExpectedTenantPartitionsRegistry(),
+                registryStore.getReplicaRegistry(),
+                registryStore.getTopologyRegistry(),
+                registryStore.getConfigRegistry(),
+                registryStore.getWriterPartitionRegistry(),
+                registryConfig.getDefaultNumberOfReplicas(),
+                registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
-            .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-            registryStore.getHostsRegistry(),
-            registryStore.getExpectedTenantsRegistry(),
-            registryStore.getExpectedTenantPartitionsRegistry(),
-            registryStore.getReplicaRegistry(),
-            registryStore.getTopologyRegistry(),
-            registryStore.getConfigRegistry(),
-            registryStore.getWriterPartitionRegistry(),
-            registryConfig.getDefaultNumberOfReplicas(),
-            registryConfig.getDefaultTopologyIsStaleAfterMillis());
+            MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
+                new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
+                clusterRegistry);
 
-        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
-            new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
-            clusterRegistry);
+            MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
+            MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig,
+                clusterRegistry,
+                replicaSetDirector,
+                registryStore,
+                wal,
+                instanceConfig.getInstanceName());
 
-        MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig,
-            clusterRegistry,
-            replicaSetDirector,
-            registryStore,
-            wal,
-            instanceConfig.getInstanceName());
+            deployable.addEndpoints(MiruClientEndpoints.class);
+            deployable.addInjectables(MiruClient.class, miruClient);
+            deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 
-        deployable.addEndpoints(MiruClientEndpoints.class);
-        deployable.addInjectables(MiruClient.class, miruClient);
-        deployable.addEndpoints(MiruWriterConfigEndpoints.class);
-
-        deployable.buildServer().start();
-
+            deployable.buildServer().start();
+            serviceStartupHealthCheck.success();
+        } catch (Throwable t) {
+            serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
+        }
     }
 }

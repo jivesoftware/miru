@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
@@ -66,131 +67,133 @@ public class MiruManageMain {
     }
 
     /*
-    private interface DevInstanceConfig extends InstanceConfig {
+     private interface DevInstanceConfig extends InstanceConfig {
 
-        @StringDefault("dev")
-        String getClusterName();
-    }
-    */
-
+     @StringDefault("dev")
+     String getClusterName();
+     }
+     */
     public void run(String[] args) throws Exception {
+        ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
+        try {
+            Deployable deployable = new Deployable(args);
+            deployable.buildStatusReporter(null).start();
+            deployable.buildManageServer().start();
 
-        Deployable deployable = new Deployable(args);
-        deployable.buildStatusReporter(null).start();
-        deployable.buildManageServer().start();
+            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class); //config(DevInstanceConfig.class);
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class); //config(DevInstanceConfig.class);
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            mapper.registerModule(new GuavaModule());
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        mapper.registerModule(new GuavaModule());
+            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                miruLogAppenderConfig);
+            miruLogAppender.install();
 
-        MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-        MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
-            instanceConfig.getClusterName(),
-            instanceConfig.getHost(),
-            instanceConfig.getServiceName(),
-            String.valueOf(instanceConfig.getInstanceName()),
-            instanceConfig.getVersion(),
-            miruLogAppenderConfig);
-        miruLogAppender.install();
+            MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
+            MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                metricSamplerConfig);
+            sampler.start();
 
+            MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
-        MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-        MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
-            instanceConfig.getClusterName(),
-            instanceConfig.getHost(),
-            instanceConfig.getServiceName(),
-            String.valueOf(instanceConfig.getInstanceName()),
-            instanceConfig.getVersion(),
-            metricSamplerConfig);
-        sampler.start();
+            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+                .newInstance();
+            @SuppressWarnings("unchecked")
+            RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
 
-        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+            MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
-        RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
-            .newInstance();
-        @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+            MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
+                .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
+            MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
+                registryStore.getHostsRegistry(),
+                registryStore.getExpectedTenantsRegistry(),
+                registryStore.getExpectedTenantPartitionsRegistry(),
+                registryStore.getReplicaRegistry(),
+                registryStore.getTopologyRegistry(),
+                registryStore.getConfigRegistry(),
+                registryStore.getWriterPartitionRegistry(),
+                registryConfig.getDefaultNumberOfReplicas(),
+                registryConfig.getDefaultTopologyIsStaleAfterMillis());
 
-        MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
+            MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
-            .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-            registryStore.getHostsRegistry(),
-            registryStore.getExpectedTenantsRegistry(),
-            registryStore.getExpectedTenantPartitionsRegistry(),
-            registryStore.getReplicaRegistry(),
-            registryStore.getTopologyRegistry(),
-            registryStore.getConfigRegistry(),
-            registryStore.getWriterPartitionRegistry(),
-            registryConfig.getDefaultNumberOfReplicas(),
-            registryConfig.getDefaultTopologyIsStaleAfterMillis());
+            MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
+            MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
+            MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
+            MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
+            MiruSchemaProvider schemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
 
-        MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
+            MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
-        MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
-        MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
-        MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
-        MiruSchemaProvider schemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
+            MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
+                clusterRegistry,
+                schemaProvider,
+                activityWALReader,
+                readTrackingWALReader,
+                activityLookupTable);
 
-        MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
+            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper);
 
-        MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
-            clusterRegistry,
-            schemaProvider,
-            activityWALReader,
-            readTrackingWALReader,
-            activityLookupTable);
+            List<MiruManagePlugin> plugins = Lists.newArrayList(
+                new MiruManagePlugin("Distincts",
+                    "/miru/manage/distincts",
+                    DistinctsPluginEndpoints.class,
+                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruManagePlugin("Analytics",
+                    "/miru/manage/analytics",
+                    AnalyticsPluginEndpoints.class,
+                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruManagePlugin("Trending",
+                    "/miru/manage/trending",
+                    TrendingPluginEndpoints.class,
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)),
+                new MiruManagePlugin("Reco",
+                    "/miru/manage/reco",
+                    RecoPluginEndpoints.class,
+                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)));
 
-        ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper);
+            MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
+                new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
 
-        List<MiruManagePlugin> plugins = Lists.newArrayList(
-            new MiruManagePlugin("Distincts",
-                "/miru/manage/distincts",
-                DistinctsPluginEndpoints.class,
-                new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
-            new MiruManagePlugin("Analytics",
-                "/miru/manage/analytics",
-                AnalyticsPluginEndpoints.class,
-                new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
-            new MiruManagePlugin("Trending",
-                "/miru/manage/trending",
-                TrendingPluginEndpoints.class,
-                new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)),
-            new MiruManagePlugin("Reco",
-                "/miru/manage/reco",
-                RecoPluginEndpoints.class,
-                new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)));
+            MiruWALDirector walDirector = new MiruWALDirector(clusterRegistry, activityWALReader, activityWALWriter);
 
-        MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
-            new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
+            File staticResourceDir = new File(System.getProperty("user.dir"));
+            System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
+            Resource sourceTree = new Resource(staticResourceDir)
+                //.addResourcePath("../../../../../src/main/resources") // fluff?
+                .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setContext("/static");
 
-        MiruWALDirector walDirector = new MiruWALDirector(clusterRegistry, activityWALReader, activityWALWriter);
+            deployable.addEndpoints(MiruManageEndpoints.class);
+            deployable.addInjectables(MiruManageService.class, miruManageService);
+            deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
+            deployable.addInjectables(MiruWALDirector.class, walDirector);
 
-        File staticResourceDir = new File(System.getProperty("user.dir"));
-        System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
-        Resource sourceTree = new Resource(staticResourceDir)
-            //.addResourcePath("../../../../../src/main/resources") // fluff?
-            .addResourcePath(rendererConfig.getPathToStaticResources())
-            .setContext("/static");
+            for (MiruManagePlugin plugin : plugins) {
+                miruManageService.registerPlugin(plugin);
+                deployable.addEndpoints(plugin.endpointsClass);
+                deployable.addInjectables(plugin.region.getClass(), plugin.region);
+            }
 
-        deployable.addEndpoints(MiruManageEndpoints.class);
-        deployable.addInjectables(MiruManageService.class, miruManageService);
-        deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
-        deployable.addInjectables(MiruWALDirector.class, walDirector);
-
-        for (MiruManagePlugin plugin : plugins) {
-            miruManageService.registerPlugin(plugin);
-            deployable.addEndpoints(plugin.endpointsClass);
-            deployable.addInjectables(plugin.region.getClass(), plugin.region);
+            deployable.addResource(sourceTree);
+            deployable.buildServer().start();
+            serviceStartupHealthCheck.success();
+        } catch (Throwable t) {
+            serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
         }
-
-        deployable.addResource(sourceTree);
-        deployable.buildServer().start();
-
     }
 }

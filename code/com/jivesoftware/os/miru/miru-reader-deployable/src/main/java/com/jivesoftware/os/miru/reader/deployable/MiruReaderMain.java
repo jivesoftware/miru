@@ -26,6 +26,7 @@ import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.checkers.DirectBufferHealthChecker;
 import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
@@ -91,169 +92,174 @@ public class MiruReaderMain {
     }
 
     public void run(String[] args) throws Exception {
+        ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
+        try {
+            final Deployable deployable = new Deployable(args);
 
-        final Deployable deployable = new Deployable(args);
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            mapper.registerModule(new GuavaModule());
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        mapper.registerModule(new GuavaModule());
+            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                miruLogAppenderConfig);
+            miruLogAppender.install();
 
-        MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-        MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
-            instanceConfig.getClusterName(),
-            instanceConfig.getHost(),
-            instanceConfig.getServiceName(),
-            String.valueOf(instanceConfig.getInstanceName()),
-            instanceConfig.getVersion(),
-            miruLogAppenderConfig);
-        miruLogAppender.install();
+            MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
+            MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                metricSamplerConfig);
+            sampler.start();
 
-        MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-        MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
-            instanceConfig.getClusterName(),
-            instanceConfig.getHost(),
-            instanceConfig.getServiceName(),
-            String.valueOf(instanceConfig.getInstanceName()),
-            instanceConfig.getVersion(),
-            metricSamplerConfig);
-        sampler.start();
+            HealthFactory.initialize(
+                new HealthCheckConfigBinder() {
+                    @Override
+                    public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                        return deployable.config(configurationInterfaceClass);
+                    }
+                },
+                new HealthCheckRegistry() {
+                    @Override
+                    public void register(HealthChecker healthChecker) {
+                        deployable.addHealthCheck(healthChecker);
+                    }
 
-        HealthFactory.initialize(
-            new HealthCheckConfigBinder() {
+                    @Override
+                    public void unregister(HealthChecker healthChecker) {
+                        throw new UnsupportedOperationException("Not supported yet.");
+                    }
+                });
+
+            deployable.buildStatusReporter(null).start();
+            deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
+            deployable.addHealthCheck(new DirectBufferHealthChecker(deployable.config(DirectBufferHealthChecker.DirectBufferHealthCheckerConfig.class)));
+            deployable.addHealthCheck(serviceStartupHealthCheck);
+            deployable.buildManageServer().start();
+
+            MiruHost miruHost = new MiruHost(instanceConfig.getHost(), instanceConfig.getMainPort());
+
+            MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+
+            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+                .newInstance();
+            @SuppressWarnings("unchecked")
+            RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+
+            MiruServiceConfig miruServiceConfig = deployable.config(MiruServiceConfig.class);
+
+            HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
+                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+
+            MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
+                rowColumnValueStoreInitializer, mapper);
+            MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
+                registryStore.getHostsRegistry(),
+                registryStore.getExpectedTenantsRegistry(),
+                registryStore.getExpectedTenantPartitionsRegistry(),
+                registryStore.getReplicaRegistry(),
+                registryStore.getTopologyRegistry(),
+                registryStore.getConfigRegistry(),
+                registryStore.getWriterPartitionRegistry(),
+                registryConfig.getDefaultNumberOfReplicas(),
+                registryConfig.getDefaultTopologyIsStaleAfterMillis());
+
+            MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
+
+            MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer().initialize(miruServiceConfig, miruHost);
+
+            backfillerizerLifecycle.start();
+            final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
+
+            MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
+
+            final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
+            final MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
+                Interners.<MiruIBA>newWeakInterner(),
+                Interners.<MiruTermId>newWeakInterner(),
+                Interners.<MiruTenantId>newStrongInterner(),
+                // makes sense to share string internment as this is authz in both cases
+                Interners.<String>newWeakInterner(),
+                termComposer);
+
+            final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+            RegistrySchemaProvider registrySchemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(),
+                10_000); //TODO configure
+
+            MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
+                registryStore,
+                clusterRegistry,
+                miruHost,
+                registrySchemaProvider,
+                wal,
+                httpClientFactory,
+                miruResourceLocator,
+                termComposer,
+                internExtern,
+                new SingleBitmapsProvider<>(bitmaps));
+
+            miruServiceLifecyle.start();
+            final MiruService miruService = miruServiceLifecyle.getService();
+            MiruWriter miruWriter = new MiruWriterImpl(miruService);
+
+            deployable.addEndpoints(MiruWriterEndpoints.class);
+            deployable.addInjectables(MiruWriter.class, miruWriter);
+            deployable.addEndpoints(MiruReaderEndpoints.class);
+            deployable.addInjectables(MiruService.class, miruService);
+
+            MiruProvider<Miru> miruProvider = new MiruProvider<Miru>() {
                 @Override
-                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                    return deployable.config(configurationInterfaceClass);
-                }
-            },
-            new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                    deployable.addHealthCheck(healthChecker);
+                public Miru getMiru(MiruTenantId tenantId) {
+                    return miruService;
                 }
 
                 @Override
-                public void unregister(HealthChecker healthChecker) {
-                    throw new UnsupportedOperationException("Not supported yet.");
+                public MiruActivityInternExtern getActivityInternExtern(MiruTenantId tenantId) {
+                    return internExtern;
                 }
-            });
 
-        deployable.buildStatusReporter(null).start();
-        deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
-        deployable.addHealthCheck(new DirectBufferHealthChecker(deployable.config(DirectBufferHealthChecker.DirectBufferHealthCheckerConfig.class)));
-        deployable.buildManageServer().start();
+                @Override
+                public MiruJustInTimeBackfillerizer getBackfillerizer(MiruTenantId tenantId) {
+                    return backfillerizer;
+                }
 
-        MiruHost miruHost = new MiruHost(instanceConfig.getHost(), instanceConfig.getMainPort());
+                @Override
+                public MiruTermComposer getTermComposer() {
+                    return termComposer;
+                }
+            };
 
-        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
-
-        RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
-            .newInstance();
-        @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-
-        MiruServiceConfig miruServiceConfig = deployable.config(MiruServiceConfig.class);
-
-        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
-
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
-            rowColumnValueStoreInitializer, mapper);
-        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-            registryStore.getHostsRegistry(),
-            registryStore.getExpectedTenantsRegistry(),
-            registryStore.getExpectedTenantPartitionsRegistry(),
-            registryStore.getReplicaRegistry(),
-            registryStore.getTopologyRegistry(),
-            registryStore.getConfigRegistry(),
-            registryStore.getWriterPartitionRegistry(),
-            registryConfig.getDefaultNumberOfReplicas(),
-            registryConfig.getDefaultTopologyIsStaleAfterMillis());
-
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-
-        MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer().initialize(miruServiceConfig, miruHost);
-
-        backfillerizerLifecycle.start();
-        final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
-
-        MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
-
-        final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
-        final MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
-            Interners.<MiruIBA>newWeakInterner(),
-            Interners.<MiruTermId>newWeakInterner(),
-            Interners.<MiruTenantId>newStrongInterner(),
-            // makes sense to share string internment as this is authz in both cases
-            Interners.<String>newWeakInterner(),
-            termComposer);
-
-        final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-        RegistrySchemaProvider registrySchemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(),
-            10_000); //TODO configure
-
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
-            registryStore,
-            clusterRegistry,
-            miruHost,
-            registrySchemaProvider,
-            wal,
-            httpClientFactory,
-            miruResourceLocator,
-            termComposer,
-            internExtern,
-            new SingleBitmapsProvider<>(bitmaps));
-
-        miruServiceLifecyle.start();
-        final MiruService miruService = miruServiceLifecyle.getService();
-        MiruWriter miruWriter = new MiruWriterImpl(miruService);
-
-        deployable.addEndpoints(MiruWriterEndpoints.class);
-        deployable.addInjectables(MiruWriter.class, miruWriter);
-        deployable.addEndpoints(MiruReaderEndpoints.class);
-        deployable.addInjectables(MiruService.class, miruService);
-
-        MiruProvider<Miru> miruProvider = new MiruProvider<Miru>() {
-            @Override
-            public Miru getMiru(MiruTenantId tenantId) {
-                return miruService;
+            for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {
+                Reflections reflections = new Reflections(new ConfigurationBuilder()
+                    .setUrls(ClasspathHelper.forPackage(pluginPackage.trim()))
+                    .setScanners(new SubTypesScanner(), new TypesScanner()));
+                Set<Class<? extends MiruPlugin>> pluginTypes = reflections.getSubTypesOf(MiruPlugin.class);
+                for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
+                    LOG.info("Loading plugin {}", pluginType.getSimpleName());
+                    add(miruProvider, deployable, pluginType.newInstance());
+                }
             }
 
-            @Override
-            public MiruActivityInternExtern getActivityInternExtern(MiruTenantId tenantId) {
-                return internExtern;
-            }
+            deployable.addEndpoints(MiruReaderConfigEndpoints.class);
+            deployable.addInjectables(MiruClusterRegistry.class, clusterRegistry);
+            deployable.addInjectables(RegistrySchemaProvider.class, registrySchemaProvider);
 
-            @Override
-            public MiruJustInTimeBackfillerizer getBackfillerizer(MiruTenantId tenantId) {
-                return backfillerizer;
-            }
-
-            @Override
-            public MiruTermComposer getTermComposer() {
-                return termComposer;
-            }
-        };
-
-        for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {
-            Reflections reflections = new Reflections(new ConfigurationBuilder()
-                .setUrls(ClasspathHelper.forPackage(pluginPackage.trim()))
-                .setScanners(new SubTypesScanner(), new TypesScanner()));
-            Set<Class<? extends MiruPlugin>> pluginTypes = reflections.getSubTypesOf(MiruPlugin.class);
-            for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
-                LOG.info("Loading plugin {}", pluginType.getSimpleName());
-                add(miruProvider, deployable, pluginType.newInstance());
-            }
+            deployable.buildServer().start();
+            serviceStartupHealthCheck.success();
+        } catch (Throwable t) {
+            serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
         }
-
-        deployable.addEndpoints(MiruReaderConfigEndpoints.class);
-        deployable.addInjectables(MiruClusterRegistry.class, clusterRegistry);
-        deployable.addInjectables(RegistrySchemaProvider.class, registrySchemaProvider);
-
-        deployable.buildServer().start();
-
     }
 
     private <E, I> void add(MiruProvider<? extends Miru> miruProvider, Deployable deployable, MiruPlugin<E, I> plugin) {

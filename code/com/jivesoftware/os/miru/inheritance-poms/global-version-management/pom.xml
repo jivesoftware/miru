@@ -11,7 +11,7 @@
     <packaging>pom</packaging>
     <properties>
         <mlogger-version>0.7</mlogger-version>
-        <jive-utils-version>0.67</jive-utils-version>
+        <jive-utils-version>0.68</jive-utils-version>
         <rcvs-version>0.12</rcvs-version>
         <filer-version>0.58</filer-version>
         <upena-version>0.30</upena-version>

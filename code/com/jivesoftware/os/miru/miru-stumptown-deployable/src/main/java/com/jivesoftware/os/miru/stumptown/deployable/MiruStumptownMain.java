@@ -23,6 +23,7 @@ import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -55,116 +56,120 @@ public class MiruStumptownMain {
     }
 
     public void run(String[] args) throws Exception {
+        ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
+        try {
+            final Deployable deployable = new Deployable(args);
 
-        final Deployable deployable = new Deployable(args);
+            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+            HealthFactory.initialize(new HealthCheckConfigBinder() {
 
-        HealthFactory.initialize(new HealthCheckConfigBinder() {
+                @Override
+                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                    return deployable.config(configurationInterfaceClass);
+                }
+            }, new HealthCheckRegistry() {
 
-            @Override
-            public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                return deployable.config(configurationInterfaceClass);
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
+
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
+
+            deployable.buildStatusReporter(null).start();
+            deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
+            deployable.buildManageServer().start();
+
+            MiruStumptownServiceConfig stumptownServiceConfig = deployable.config(MiruStumptownServiceConfig.class);
+
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new GuavaModule());
+
+            MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+
+            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+                .newInstance();
+            @SuppressWarnings("unchecked")
+            RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+            //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
+            MiruStumptownPayloads payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(),
+                rowColumnValueStoreInitializer, mapper);
+
+            OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
+
+            RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruReaderHosts(), mapper);
+            RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruWriterHosts(), mapper);
+
+            LogMill logMill = new LogMill(orderIdProvider);
+
+            MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
+            MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(intakeConfig,
+                logMill,
+                miruWrites,
+                miruReaders,
+                payloads);
+
+            new MiruStumptownInternalLogAppender("unknownDatacenter",
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                inTakeService,
+                10_000,
+                1_000,
+                false,
+                1_000,
+                1_000,
+                5_000,
+                1_000,
+                1_000,
+                10_000).install();
+
+            MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
+            MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
+            MiruStumptownService queryService = new MiruQueryStumptownInitializer().initialize(renderer);
+
+            List<MiruManagePlugin> plugins = Lists.newArrayList(
+                new MiruManagePlugin("eye-open", "Status", "/stumptown/status",
+                    StumptownStatusPluginEndpoints.class,
+                    new StumptownStatusPluginRegion("soy.stumptown.page.stumptownStatusPluginRegion", renderer, logMill)),
+                new MiruManagePlugin("stats", "Trends", "/stumptown/trends",
+                    StumptownTrendsPluginEndpoints.class,
+                    new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, miruReaders)),
+                new MiruManagePlugin("search", "Query", "/stumptown/query",
+                    StumptownQueryPluginEndpoints.class,
+                    new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion", renderer, miruReaders, payloads)));
+
+            File staticResourceDir = new File(System.getProperty("user.dir"));
+            System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
+            Resource sourceTree = new Resource(staticResourceDir)
+                .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setContext("/static");
+
+            deployable.addEndpoints(MiruStumptownIntakeEndpoints.class);
+            deployable.addInjectables(MiruStumptownIntakeService.class, inTakeService);
+
+            deployable.addEndpoints(MiruQueryStumptownEndpoints.class);
+            deployable.addInjectables(MiruStumptownService.class, queryService);
+
+            for (MiruManagePlugin plugin : plugins) {
+                queryService.registerPlugin(plugin);
+                deployable.addEndpoints(plugin.endpointsClass);
+                deployable.addInjectables(plugin.region.getClass(), plugin.region);
             }
-        }, new HealthCheckRegistry() {
 
-            @Override
-            public void register(HealthChecker healthChecker) {
-                deployable.addHealthCheck(healthChecker);
-            }
-
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-        });
-
-        deployable.buildStatusReporter(null).start();
-        deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
-        deployable.buildManageServer().start();
-
-        MiruStumptownServiceConfig stumptownServiceConfig = deployable.config(MiruStumptownServiceConfig.class);
-
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new GuavaModule());
-
-        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
-
-        RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
-            .newInstance();
-        @SuppressWarnings("unchecked")
-        RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-            .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-        //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
-        MiruStumptownPayloads payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(),
-            rowColumnValueStoreInitializer, mapper);
-
-        OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
-
-        RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruReaderHosts(), mapper);
-        RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruWriterHosts(), mapper);
-
-        LogMill logMill = new LogMill(orderIdProvider);
-
-        MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
-        MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(intakeConfig,
-            logMill,
-            miruWrites,
-            miruReaders,
-            payloads);
-
-        new MiruStumptownInternalLogAppender("unknownDatacenter",
-            instanceConfig.getClusterName(),
-            instanceConfig.getHost(),
-            instanceConfig.getServiceName(),
-            String.valueOf(instanceConfig.getInstanceName()),
-            instanceConfig.getVersion(),
-            inTakeService,
-            10_000,
-            1_000,
-            false,
-            1_000,
-            1_000,
-            5_000,
-            1_000,
-            1_000,
-            10_000).install();
-
-        MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
-        MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-        MiruStumptownService queryService = new MiruQueryStumptownInitializer().initialize(renderer);
-
-        List<MiruManagePlugin> plugins = Lists.newArrayList(
-            new MiruManagePlugin("eye-open", "Status", "/stumptown/status",
-                StumptownStatusPluginEndpoints.class,
-                new StumptownStatusPluginRegion("soy.stumptown.page.stumptownStatusPluginRegion", renderer, logMill)),
-            new MiruManagePlugin("stats", "Trends", "/stumptown/trends",
-                StumptownTrendsPluginEndpoints.class,
-                new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, miruReaders)),
-            new MiruManagePlugin("search", "Query", "/stumptown/query",
-                StumptownQueryPluginEndpoints.class,
-                new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion", renderer, miruReaders, payloads)));
-
-        File staticResourceDir = new File(System.getProperty("user.dir"));
-        System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
-        Resource sourceTree = new Resource(staticResourceDir)
-            .addResourcePath(rendererConfig.getPathToStaticResources())
-            .setContext("/static");
-
-        deployable.addEndpoints(MiruStumptownIntakeEndpoints.class);
-        deployable.addInjectables(MiruStumptownIntakeService.class, inTakeService);
-
-        deployable.addEndpoints(MiruQueryStumptownEndpoints.class);
-        deployable.addInjectables(MiruStumptownService.class, queryService);
-
-        for (MiruManagePlugin plugin : plugins) {
-            queryService.registerPlugin(plugin);
-            deployable.addEndpoints(plugin.endpointsClass);
-            deployable.addInjectables(plugin.region.getClass(), plugin.region);
+            deployable.addResource(sourceTree);
+            deployable.buildServer().start();
+            serviceStartupHealthCheck.success();
+        } catch (Throwable t) {
+            serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
         }
-
-        deployable.addResource(sourceTree);
-        deployable.buildServer().start();
-
     }
 }

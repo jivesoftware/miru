@@ -23,11 +23,11 @@ import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
-import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSeaAnomalyIntakeInitializer.MiruSeaAnomalyIntakeConfig;
@@ -53,99 +53,109 @@ public class MiruSeaAnomalyMain {
     }
 
     public void run(String[] args) throws Exception {
+        ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
+        try {
+            final Deployable deployable = new Deployable(args);
 
-        final Deployable deployable = new Deployable(args);
+            serviceStartupHealthCheck.info("loading config...", null);
+            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
-        InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+            HealthFactory.initialize(new HealthCheckConfigBinder() {
 
-        HealthFactory.initialize(new HealthCheckConfigBinder() {
+                @Override
+                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                    return deployable.config(configurationInterfaceClass);
+                }
+            }, new HealthCheckRegistry() {
 
-            @Override
-            public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                return deployable.config(configurationInterfaceClass);
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
+
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
+
+            serviceStartupHealthCheck.info("status reporter...", null);
+
+            deployable.buildStatusReporter(null).start();
+            deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
+            deployable.addHealthCheck(serviceStartupHealthCheck);
+            deployable.buildManageServer().start();
+
+            MiruSeaAnomalyServiceConfig seaAnomalyServiceConfig = deployable.config(MiruSeaAnomalyServiceConfig.class);
+
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.registerModule(new GuavaModule());
+
+            OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
+
+            serviceStartupHealthCheck.info("building request helpers...", null);
+            RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruReaderHosts(), mapper);
+            RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruWriterHosts(), mapper);
+
+            SampleTrawl logMill = new SampleTrawl(orderIdProvider);
+
+            MiruSeaAnomalyIntakeConfig intakeConfig = deployable.config(MiruSeaAnomalyIntakeConfig.class);
+            MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,
+                logMill,
+                miruWrites,
+                miruReaders);
+
+            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                miruLogAppenderConfig);
+            miruLogAppender.install();
+
+            MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
+            MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
+            MiruSeaAnomalyService queryService = new MiruQuerySeaAnomalyInitializer().initialize(renderer);
+
+            serviceStartupHealthCheck.info("installing ui plugins...", null);
+
+            List<MiruManagePlugin> plugins = Lists.newArrayList(
+                new MiruManagePlugin("eye-open", "Status", "/seaAnomaly/status",
+                    SeaAnomalyStatusPluginEndpoints.class,
+                    new SeaAnomalyStatusPluginRegion("soy.sea.anomaly.page.seaAnomalyStatusPluginRegion", renderer, logMill)),
+                new MiruManagePlugin("stats", "Trends", "/seaAnomaly/trends",
+                    SeaAnomalyTrendsPluginEndpoints.class,
+                    new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, miruReaders)),
+                new MiruManagePlugin("search", "Query", "/seaAnomaly/query",
+                    SeaAnomalyQueryPluginEndpoints.class,
+                    new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, miruReaders)));
+
+            File staticResourceDir = new File(System.getProperty("user.dir"));
+            System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
+            Resource sourceTree = new Resource(staticResourceDir)
+                .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setContext("/static");
+
+            deployable.addEndpoints(MiruSeaAnomalyIntakeEndpoints.class);
+            deployable.addInjectables(MiruSeaAnomalyIntakeService.class, inTakeService);
+
+            deployable.addEndpoints(MiruQuerySeaAnomalyEndpoints.class);
+            deployable.addInjectables(MiruSeaAnomalyService.class, queryService);
+
+            for (MiruManagePlugin plugin : plugins) {
+                queryService.registerPlugin(plugin);
+                deployable.addEndpoints(plugin.endpointsClass);
+                deployable.addInjectables(plugin.region.getClass(), plugin.region);
             }
-        }, new HealthCheckRegistry() {
 
-            @Override
-            public void register(HealthChecker healthChecker) {
-                deployable.addHealthCheck(healthChecker);
-            }
-
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-        });
-
-        deployable.buildStatusReporter(null).start();
-        deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
-        deployable.buildManageServer().start();
-
-        MiruSeaAnomalyServiceConfig seaAnomalyServiceConfig = deployable.config(MiruSeaAnomalyServiceConfig.class);
-
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new GuavaModule());
-
-        MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
-
-        OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
-
-        RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruReaderHosts(), mapper);
-        RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruWriterHosts(), mapper);
-
-        SampleTrawl logMill = new SampleTrawl(orderIdProvider);
-
-        MiruSeaAnomalyIntakeConfig intakeConfig = deployable.config(MiruSeaAnomalyIntakeConfig.class);
-        MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,
-            logMill,
-            miruWrites,
-            miruReaders);
-
-        MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-        MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
-            instanceConfig.getClusterName(),
-            instanceConfig.getHost(),
-            instanceConfig.getServiceName(),
-            String.valueOf(instanceConfig.getInstanceName()),
-            instanceConfig.getVersion(),
-            miruLogAppenderConfig);
-        miruLogAppender.install();
-
-        MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
-        MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-        MiruSeaAnomalyService queryService = new MiruQuerySeaAnomalyInitializer().initialize(renderer);
-
-        List<MiruManagePlugin> plugins = Lists.newArrayList(
-            new MiruManagePlugin("eye-open", "Status", "/seaAnomaly/status",
-                SeaAnomalyStatusPluginEndpoints.class,
-                new SeaAnomalyStatusPluginRegion("soy.sea.anomaly.page.seaAnomalyStatusPluginRegion", renderer, logMill)),
-            new MiruManagePlugin("stats", "Trends", "/seaAnomaly/trends",
-                SeaAnomalyTrendsPluginEndpoints.class,
-                new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, miruReaders)),
-            new MiruManagePlugin("search", "Query", "/seaAnomaly/query",
-                SeaAnomalyQueryPluginEndpoints.class,
-                new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, miruReaders)));
-
-        File staticResourceDir = new File(System.getProperty("user.dir"));
-        System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
-        Resource sourceTree = new Resource(staticResourceDir)
-            .addResourcePath(rendererConfig.getPathToStaticResources())
-            .setContext("/static");
-
-        deployable.addEndpoints(MiruSeaAnomalyIntakeEndpoints.class);
-        deployable.addInjectables(MiruSeaAnomalyIntakeService.class, inTakeService);
-
-        deployable.addEndpoints(MiruQuerySeaAnomalyEndpoints.class);
-        deployable.addInjectables(MiruSeaAnomalyService.class, queryService);
-
-        for (MiruManagePlugin plugin : plugins) {
-            queryService.registerPlugin(plugin);
-            deployable.addEndpoints(plugin.endpointsClass);
-            deployable.addInjectables(plugin.region.getClass(), plugin.region);
+            deployable.addResource(sourceTree);
+            serviceStartupHealthCheck.info("start serving...", null);
+            deployable.buildServer().start();
+            serviceStartupHealthCheck.success();
+        } catch (Throwable t) {
+            serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
         }
-
-        deployable.addResource(sourceTree);
-        deployable.buildServer().start();
-
     }
 }

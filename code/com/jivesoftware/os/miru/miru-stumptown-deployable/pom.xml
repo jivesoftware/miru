@@ -121,6 +121,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>health</artifactId>
+            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
