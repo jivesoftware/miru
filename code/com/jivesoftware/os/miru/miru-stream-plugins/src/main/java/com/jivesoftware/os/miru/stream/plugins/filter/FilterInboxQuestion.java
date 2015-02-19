@@ -77,15 +77,6 @@ public class FilterInboxQuestion implements Question<AggregateCountsAnswer, Aggr
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
-            MiruTimeRange timeRange = request.query.countTimeRange;
-
-            // Short-circuit if the time range doesn't live here
-            if (!timeIndexIntersectsTimeRange(context.getTimeIndex(), timeRange)) {
-                LOG.debug("No count time index intersection");
-                return new MiruPartitionResponse<>(
-                    aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
-                    solutionLog.asList());
-            }
             counterAnds.add(bitmaps.buildTimeRangeMask(
                 context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp));
         }

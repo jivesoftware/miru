@@ -18,10 +18,10 @@ public class MiruHomeRegion implements PageRegion<HomeInput> {
         this.renderer = renderer;
     }
 
-     public static class HomeInput {
+    public static class HomeInput {
 
         final String intakeURL;
-        
+
         public HomeInput(String intakeURL) {
             this.intakeURL = intakeURL;
         }

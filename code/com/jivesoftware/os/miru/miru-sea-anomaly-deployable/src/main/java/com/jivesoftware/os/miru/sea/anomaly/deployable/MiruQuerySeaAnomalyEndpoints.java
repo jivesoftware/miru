@@ -26,7 +26,7 @@ public class MiruQuerySeaAnomalyEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response get(@Context UriInfo uriInfo) {
-        String rendered = miruQuerySeaAnomalyService.render(uriInfo.getAbsolutePath()+"/miru/sea/anomaly/intake");
+        String rendered = miruQuerySeaAnomalyService.render(uriInfo.getAbsolutePath() + "/miru/sea/anomaly/intake");
         return Response.ok(rendered).build();
     }
 

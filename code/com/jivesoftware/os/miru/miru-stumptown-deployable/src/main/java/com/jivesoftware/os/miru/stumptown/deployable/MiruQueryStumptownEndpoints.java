@@ -26,7 +26,7 @@ public class MiruQueryStumptownEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response get(@Context UriInfo uriInfo) {
-        String rendered = miruQueryStumptownService.render(uriInfo.getAbsolutePath()+"miru/stumptown/intake");
+        String rendered = miruQueryStumptownService.render(uriInfo.getAbsolutePath() + "miru/stumptown/intake");
         return Response.ok(rendered).build();
     }
 
