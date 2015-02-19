@@ -39,6 +39,7 @@ import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.miru.manage.deployable.region.AggregateCountsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.DistinctsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
@@ -192,7 +193,11 @@ public class MiruManageMain {
                 new MiruManagePlugin("Reco",
                     "/miru/manage/reco",
                     RecoPluginEndpoints.class,
-                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)));
+                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)),
+                new MiruManagePlugin("Aggregate Counts",
+                    "/miru/manage/aggregate",
+                    AggregateCountsPluginEndpoints.class,
+                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, readerRequestHelpers)));
 
             MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);

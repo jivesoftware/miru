@@ -131,6 +131,11 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-stream-plugins</artifactId>
+            <version>0.318-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-reco-plugins</artifactId>
             <version>0.319-SNAPSHOT</version>
         </dependency>
