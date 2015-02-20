@@ -1,39 +1,90 @@
 window.$ = window.jQuery;
 
-window.stump = {};
+window.anomaly = {};
 
-stump.query = {
+anomaly.query = {
 
-    advanced: function(ele) {
+    waves: {},
+    data: {},
+
+    initChart: function (which) {
+        var $canvas = $(which);
+        var ctx = which.getContext("2d");
+        var id = $canvas.data('anomWaveId');
+        if (!anomaly.query.waves[id]) {
+            var type = $canvas.data('anomWaveType');
+            var data = anomaly.query.data[id];
+            anomaly.query.waves[id] = (new Chart(ctx))[type](data, {
+                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                scaleLineColor: "rgba(128,128,128,0.5)",
+                tooltipFillColor: "rgba(0,0,0,1)",
+                pointDot: false,
+                bezierCurve: false,
+                datasetFill: false,
+                responsive: true,
+                animation: false
+            });
+        }
+        anomaly.query.waves[id].update();
+    },
+
+    init: function () {
+        anomaly.query.initToggle();
+
+        $('.anom-single-wave').each(function (i) {
+            anomaly.query.initChart(this);
+        });
+
+        var isLarge = [];
+        $('.anom-wave-toggle').each(function (i) {
+            $(this).click(function () {
+                $(this).animate({height: (isLarge[i] ? '20px' : '100%')});
+                isLarge[i] = !isLarge[i];
+            });
+        });
+
+        $('#tabs a[data-toggle=tab]').on('shown.bs.tab', function (e) {
+            var $a = $(this);
+            var selector = $a.attr('href');
+            $(selector).find('canvas').each(function (i) {
+                anomaly.query.initChart(this);
+            });
+        });
+        $('#tabs a[data-toggle=tab]:first').tab('show');
+    },
+
+    advanced: function (ele) {
         var $e = $(ele);
         if ($e.prop('checked')) {
-            $('#stump-query-filters').addClass('stump-query-show-advanced');
+            $('#anom-query-filters').addClass('anom-query-show-advanced');
         } else {
-            $('#stump-query-filters').removeClass('stump-query-show-advanced');
+            $('#anom-query-filters').removeClass('anom-query-show-advanced');
         }
     },
 
-    toggle: function(ele) {
+    toggle: function (ele) {
         var $e = $(ele);
         if ($e.prop('checked')) {
-            $('#stump-events').addClass('stump-show-' + $e.data('name'));
+            $('#anom-events').addClass('anom-show-' + $e.data('name'));
         } else {
-            $('#stump-events').removeClass('stump-show-' + $e.data('name'));
+            $('#anom-events').removeClass('anom-show-' + $e.data('name'));
         }
     },
 
-    initEvents: function() {
-        var $toggle = $('.stump-toggle');
-        var $toggleOn = $('.stump-toggle-on');
+    initToggle: function () {
+        var $toggle = $('.anom-toggle');
+        var $toggleOn = $('.anom-toggle-on');
 
         $toggle.prop('checked', false);
         $toggleOn.prop('checked', true);
-        $toggle.each(function(index, ele) {
-            stump.query.toggle(ele);
+        $toggle.each(function (index, ele) {
+            anom.query.toggle(ele);
         });
     }
 };
 
-$(document).ready(function() {
-    stump.query.initEvents();
+$(document).ready(function () {
+    if ($('#anomaly-query').length) {
+        anomaly.query.init();
+    }
 });

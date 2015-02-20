@@ -32,31 +32,31 @@ div.container {
     width: 100% !important;
 }
 
-form#stump-query-filters .stump-query-advanced { display: none; }
-form#stump-query-filters.stump-query-show-advanced tr.stump-query-advanced { display: table-row; }
-form#stump-query-filters.stump-query-show-advanced td.stump-query-advanced { display: table-cell; }
+form#anom-query-filters .anom-query-advanced { display: none; }
+form#anom-query-filters.anom-query-show-advanced tr.anom-query-advanced { display: table-row; }
+form#anom-query-filters.anom-query-show-advanced td.anom-query-advanced { display: table-cell; }
 
-table#stump-events td, table#stump-events th { display: none; }
-table#stump-events.stump-show-datacenter .stump-event-datacenter { display: table-cell; }
-table#stump-events.stump-show-cluster .stump-event-cluster { display: table-cell; }
-table#stump-events.stump-show-host .stump-event-host { display: table-cell; }
-table#stump-events.stump-show-service .stump-event-service { display: table-cell; }
-table#stump-events.stump-show-instance .stump-event-instance { display: table-cell; }
-table#stump-events.stump-show-version .stump-event-version { display: table-cell; }
-table#stump-events.stump-show-time .stump-event-time { display: table-cell; }
-table#stump-events.stump-show-thread .stump-event-thread { display: table-cell; }
-table#stump-events.stump-show-level .stump-event-level { display: table-cell; }
-table#stump-events.stump-show-message .stump-event-message { display: table-cell; }
+table#anom-events td, table#anom-events th { display: none; }
+table#anom-events.anom-show-datacenter .anom-event-datacenter { display: table-cell; }
+table#anom-events.anom-show-cluster .anom-event-cluster { display: table-cell; }
+table#anom-events.anom-show-host .anom-event-host { display: table-cell; }
+table#anom-events.anom-show-service .anom-event-service { display: table-cell; }
+table#anom-events.anom-show-instance .anom-event-instance { display: table-cell; }
+table#anom-events.anom-show-version .anom-event-version { display: table-cell; }
+table#anom-events.anom-show-time .anom-event-time { display: table-cell; }
+table#anom-events.anom-show-thread .anom-event-thread { display: table-cell; }
+table#anom-events.anom-show-level .anom-event-level { display: table-cell; }
+table#anom-events.anom-show-message .anom-event-message { display: table-cell; }
 
 /*
-<th class="stump-event-datacenter">Datacenter</th>
-<th class="stump-event-cluster">Cluster</th>
-<th class="stump-event-host">Host</th>
-<th class="stump-event-service">Service</th>
-<th class="stump-event-instance">Instance</th>
-<th class="stump-event-version">Version</th>
-<th class="stump-event-time">Time</th>
-<th class="stump-event-thread">Thread</th>
-<th class="stump-event-level">Level</th>
-<th class="stump-event-message">Message</th>
+<th class="anom-event-datacenter">Datacenter</th>
+<th class="anom-event-cluster">Cluster</th>
+<th class="anom-event-host">Host</th>
+<th class="anom-event-service">Service</th>
+<th class="anom-event-instance">Instance</th>
+<th class="anom-event-version">Version</th>
+<th class="anom-event-time">Time</th>
+<th class="anom-event-thread">Thread</th>
+<th class="anom-event-level">Level</th>
+<th class="anom-event-message">Message</th>
 */
