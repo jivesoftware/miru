@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 /**
  *
  */
-// soy.sea.anomaly.page.trends§PluginRegion
+// soy.sea.anomaly.page.trendsPluginRegion
 public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnomalyTrendsPluginRegion.TrendingPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

@@ -43,12 +43,13 @@ public class SeaAnomalyQueryPluginEndpoints {
         @QueryParam("fromTimeUnit") @DefaultValue("MINUTES") String fromTimeUnit,
         @QueryParam("toTimeUnit") @DefaultValue("MINUTES") String toTimeUnit,
         @QueryParam("tenant") @DefaultValue("") String tenant,
-        @QueryParam("samplers") @DefaultValue("") String samplers,
-        @QueryParam("metrics") @DefaultValue("") String metrics,
+        @QueryParam("sampler") @DefaultValue("") String sampler,
+        @QueryParam("metric") @DefaultValue("") String metric,
         @QueryParam("tags") @DefaultValue("") String tags,
-        @QueryParam("type") @DefaultValue("") String type,
+        @QueryParam("type") @DefaultValue("VALUE") String type,
         @QueryParam("buckets") @DefaultValue("60") int buckets,
-        @QueryParam("expansionField") @DefaultValue("") String expansionField,
+        @QueryParam("graphType") @DefaultValue("Line") String graphType,
+        @QueryParam("expansionField") @DefaultValue("metric") String expansionField,
         @QueryParam("expansionValue") @DefaultValue("*") String expansionValue
     ) {
         String rendered = seaAnomalyService.renderPlugin(pluginRegion,
@@ -62,11 +63,12 @@ public class SeaAnomalyQueryPluginEndpoints {
                     fromTimeUnit,
                     toTimeUnit,
                     tenant,
-                    samplers,
-                    metrics,
+                    sampler,
+                    metric,
                     tags,
                     type,
                     buckets,
+                    graphType,
                     expansionField,
                     expansionValue)));
         return Response.ok(rendered).build();

@@ -240,7 +240,7 @@ public class JVMMetrics {
                 version,
                 "null",
                 "jvm",
-                m.key.split(">"),
+                m.key.split("\\>"),
                 ValueType.VALUE.toString(),
                 v,
                 String.valueOf(timestamp)));

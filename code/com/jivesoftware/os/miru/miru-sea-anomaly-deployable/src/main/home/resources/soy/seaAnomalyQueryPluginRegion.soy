@@ -13,8 +13,8 @@
  * @param? fromTimeUnit
  * @param? toTimeUnit
  * @param? tenant
- * @param? samplers
- * @param? metrics
+ * @param? sampler
+ * @param? metric
  * @param? tags
  * @param? type
  * @param? expansionField
@@ -23,14 +23,15 @@
  * @param? buckets
  * @param? summary
  * @param? elapse
- * @param? waves
+ * @param? rates
+ * @param? values
+ * @param? graphType
  */
 {template .seaAnomalyQueryPluginRegion}
     <div class="panel panel-default">
         <div class="panel-heading">Query See Anomaly</div>
         <div class="panel-body">
-            <form id="stump-query-filters" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
-                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+            <form id="stump-query-filters" method="get" name="requestPickerForm">
                 <table cellspacing="5">
                     <tr class="stump-query-advanced">
                         <td>Cluster</td>
@@ -72,25 +73,6 @@
                         <td>From</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
-                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$fromAgo?:''}"
-                                name="fromAgo" id="fromTimePicker" data-original-title="" title="">
-                            &nbsp;
-                            <select style="width:120px; padding-left:10px;"
-                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="FromTimeUnit"
-                                name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
-                                <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
-                                <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
-                                <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
-                                <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
-                            </select>
-                            &nbsp;
-                            ago
-                            </td>
-                    </tr>
-                    <tr>
-                        <td>To</td>
-                        <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
                                 class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Time Ago" value="{$toAgo?:''}"
                                 name="toAgo" id="toTimePicker" data-original-title="" title="">
                             &nbsp;
@@ -103,16 +85,31 @@
                                 <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
                             </select>
                             &nbsp;
-                            ago
+                            ago to
+                            &nbsp;
                         </td>
-                    </tr>
-                    <tr>
-                        <td>Buckets</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$fromAgo?:''}"
+                                name="fromAgo" id="fromTimePicker" data-original-title="" title="">
+                            &nbsp;
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="FromTimeUnit"
+                                name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td>
+                        <td>&nbsp;ago using&nbsp;</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                                 class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
                                 name="buckets" id="bucketsPicker" data-original-title="" title="">
                         </td>
+                        <td>&nbsp;buckets.&nbsp;</td>
+                        
                     </tr>
                     <tr>
                         <td>Tenant</td>
@@ -126,16 +123,16 @@
                         <td>Samplers</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-samplers-autocomplete j-autocomplete-input j-ui-elem" placeholder="Sampler Name/s" value="{$samplers?:''}"
-                                name="samplers" id="samplerPicker" data-original-title="" title="">
+                                placeholder="Sampler Name/s" value="{$sampler?:''}"
+                                name="sampler" id="samplerPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
                         <td>Metrics</td>
                         <td colspan="3">
                             <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
-                                class="j-metrics-autocomplete j-autocomplete-input j-ui-elem" placeholder="Metric Name/s" value="{$metrics?:''}"
-                                name="metrics" id="messagePicker" data-original-title="" title="">
+                                placeholder="Metric Name/s" value="{$metric?:''}"
+                                name="metric" id="messagePicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
@@ -146,23 +143,21 @@
                                 name="tags" id="messagePicker" data-original-title="" title="">
                         </td>
                     </tr>
+                </table>
+                <table cellspacing="5">
                     <tr>
                         <td>Type</td>
                         <td>
                             <select style="width:120px; padding-left:10px;"
                                 class="j-type-autocomplete j-autocomplete-input j-ui-elem" placeholder="type"
                                 name="type" id="type" data-original-title="" title="">
+                                <option value="VALUE" {if $type == 'VALUE'}selected="selected"{/if}>VALUE</option>
                                 <option value="counter" {if $type == 'counter'}selected="selected"{/if}>counter</option>
                                 <option value="atomicCounter" {if $type == 'atomicCounter'}selected="selected"{/if}>atomicCounter</option>
                                 <option value="timer" {if $type == 'timer'}selected="selected"{/if}>timer</option>
-                                <option value="all" {if $type == 'all'}selected="selected"{/if}></option>
+                                <option value="all" {if $type == 'all'}selected="selected"{/if}>all</option>
                             </select>
                         </td>
-                    </tr>
-                    <tr><td colspan="5">
-                        <hr/>
-                    </td></tr>
-                    <tr>
                         <td>Expansion</td>
                         <td>
                             <select style="width:120px; padding-left:10px;"
@@ -179,116 +174,152 @@
                                 <option value="tenant" {if $expansionField == 'tenant'}selected="tenant"{/if}>tenant</option>
                             </select>
                         </td>
-                        <td colspan="4">
+                        <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                                 class="j-expansionValue-autocomplete j-autocomplete-input j-ui-elem" placeholder="expansionValue" value="{$expansionValue?:''}"
                                 name="expansionValue" id="expansionValuePicker" data-original-title="" title="">
                         </td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;" placeholder="GraphType" name="graphType" >
+                                <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
+                                <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
+                                <option value="Bar" {if $graphType == 'Bar'}selected="selected"{/if}>Bar</option>
+                                <option value="StackedBar" {if $graphType == 'StackedBar'}selected="selected"{/if}>StackedBar</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input class="btn btn-primary" type="submit" value="Refresh"/>
+                        </td>
+                        <td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" onchange="stump.query.advanced(this);"> Show advanced filters</label>
+                            </div>
+                        </td>
                     </tr>
                 </table>
-                <br/>
-                <input type="submit" value="Refresh"/>
-                &nbsp;
-                <input type="checkbox" onchange="stump.query.advanced(this);" /> Show advanced filters
             </form>
         </div>
     </div>
-    {if $waves}
-        <div class="panel panel-default">
-            <div class="panel-heading">Aggregate</div>
-            <div class="panel-body">
-                <div style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
-                    <table>
-                        <tr>
-                            <td>
-                                <canvas id="radar" height="150" width="150"></canvas>
-                            </td>
-                            <td>
-                                <canvas id="wave" height="150" width="878"></canvas>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2">
-                                <canvas id="stacked" height="150" width="900"></canvas>
-                            </td>
-                        </tr>
-                    </table>
+    
+    <div class="panel panel-default">
+        <div class="panel-heading">Aggregate</div>
+        <div class="panel-body">
+            <div class="container">
+
+                <!-------->
+                <div id="content">
+                    <ul id="tabs" class="nav nav-dark nav-pills nav-pills-dark" data-tabs="tabs">
+                        <li class="active"><a href="#rate-tab" data-toggle="tab">Rates</a></li>
+                        <li><a href="#value-tab" data-toggle="tab">Values</a></li>
+                    </ul>
+                    <div id="my-tab-content" class="tab-content well" style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
+                        <div class="tab-pane active" id="rate-tab">
+                            <canvas id="rates" height="400" width="1070"></canvas>
+                        </div>
+                        <div class="tab-pane active" id="value-tab">
+                            <canvas id="values" height="400" width="1070"></canvas>
+                        </div>
+                    </div>
                     <script>
                         function addLoadEvent(func) {lb}
-                        var oldonload = window.onload;
-                        if (typeof window.onload != 'function') {lb}
-                          window.onload = func;
-                        {rb} else {lb}
-                          window.onload = function() {lb}
-                            if (oldonload) {lb}
-                              oldonload();
+                            var oldonload = window.onload;
+                            if (typeof window.onload != 'function') {lb}
+                                window.onload = func;
+                            {rb} else {lb}
+                                window.onload = function() {lb}
+                                    if (oldonload) {lb}
+                                            oldonload();
+                                        {rb}
+                                        func();
+                                    {rb}
+                                {rb}
                             {rb}
-                            func();
-                          {rb}
-                        {rb}
-                      {rb}
 
-                        addLoadEvent(function(){lb}
-                            var ctx = document.getElementById("wave").getContext("2d");
-                            window.myBar = new Chart(ctx).Line({$waves|noAutoescape}, {lb}
-                                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
-                                scaleLineColor: "rgba(128,128,128,0.5)",
-                                tooltipFillColor: "rgba(0,0,0,1)",
-                                datasetFill : false,
-                                responsive : true,
-                                animation: false
+                            addLoadEvent(function(){lb}
+
+                                var ctx = document.getElementById("rates").getContext("2d");
+                                window.myRates = new Chart(ctx).{$graphType}({$rates|noAutoescape}, {lb}
+                                    multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                                    scaleLineColor: "rgba(128,128,128,0.5)",
+                                    tooltipFillColor: "rgba(0,0,0,1)",
+                                    pointDot : false,
+                                    bezierCurve : false,
+                                    datasetFill : false,
+                                    responsive : true,
+                                    animation: false
+                                {rb});
+                                 var ctx = document.getElementById("values").getContext("2d");
+                                    window.myValues = new Chart(ctx).{$graphType}({$values|noAutoescape}, {lb}
+                                        multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                                        scaleLineColor: "rgba(128,128,128,0.5)",
+                                        tooltipFillColor: "rgba(0,0,0,1)",
+                                        pointDot : false,
+                                        bezierCurve : false,
+                                        datasetFill : false,
+                                        responsive : true,
+                                        animation: false
+                                    {rb});
+
                             {rb});
-                            var ctx = document.getElementById("radar").getContext("2d");
-                            window.myRadar = new Chart(ctx).Radar({$waves|noAutoescape}, {lb}
-                                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
-                                scaleLineColor: "rgba(128,128,128,0.5)",
-                                tooltipFillColor: "rgba(0,0,0,1)",
-                                datasetFill : false,
-                                responsive : true,
-                                animation: false
-                            {rb});
-                            var ctx = document.getElementById("stacked").getContext("2d");
-                            window.myStack = new Chart(ctx).StackedBar({$waves|noAutoescape}, {lb}
-                                responsive : true,
-                                scaleLineColor: "rgba(128,128,128,0.5)",
-                                tooltipFillColor: "rgba(0,0,0,1)",
-                                datasetFill : false,
-                                animation: false,
-                                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>"
-                            {rb});
-                        {rb});
-                    </script>
+                        </script>
                 </div>
-            </div>
+
+                <script type="text/javascript">
+                    jQuery(document).ready(function ($) {lb}
+                        $('#tabs').tab();
+                    {rb});
+                </script>    
+            </div> <!-- container -->
         </div>
-    {/if}
+    </div>
+
     {if $results}
         <div class="panel panel-default">
             <div class="panel-heading">Discrete</div>
             <div class="panel-body">
-                <table>
-                    <tr>
-                        <td>Rank</td>
-                        <td>Field</td>
-                        <td>Value</td>
-                    </tr>
+                <table cellspacing="4">
                     {foreach $result in $results}
                         <tr>
-                            <td>{$result.rank}</td>
-                            <td>{$result.field}</td>
+                            <td style="width:32; height:32; background-color:{$result.color}">
+                                <span class="glyphicon glyphicon-fullscreen"></span>
                             <td>
-                                <a href="/seaAnomaly/query?{$result.field}={$result.value}&amp;
-                                    fromAgo={$fromAgo}&amp;
-                                    fromTimeUnit=HOURS&amp;
-                                    toAgo=0&amp;
-                                    toTimeUnit=HOURS&amp;
-                                    ">{$result.value}</a>
+                                
+                                
+                                <script src="/static/scripts/jquery-2.1.0.min.js">
+                                </script>
+                                <script>
+                                    isLarge = false; 
+                                        $(document).ready(function(){lb}
+                                          $("#{$result.id}w").click(function(){lb}
+                                                $("#{$result.id}w").animate({lb}height:(isLarge ? '20px' : '100%'){rb});
+                                                isLarge = !isLarge;    
+                                          {rb});
+                                    {rb});
+                                </script> 
 
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="4" style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
-                                <canvas id="singleWave{$result.id|noAutoescape}" height="100" width="900"></canvas>
+                                <div id="{$result.id}w" style="background:#ccc;height:20px;width:100%;position:relative;overflow:hidden;">
+                                    <div>
+                                        <form method="get">
+                                            <input type="hidden" name="{$result.field}" value="{$result.value}">
+                                            <input type="hidden" name="fromAgo" value="{$fromAgo}">
+                                            <input type="hidden" name="fromTimeUnit" value="{$fromTimeUnit}">
+                                            <input type="hidden" name="toAgo" value="{$toAgo}">
+                                            <input type="hidden" name="toTimeUnit" value="{$toTimeUnit}">
+                                            
+                                            avg:{$result.avg}&nbsp;&nbsp;&nbsp;{$result.value}
+                                            <input type="submit" value="Focus"/>
+                                        </form>
+                                    </div>
+                                    <br>
+                                    (min:{$result.min}  max:{$result.max})
+                                    <div style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
+                                        <canvas id="singleRate{$result.id|noAutoescape}" height="200" width="1070"></canvas>
+                                    </div>
+                                    <div style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
+                                        <canvas id="singleValue{$result.id|noAutoescape}" height="200" width="1070"></canvas>
+                                    </div>
+                                    
+                                </div>
                             </td>
                         </tr>
                     {/foreach}
@@ -310,12 +341,26 @@
                           {rb}
 
                        addLoadEvent(function(){lb}
-                            var ctx = document.getElementById("singleWave{$result.id|noAutoescape}").getContext("2d");
-                            window.myWave{$result.id|noAutoescape} = new Chart(ctx).Line({$result.wave|noAutoescape}, {lb}
+                            var ctx = document.getElementById("singleValue{$result.id|noAutoescape}").getContext("2d");
+                            window.mySingleValue{$result.id|noAutoescape} = new Chart(ctx).{$graphType}({$result.values|noAutoescape}, {lb}
                                 multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
                                 scaleLineColor: "rgba(128,128,128,0.5)",
                                 tooltipFillColor: "rgba(0,0,0,1)",
-                                datasetFill : false,
+                                datasetFill : true,
+                                pointDot : false,
+                                bezierCurve : false,
+                                responsive : true,
+                                animation: false
+                            {rb});
+                            
+                            var ctx = document.getElementById("singleRate{$result.id|noAutoescape}").getContext("2d");
+                            window.mySingleRate{$result.id|noAutoescape} = new Chart(ctx).{$graphType}({$result.rates|noAutoescape}, {lb}
+                                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                                scaleLineColor: "rgba(128,128,128,0.5)",
+                                tooltipFillColor: "rgba(0,0,0,1)",
+                                datasetFill : true,
+                                pointDot : false,
+                                bezierCurve : false,
                                 responsive : true,
                                 animation: false
                             {rb});

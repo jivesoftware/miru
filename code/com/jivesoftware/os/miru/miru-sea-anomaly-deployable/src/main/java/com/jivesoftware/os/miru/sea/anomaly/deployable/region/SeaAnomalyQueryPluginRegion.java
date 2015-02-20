@@ -23,12 +23,14 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SeaAnomalySchemaConstants;
+import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.MinMaxDouble;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyConstants;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyQuery;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.awt.Color;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -73,12 +76,13 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
         final String toTimeUnit;
         final String tenant;
 
-        final String samplers;
-        final String metrics;
+        final String sampler;
+        final String metric;
         final String tags;
         final String type;
 
         final int buckets;
+        final String graphType;
 
         final String expansionField;
         final String expansionValue;
@@ -94,10 +98,11 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
             String toTimeUnit,
             String tenant,
             String samplers,
-            String metrics,
+            String metric,
             String tags,
             String type,
             int buckets,
+            String graphType,
             String expansionField,
             String expansionValue) {
 
@@ -111,11 +116,12 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
             this.fromTimeUnit = fromTimeUnit;
             this.toTimeUnit = toTimeUnit;
             this.tenant = tenant;
-            this.samplers = samplers;
-            this.metrics = metrics;
+            this.sampler = samplers;
+            this.metric = metric;
             this.tags = tags;
             this.type = type;
             this.buckets = buckets;
+            this.graphType = graphType;
             this.expansionField = expansionField;
             this.expansionValue = expansionValue;
         }
@@ -140,14 +146,15 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                 data.put("toTimeUnit", input.toTimeUnit);
 
                 data.put("tenant", input.tenant);
-                data.put("samplers", input.samplers);
-                data.put("metrics", input.metrics);
+                data.put("sampler", input.sampler);
+                data.put("metric", input.metric);
                 data.put("tags", input.tags);
                 data.put("type", input.type);
 
                 data.put("fromAgo", String.valueOf(fromAgo));
                 data.put("toAgo", String.valueOf(toAgo));
                 data.put("buckets", String.valueOf(input.buckets));
+                data.put("graphType", input.graphType);
 
                 data.put("expansionField", input.expansionField);
                 data.put("expansionValue", input.expansionValue);
@@ -170,8 +177,8 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                         addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
                         addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
                         addFieldFilter(fieldFilters, notFieldFilters, "tenant", input.tenant);
-                        addFieldFilter(fieldFilters, notFieldFilters, "sampler", input.samplers);
-                        addFieldFilter(fieldFilters, notFieldFilters, "metric", input.metrics);
+                        addFieldFilter(fieldFilters, notFieldFilters, "sampler", input.sampler);
+                        addFieldFilter(fieldFilters, notFieldFilters, "metric", input.metric);
                         addFieldFilter(fieldFilters, notFieldFilters, "tags", input.tags);
                         addFieldFilter(fieldFilters, notFieldFilters, "type", input.type);
 
@@ -227,36 +234,68 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
                     }
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    Map<String, long[]> rawWaveforms = new HashMap<>();
+                    Map<WaveformKey, long[]> rawWaveforms = new ConcurrentSkipListMap<>();
                     for (Entry<String, SeaAnomalyAnswer.Waveform> e : waveforms.entrySet()) {
-                        rawWaveforms.put(e.getKey(), e.getValue().waveform);
+                        MinMaxDouble mmd = new MinMaxDouble();
+                        Long last = null;
+                        for (long v : e.getValue().waveform) {
+                            if (last == null) {
+                                last = v;
+                            } else {
+                                mmd.value((double) (last - v));
+                                last = v;
+                            }
+                        }
+                        String key = e.getKey().substring(e.getKey().indexOf('-') + 1);
+                        rawWaveforms.put(new WaveformKey(key, mmd), e.getValue().waveform);
                     }
 
                     List<String> labels = new ArrayList<>();
-                    List<Map<String, Object>> datasets = new ArrayList<>();
+                    List<Map<String, Object>> valueDatasets = new ArrayList<>();
+                    List<Map<String, Object>> rateDatasets = new ArrayList<>();
+
+                    long minTime = TimeUnit.valueOf(input.fromTimeUnit).toMillis(input.fromAgo);
+                    long maxTime = TimeUnit.valueOf(input.toTimeUnit).toMillis(input.toAgo);
+                    long ft = Math.min(minTime, maxTime);
+                    long tt = Math.max(minTime, maxTime);
+                    int numLabels = 10;
+                    long ts = (tt - ft) / (numLabels - 1);
 
                     ArrayList<Map<String, Object>> results = new ArrayList<>();
                     int id = 0;
-                    for (Entry<String, long[]> t : rawWaveforms.entrySet()) {
+                    for (Entry<WaveformKey, long[]> t : rawWaveforms.entrySet()) {
                         if (labels.isEmpty()) {
-                            for (int i = 0; i < t.getValue().length; i++) {
-                                labels.add("\"" + String.valueOf(i) + "\"");
+                            for (int i = 0; i < numLabels; i++) {
+                                labels.add("\"" + hms(tt - (ts * i)) + "\"");
                             }
                         }
-                        Color c = new Color(Color.HSBtoRGB((float) id / (float) (rawWaveforms.size()), 1f, 1f));
-                        Map<String, Object> w = waveform(t.getKey(), c, 0.2f, t.getValue());
-                        results.add(ImmutableMap.of(
-                            "id", String.valueOf(id),
-                            "rank", "nil",
-                            "field", input.expansionField,
-                            "value", t.getKey(),
-                            "wave", (Object) ImmutableMap.of("labels", labels, "datasets", Arrays.asList(w))));
 
-                        datasets.add(w);
+                        Color c = new Color(Color.HSBtoRGB((float) id / (float) (rawWaveforms.size()), 1f, 1f));
+                        Map<String, Object> w = waveform(t.getKey().key, c, 0.2f, t.getValue());
+                        Map<String, Object> r = rates(t.getKey().key, c, 0.2f, t.getValue());
+
+                        DecimalFormat df2 = new DecimalFormat("#,###,###,##0.00");
+
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("id", String.valueOf(id));
+                        m.put("color", "#" + hexColor(c));
+                        m.put("field", input.expansionField);
+                        m.put("value", t.getKey().key);
+                        m.put("min", df2.format(t.getKey().mmd.min));
+                        m.put("max", df2.format(t.getKey().mmd.max));
+                        m.put("avg", df2.format(t.getKey().mmd.mean()));
+                        m.put("values", (Object) ImmutableMap.of("labels", labels, "datasets", Arrays.asList(w)));
+                        m.put("rates", (Object) ImmutableMap.of("labels", labels, "datasets", Arrays.asList(r)));
+
+                        results.add(m);
+
+                        valueDatasets.add(w);
+                        rateDatasets.add(r);
                         id++;
                     }
 
-                    data.put("waves", ImmutableMap.of("labels", labels, "datasets", datasets));
+                    data.put("values", ImmutableMap.of("labels", labels, "datasets", valueDatasets));
+                    data.put("rates", ImmutableMap.of("labels", labels, "datasets", rateDatasets));
                     data.put("results", results);
 
                     ObjectMapper mapper = new ObjectMapper();
@@ -272,6 +311,38 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
         return renderer.render(template, data);
     }
 
+    public String hms(long millis) {
+        return String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+            TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)),
+            TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
+    }
+
+    static class WaveformKey implements Comparable<WaveformKey> {
+
+        public final String key;
+        public final MinMaxDouble mmd;
+
+        public WaveformKey(String key, MinMaxDouble mmd) {
+            this.key = key;
+            this.mmd = mmd;
+        }
+
+        @Override
+        public int compareTo(WaveformKey o) {
+            int c = -Double.compare(mmd.mean(), o.mmd.mean());
+            if (c == 0) {
+                c = key.compareTo(o.key);
+            }
+            return c;
+        }
+
+    }
+
+    public String hexColor(Color color) {
+        String s = Integer.toHexString(color.getRGB() & 0xffffff);
+        return "000000".substring(s.length()) + s;
+    }
+
     public Map<String, Object> waveform(String label, Color color, float alpha, long[] values) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
@@ -284,6 +355,29 @@ public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnoma
         List<Integer> ints = new ArrayList<>();
         for (long v : values) {
             ints.add((int) v);
+        }
+        waveform.put("data", ints);
+        return waveform;
+    }
+
+    public Map<String, Object> rates(String label, Color color, float alpha, long[] values) {
+        Map<String, Object> waveform = new HashMap<>();
+        waveform.put("label", "\"" + label + "\"");
+        waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+        waveform.put("strokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        waveform.put("pointColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        waveform.put("pointStrokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        waveform.put("pointHighlightFill", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        waveform.put("pointHighlightStroke", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
+        List<Integer> ints = new ArrayList<>();
+        Long last = null;
+        for (long v : values) {
+            if (last == null) {
+                last = v;
+            } else {
+                ints.add((int) (last - v));
+                last = v;
+            }
         }
         waveform.put("data", ints);
         return waveform;
