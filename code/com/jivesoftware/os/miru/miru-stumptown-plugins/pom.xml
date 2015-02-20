@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>shared-lib-build-management</artifactId>
-        <version>0.323-SNAPSHOT</version>
+        <version>0.323</version>
         <relativePath>../inheritance-poms/shared-lib-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-stumptown-plugins</artifactId>
-    <version>0.323-SNAPSHOT</version>
+    <version>0.323</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -38,17 +38,17 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.323-SNAPSHOT</version>
+            <version>0.323</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.323-SNAPSHOT</version>
+            <version>0.323</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-reader</artifactId>
-            <version>0.323-SNAPSHOT</version>
+            <version>0.323</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
