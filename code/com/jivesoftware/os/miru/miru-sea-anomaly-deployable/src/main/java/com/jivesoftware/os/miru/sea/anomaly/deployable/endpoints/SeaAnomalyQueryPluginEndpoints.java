@@ -38,7 +38,7 @@ public class SeaAnomalyQueryPluginEndpoints {
         @QueryParam("service") @DefaultValue("") String service,
         @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("version") @DefaultValue("") String version,
-        @QueryParam("fromAgo") @DefaultValue("8") int fromAgo,
+        @QueryParam("fromAgo") @DefaultValue("60") int fromAgo,
         @QueryParam("toAgo") @DefaultValue("0") int toAgo,
         @QueryParam("fromTimeUnit") @DefaultValue("MINUTES") String fromTimeUnit,
         @QueryParam("toTimeUnit") @DefaultValue("MINUTES") String toTimeUnit,
@@ -47,9 +47,9 @@ public class SeaAnomalyQueryPluginEndpoints {
         @QueryParam("metrics") @DefaultValue("") String metrics,
         @QueryParam("tags") @DefaultValue("") String tags,
         @QueryParam("type") @DefaultValue("") String type,
-        @QueryParam("buckets") @DefaultValue("30") int buckets,
+        @QueryParam("buckets") @DefaultValue("60") int buckets,
         @QueryParam("expansionField") @DefaultValue("") String expansionField,
-        @QueryParam("expansionValue") @DefaultValue("") String expansionValue
+        @QueryParam("expansionValue") @DefaultValue("*") String expansionValue
     ) {
         String rendered = seaAnomalyService.renderPlugin(pluginRegion,
             Optional.of(new SeaAnomalyPluginRegionInput(cluster,
