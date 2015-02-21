@@ -63,6 +63,8 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(1_000_000)
     long getMergeChitCount();
 
+    void setMergeChitCount(long mergeChitCount);
+
     @LongDefault(-1)
     long getMergeMaxOverage();
 

@@ -92,6 +92,7 @@ public class MiruPluginTestBootstrap {
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultStorage(desiredStorage.name());
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
+        config.setMergeChitCount(10_000);
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
