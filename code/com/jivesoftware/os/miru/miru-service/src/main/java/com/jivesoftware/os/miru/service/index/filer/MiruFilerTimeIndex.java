@@ -3,10 +3,11 @@ package com.jivesoftware.os.miru.service.index.filer;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.FilerTransaction;
-import com.jivesoftware.os.filer.map.store.api.KeyValueContext;
-import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
-import com.jivesoftware.os.filer.map.store.api.KeyValueTransaction;
+import com.jivesoftware.os.filer.io.api.ChunkTransaction;
+import com.jivesoftware.os.filer.io.api.KeyValueContext;
+import com.jivesoftware.os.filer.io.api.KeyValueStore;
+import com.jivesoftware.os.filer.io.api.KeyValueTransaction;
+import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -42,12 +43,12 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     private int searchIndexSegments;
     private int searchIndexSizeInBytes;
 
-    private final MiruFilerProvider filerProvider;
+    private final MiruFilerProvider<Long, Void> filerProvider;
     private final Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream;
     private final KeyValueStore<Long, Integer> timestampToIndex;
 
     public MiruFilerTimeIndex(Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
-        MiruFilerProvider filerProvider,
+        MiruFilerProvider<Long, Void> filerProvider,
         KeyValueStore<Long, Integer> timestampToIndex)
         throws IOException {
 
@@ -62,9 +63,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
         final AtomicBoolean initialized = new AtomicBoolean(false);
 
         //TODO consider using a custom CreateFiler in the KeyValueStore to handle the uninitialized case
-        filerProvider.read(-1, new FilerTransaction<Filer, Void>() {
+        filerProvider.read(null, new ChunkTransaction<Void, Void>() {
             @Override
-            public Void commit(Object lock, Filer filer) throws IOException {
+            public Void commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                 if (filer != null) {
                     synchronized (lock) {
                         filer.seek(0);
@@ -94,9 +95,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             this.searchIndexSegments = SEGMENTS;
             this.searchIndexSizeInBytes = segmentWidth(LEVELS, SEGMENTS);
 
-            filerProvider.writeNewReplace(HEADER_SIZE_IN_BYTES, new FilerTransaction<Filer, Void>() {
+            filerProvider.writeNewReplace((long) HEADER_SIZE_IN_BYTES, new ChunkTransaction<Void, Void>() {
                 @Override
-                public Void commit(Object o, Filer filer) throws IOException {
+                public Void commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
 
                     filer.seek(0);
                     FilerIO.writeInt(filer, MiruFilerTimeIndex.this.id.get(), "lastId");
@@ -213,9 +214,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             return 0l;
         }
         try {
-            long ts = filerProvider.read(-1, new FilerTransaction<Filer, Long>() {
+            long ts = filerProvider.read(null, new ChunkTransaction<Void, Long>() {
                 @Override
-                public Long commit(Object lock, Filer filer) throws IOException {
+                public Long commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                     long timestamp;
                     synchronized (lock) {
                         filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
@@ -282,9 +283,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                 final int _lastId = lastId;
 
                 //TODO we should be concerned about potential corruption with failures during readWriteAutoGrow
-                filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, new FilerTransaction<Filer, Void>() {
+                filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, new ChunkTransaction<Void, Void>() {
                     @Override
-                    public Void commit(Object lock, Filer filer) throws IOException {
+                    public Void commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                         synchronized (lock) {
                             filer.seek(0);
                             FilerIO.writeInt(filer, _lastId, "int");
@@ -336,9 +337,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     @Override
     public int getClosestId(final long timestamp) {
         try {
-            int i = filerProvider.read(-1, new FilerTransaction<Filer, Integer>() {
+            int i = filerProvider.read(null, new ChunkTransaction<Void, Integer>() {
                 @Override
-                public Integer commit(Object lock, Filer filer) throws IOException {
+                public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                     if (filer != null) {
                         return readClosestId(lock, filer, timestamp);
                     }
@@ -420,9 +421,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             if (id.get() < 0) {
                 return 0;
             }
-            return filerProvider.read(-1, new FilerTransaction<Filer, Integer>() {
+            return filerProvider.read(null, new ChunkTransaction<Void, Integer>() {
                 @Override
-                public Integer commit(Object lock, Filer filer) throws IOException {
+                public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                     if (filer != null) {
                         int index = readClosestId(lock, filer, timestamp);
                         if (index == -1) {
@@ -454,9 +455,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             if (id.get() < 0) {
                 return -1;
             }
-            return filerProvider.read(-1, new FilerTransaction<Filer, Integer>() {
+            return filerProvider.read(null, new ChunkTransaction<Void, Integer>() {
                 @Override
-                public Integer commit(Object lock, Filer filer) throws IOException {
+                public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                     if (filer != null) {
                         int index = readClosestId(lock, filer, timestamp);
                         if (index < 0) {

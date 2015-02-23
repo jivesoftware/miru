@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
-import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.FilerTransaction;
-import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.ChunkTransaction;
+import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -26,14 +26,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final KeyedFilerStore keyedStore;
+    private final KeyedFilerStore<Long, Void> keyedStore;
     private final AtomicInteger indexSize = new AtomicInteger(-1);
     private final MiruInternalActivityMarshaller internalActivityMarshaller;
-    private final MiruFilerProvider indexSizeFiler;
+    private final MiruFilerProvider<Long, Void> indexSizeFiler;
 
-    public MiruFilerActivityIndex(KeyedFilerStore keyedStore,
+    public MiruFilerActivityIndex(KeyedFilerStore<Long, Void> keyedStore,
         MiruInternalActivityMarshaller internalActivityMarshaller,
-        MiruFilerProvider indexSizeFiler)
+        MiruFilerProvider<Long, Void> indexSizeFiler)
         throws Exception {
         this.keyedStore = keyedStore;
         this.internalActivityMarshaller = internalActivityMarshaller;
@@ -45,9 +45,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            return keyedStore.read(FilerIO.intBytes(index), -1, new FilerTransaction<Filer, MiruInternalActivity>() {
+            return keyedStore.read(FilerIO.intBytes(index), null, new ChunkTransaction<Void, MiruInternalActivity>() {
                 @Override
-                public MiruInternalActivity commit(Object lock, Filer filer) throws IOException {
+                public MiruInternalActivity commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                     if (filer != null) {
                         synchronized (lock) {
                             filer.seek(0);
@@ -68,9 +68,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            return keyedStore.read(FilerIO.intBytes(index), -1, new FilerTransaction<Filer, MiruTermId[]>() {
+            return keyedStore.read(FilerIO.intBytes(index), null, new ChunkTransaction<Void, MiruTermId[]>() {
                 @Override
-                public MiruTermId[] commit(Object lock, Filer filer) throws IOException {
+                public MiruTermId[] commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                     if (filer != null) {
                         synchronized (lock) {
                             filer.seek(0);
@@ -115,9 +115,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
             try {
                 final byte[] bytes = internalActivityMarshaller.toBytes(activity);
-                keyedStore.writeNewReplace(FilerIO.intBytes(index), 4 + bytes.length, new FilerTransaction<Filer, Void>() {
+                keyedStore.writeNewReplace(FilerIO.intBytes(index), (long) 4 + bytes.length, new ChunkTransaction<Void, Void>() {
                     @Override
-                    public Void commit(Object newLock, Filer newFiler) throws IOException {
+                    public Void commit(Void monkey, ChunkFiler newFiler, Object newLock) throws IOException {
                         synchronized (newLock) {
                             newFiler.seek(0);
                             FilerIO.write(newFiler, bytes);
@@ -140,9 +140,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         final int size = index + 1;
         synchronized (indexSize) {
             if (size > indexSize.get()) {
-                indexSizeFiler.readWriteAutoGrow(4, new FilerTransaction<Filer, Void>() {
+                indexSizeFiler.readWriteAutoGrow(4L, new ChunkTransaction<Void, Void>() {
                     @Override
-                    public Void commit(Object lock, Filer filer) throws IOException {
+                    public Void commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                         synchronized (lock) {
                             filer.seek(0);
                             FilerIO.writeInt(filer, size, "size");
@@ -162,9 +162,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         try {
             int size = indexSize.get();
             if (size < 0) {
-                size = indexSizeFiler.read(-1, new FilerTransaction<Filer, Integer>() {
+                size = indexSizeFiler.read(null, new ChunkTransaction<Void, Integer>() {
                     @Override
-                    public Integer commit(Object lock, Filer filer) throws IOException {
+                    public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                         if (filer != null) {
                             int size;
                             synchronized (lock) {

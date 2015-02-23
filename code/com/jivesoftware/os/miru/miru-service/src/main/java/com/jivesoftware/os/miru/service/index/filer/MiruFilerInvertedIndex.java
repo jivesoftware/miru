@@ -6,8 +6,9 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.FilerTransaction;
-import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.ChunkTransaction;
+import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -32,14 +33,14 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final MiruFieldIndex.IndexKey indexKey;
-    private final KeyedFilerStore keyedFilerStore;
+    private final KeyedFilerStore<Long, Void> keyedFilerStore;
     private final int considerIfIndexIdGreaterThanN;
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
     public MiruFilerInvertedIndex(MiruBitmaps<BM> bitmaps,
         MiruFieldIndex.IndexKey indexKey,
-        KeyedFilerStore keyedFilerStore,
+        KeyedFilerStore<Long, Void> keyedFilerStore,
         int considerIfIndexIdGreaterThanN,
         Object mutationLock) {
         this.bitmaps = bitmaps;
@@ -52,7 +53,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     private final Callable<Optional<BM>> indexLoader = new Callable<Optional<BM>>() {
         @Override
         public Optional<BM> call() throws Exception {
-            byte[] rawBytes = keyedFilerStore.read(indexKey.keyBytes, -1, getTransaction);
+            byte[] rawBytes = keyedFilerStore.read(indexKey.keyBytes, null, getTransaction);
             if (rawBytes != null) {
                 log.inc("get>total");
                 log.inc("get>bytes", rawBytes.length);
@@ -79,7 +80,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             return Optional.absent();
         }
 
-        byte[] rawBytes = keyedFilerStore.read(indexKey.keyBytes, -1, getTransaction);
+        byte[] rawBytes = keyedFilerStore.read(indexKey.keyBytes, null, getTransaction);
         if (rawBytes != null) {
             log.inc("get>total");
             log.inc("get>bytes", rawBytes.length);
@@ -221,7 +222,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     public int lastId() throws Exception {
         if (lastId == Integer.MIN_VALUE) {
             synchronized (mutationLock) {
-                lastId = keyedFilerStore.read(indexKey.keyBytes, -1, lastIdTransaction);
+                lastId = keyedFilerStore.read(indexKey.keyBytes, null, lastIdTransaction);
             }
             log.inc("lastId>total");
             log.inc("lastId>bytes", 4);
@@ -277,9 +278,9 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
     }
 
-    private static final FilerTransaction<Filer, Integer> lastIdTransaction = new FilerTransaction<Filer, Integer>() {
+    private static final ChunkTransaction<Void, Integer> lastIdTransaction = new ChunkTransaction<Void, Integer>() {
         @Override
-        public Integer commit(Object lock, Filer filer) throws IOException {
+        public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
             if (filer != null) {
                 return getLastId(lock, filer);
             } else {
@@ -288,9 +289,9 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
     };
 
-    private static final FilerTransaction<Filer, byte[]> getTransaction = new FilerTransaction<Filer, byte[]>() {
+    private static final ChunkTransaction<Void, byte[]> getTransaction = new ChunkTransaction<Void, byte[]>() {
 
-        public byte[] commit(Object lock, Filer filer) throws IOException {
+        public byte[] commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
             if (filer != null) {
                 synchronized (lock) {
                     filer.seek(0);
@@ -303,7 +304,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
     };
 
-    private static class SetTransaction implements FilerTransaction<Filer, Void> {
+    private static class SetTransaction implements ChunkTransaction<Void, Void> {
 
         private final byte[] bytes;
 
@@ -312,7 +313,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
 
         @Override
-        public Void commit(Object newLock, Filer newFiler) throws IOException {
+        public Void commit(Void monkey, ChunkFiler newFiler, Object newLock) throws IOException {
             synchronized (newLock) {
                 newFiler.seek(0);
                 newFiler.write(bytes);

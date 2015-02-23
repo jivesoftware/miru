@@ -1,17 +1,18 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.jivesoftware.os.filer.io.Filer;
-import com.jivesoftware.os.filer.io.FilerTransaction;
+import com.jivesoftware.os.filer.io.api.ChunkTransaction;
 import java.io.IOException;
 
 /**
  *
+ * @param <H>
+ * @param <M>
  */
-public interface MiruFilerProvider {
+public interface MiruFilerProvider<H, M> {
 
-    <R> R read(long initialCapacity, FilerTransaction<Filer, R> filerTransaction) throws IOException;
+    <R> R read(H initialCapacity, ChunkTransaction<M, R> transaction) throws IOException;
 
-    <R> R writeNewReplace(long initialCapacity, FilerTransaction<Filer, R> filerTransaction) throws IOException;
+    <R> R writeNewReplace(H initialCapacity, ChunkTransaction<M, R> transaction) throws IOException;
 
-    <R> R readWriteAutoGrow(long initialCapacity, FilerTransaction<Filer, R> filerTransaction) throws IOException;
+    <R> R readWriteAutoGrow(H initialCapacity, ChunkTransaction<M, R> transaction) throws IOException;
 }

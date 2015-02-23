@@ -3,16 +3,17 @@ package com.jivesoftware.os.miru.service;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
-import com.jivesoftware.os.filer.chunk.store.ChunkStore;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.api.KeyValueStore;
+import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
-import com.jivesoftware.os.filer.map.store.api.KeyValueStore;
-import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
@@ -52,8 +53,8 @@ public class IndexTestUtil {
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(
             new MiruSchema.Builder("test", 1)
-                .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
-                .build());
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .build());
         MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(),
@@ -78,9 +79,9 @@ public class IndexTestUtil {
             activityInternExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
             1024,
@@ -111,7 +112,11 @@ public class IndexTestUtil {
     }
 
     public static KeyedFilerStore buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {
-        return new TxKeyedFilerStore(chunkStores, keyBytes(name), false);
+        return new TxKeyedFilerStore(chunkStores, keyBytes(name), false,
+            TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
+            TxNamedMapOfFiler.CHUNK_FILER_OPENER,
+            TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
+            TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
     }
 
     public static ChunkStore[] buildByteBufferBackedChunkStores(int numberOfChunkStores, ByteBufferFactory byteBufferFactory, long segmentSize)

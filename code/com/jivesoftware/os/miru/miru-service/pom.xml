@@ -74,10 +74,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.filer</groupId>
-            <artifactId>map-store</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>chunk-store</artifactId>
         </dependency>
         <dependency>

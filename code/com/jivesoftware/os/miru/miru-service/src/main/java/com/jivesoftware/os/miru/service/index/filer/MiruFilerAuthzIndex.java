@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;

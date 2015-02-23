@@ -87,7 +87,7 @@ public class MiruEjjiNGTest {
         this.injectable = new DistinctsInjectable(miruProvider, new Distincts(miruProvider.getTermComposer()));
     }
 
-    @Test(enabled = true)
+    @Test(enabled = false)
     public void basicTest() throws Exception {
 
         Random rand = new Random(1_234);
@@ -141,7 +141,6 @@ public class MiruEjjiNGTest {
         System.out.println("Running queries...");
 
         List<String> orderedUsers = Lists.newArrayList(users);
-        List<String> orderedStreams = Lists.newArrayList(streams);
         List<Integer> orderedTypes = Lists.newArrayList(types);
 
         for (int i = 0; i < numqueries; i++) {

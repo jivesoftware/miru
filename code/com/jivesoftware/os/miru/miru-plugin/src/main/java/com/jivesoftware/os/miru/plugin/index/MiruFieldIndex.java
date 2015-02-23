@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.plugin.index;
 
-import com.jivesoftware.os.filer.map.store.api.KeyRange;
+import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Arrays;
 import java.util.List;

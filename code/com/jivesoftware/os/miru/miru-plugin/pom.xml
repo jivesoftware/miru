@@ -24,10 +24,6 @@
             <artifactId>io</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.filer</groupId>
-            <artifactId>map-store</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.mlogger</groupId>
             <artifactId>core</artifactId>
         </dependency>

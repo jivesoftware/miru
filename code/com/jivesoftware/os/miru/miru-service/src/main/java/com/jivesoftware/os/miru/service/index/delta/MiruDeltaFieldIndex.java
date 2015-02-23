@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.primitives.UnsignedBytes;
-import com.jivesoftware.os.filer.map.store.api.KeyRange;
+import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;

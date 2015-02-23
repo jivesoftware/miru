@@ -84,6 +84,17 @@
             <artifactId>testng</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>io</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>chunk-store</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>keyed-store</artifactId>
+        </dependency>
     </dependencies>
 </project>

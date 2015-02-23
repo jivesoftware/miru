@@ -1,36 +1,35 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.jivesoftware.os.filer.io.Filer;
-import com.jivesoftware.os.filer.io.FilerTransaction;
-import com.jivesoftware.os.filer.map.store.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.ChunkTransaction;
+import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import java.io.IOException;
 
 /**
  *
  */
-public class KeyedFilerProvider implements MiruFilerProvider {
+public class KeyedFilerProvider<H, M> implements MiruFilerProvider<H, M> {
 
-    private final KeyedFilerStore keyedFilerStore;
+    private final KeyedFilerStore<H, M> keyedFilerStore;
     private final byte[] key;
 
-    public KeyedFilerProvider(KeyedFilerStore keyedFilerStore, byte[] key) {
+    public KeyedFilerProvider(KeyedFilerStore<H, M> keyedFilerStore, byte[] key) {
         this.keyedFilerStore = keyedFilerStore;
         this.key = key;
     }
 
     @Override
-    public <R> R read(long initialCapacity, final FilerTransaction<Filer, R> filerTransaction) throws IOException {
-        return keyedFilerStore.read(key, initialCapacity, filerTransaction);
+    public <R> R read(H initialCapacity, final ChunkTransaction<M, R> transaction) throws IOException {
+        return keyedFilerStore.read(key, initialCapacity, transaction);
     }
 
     @Override
-    public <R> R writeNewReplace(long initialCapacity, final FilerTransaction<Filer, R> filerTransaction) throws IOException {
-        return keyedFilerStore.writeNewReplace(key, initialCapacity, filerTransaction);
+    public <R> R writeNewReplace(H initialCapacity, final ChunkTransaction<M, R> transaction) throws IOException {
+        return keyedFilerStore.writeNewReplace(key, initialCapacity, transaction);
     }
 
     @Override
-    public <R> R readWriteAutoGrow(long initialCapacity, final FilerTransaction<Filer, R> filerTransaction) throws IOException {
-        return keyedFilerStore.readWriteAutoGrow(key, initialCapacity, filerTransaction);
+    public <R> R readWriteAutoGrow(H initialCapacity, final ChunkTransaction<M, R> transaction) throws IOException {
+        return keyedFilerStore.readWriteAutoGrow(key, initialCapacity, transaction);
     }
 
 }
