@@ -9,12 +9,13 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import java.util.concurrent.ConcurrentMap;
 
 /**
  * DELTA FORCE
  */
-public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM> {
+public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM>, Mergeable {
 
     private final MiruBitmaps<BM> bitmaps;
     private final long indexId;
@@ -66,6 +67,7 @@ public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM> {
         backingIndex.close();
     }
 
+    @Override
     public void merge() throws Exception {
         for (MiruDeltaInvertedIndex<BM> delta : inboxDeltas.values()) {
             delta.merge();

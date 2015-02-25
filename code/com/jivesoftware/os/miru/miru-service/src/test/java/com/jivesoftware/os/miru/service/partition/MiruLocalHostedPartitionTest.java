@@ -98,6 +98,7 @@ public class MiruLocalHostedPartitionTest {
     private ScheduledExecutorService scheduledSipMigrateService;
     private ExecutorService rebuildExecutor;
     private ExecutorService sipIndexExecutor;
+    private ExecutorService mergeExecutor;
     private AtomicReference<MiruLocalHostedPartition.BootstrapRunnable> bootstrapRunnable;
     private AtomicReference<MiruLocalHostedPartition.RebuildIndexRunnable> rebuildIndexRunnable;
     private AtomicReference<MiruLocalHostedPartition.SipMigrateIndexRunnable> sipMigrateIndexRunnable;
@@ -230,6 +231,7 @@ public class MiruLocalHostedPartitionTest {
         scheduledSipMigrateService = mock(ScheduledExecutorService.class);
         rebuildExecutor = Executors.newSingleThreadExecutor();
         sipIndexExecutor = Executors.newSingleThreadExecutor();
+        mergeExecutor = Executors.newSingleThreadExecutor();
 
         bootstrapRunnable = new AtomicReference<>();
         captureRunnable(scheduledBootstrapService, bootstrapRunnable, MiruLocalHostedPartition.BootstrapRunnable.class);
@@ -245,7 +247,7 @@ public class MiruLocalHostedPartitionTest {
     public void testBootstrapToOnline() throws Exception {
         MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
             activityWALReader, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, true, 100, 100, new MiruMergeChits(100_000, 10_000), timings);
 
         setActive(true);
@@ -269,7 +271,7 @@ public class MiruLocalHostedPartitionTest {
     public void testInactiveToOffline() throws Exception {
         MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
             activityWALReader, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, true, 100, 100,  new MiruMergeChits(100_000, 10_000), timings);
 
         setActive(true);
@@ -288,7 +290,7 @@ public class MiruLocalHostedPartitionTest {
     public void testQueryHandleOfflineMemMappedHotDeploy() throws Exception {
         MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
             activityWALReader, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, true, 100, 100,  new MiruMergeChits(100_000, 10_000), timings);
 
         setActive(true);
@@ -314,7 +316,7 @@ public class MiruLocalHostedPartitionTest {
     public void testQueryHandleOfflineMemoryException() throws Exception {
         MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
             activityWALReader, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, true, 100, 100,  new MiruMergeChits(100_000, 10_000), timings);
 
         setActive(true);
@@ -336,7 +338,7 @@ public class MiruLocalHostedPartitionTest {
     public void testRemove() throws Exception {
         MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
             activityWALReader, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, true, 100, 100,  new MiruMergeChits(100_000, 10_000), timings);
 
         setActive(true);
@@ -354,7 +356,7 @@ public class MiruLocalHostedPartitionTest {
     public void testWakeOnIndex_false() throws Exception {
         MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
             activityWALReader, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, false, 100, 100,  new MiruMergeChits(100_000, 10_000), timings);
 
         indexNormalActivity(localHostedPartition);
@@ -368,7 +370,7 @@ public class MiruLocalHostedPartitionTest {
     public void testWakeOnIndex_true() throws Exception {
         MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
             activityWALReader, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, true, 100, 100,  new MiruMergeChits(100_000, 10_000), timings);
 
         indexNormalActivity(localHostedPartition);
@@ -383,7 +385,7 @@ public class MiruLocalHostedPartitionTest {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
         MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
             activityWALReader, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, false, 100, 100,  new MiruMergeChits(100_000, 10_000), timings);
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);

@@ -40,6 +40,13 @@ public class CollaborativeFiltering {
     private final MiruAggregateUtil aggregateUtil;
     private final MiruIndexUtil indexUtil;
 
+    private final Comparator<MiruTermCount> highestCountComparator = new Comparator<MiruTermCount>() {
+        @Override
+        public int compare(MiruTermCount o1, MiruTermCount o2) {
+            return -Long.compare(o1.count, o2.count); // minus to reverse :)
+        }
+    };
+
     public CollaborativeFiltering(MiruAggregateUtil aggregateUtil, MiruIndexUtil indexUtil) {
         this.aggregateUtil = aggregateUtil;
         this.indexUtil = indexUtil;
@@ -71,12 +78,23 @@ public class CollaborativeFiltering {
         // otherContributors: all *except me* of the latest distinct users <field2> against distinct parents <field1>
         BM otherContributors = bitmaps.create();
         bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "not my self {}.", bitmaps.cardinality(otherContributors));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "not my self bitmap {}", otherContributors);
+        }
 
         // contributorHeap: ranked users <field2> based on cardinality of interactions with distinct parents <field1>
         MinMaxPriorityQueue<MiruTermCount> contributorHeap = rankContributors(bitmaps, request, requestContext, otherContributors);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "not my self {}.", bitmaps.cardinality(otherContributors));
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "not my self bitmap {}", otherContributors);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "contributorHeap {}.", contributorHeap.size());
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "contributorHeap values {}", contributorHeap);
+        }
+
+        if (request.query.aggregateFieldName2.equals(request.query.aggregateFieldName3)) {
+            // special case where the ranked users <field2> are the desired parents <field3>
+            int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName2);
+            MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
+            return composeAnswer(requestContext, fieldDefinition, contributorHeap);
         }
 
         // contributions: all latest distinct parents <field3> for each distinct user <field2>
@@ -144,7 +162,7 @@ public class CollaborativeFiltering {
     private <BM> BM contributions(MiruBitmaps<BM> bitmaps, MinMaxPriorityQueue<MiruTermCount> userHeap, MiruRequestContext<BM> requestContext, RecoQuery query)
         throws Exception {
 
-        int fieldId = requestContext.getSchema().getFieldId(query.lookupFieldNamed2);
+        int fieldId = requestContext.getSchema().getFieldId(query.lookupFieldName2);
         MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.pairedLatest);
 
         List<BM> toBeORed = new ArrayList<>();
@@ -171,13 +189,9 @@ public class CollaborativeFiltering {
         int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName2);
         log.debug("rankContributors: fieldId={}", fieldId);
 
-        final MinMaxPriorityQueue<MiruTermCount> userHeap = MinMaxPriorityQueue.orderedBy(new Comparator<MiruTermCount>() {
-
-            @Override
-            public int compare(MiruTermCount o1, MiruTermCount o2) {
-                return -Long.compare(o1.count, o2.count); // minus to reverse :)
-            }
-        }).maximumSize(request.query.desiredNumberOfDistincts).create(); // overloaded :(
+        final MinMaxPriorityQueue<MiruTermCount> userHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
+            .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
+            .create();
 
         aggregateUtil.stream(bitmaps, request.tenantId, requestContext, join1, Optional.<BM>absent(), fieldId, request.query.retrieveFieldName2,
             new CallbackStream<MiruTermCount>() {
@@ -230,13 +244,9 @@ public class CollaborativeFiltering {
         log.debug("score: fieldId={}", fieldId);
 
         final MiruFieldIndex<BM> bloomFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
-        final MinMaxPriorityQueue<MiruTermCount> heap = MinMaxPriorityQueue.orderedBy(new Comparator<MiruTermCount>() {
-
-            @Override
-            public int compare(MiruTermCount o1, MiruTermCount o2) {
-                return -Long.compare(o1.count, o2.count); // minus to reverse :)
-            }
-        }).maximumSize(request.query.desiredNumberOfDistincts).create();
+        final MinMaxPriorityQueue<MiruTermCount> heap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
+            .maximumSize(request.query.desiredNumberOfDistincts)
+            .create();
 
         // feeds us all recommended parents <field3>
         aggregateUtil.stream(bitmaps, request.tenantId, requestContext, scorable, Optional.<BM>absent(), fieldId, request.query.retrieveFieldName3,
@@ -271,6 +281,13 @@ public class CollaborativeFiltering {
                     return v;
                 }
             });
+
+        return composeAnswer(requestContext, fieldDefinition, heap);
+    }
+
+    private <BM> RecoAnswer composeAnswer(MiruRequestContext<BM> requestContext,
+        MiruFieldDefinition fieldDefinition,
+        MinMaxPriorityQueue<MiruTermCount> heap) {
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
         List<Recommendation> results = new ArrayList<>();

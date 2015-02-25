@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerTimeIndex;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongIntHashMap;
@@ -11,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author jonathan.colt
  */
-public class MiruDeltaTimeIndex implements MiruTimeIndex {
+public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
 
     private final MiruFilerTimeIndex backingIndex;
     private final AtomicInteger baseId = new AtomicInteger(-1);
@@ -205,6 +206,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex {
         backingIndex.close();
     }
 
+    @Override
     public void merge() throws Exception {
         backingIndex.nextId(actualInsertionOrderTimestamps.toArray());
         clear();

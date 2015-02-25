@@ -33,6 +33,7 @@ public class MiruLocalPartitionFactory {
     private final ScheduledExecutorService scheduledSipMigrateExecutor;
     private final ExecutorService rebuildExecutors;
     private final ExecutorService sipIndexExecutor;
+    private final ExecutorService mergeExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
     private final MiruMergeChits mergeChits;
@@ -47,6 +48,7 @@ public class MiruLocalPartitionFactory {
         ScheduledExecutorService scheduledSipMigrateExecutor,
         ExecutorService rebuildExecutors,
         ExecutorService sipIndexExecutor,
+        ExecutorService mergeExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
         MiruMergeChits mergeChits) {
@@ -60,6 +62,7 @@ public class MiruLocalPartitionFactory {
         this.scheduledSipMigrateExecutor = scheduledSipMigrateExecutor;
         this.rebuildExecutors = rebuildExecutors;
         this.sipIndexExecutor = sipIndexExecutor;
+        this.mergeExecutor = mergeExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
         this.mergeChits = mergeChits;
@@ -77,6 +80,7 @@ public class MiruLocalPartitionFactory {
             scheduledSipMigrateExecutor,
             rebuildExecutors,
             sipIndexExecutor,
+            mergeExecutor,
             rebuildIndexerThreads,
             indexRepairs,
             new MiruIndexer<>(

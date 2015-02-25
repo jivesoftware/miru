@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaFieldIndex;
@@ -40,6 +41,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -170,23 +172,47 @@ public class MiruPartitionAccessor<BM> {
         return (context.isPresent() && context.get().sipIndex.setSip(sip));
     }
 
-    void merge(MiruMergeChits chits) throws Exception {
+    private static class MergeRunnable implements Runnable {
+
+        private final Mergeable mergeable;
+
+        public MergeRunnable(Mergeable mergeable) {
+            this.mergeable = mergeable;
+        }
+
+        @Override
+        public void run() {
+            try {
+                mergeable.merge();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception {
         if (context.isPresent()) {
-            MiruContext<BM> got = context.get();
+            final MiruContext<BM> got = context.get();
             long elapsed;
             synchronized (got.writeLock) {
                 long start = System.currentTimeMillis();
-                ((MiruDeltaTimeIndex) got.timeIndex).merge();
+
+                List<Future<?>> futures = Lists.newArrayList();
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaTimeIndex) got.timeIndex)));
                 for (MiruFieldType fieldType : MiruFieldType.values()) {
-                    ((MiruDeltaFieldIndex<BM>) got.fieldIndexProvider.getFieldIndex(fieldType)).merge();
+                    futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaFieldIndex<BM>) got.fieldIndexProvider.getFieldIndex(fieldType))));
+                }
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaAuthzIndex<BM>) got.authzIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaRemovalIndex<BM>) got.removalIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaInboxIndex<BM>) got.inboxIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaUnreadTrackingIndex<BM>) got.unreadTrackingIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaActivityIndex) got.activityIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaSipIndex) got.sipIndex)));
+
+                for (Future<?> future : futures) {
+                    future.get();
                 }
 
-                ((MiruDeltaAuthzIndex<BM>) got.authzIndex).merge();
-                ((MiruDeltaRemovalIndex<BM>) got.removalIndex).merge();
-                ((MiruDeltaInboxIndex<BM>) got.inboxIndex).merge();
-                ((MiruDeltaUnreadTrackingIndex<BM>) got.unreadTrackingIndex).merge();
-                ((MiruDeltaActivityIndex) got.activityIndex).merge();
-                ((MiruDeltaSipIndex) got.sipIndex).merge();
                 elapsed = System.currentTimeMillis() - start;
 
                 chits.refundAll(coord);
@@ -209,7 +235,8 @@ public class MiruPartitionAccessor<BM> {
         IndexStrategy strategy,
         boolean recovery,
         MiruMergeChits chits,
-        ExecutorService indexExecutor)
+        ExecutorService indexExecutor,
+        ExecutorService mergeExecutor)
         throws Exception {
 
         int consumedCount = 0;
@@ -269,7 +296,7 @@ public class MiruPartitionAccessor<BM> {
         }
 
         if (chits.take(coord, consumedCount)) {
-            merge(chits);
+            merge(chits, mergeExecutor);
         }
 
         return consumedCount;
@@ -531,8 +558,8 @@ public class MiruPartitionAccessor<BM> {
             }
 
             @Override
-            public void merge(MiruMergeChits chits) throws Exception {
-                MiruPartitionAccessor.this.merge(chits);
+            public void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception {
+                MiruPartitionAccessor.this.merge(chits, mergeExecutor);
             }
 
             @Override

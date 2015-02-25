@@ -9,11 +9,12 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentMap;
 
 /** @author jonathan */
-public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM> {
+public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM>, Mergeable {
 
     private final MiruBitmaps<BM> bitmaps;
     private final long indexId;
@@ -72,6 +73,7 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
         backingIndex.close();
     }
 
+    @Override
     public void merge() throws Exception {
         for (MiruDeltaInvertedIndex<BM> delta : unreadDeltas.values()) {
             delta.merge();

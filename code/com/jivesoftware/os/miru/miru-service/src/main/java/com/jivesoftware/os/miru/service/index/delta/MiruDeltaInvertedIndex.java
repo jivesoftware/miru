@@ -5,6 +5,7 @@ import com.google.common.cache.Cache;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.concurrent.Callable;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
+public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergeable {
 
     private final MiruBitmaps<BM> bitmaps;
     private final MiruInvertedIndex<BM> backingIndex;
@@ -324,6 +325,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         invalidateCache();
     }
 
+    @Override
     public void merge() throws Exception {
         if (delta.andNot == null && delta.or == null) {
             return;

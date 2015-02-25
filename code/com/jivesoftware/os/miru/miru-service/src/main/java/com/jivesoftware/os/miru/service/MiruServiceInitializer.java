@@ -108,6 +108,9 @@ public class MiruServiceInitializer {
         final ExecutorService sipIndexExecutor = Executors.newFixedThreadPool(config.getSipIndexerThreads(),
             new NamedThreadFactory(threadGroup, "sip_index"));
 
+        final ExecutorService mergeExecutor = Executors.newFixedThreadPool(config.getMergeIndexThreads(),
+            new NamedThreadFactory(threadGroup, "merge_index"));
+
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount(),
             new NamedThreadFactory(threadGroup, "stream_factory"));
 
@@ -202,6 +205,7 @@ public class MiruServiceInitializer {
             scheduledSipMigrateExecutor,
             rebuildExecutors,
             sipIndexExecutor,
+            mergeExecutor,
             config.getRebuildIndexerThreads(),
             indexRepairs,
             miruMergeChits);

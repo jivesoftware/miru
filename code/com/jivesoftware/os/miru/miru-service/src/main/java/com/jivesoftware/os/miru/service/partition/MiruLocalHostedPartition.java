@@ -69,6 +69,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final ScheduledExecutorService scheduledSipExecutor;
     private final ExecutorService rebuildWALExecutors;
     private final ExecutorService sipIndexExecutor;
+    private final ExecutorService mergeExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM> indexer;
@@ -118,6 +119,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         ScheduledExecutorService scheduledSipExecutor,
         ExecutorService rebuildWALExecutors,
         ExecutorService sipIndexExecutor,
+        ExecutorService mergeExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer,
@@ -138,6 +140,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.scheduledSipExecutor = scheduledSipExecutor;
         this.rebuildWALExecutors = rebuildWALExecutors;
         this.sipIndexExecutor = sipIndexExecutor;
+        this.mergeExecutor = mergeExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
@@ -278,8 +281,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         // intentionally locking all stream writes for the entire batch to avoid getting a lock for each activity
         MiruPartitionAccessor<BM> accessor = accessorRef.get();
         if (accessor.isOpenForWrites()) {
+            ExecutorService sameThreadExecutor = MoreExecutors.sameThreadExecutor();
             int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress, true, mergeChits,
-                MoreExecutors.sameThreadExecutor());
+                sameThreadExecutor, sameThreadExecutor);
             if (count > 0) {
                 log.inc("indexIngress>written", count);
             }
@@ -333,7 +337,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                         MiruContext<BM> toContext;
                         synchronized (fromContext.writeLock) {
-                            handle.merge(mergeChits);
+                            handle.merge(mergeChits, mergeExecutor);
                             toContext = contextFactory.copy(bitmaps, coord, fromContext, destinationStorage);
                         }
 
@@ -488,7 +492,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                                         MiruPartitionAccessor<BM> online = rebuilding.copyToState(MiruPartitionState.online);
                                         MiruPartitionAccessor<BM> updated = updatePartition(rebuilding, online);
                                         if (updated != null) {
-                                            updated.merge(mergeChits);
+                                            updated.merge(mergeChits, mergeExecutor);
                                         }
                                     }
                                 } catch (Throwable t) {
@@ -606,8 +610,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                 try {
                     boolean repair = firstRebuild.compareAndSet(true, false);
                     accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, repair, mergeChits,
-                        rebuildIndexExecutor);
-                    accessor.merge(mergeChits);
+                        rebuildIndexExecutor, mergeExecutor);
+                    accessor.merge(mergeChits, mergeExecutor);
                     accessor.setRebuildTimestamp(rebuildTimestamp.get());
                     accessor.setSip(sip.get());
                 } catch (Exception e) {
@@ -710,7 +714,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             deliver(partitionedActivities, accessor, sipTracker, sip);
 
             if (!accessor.hasOpenWriters()) {
-                accessor.merge(mergeChits);
+                accessor.merge(mergeChits, mergeExecutor);
             }
 
             return accessorRef.get() == accessor;
@@ -721,7 +725,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             boolean repair = firstSip.compareAndSet(true, false);
             int initialCount = partitionedActivities.size();
             int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip,
-                repair, mergeChits, sipIndexExecutor);
+                repair, mergeChits, sipIndexExecutor, mergeExecutor);
 
             Sip suggestion = sipTracker.suggest(sip.get());
             if (accessor.setSip(suggestion)) {

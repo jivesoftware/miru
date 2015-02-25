@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +20,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM> {
+public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
 
     private final MiruBitmaps<BM> bitmaps;
     private final long[] indexIds;
@@ -153,6 +154,7 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM> {
             fieldIndexCache);
     }
 
+    @Override
     public void merge() throws Exception {
         for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
             ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<BM>> deltaMap = fieldIndexDeltas[fieldId];

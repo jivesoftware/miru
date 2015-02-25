@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import java.util.Map;
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM> {
+public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM>, Mergeable {
 
     private final MiruBitmaps<BM> bitmaps;
     private final long indexId;
@@ -94,6 +95,7 @@ public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM> {
         backingIndex.close();
     }
 
+    @Override
     public void merge() throws Exception {
         for (Map.Entry<String, MiruDeltaInvertedIndex<BM>> entry : authzDeltas.entrySet()) {
             entry.getValue().merge();

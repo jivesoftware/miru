@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -14,7 +15,7 @@ public interface MiruMigrationHandle<BM> extends AutoCloseable {
 
     Optional<MiruContext<BM>> getContext();
 
-    void merge(MiruMergeChits chits) throws Exception;
+    void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception;
 
     MiruPartitionAccessor<BM> migrated(MiruContext<BM> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state);
 }

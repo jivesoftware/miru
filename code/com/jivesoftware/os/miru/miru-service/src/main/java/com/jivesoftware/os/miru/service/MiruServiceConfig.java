@@ -152,6 +152,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(24)
     int getSipIndexerThreads();
 
+    @IntDefault(8)
+    int getMergeIndexThreads();
+
     @BooleanDefault(true)
     public boolean getUseOffHeapBuffers();
 
