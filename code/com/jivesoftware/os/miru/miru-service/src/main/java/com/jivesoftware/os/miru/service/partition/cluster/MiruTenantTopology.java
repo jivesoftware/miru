@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.partition;
+package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
@@ -14,7 +14,8 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
-import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
+import com.jivesoftware.os.miru.service.partition.MiruLocalPartitionFactory;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
@@ -35,11 +36,11 @@ public class MiruTenantTopology<BM> {
     private final MiruLocalPartitionFactory localPartitionFactory;
     private final ConcurrentSkipListMap<PartitionAndHost, MiruLocalHostedPartition<BM>> topology;
     private final Cache<PartitionAndHost, Boolean> sticky;
-    
+
     private final StripingLocksProvider<PartitionAndHost> topologyLock = new StripingLocksProvider<>(64);
 
     public MiruTenantTopology(
-        MiruServiceConfig config,
+        long ensurePartitionsIntervalInMillis,
         MiruBitmaps<BM> bitmaps,
         MiruHost localHost,
         MiruTenantId tenantId,
@@ -50,7 +51,7 @@ public class MiruTenantTopology<BM> {
         this.localPartitionFactory = localPartitionFactory;
         this.topology = new ConcurrentSkipListMap<>();
         this.sticky = CacheBuilder.newBuilder()
-            .expireAfterWrite(config.getEnsurePartitionsIntervalInMillis() * 2, TimeUnit.MILLISECONDS) // double the ensurePartitions interval
+            .expireAfterWrite(ensurePartitionsIntervalInMillis * 2, TimeUnit.MILLISECONDS) // double the ensurePartitions interval
             .build();
     }
 
@@ -109,7 +110,7 @@ public class MiruTenantTopology<BM> {
         }
     }
 
-    public void checkForPartitionAlignment(MiruHost host, MiruTenantId tenant, List<MiruPartitionId> partitionIds) throws Exception {
+    void checkForPartitionAlignment(MiruHost host, MiruTenantId tenant, List<MiruPartitionId> partitionIds) throws Exception {
         Set<PartitionAndHost> expected = Sets.newHashSet();
         for (MiruPartitionId miruPartitionId : partitionIds) {
             expected.add(new PartitionAndHost(miruPartitionId, host));

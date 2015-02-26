@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -10,7 +9,9 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatRequest;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,23 +39,25 @@ public class MiruPartitionHeartbeatHandler {
         Map<MiruPartitionCoord, MiruHeartbeatRequest.Partition> beats;
         do {
             beats = heartbeats.get();
-            MiruHeartbeatRequest.Partition got = beats.get(coord);
-            if (got == null) {
-                got = new MiruHeartbeatRequest.Partition(coord.tenantId.getBytes(),
-                    coord.partitionId.getId(),
-                    refreshTimestamp.or(-1L),
-                    info.state,
-                    info.storage
-                );
-                beats.put(coord, got);
-            } else {
-                got = new MiruHeartbeatRequest.Partition(coord.tenantId.getBytes(),
-                    coord.partitionId.getId(),
-                    refreshTimestamp.or(got.activeTimestamp),
-                    info.state,
-                    info.storage
-                );
-                beats.put(coord, got);
+            if (beats != null) {
+                MiruHeartbeatRequest.Partition got = beats.get(coord);
+                if (got == null) {
+                    got = new MiruHeartbeatRequest.Partition(coord.tenantId.getBytes(),
+                        coord.partitionId.getId(),
+                        refreshTimestamp.or(-1L),
+                        info.state,
+                        info.storage
+                    );
+                    beats.put(coord, got);
+                } else {
+                    got = new MiruHeartbeatRequest.Partition(coord.tenantId.getBytes(),
+                        coord.partitionId.getId(),
+                        refreshTimestamp.or(got.activeTimestamp),
+                        info.state,
+                        info.storage
+                    );
+                    beats.put(coord, got);
+                }
             }
         } while (beats != heartbeats.get());
     }
@@ -78,8 +81,12 @@ public class MiruPartitionHeartbeatHandler {
 
     private List<MiruHeartbeatRequest.Partition> heartbeats() {
         Map<MiruPartitionCoord, MiruHeartbeatRequest.Partition> beats = heartbeats.get();
-        heartbeats.compareAndSet(beats, new ConcurrentHashMap<MiruPartitionCoord, MiruHeartbeatRequest.Partition>());
-        return new ArrayList<>(beats.values());
+        if (beats != null) {
+            heartbeats.compareAndSet(beats, new ConcurrentHashMap<MiruPartitionCoord, MiruHeartbeatRequest.Partition>());
+            return new ArrayList<>(beats.values());
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     private void setActive(MiruHost host, List<MiruHeartbeatResponse.Partition> coords) {

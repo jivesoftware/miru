@@ -258,6 +258,7 @@ public class MiruLocalHostedPartitionTest {
 
         setActive(true);
         waitForRef(bootstrapRunnable).run();
+        partitionEventHandler.thumpthump(new MiruHost("localhost", 1234));
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);

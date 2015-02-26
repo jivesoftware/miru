@@ -120,7 +120,6 @@ public class MiruReaderMain {
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.buildManageServer().start();
 
-
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             mapper.registerModule(new GuavaModule());
@@ -162,7 +161,6 @@ public class MiruReaderMain {
             HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
                 .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
-           
             MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
             MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer().initialize(miruServiceConfig, miruHost);
@@ -187,7 +185,7 @@ public class MiruReaderMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(clusterClientConfig, mapper);
 
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
-            
+
             MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                 clusterClient,
                 miruHost,
@@ -242,7 +240,7 @@ public class MiruReaderMain {
             }
 
             deployable.addEndpoints(MiruReaderConfigEndpoints.class);
-            
+
             deployable.buildServer().start();
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {

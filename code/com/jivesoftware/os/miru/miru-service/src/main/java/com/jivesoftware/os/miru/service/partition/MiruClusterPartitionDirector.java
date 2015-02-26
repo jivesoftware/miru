@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.service.partition.cluster.MiruTenantTopology;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -25,7 +26,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     private final MiruHost host;
     private final MiruClusterClient clusterClient;
     private final MiruExpectedTenants expectedTenants;
-   
+
     public MiruClusterPartitionDirector(MiruHost host,
         MiruClusterClient clusterClient,
         MiruExpectedTenants expectedTenants) {
@@ -106,8 +107,8 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         if (topology != null) {
             Optional<MiruLocalHostedPartition<?>> partition = topology.getPartition(new MiruPartitionCoord(tenantId, partitionId, host));
             if (partition.isPresent()) {
-                return info.state == partition.get().getState() &&
-                    (info.storage == MiruBackingStorage.unknown || info.storage == partition.get().getStorage());
+                return info.state == partition.get().getState()
+                    && (info.storage == MiruBackingStorage.unknown || info.storage == partition.get().getStorage());
             }
         }
         return false;

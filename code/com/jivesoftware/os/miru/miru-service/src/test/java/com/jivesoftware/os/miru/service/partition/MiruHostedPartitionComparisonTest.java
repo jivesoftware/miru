@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
+import com.jivesoftware.os.miru.service.partition.cluster.PartitionAndHost;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListMap;

@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.cluster.marshaller;
 
-import com.jivesoftware.os.miru.api.marshall.MiruPartitionIdMarshaller;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.marshall.MiruPartitionIdMarshaller;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;

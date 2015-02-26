@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ComparisonChain;
@@ -12,7 +11,9 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
+import com.jivesoftware.os.miru.service.partition.cluster.PartitionAndHost;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;

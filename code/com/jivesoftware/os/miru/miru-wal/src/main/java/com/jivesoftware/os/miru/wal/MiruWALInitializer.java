@@ -39,8 +39,8 @@ public class MiruWALInitializer {
         throws Exception {
 
         // Miru ActivityWAL
-        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL = rowColumnValueStoreInitializer
-            .initialize(
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL =
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.activity.wal", "a", new String[]{"s"}, new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruTenantIdMarshaller(),
@@ -51,8 +51,8 @@ public class MiruWALInitializer {
             );
 
         // Miru ActivitySipWAL
-        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL = rowColumnValueStoreInitializer
-            .initialize(
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.activity.wal", "s", new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruTenantIdMarshaller(),
@@ -63,8 +63,8 @@ public class MiruWALInitializer {
             );
 
         // Miru ReadTrackingWAL
-        RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL = rowColumnValueStoreInitializer
-            .initialize(
+        RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL =
+            rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
                 "miru.readtracking.wal", "r", new String[]{"s"}, new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruTenantIdMarshaller(),
@@ -121,19 +121,30 @@ public class MiruWALInitializer {
     static public class MiruWAL {
 
         private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
-        private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL;
-        private final RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL;
-        private final RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL;
-        private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
-        private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
+        private final RowColumnValueStore<MiruTenantId,
+            MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL;
+        private final RowColumnValueStore<MiruTenantId,
+            MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL;
+        private final RowColumnValueStore<MiruTenantId,
+            MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL;
+        private final RowColumnValueStore<MiruVoidByte,
+            MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
+        private final RowColumnValueStore<MiruVoidByte,
+            MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
 
         public MiruWAL(
-            RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
-            RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL,
-            RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
-            RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL,
-            RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable,
-            RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry) {
+            RowColumnValueStore<MiruTenantId,
+                MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
+            RowColumnValueStore<MiruTenantId,
+                MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL,
+            RowColumnValueStore<MiruTenantId,
+                MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
+            RowColumnValueStore<MiruTenantId,
+                MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL,
+            RowColumnValueStore<MiruVoidByte,
+                MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable,
+            RowColumnValueStore<MiruVoidByte,
+                MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry) {
             this.activityWAL = activityWAL;
             this.activitySipWAL = activitySipWAL;
             this.readTrackingWAL = readTrackingWAL;
@@ -142,27 +153,33 @@ public class MiruWALInitializer {
             this.writerPartitionRegistry = writerPartitionRegistry;
         }
 
-        public RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> getActivityWAL() {
+        public RowColumnValueStore<MiruTenantId,
+     MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> getActivityWAL() {
             return activityWAL;
         }
 
-        public RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> getActivitySipWAL() {
+        public RowColumnValueStore<MiruTenantId,
+     MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> getActivitySipWAL() {
             return activitySipWAL;
         }
 
-        public RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> getReadTrackingWAL() {
+        public RowColumnValueStore<MiruTenantId,
+     MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> getReadTrackingWAL() {
             return readTrackingWAL;
         }
 
-        public RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> getReadTrackingSipWAL() {
+        public RowColumnValueStore<MiruTenantId,
+     MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> getReadTrackingSipWAL() {
             return readTrackingSipWAL;
         }
 
-        public RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> getActivityLookupTable() {
+        public RowColumnValueStore<MiruVoidByte,
+     MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> getActivityLookupTable() {
             return activityLookupTable;
         }
 
-        public RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> getWriterPartitionRegistry() {
+        public RowColumnValueStore<MiruVoidByte,
+     MiruTenantId, Integer, MiruPartitionId, ? extends Exception> getWriterPartitionRegistry() {
             return writerPartitionRegistry;
         }
 

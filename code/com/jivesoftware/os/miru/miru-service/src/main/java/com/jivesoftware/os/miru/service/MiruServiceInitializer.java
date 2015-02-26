@@ -212,10 +212,9 @@ public class MiruServiceInitializer {
             heartbeatHandler,
             partitionComparison,
             clusterClient);
-        
 
         final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, clusterClient, expectedTenants);
-       
+
         MiruSolver solver = new MiruLowestLatencySolver(solverExecutor,
             config.getDefaultInitialSolvers(),
             config.getDefaultMaxNumberOfSolvers(),

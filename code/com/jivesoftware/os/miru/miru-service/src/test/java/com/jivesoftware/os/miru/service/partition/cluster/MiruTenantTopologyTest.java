@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.partition;
+package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
@@ -13,6 +13,9 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
+import com.jivesoftware.os.miru.service.partition.MiruLocalPartitionFactory;
+import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
 import java.util.Iterator;
 import java.util.Map;
 import org.mockito.Matchers;
@@ -48,34 +51,25 @@ public class MiruTenantTopologyTest {
         localPartitionFactory = mock(MiruLocalPartitionFactory.class);
         remotePartitionFactory = mock(MiruRemoteQueryablePartitionFactory.class);
         bitmaps = new MiruBitmapsEWAH(2);
-        tenantTopology = new MiruTenantTopology<>(config, bitmaps, localhost, tenantId, localPartitionFactory);
+        tenantTopology = new MiruTenantTopology<>(config.getEnsurePartitionsIntervalInMillis(), bitmaps, localhost, tenantId, localPartitionFactory);
     }
 
     @Test
     public void testCheckForPartitionAlignment() throws Exception {
         MiruPartitionId p0 = MiruPartitionId.of(0);
         MiruPartitionId p1 = MiruPartitionId.of(1);
-        MiruPartitionId p2 = MiruPartitionId.of(2);
 
-        final Map<MiruPartitionCoord, MiruHostedPartition> coordToPartition = Maps.newHashMap();
+        final Map<MiruPartitionCoord, MiruLocalHostedPartition> coordToPartition = Maps.newHashMap();
         Answer<MiruHostedPartition> localAnswer = new Answer<MiruHostedPartition>() {
             @Override
-            public MiruHostedPartition answer(InvocationOnMock invocation) throws Throwable {
+            public MiruLocalHostedPartition answer(InvocationOnMock invocation) throws Throwable {
                 MiruPartitionCoord coord = (MiruPartitionCoord) invocation.getArguments()[1];
-                MiruHostedPartition hostedPartition = mock(MiruHostedPartition.class);
+                MiruLocalHostedPartition hostedPartition = mock(MiruLocalHostedPartition.class);
                 coordToPartition.put(coord, hostedPartition);
                 return hostedPartition;
             }
         };
-        Answer<MiruHostedPartition> remoteAnswer = new Answer<MiruHostedPartition>() {
-            @Override
-            public MiruHostedPartition answer(InvocationOnMock invocation) throws Throwable {
-                MiruPartitionCoord coord = (MiruPartitionCoord) invocation.getArguments()[0];
-                MiruHostedPartition hostedPartition = mock(MiruHostedPartition.class);
-                coordToPartition.put(coord, hostedPartition);
-                return hostedPartition;
-            }
-        };
+
         when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class))).thenAnswer(localAnswer);
 
         tenantTopology.checkForPartitionAlignment(localhost, tenantId, Lists.newArrayList(p0));
@@ -87,7 +81,7 @@ public class MiruTenantTopologyTest {
 
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)));
         verifyNoMoreInteractions(localPartitionFactory);
-        
+
         tenantTopology.checkForPartitionAlignment(localhost, tenantId, Lists.newArrayList());
 
         verifyNoMoreInteractions(localPartitionFactory);
@@ -106,7 +100,7 @@ public class MiruTenantTopologyTest {
             @Override
             public MiruHostedPartition answer(InvocationOnMock invocation) throws Throwable {
                 final MiruPartitionCoord coord = (MiruPartitionCoord) invocation.getArguments()[1];
-                MiruHostedPartition hostedPartition = mock(MiruHostedPartition.class);
+                MiruLocalHostedPartition hostedPartition = mock(MiruLocalHostedPartition.class);
                 doAnswer(new Answer<Void>() {
                     @Override
                     @SuppressWarnings("unchecked")

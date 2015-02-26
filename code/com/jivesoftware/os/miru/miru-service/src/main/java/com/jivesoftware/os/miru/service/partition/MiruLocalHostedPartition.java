@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -17,6 +16,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
@@ -407,10 +407,10 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     log.warn("Tenant is active but schema not available for {}", coord.tenantId);
                     log.debug("Tenant is active but schema not available", sue);
                 } catch (Throwable t) {
-                    log.error("CheckActive encountered a problem for {}", new Object[] { coord }, t);
+                    log.error("CheckActive encountered a problem for {}", new Object[]{coord}, t);
                 }
             } catch (Throwable t) {
-                log.error("Bootstrap encountered a problem for {}", new Object[] { coord }, t);
+                log.error("Bootstrap encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 
@@ -492,7 +492,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                                         }
                                     }
                                 } catch (Throwable t) {
-                                    log.error("Rebuild encountered a problem for {}", new Object[] { coord }, t);
+                                    log.error("Rebuild encountered a problem for {}", new Object[]{coord}, t);
                                 }
                             }
                         } catch (MiruPartitionUnavailableException e) {
@@ -507,7 +507,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     }
                 }
             } catch (Throwable t) {
-                log.error("RebuildIndex encountered a problem for {}", new Object[] { coord }, t);
+                log.error("RebuildIndex encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 
@@ -566,7 +566,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                         log.debug("Signaling end of rebuild for {}", coord);
                         queue.put(Collections.<MiruPartitionedActivity>emptyList());
                     } catch (Exception x) {
-                        log.error("Failure while rebuilding {}", new Object[] { coord }, x);
+                        log.error("Failure while rebuilding {}", new Object[]{coord}, x);
                     }
                 }
             });
@@ -649,7 +649,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             updateStorage(accessor, MiruBackingStorage.disk, false);
                         }
                     } catch (Throwable t) {
-                        log.error("Migrate encountered a problem for {}", new Object[] { coord }, t);
+                        log.error("Migrate encountered a problem for {}", new Object[]{coord}, t);
                     }
                     try {
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
@@ -658,11 +658,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             accessor.refundChits(mergeChits);
                         }
                     } catch (Throwable t) {
-                        log.error("Sip encountered a problem for {}", new Object[] { coord }, t);
+                        log.error("Sip encountered a problem for {}", new Object[]{coord}, t);
                     }
                 }
             } catch (Throwable t) {
-                log.error("SipMigrateIndex encountered a problem for {}", new Object[] { coord }, t);
+                log.error("SipMigrateIndex encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 

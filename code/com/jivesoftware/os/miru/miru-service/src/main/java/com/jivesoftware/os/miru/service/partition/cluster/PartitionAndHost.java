@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.partition;
+package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.collect.ComparisonChain;
 import com.jivesoftware.os.miru.api.MiruHost;

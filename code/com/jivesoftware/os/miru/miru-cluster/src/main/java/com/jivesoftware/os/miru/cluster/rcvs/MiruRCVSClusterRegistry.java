@@ -173,7 +173,6 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         return getTenantConfig(tenantId).getInt(MiruTenantConfigFields.number_of_replicas.name(), defaultNumberOfReplicas);
     }
 
-   
     @Override
     public List<MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception {
         final MiruTenantConfig config = getTenantConfig(tenantId);
@@ -454,8 +453,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         final Collection<MiruPartitionId> requiredPartitionId,
         final SetMultimap<MiruPartitionId, MiruHost> perPartitonHostsWithReplica) throws Exception {
 
-        final ListMultimap<MiruPartitionId, ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>> partitionsTopology = ArrayListMultimap
-            .create();
+        final ListMultimap<MiruPartitionId, ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>> partitionsTopology =
+            ArrayListMultimap.create();
         topologyRegistry.getEntrys(
             MiruVoidByte.INSTANCE, tenantId, null, null, 100, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>>() {

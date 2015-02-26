@@ -36,10 +36,6 @@
             <artifactId>merlin-config</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
             <version>0.328-SNAPSHOT</version>
@@ -48,10 +44,6 @@
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
             <version>0.328-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.rcvs</groupId>
-            <artifactId>row-column-value-store-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.mlogger</groupId>

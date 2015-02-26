@@ -30,7 +30,7 @@ public class MiruReaderConfigEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruService miruService;
-   
+
     public MiruReaderConfigEndpoints(@Context MiruService miruService) {
         this.miruService = miruService;
     }
@@ -49,7 +49,7 @@ public class MiruReaderConfigEndpoints {
                 MiruBackingStorage.valueOf(storage));
             return Response.ok(storage).build();
         } catch (Throwable t) {
-            log.error("Failed to set storage to {} for tenant {} partition {}", new Object[] { storage, tenantId, partitionId }, t);
+            log.error("Failed to set storage to {} for tenant {} partition {}", new Object[]{storage, tenantId, partitionId}, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -66,7 +66,7 @@ public class MiruReaderConfigEndpoints {
             miruService.removeHost(host);
             return Response.ok(host.toStringForm()).build();
         } catch (Throwable t) {
-            log.error("Failed to remove host {}", new Object[] { host }, t);
+            log.error("Failed to remove host {}", new Object[]{host}, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -88,7 +88,7 @@ public class MiruReaderConfigEndpoints {
                 host);
             return Response.ok(host.toStringForm()).build();
         } catch (Throwable t) {
-            log.error("Failed to remove topology for tenant {} partition {} host {}", new Object[] { tenantId, partitionId, host }, t);
+            log.error("Failed to remove topology for tenant {} partition {} host {}", new Object[]{tenantId, partitionId, host}, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -109,7 +109,7 @@ public class MiruReaderConfigEndpoints {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
         } catch (Throwable t) {
-            log.error("Failed to check state for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
+            log.error("Failed to check state for tenant {} partition {}", new Object[]{tenantId, partitionId}, t);
             return Response.serverError().build();
         }
     }
@@ -128,7 +128,7 @@ public class MiruReaderConfigEndpoints {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
         } catch (Throwable t) {
-            log.error("Failed to prioritize rebuild for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
+            log.error("Failed to prioritize rebuild for tenant {} partition {}", new Object[]{tenantId, partitionId}, t);
             return Response.serverError().build();
         }
     }

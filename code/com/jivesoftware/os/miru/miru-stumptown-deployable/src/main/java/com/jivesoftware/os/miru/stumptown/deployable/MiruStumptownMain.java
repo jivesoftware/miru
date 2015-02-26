@@ -93,8 +93,6 @@ public class MiruStumptownMain {
             ObjectMapper mapper = new ObjectMapper();
             mapper.registerModule(new GuavaModule());
 
-            
-
             RowColumnValueStoreProvider rowColumnValueStoreProvider = stumptownServiceConfig.getRowColumnValueStoreProviderClass()
                 .newInstance();
             @SuppressWarnings("unchecked")
@@ -109,7 +107,7 @@ public class MiruStumptownMain {
 
             RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruReaderHosts(), mapper);
             RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruWriterHosts(), mapper);
-            
+
             LogMill logMill = new LogMill(orderIdProvider);
 
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);

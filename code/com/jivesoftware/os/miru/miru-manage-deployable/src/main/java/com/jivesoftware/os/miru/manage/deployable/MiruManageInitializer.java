@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruActivityWALRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruAdminRegion;
@@ -15,6 +14,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 
 public class MiruManageInitializer {

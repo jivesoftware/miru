@@ -4,6 +4,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.service.partition.cluster.MiruTenantTopology;
 
 /**
  * To expect a tenant is to consider it active, meaning its partitions are eligible to wake and serve activity.

@@ -15,11 +15,11 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.client.MiruActivitySenderProvider;
 import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruPartitioner;
-import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 
 /**
  * @author jonathan
@@ -118,9 +117,8 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                 Set<MiruHost> fullReplicaSet = electHostsForTenantPartition(tenantId, partitionId, replicaHosts);
                 Collection<MiruPartitionCoord> allCoords = Collections2.transform(fullReplicaSet,
                     new Function<MiruHost, MiruPartitionCoord>() {
-                        @Nullable
                         @Override
-                        public MiruPartitionCoord apply(@Nullable MiruHost host) {
+                        public MiruPartitionCoord apply(MiruHost host) {
                             return new MiruPartitionCoord(tenantId, partitionId, host);
                         }
                     });
