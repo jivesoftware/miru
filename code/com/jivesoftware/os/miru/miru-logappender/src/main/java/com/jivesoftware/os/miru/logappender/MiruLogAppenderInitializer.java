@@ -72,7 +72,10 @@ public class MiruLogAppenderInitializer {
 
             for (int i = 0; i < logSenders.length; i++) {
                 String[] parts = hostPorts[i].split(":");
-                logSenders[i] = new HttpPoster(parts[0], Integer.parseInt(parts[1]), config.getSocketTimeoutInMillis());
+                int port = Integer.parseInt(parts[1]);
+                if (port > 0) {
+                    logSenders[i] = new HttpPoster(parts[0], port, config.getSocketTimeoutInMillis());
+                }
             }
 
             return new HttpMiruLogAppender(datacenter,

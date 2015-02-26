@@ -19,7 +19,7 @@ public class MiruMetricSamplerInitializer {
 
     public static interface MiruMetricSamplerConfig extends Config {
 
-        @StringDefault("undefined")
+        @StringDefault("undefined:-1")
         String getMiruSeaAnomalyHostPorts();
 
         @IntDefault(60_000)
@@ -57,7 +57,10 @@ public class MiruMetricSamplerInitializer {
             for (String hostPort : hostPorts) {
                 String[] parts = hostPort.split(":");
                 try {
-                    sampleSenders.add(new HttpPoster(parts[0], Integer.parseInt(parts[1]), config.getSocketTimeoutInMillis()));
+                    int port = Integer.parseInt(parts[1]);
+                    if (port > 0) {
+                        sampleSenders.add(new HttpPoster(parts[0], port, config.getSocketTimeoutInMillis()));
+                    }
                 } catch (NumberFormatException | IOException x) {
                     LOG.error("Failed initializing MiruMetricSampleSender. input=" + hostPort, x);
                 }
