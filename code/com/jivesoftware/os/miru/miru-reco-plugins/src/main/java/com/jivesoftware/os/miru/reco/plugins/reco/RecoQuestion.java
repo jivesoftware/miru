@@ -50,17 +50,17 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run
-        List<BM> ands = new ArrayList<>();
+        List<BM> okAnds = new ArrayList<>();
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
+        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.scorableFilter,
             solutionLog, filtered, context.getActivityIndex().lastId(), -1);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "constrained down to {} items.", bitmaps.cardinality(filtered));
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained down bitmap {}", filtered);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "constrained scorable down to {} items.", bitmaps.cardinality(filtered));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained scorable down bitmap {}", filtered);
         }
-        ands.add(filtered);
+        okAnds.add(filtered);
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
@@ -69,7 +69,7 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "compositeAuthz contains {} items.", bitmaps.cardinality(compositeAuthz));
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "compositeAuthz bitmap {}", compositeAuthz);
             }
-            ands.add(compositeAuthz);
+            okAnds.add(compositeAuthz);
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
@@ -78,22 +78,28 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
             solutionLog.log(MiruSolutionLogLevel.INFO, "indexMask contains {} items.", bitmaps.cardinality(buildIndexMask));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "indexMask bitmap {}", buildIndexMask);
         }
-        ands.add(buildIndexMask);
+        okAnds.add(buildIndexMask);
 
         // AND it all together and return the results
-        BM answer = bitmaps.create();
-        bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-        bitmaps.and(answer, ands);
-
-
+        BM okActivity = bitmaps.create();
+        bitmapsDebug.debug(solutionLog, bitmaps, "ands", okAnds);
+        bitmaps.and(okActivity, okAnds);
 
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "considering {} items.", bitmaps.cardinality(answer));
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "considering bitmap {}", answer);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "answering {} items.", bitmaps.cardinality(okActivity));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "answering bitmap {}", okActivity);
+        }
+
+        BM allMyActivity = bitmaps.create();
+        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
+            solutionLog, allMyActivity, context.getActivityIndex().lastId(), -1);
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "constrained mine down to {} items.", bitmaps.cardinality(allMyActivity));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained mine down bitmap {}", allMyActivity);
         }
 
         return new MiruPartitionResponse<>(
-            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, answer, removeDistinctsFilter),
+            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, allMyActivity, okActivity, removeDistinctsFilter),
             solutionLog.asList()
         );
     }

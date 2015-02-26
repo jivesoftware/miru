@@ -38,4 +38,22 @@ public class CollaborativeFilterUtil {
         return partitionedActivityFactory.activity(1, partitionId, index, activity);
     }
 
+    public MiruPartitionedActivity typedActivity(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        long time,
+        String user,
+        String doc,
+        String activityType,
+        int index) {
+
+        int hash = Math.abs(doc.hashCode());
+        Map<String, List<String>> fieldsValues = Maps.newHashMap();
+        fieldsValues.put("user", Arrays.asList(user));
+        fieldsValues.put("doc", Arrays.asList(doc));
+        fieldsValues.put("docType", Arrays.asList(String.valueOf(hash % 4)));
+        fieldsValues.put("activityType", Arrays.asList(activityType));
+
+        MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        return partitionedActivityFactory.activity(1, partitionId, index, activity);
+    }
 }

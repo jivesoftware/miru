@@ -1,8 +1,10 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.hash.Hashing;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -28,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang.mutable.MutableInt;
 
 /**
@@ -60,83 +63,87 @@ public class CollaborativeFiltering {
         MiruRequestContext<BM> requestContext,
         final MiruRequest<RecoQuery> request,
         Optional<RecoReport> report,
-        BM answer,
+        BM allMyActivity,
+        BM okActivity,
         MiruFilter removeDistinctsFilter)
         throws Exception {
 
-        log.debug("Get collaborative filtering for answer={} query={}", answer, request);
+        log.debug("Get collaborative filtering for allMyActivity={} allOkActivity={} query={}", allMyActivity, okActivity, request);
 
-        // answer: latest time I touched distinct parents <field1>
+        int fieldId1 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName1);
+        int fieldId2 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName2);
+        int fieldId3 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName3);
+        MiruFieldDefinition fieldDefinition3 = requestContext.getSchema().getFieldDefinition(fieldId3);
 
-        // contributors: all latest distinct users <field2> for the latest distinct parents <field1>
-        BM contributors = possibleContributors(bitmaps, requestContext, request, answer);
-        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "contributors {}.", bitmaps.cardinality(contributors));
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "contributors bitmap {}", contributors);
+        // myOkActivity: all my activity
+        BM myOkActivity = bitmaps.create();
+        bitmaps.and(myOkActivity, Arrays.asList(allMyActivity, okActivity));
+
+        // distinctParents: distinct parents <field1> that I've touched
+        Set<MiruTermId> distinctParents = Sets.newHashSet();
+        MiruIntIterator iter = bitmaps.intIterator(myOkActivity);
+        while (iter.hasNext()) {
+            int id = iter.next();
+            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, id, fieldId1); //TODO batch get by fieldId
+            Collections.addAll(distinctParents, fieldValues);
         }
 
-        // otherContributors: all *except me* of the latest distinct users <field2> against distinct parents <field1>
-        BM otherContributors = bitmaps.create();
-        bitmaps.andNot(otherContributors, contributors, Collections.singletonList(answer));
+        MiruFieldIndex<BM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        List<BM> toBeORed = new ArrayList<>();
+        log.debug("allField1Activity: fieldId={}", fieldId1);
+        for (MiruTermId parent : distinctParents) {
+            Optional<BM> index = primaryFieldIndex.get(
+                fieldId1,
+                parent)
+                .getIndex();
+            if (index.isPresent()) {
+                toBeORed.add(index.get());
+            }
+        }
+
+        // allField1Activity: all activity for the distinct parents <field1> that I've touched
+        BM allField1Activity = bitmaps.create();
+        log.debug("allField1Activity: toBeORed.size={}", toBeORed.size());
+        bitmaps.or(allField1Activity, toBeORed);
+        log.trace("allField1Activity: allField1Activity={}", allField1Activity);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "not my self {}.", bitmaps.cardinality(otherContributors));
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "not my self bitmap {}", otherContributors);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "allField1Activity {}.", bitmaps.cardinality(allField1Activity));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "allField1Activity bitmap {}", allField1Activity);
+        }
+
+        BM okField1Activity = bitmaps.create();
+        bitmaps.and(okField1Activity, Arrays.asList(okActivity, allField1Activity));
+
+        // otherOkField1Activity: all activity *except mine* for the distinct parents <field1>
+        BM otherOkField1Activity = bitmaps.create();
+        bitmaps.andNot(otherOkField1Activity, okField1Activity, Arrays.asList(myOkActivity));
+        log.trace("otherOkField1Activity: otherOkField1Activity={}", otherOkField1Activity);
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "otherOkField1Activity {}.", bitmaps.cardinality(otherOkField1Activity));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "otherOkField1Activity bitmap {}", otherOkField1Activity);
         }
 
         // contributorHeap: ranked users <field2> based on cardinality of interactions with distinct parents <field1>
-        MinMaxPriorityQueue<MiruTermCount> contributorHeap = rankContributors(bitmaps, request, requestContext, otherContributors);
-        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "contributorHeap {}.", contributorHeap.size());
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "contributorHeap values {}", contributorHeap);
-        }
+        final MinMaxPriorityQueue<MiruTermCount> contributorHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
+            .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
+            .create();
+        aggregateUtil.stream(bitmaps, request.tenantId, requestContext, otherOkField1Activity, Optional.<BM>absent(), fieldId2,
+            request.query.aggregateFieldName2, new CallbackStream<MiruTermCount>() {
+                @Override
+                public MiruTermCount callback(MiruTermCount miruTermCount) throws Exception {
+                    if (miruTermCount != null) {
+                        contributorHeap.add(miruTermCount);
+                    }
+                    return miruTermCount;
+                }
+            });
 
         if (request.query.aggregateFieldName2.equals(request.query.aggregateFieldName3)) {
             // special case where the ranked users <field2> are the desired parents <field3>
-            int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName2);
-            MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
-            return composeAnswer(requestContext, fieldDefinition, contributorHeap);
+            return composeAnswer(requestContext, fieldDefinition3, contributorHeap);
         }
 
-        // contributions: all latest distinct parents <field3> for each distinct user <field2>
-        BM contributions = contributions(bitmaps, contributorHeap, requestContext, request.query);
-        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "contributions {}.", bitmaps.cardinality(contributions));
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "contributions bitmap {}", contributions);
-        }
-
-        final List<MiruTermCount> mostLike = new ArrayList<>(contributorHeap);
-        final BloomIndex<BM> bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
-        final List<BloomIndex.Mights<MiruTermCount>> wantBits = bloomIndex.wantBits(mostLike);
-        // TODO handle authz
-
-        // othersContributions: all latest distinct parents <field3> *except what I've touched* for each distinct user <field2>
-        BM othersContributions = bitmaps.create();
-        bitmaps.andNot(othersContributions, contributions, Collections.singletonList(contributors));
-        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "othersContributions {}.", bitmaps.cardinality(othersContributions));
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "othersContributions bitmap {}", othersContributions);
-        }
-
-        BM scorable = othersContributions;
-        MiruFilter constrainScorableFilter = request.query.scorableFilter;
-        if (!MiruFilter.NO_FILTER.equals(constrainScorableFilter)) {
-            BM possible = bitmaps.create();
-            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                constrainScorableFilter, solutionLog, possible, requestContext.getActivityIndex().lastId(), -1);
-            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-                solutionLog.log(MiruSolutionLogLevel.INFO, "possible {}.", bitmaps.cardinality(possible));
-                solutionLog.log(MiruSolutionLogLevel.TRACE, "possible bitmap {}", possible);
-            }
-
-            BM constrainedScorable = bitmaps.create();
-            bitmaps.and(constrainedScorable, Arrays.asList(possible, othersContributions));
-
-            scorable = constrainedScorable;
-            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-                solutionLog.log(MiruSolutionLogLevel.INFO, "constrained {}.", bitmaps.cardinality(scorable));
-                solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained bitmap {}", scorable);
-            }
-        }
+        // augment distinctParents with additional distinct parents <field1> for exclusion below
         if (!MiruFilter.NO_FILTER.equals(removeDistinctsFilter)) {
             BM remove = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
@@ -146,17 +153,50 @@ public class CollaborativeFiltering {
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);
             }
 
-            BM removedScorable = bitmaps.create();
-            bitmaps.andNot(removedScorable, scorable, Arrays.asList(remove));
-
-            scorable = removedScorable;
-            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-                solutionLog.log(MiruSolutionLogLevel.INFO, "reduced {}.", bitmaps.cardinality(scorable));
-                solutionLog.log(MiruSolutionLogLevel.TRACE, "reduced bitmap {}", scorable);
+            MiruIntIterator removeIter = bitmaps.intIterator(remove);
+            while (removeIter.hasNext()) {
+                int id = removeIter.next();
+                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, id, fieldId3); //TODO batch get by fieldId
+                Collections.addAll(distinctParents, fieldValues);
             }
         }
 
-        return score(bitmaps, request, scorable, requestContext, bloomIndex, wantBits);
+        Multiset<MiruTermId> scoredParents = HashMultiset.create();
+
+        for (MiruTermCount tc : contributorHeap) {
+            Optional<BM> index = primaryFieldIndex.get(
+                fieldId2,
+                tc.termId)
+                .getIndex();
+            if (index.isPresent()) {
+                BM contributorAllActivity = index.get();
+                BM contributorOkActivity = bitmaps.create();
+                bitmaps.and(contributorOkActivity, Arrays.asList(okActivity, contributorAllActivity));
+
+                MiruIntIterator contributorIter = bitmaps.intIterator(contributorOkActivity);
+                Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
+                while (contributorIter.hasNext()) {
+                    int id = contributorIter.next();
+                    MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, id, fieldId3); //TODO batch get by fieldId
+                    Collections.addAll(distinctContributorParents, fieldValues);
+                }
+
+                distinctContributorParents.removeAll(distinctParents);
+
+                for (MiruTermId parent : distinctContributorParents) {
+                    scoredParents.add(parent, (int) tc.count);
+                }
+            }
+        }
+
+        final MinMaxPriorityQueue<MiruTermCount> scoredHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
+            .maximumSize(request.query.desiredNumberOfDistincts)
+            .create();
+        for (Multiset.Entry<MiruTermId> entry : scoredParents.entrySet()) {
+            scoredHeap.add(new MiruTermCount(entry.getElement(), null, entry.getCount()));
+        }
+
+        return composeAnswer(requestContext, fieldDefinition3, scoredHeap);
     }
 
     private <BM> BM contributions(MiruBitmaps<BM> bitmaps, MinMaxPriorityQueue<MiruTermCount> userHeap, MiruRequestContext<BM> requestContext, RecoQuery query)
