@@ -9,22 +9,20 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.client.MiruActivitySenderProvider;
 import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruPartitioner;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -41,24 +39,24 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final ExecutorService sendActivitiesToHostsThreadPool;
-    private final MiruClusterRegistry clusterRegistry;
+    private final MiruClusterClient clusterClient;
     private final MiruReplicaSetDirector replicaSetDirector;
     private final MiruActivitySenderProvider activitySenderProvider;
     private final MiruPartitioner miruPartitioner;
 
-    private final Cache<TenantAndPartitionKey, MiruReplicaSet> replicaCache;
+    private final Cache<TenantAndPartitionKey, MiruReplicaHosts> replicaCache;
     private final Cache<MiruTenantId, Boolean> latestAlignmentCache;
 
     public MiruBestEffortFailureTolerantClient(
         ExecutorService sendActivitiesToHostsThreadPool,
-        MiruClusterRegistry clusterRegistry,
+        MiruClusterClient clusterClient,
         MiruReplicaSetDirector replicaSetDirector,
         MiruActivitySenderProvider activitySenderProvider,
         MiruPartitioner miruPartitioner,
         int cacheSize,
         long cacheExpiresAfterNMillis) {
         this.sendActivitiesToHostsThreadPool = sendActivitiesToHostsThreadPool;
-        this.clusterRegistry = clusterRegistry;
+        this.clusterClient = clusterClient;
         this.replicaSetDirector = replicaSetDirector;
         this.activitySenderProvider = activitySenderProvider;
         this.miruPartitioner = miruPartitioner;
@@ -94,15 +92,15 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
 
             for (final MiruPartitionId partitionId : activitiesPerPartition.keySet()) {
                 TenantAndPartitionKey key = new TenantAndPartitionKey(tenantId, partitionId);
-                MiruReplicaSet replicaSet = replicaCache.getIfPresent(key);
+                MiruReplicaHosts replicaHosts = replicaCache.getIfPresent(key);
 
-                if (replicaSet == null) {
+                if (replicaHosts == null) {
                     try {
                         LOG.info("Refreshing replica cache for tenant:{} partition:{}", tenantId, partitionId);
-                        replicaSet = clusterRegistry.getReplicaSets(tenantId, Arrays.asList(partitionId)).get(partitionId);
-                        if (!replicaSet.get(MiruPartitionState.online).isEmpty()) {
+                        replicaHosts = clusterClient.replicas(tenantId, partitionId);
+                        if (replicaHosts.atleastOneOnline) {
                             // cache only if at least one node is online
-                            replicaCache.put(key, replicaSet);
+                            replicaCache.put(key, replicaHosts);
                             LOG.inc("sendActivity>cached");
                         } else {
                             LOG.warn("Failed to cache because no partitions are online for tenant:{} partition:{}", tenantId, partitionId);
@@ -117,7 +115,7 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
                 }
 
                 // This will contain all existing replicas as well as newly elected replicas
-                Set<MiruHost> fullReplicaSet = electHostsForTenantPartition(tenantId, partitionId, replicaSet);
+                Set<MiruHost> fullReplicaSet = electHostsForTenantPartition(tenantId, partitionId, replicaHosts);
                 Collection<MiruPartitionCoord> allCoords = Collections2.transform(fullReplicaSet,
                     new Function<MiruHost, MiruPartitionCoord>() {
                         @Nullable
@@ -149,15 +147,15 @@ public class MiruBestEffortFailureTolerantClient implements MiruClient {
         }
     }
 
-    private Set<MiruHost> electHostsForTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, MiruReplicaSet replicaSet) throws Exception {
-        if (replicaSet.getCountOfMissingReplicas() > 0) {
+    private Set<MiruHost> electHostsForTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, MiruReplicaHosts replicaHosts) throws Exception {
+        if (replicaHosts.countOfMissingReplicas > 0) {
             return replicaSetDirector.electToReplicaSetForTenantPartition(tenantId,
                 partitionId,
-                replicaSet,
+                replicaHosts,
                 System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1) // TODO expose to config!
             );
         }
-        return replicaSet.getHostsWithReplica();
+        return replicaHosts.replicaHosts;
     }
 
     @Override

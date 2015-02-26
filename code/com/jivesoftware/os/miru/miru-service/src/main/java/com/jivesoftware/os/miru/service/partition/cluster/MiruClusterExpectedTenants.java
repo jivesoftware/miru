@@ -2,38 +2,48 @@ package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
-import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
+import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse.Partition;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
+import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
+import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
+import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
+import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
-import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
+import com.jivesoftware.os.miru.service.partition.MiruPartitionHeartbeatHandler;
+import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
+import com.jivesoftware.os.miru.service.partition.MiruTenantRoutingTopology;
+import com.jivesoftware.os.miru.service.partition.MiruTenantRoutingTopology.PartitionGroup;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopology;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
+import com.jivesoftware.os.miru.service.partition.PartitionAndHost;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nonnull;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  *
@@ -42,172 +52,155 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruPartitionInfoProvider partitionInfoProvider;
-    private final MiruClusterRegistry clusterRegistry;
+    private final MiruClusterClient clusterClient;
     private final MiruTenantTopologyFactory tenantTopologyFactory;
+    private final MiruRemoteQueryablePartitionFactory remotePartitionFactory;
 
-    private final ConcurrentMap<MiruTenantId, MiruTenantTopology<?>> expectedTopologies = Maps.newConcurrentMap();
+    private final ConcurrentMap<MiruTenantId, MiruTenantTopology<?>> localTopologies = Maps.newConcurrentMap();
     private final StripingLocksProvider<MiruTenantId> tenantLocks = new StripingLocksProvider<>(64);
 
-    private final Cache<MiruTenantId, MiruTenantTopology<?>> temporaryTopologies = CacheBuilder.newBuilder()
+    private final Cache<MiruTenantId, MiruTenantRoutingTopology> routingTopologies = CacheBuilder.newBuilder()
         .concurrencyLevel(24)
         .expireAfterAccess(1, TimeUnit.HOURS)
         .maximumSize(10_000) //TODO configure
-        .removalListener(new RemovalListener<MiruTenantId, MiruTenantTopology<?>>() {
-            @Override
-            public void onRemoval(@Nonnull RemovalNotification<MiruTenantId, MiruTenantTopology<?>> notification) {
-                MiruTenantId tenantId = notification.getKey();
-                MiruTenantTopology<?> tenantTopology = notification.getValue();
+        .build();
 
-                if (tenantTopology != null && tenantId != null) {
-                    if (expectedTopologies.get(tenantId) != tenantTopology) {
-                        LOG.info("Removed temporary topology for {}: {}", tenantId, notification.getCause());
-                        Iterator<MiruPartitionCoord> iter = partitionInfoProvider.getKeysIterator();
-                        while (iter.hasNext()) {
-                            MiruPartitionCoord coord = iter.next();
-                            if (coord.tenantId.equals(tenantId)) {
-                                iter.remove();
+    private final MiruPartitionHeartbeatHandler heartbeatHandler;
+    private final MiruHostedPartitionComparison partitionComparison;
+
+    public MiruClusterExpectedTenants(MiruTenantTopologyFactory tenantTopologyFactory,
+        MiruRemoteQueryablePartitionFactory remotePartitionFactory,
+        MiruPartitionHeartbeatHandler heartbeatHandler,
+        MiruHostedPartitionComparison partitionComparison,
+        MiruClusterClient clusterClient) {
+
+        this.tenantTopologyFactory = tenantTopologyFactory;
+        this.remotePartitionFactory = remotePartitionFactory;
+        this.heartbeatHandler = heartbeatHandler;
+        this.partitionComparison = partitionComparison;
+        this.clusterClient = clusterClient;
+    }
+
+    @Override
+    public Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(final MiruHost localhost,
+        final MiruTenantId tenantId,
+        String queryKey) throws Exception {
+
+        MiruTenantRoutingTopology topology = routingTopologies.get(tenantId, new Callable<MiruTenantRoutingTopology>() {
+
+            @Override
+            public MiruTenantRoutingTopology call() throws Exception {
+
+                MiruTopologyResponse topologyResponse = clusterClient.routingTopology(tenantId);
+                ConcurrentSkipListMap<PartitionAndHost, MiruRoutablePartition> topology = new ConcurrentSkipListMap<PartitionAndHost, MiruRoutablePartition>();
+                for (MiruTopologyResponse.Partition partition : topologyResponse.topology) {
+                    MiruPartitionId partitionId = MiruPartitionId.of(partition.partitionId);
+                    MiruRoutablePartition routablePartition = new MiruRoutablePartition(partition.host,
+                        partitionId, partition.host.equals(localhost),
+                        partition.state, partition.storage);
+                    topology.put(new PartitionAndHost(partitionId, partition.host), routablePartition);
+                }
+                return new MiruTenantRoutingTopology(partitionComparison, topology);
+            }
+        });
+        if (topology == null) {
+            return Collections.emptyList();
+        }
+        final MiruTenantTopology<?> localTopology = localTopologies.get(tenantId);
+        List<PartitionGroup> allPartitionsInOrder = topology.allPartitionsInOrder(tenantId, queryKey);
+        return Lists.transform(allPartitionsInOrder, new Function<PartitionGroup, OrderedPartitions<?>>() {
+
+            @Override
+            public OrderedPartitions<?> apply(PartitionGroup input) {
+                List<MiruQueryablePartition<?>> partitions = Lists.transform(input.partitions,
+                    new Function<MiruRoutablePartition, MiruQueryablePartition<?>>() {
+
+                        @Override
+                        public MiruQueryablePartition<?> apply(MiruRoutablePartition input) {
+                            MiruPartitionCoord key = new MiruPartitionCoord(tenantId, input.partitionId, input.host);
+                            if (input.local) {
+                                Optional<MiruLocalHostedPartition<?>> partition = localTopology.getPartition(key);
+                                return partition.orNull();
+                            } else {
+                                return remotePartitionFactory.create(key, new MiruPartitionCoordInfo(input.state, input.storage));
                             }
                         }
-                        tenantTopology.remove();
-                    } else {
-                        LOG.info("Migrated temporary topology for {}", tenantId);
-                    }
-                }
+                    });
+                return new OrderedPartitions(input.tenantId, input.partitionId, Iterables.filter(partitions, Predicates.notNull()));
             }
-        })
-        .build();
-    private final ConcurrentLinkedDeque<MiruTenantTopology<?>> temporaryUpdateDeque = new ConcurrentLinkedDeque<>();
-
-    public MiruClusterExpectedTenants(MiruPartitionInfoProvider partitionInfoProvider,
-        MiruTenantTopologyFactory tenantTopologyFactory,
-        MiruClusterRegistry clusterRegistry) {
-
-        this.partitionInfoProvider = partitionInfoProvider;
-        this.tenantTopologyFactory = tenantTopologyFactory;
-        this.clusterRegistry = clusterRegistry;
+        });
     }
 
     @Override
-    public MiruTenantTopology<?> getTopology(final MiruTenantId tenantId) throws Exception {
-        MiruTenantTopology<?> tenantTopology = expectedTopologies.get(tenantId);
-        if (tenantTopology == null) {
-            synchronized (tenantLocks.lock(tenantId)) {
-                tenantTopology = temporaryTopologies.get(tenantId, new Callable<MiruTenantTopology<?>>() {
-                    @Override
-                    public MiruTenantTopology<?> call() throws Exception {
-                        LOG.info("Added temporary topology for {}", tenantId);
-                        MiruTenantTopology<?> temporaryTopology = tenantTopologyFactory.create(tenantId);
-                        alignTopology(temporaryTopology);
-                        return temporaryTopology;
-                    }
-                });
-                temporaryUpdateDeque.add(tenantTopology);
-            }
+    public void thumpthump(MiruHost host) throws Exception {
+        MiruHeartbeatResponse thumpthump = heartbeatHandler.thumpthump(host);
+
+        ListMultimap<MiruTenantId, MiruPartitionId> tenantPartitionIds = ArrayListMultimap.create();
+        for (Partition active : thumpthump.active) {
+            tenantPartitionIds.put(new MiruTenantId(active.tenantId), MiruPartitionId.of(active.partitionId));
         }
-        return tenantTopology;
+        expect(host, tenantPartitionIds);
+
+        for (byte[] rawTenants : thumpthump.topologyHasChanged) {
+            routingTopologies.invalidate(new MiruTenantId(rawTenants));
+        }
     }
 
-    @Override
-    public Collection<MiruTenantTopology<?>> topologies() {
-        return expectedTopologies.values();
-    }
+    private void expect(MiruHost host, ListMultimap<MiruTenantId, MiruPartitionId> expected) throws Exception {
 
-    @Override
-    public boolean isExpected(MiruTenantId tenantId) {
-        return expectedTopologies.containsKey(tenantId);
-    }
-
-    @Override
-    public void expect(List<MiruTenantId> expectedTenantsForHost) throws Exception {
-        checkArgument(expectedTenantsForHost != null);
         Set<MiruTenantId> synced = Sets.newHashSet();
-        for (MiruTenantId tenantId : expectedTenantsForHost) {
+        for (MiruTenantId tenantId : expected.keys()) {
             synchronized (tenantLocks.lock(tenantId)) {
                 if (synced.add(tenantId)) {
-                    MiruTenantTopology<?> tenantTopology = expectedTopologies.get(tenantId);
+                    MiruTenantTopology<?> tenantTopology = localTopologies.get(tenantId);
                     if (tenantTopology == null) {
-                        MiruTenantTopology<?> allowed = temporaryTopologies.getIfPresent(tenantId);
-                        if (allowed != null) {
-                            tenantTopology = allowed;
-                        } else {
-                            tenantTopology = tenantTopologyFactory.create(tenantId);
-                        }
-                        expectedTopologies.putIfAbsent(tenantId, tenantTopology);
+                        tenantTopology = tenantTopologyFactory.create(tenantId);
+                        localTopologies.put(tenantId, tenantTopology);
                     }
 
-                    alignTopology(tenantTopology);
-                    temporaryTopologies.invalidate(tenantId);
+                    tenantTopology.checkForPartitionAlignment(host, tenantId, expected.get(tenantId));
+
                 }
             }
         }
 
-        for (MiruTenantId tenantId : expectedTopologies.keySet()) {
+        for (MiruTenantId tenantId : localTopologies.keySet()) {
             synchronized (tenantLocks.lock(tenantId)) {
                 if (!synced.contains(tenantId)) {
-                    final MiruTenantTopology removed = expectedTopologies.remove(tenantId);
+                    final MiruTenantTopology removed = localTopologies.remove(tenantId);
                     if (removed != null) {
-                        // tenant is no longer expected, but instead of removing demote it to temporary, and enqueue for alignment
-                        temporaryTopologies.put(tenantId, removed);
-                        temporaryUpdateDeque.add(removed);
+                        removed.remove();
                     }
                 }
             }
         }
+    }
 
-        // stop after we reach the current oldest element
-        MiruTenantTopology<?> lastTemporaryTopology = temporaryUpdateDeque.peekLast();
-        while (!temporaryUpdateDeque.isEmpty()) {
-            MiruTenantTopology<?> tenantTopology = temporaryUpdateDeque.removeFirst();
-            MiruTenantId tenantId = tenantTopology.getTenantId();
-            synchronized (tenantLocks.lock(tenantId)) {
-                if (synced.add(tenantId)) {
-                    alignTopology(tenantTopology);
-                }
-                if (tenantTopology == lastTemporaryTopology) {
-                    break;
-                }
-            }
-        }
+    @Override
+    public MiruTenantTopology<?> getLocalTopology(final MiruTenantId tenantId) throws Exception {
+        return localTopologies.get(tenantId);
     }
 
     @Override
     public boolean prioritizeRebuild(MiruPartitionCoord coord) {
-        MiruTenantTopology<?> topology = expectedTopologies.get(coord.tenantId);
+        MiruTenantTopology<?> topology = localTopologies.get(coord.tenantId);
         if (topology == null) {
             LOG.warn("Attempted to prioritize for unknown tenant {} (temporary = {})",
-                coord.tenantId, temporaryTopologies.getIfPresent(coord.tenantId) != null);
+                coord.tenantId, routingTopologies.getIfPresent(coord.tenantId) != null);
             return false;
         }
-        Optional<MiruHostedPartition<?>> optionalPartition = topology.getPartition(coord);
+        Optional<MiruLocalHostedPartition<?>> optionalPartition = topology.getPartition(coord);
         if (optionalPartition.isPresent()) {
-            MiruHostedPartition<?> partition = optionalPartition.get();
-            if (partition.isLocal()) {
-                if (partition.getState() == MiruPartitionState.bootstrap) {
-                    tenantTopologyFactory.prioritizeRebuild((MiruLocalHostedPartition<?>) partition);
-                    return true;
-                } else if (partition.getState() == MiruPartitionState.offline) {
-                    topology.warm(coord);
-                    return true;
-                }
+            MiruLocalHostedPartition<?> partition = optionalPartition.get();
+            if (partition.getState() == MiruPartitionState.bootstrap) {
+                tenantTopologyFactory.prioritizeRebuild(partition);
+                return true;
+            } else if (partition.getState() == MiruPartitionState.offline) {
+                topology.warm(coord);
+                return true;
             }
         }
         return false;
     }
 
-    private void alignTopology(MiruTenantTopology<?> tenantTopology) throws Exception {
-        MiruTenantId tenantId = tenantTopology.getTenantId();
-
-        List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
-        for (MiruPartition partition : partitionsForTenant) {
-            partitionInfoProvider.put(partition.coord, partition.info);
-        }
-        tenantTopology.checkForPartitionAlignment(Lists.transform(partitionsForTenant,
-            new Function<MiruPartition, MiruPartitionCoord>() {
-                @Override
-                public MiruPartitionCoord apply(MiruPartition input) {
-                    return input.coord;
-                }
-            }));
-    }
 }

@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -58,9 +59,9 @@ public class MiruRebalanceDirector {
             return input.coord.host;
         }
     };
-    private Function<MiruClusterRegistry.HostHeartbeat, MiruHost> heartbeatToHost = new Function<MiruClusterRegistry.HostHeartbeat, MiruHost>() {
+    private Function<HostHeartbeat, MiruHost> heartbeatToHost = new Function<HostHeartbeat, MiruHost>() {
         @Override
-        public MiruHost apply(MiruClusterRegistry.HostHeartbeat input) {
+        public MiruHost apply(HostHeartbeat input) {
             return input.host;
         }
     };
@@ -74,7 +75,7 @@ public class MiruRebalanceDirector {
     }
 
     public void shiftTopologies(Optional<MiruHost> fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
-        LinkedHashSet<MiruClusterRegistry.HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
+        LinkedHashSet<HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
         List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(hostHeartbeats, heartbeatToHost));
 
         int moved = 0;
@@ -233,10 +234,10 @@ public class MiruRebalanceDirector {
             context = contextCache.get(token, new Callable<VisualizeContext>() {
                 @Override
                 public VisualizeContext call() throws Exception {
-                    LinkedHashSet<MiruClusterRegistry.HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
+                    LinkedHashSet<HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
                     List<MiruHost> allHosts = Lists.newArrayList();
                     Set<MiruHost> unhealthyHosts = Sets.newHashSet();
-                    for (MiruClusterRegistry.HostHeartbeat heartbeat : heartbeats) {
+                    for (HostHeartbeat heartbeat : heartbeats) {
                         allHosts.add(heartbeat.host);
                         if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
                             unhealthyHosts.add(heartbeat.host);

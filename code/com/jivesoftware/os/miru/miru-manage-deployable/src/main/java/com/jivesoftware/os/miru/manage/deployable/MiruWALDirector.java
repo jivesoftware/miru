@@ -37,7 +37,7 @@ public class MiruWALDirector {
     public void repairActivityWAL() throws Exception {
         List<MiruTenantId> tenantIds = clusterRegistry.allTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
-            Optional<MiruPartitionId> latestPartitionId = clusterRegistry.getLatestPartitionIdForTenant(tenantId);
+            Optional<MiruPartitionId> latestPartitionId = activityWALReader.getLatestPartitionIdForTenant(tenantId);
             if (latestPartitionId.isPresent()) {
                 for (MiruPartitionId partitionId = latestPartitionId.get().prev(); partitionId != null; partitionId = partitionId.prev()) {
                     MiruActivityWALStatus status = activityWALReader.getStatus(tenantId, partitionId);

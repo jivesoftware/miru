@@ -26,16 +26,15 @@ import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
 import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruClientConfig;
 import com.jivesoftware.os.miru.client.MiruClientInitializer;
 import com.jivesoftware.os.miru.client.endpoints.MiruClientEndpoints;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientConfig;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
@@ -44,7 +43,6 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.Miru
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
-import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import org.merlin.config.Config;
@@ -118,29 +116,19 @@ public class MiruWriterMain {
 
             MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
 
-            MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
-                .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-            MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-                registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                registryStore.getWriterPartitionRegistry(),
-                registryConfig.getDefaultNumberOfReplicas(),
-                registryConfig.getDefaultTopologyIsStaleAfterMillis());
+
+            MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(clusterClientConfig, mapper);
 
             MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
-                clusterRegistry);
+                clusterClient);
 
             MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
             MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig,
-                clusterRegistry,
+                clusterClient,
                 replicaSetDirector,
-                registryStore,
                 wal,
                 instanceConfig.getInstanceName());
 

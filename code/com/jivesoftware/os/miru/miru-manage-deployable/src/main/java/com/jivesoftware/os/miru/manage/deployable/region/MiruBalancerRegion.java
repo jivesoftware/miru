@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -46,7 +47,7 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
     public String render(Void input) {
         Map<String, Object> data = Maps.newHashMap();
         try {
-            LinkedHashSet<MiruClusterRegistry.HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
+            LinkedHashSet<HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
 
             final ListMultimap<MiruHost, MiruTopologyStatus> topologies = ArrayListMultimap.create();
             List<MiruTenantId> tenantIds = clusterRegistry.allTenantIds();
@@ -60,9 +61,9 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
                 }
             });
 
-            data.put("hosts", Collections2.transform(hostHeartbeats, new Function<MiruClusterRegistry.HostHeartbeat, Map<String, String>>() {
+            data.put("hosts", Collections2.transform(hostHeartbeats, new Function<HostHeartbeat, Map<String, String>>() {
                 @Override
-                public Map<String, String> apply(MiruClusterRegistry.HostHeartbeat input) {
+                public Map<String, String> apply(HostHeartbeat input) {
                     List<MiruTopologyStatus> statuses = topologies.get(input.host);
                     Multiset<MiruPartitionState> stateCounts = HashMultiset.create();
                     for (MiruTopologyStatus status : statuses) {

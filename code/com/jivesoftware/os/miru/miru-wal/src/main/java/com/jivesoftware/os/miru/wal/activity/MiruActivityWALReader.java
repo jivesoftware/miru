@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.wal.activity;
 
+import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -35,6 +36,8 @@ public interface MiruActivityWALReader {
     MiruPartitionedActivity findExisting(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionedActivity activity) throws Exception;
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception;
 
     public static class Sip implements Comparable<Sip> {
 

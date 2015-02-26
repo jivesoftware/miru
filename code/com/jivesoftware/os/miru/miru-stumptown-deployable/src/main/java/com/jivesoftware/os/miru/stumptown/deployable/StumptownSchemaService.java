@@ -8,14 +8,10 @@
  */
 package com.jivesoftware.os.miru.stumptown.deployable;
 
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.MiruConfigReader;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.mlogger.core.MetricLogger;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
 
 /**
@@ -24,22 +20,16 @@ import java.util.Set;
  */
 public class StumptownSchemaService {
 
-    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-
-    private final Random rand = new Random();
-    private final RequestHelper[] miruReaderHosts;
+    private final MiruClusterClient client;
     private final Set<MiruTenantId> registered = new HashSet<>();
 
-    public StumptownSchemaService(RequestHelper[] miruReaderHosts) {
-        this.miruReaderHosts = miruReaderHosts;
+    public StumptownSchemaService(MiruClusterClient client) {
+        this.client = client;
     }
 
-    public void ensureSchema(MiruTenantId serviceId, MiruSchema schema) {
+    public void ensureSchema(MiruTenantId serviceId, MiruSchema schema) throws Exception {
         if (!registered.contains(serviceId)) {
-            int index = rand.nextInt(miruReaderHosts.length);
-            LOG.info("submitting schema for service:" + serviceId + " to " + miruReaderHosts[index]);
-            RequestHelper requestHelper = miruReaderHosts[index];
-            requestHelper.executeRequest(schema, MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX + "/schema/" + serviceId.toString(), String.class, null);
+            client.registerSchema(serviceId, schema);
             registered.add(serviceId);
         }
     }

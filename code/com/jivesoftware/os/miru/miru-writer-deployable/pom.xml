@@ -63,12 +63,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-cluster</artifactId>
-            <version>0.328-SNAPSHOT</version>
-            <type>jar</type>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-client</artifactId>
             <version>0.328-SNAPSHOT</version>
             <type>jar</type>
@@ -107,6 +101,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-metric-sampler</artifactId>
+            <version>0.328-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-cluster-client</artifactId>
             <version>0.328-SNAPSHOT</version>
             <type>jar</type>
         </dependency>

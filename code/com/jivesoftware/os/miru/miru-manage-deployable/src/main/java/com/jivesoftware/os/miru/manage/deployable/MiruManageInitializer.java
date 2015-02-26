@@ -1,8 +1,7 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
-import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruActivityWALRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruAdminRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruBalancerRegion;
@@ -22,7 +21,6 @@ public class MiruManageInitializer {
 
     public MiruManageService initialize(MiruSoyRenderer renderer,
         MiruClusterRegistry clusterRegistry,
-        MiruSchemaProvider schemaProvider,
         MiruActivityWALReader activityWALReader,
         MiruReadTrackingWALReader readTrackingWALReader,
         MiruActivityLookupTable activityLookupTable)
@@ -36,7 +34,7 @@ public class MiruManageInitializer {
                 new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer),
                 new MiruHostFocusRegion("soy.miru.section.hostFocusRegion", renderer, clusterRegistry)),
             new MiruBalancerRegion("soy.miru.page.balancerRegion", renderer, clusterRegistry),
-            new MiruSchemaRegion("soy.miru.page.schemaRegion", renderer, clusterRegistry, schemaProvider),
+            new MiruSchemaRegion("soy.miru.page.schemaRegion", renderer, clusterRegistry),
             new MiruTenantsRegion("soy.miru.page.tenantsRegion", renderer,
                 new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry, activityWALReader)),
             new MiruLookupRegion("soy.miru.page.lookupRegion", renderer, activityLookupTable),

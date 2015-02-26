@@ -4,15 +4,12 @@ import com.google.common.collect.ComparisonChain;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 
-/**
- * Package private encapsulation of partitionId and host.
- */
-class PartitionAndHost implements Comparable<PartitionAndHost> {
+public class PartitionAndHost implements Comparable<PartitionAndHost> {
 
     final MiruPartitionId partitionId;
     final MiruHost host;
 
-    PartitionAndHost(MiruPartitionId partitionId, MiruHost host) {
+    public PartitionAndHost(MiruPartitionId partitionId, MiruHost host) {
         this.partitionId = partitionId;
         this.host = host;
     }

@@ -6,7 +6,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
@@ -255,7 +255,7 @@ public class MiruManageEndpoints {
                     @Override
                     public boolean needsToShift(MiruTenantId tenantId,
                         MiruPartitionId partitionId,
-                        Collection<MiruClusterRegistry.HostHeartbeat> hostHeartbeats,
+                        Collection<HostHeartbeat> hostHeartbeats,
                         List<MiruPartition> partitions) {
                         return true;
                     }

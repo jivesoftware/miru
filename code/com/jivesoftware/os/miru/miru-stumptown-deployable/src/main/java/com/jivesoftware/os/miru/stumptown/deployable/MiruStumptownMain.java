@@ -28,7 +28,9 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
-import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientConfig;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownIntakeInitializer.MiruStumptownIntakeConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownQueryPluginEndpoints;
@@ -91,13 +93,14 @@ public class MiruStumptownMain {
             ObjectMapper mapper = new ObjectMapper();
             mapper.registerModule(new GuavaModule());
 
-            MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+            
 
-            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+            RowColumnValueStoreProvider rowColumnValueStoreProvider = stumptownServiceConfig.getRowColumnValueStoreProviderClass()
                 .newInstance();
             @SuppressWarnings("unchecked")
             RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
                 .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+
             //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
             MiruStumptownPayloads payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(),
                 rowColumnValueStoreInitializer, mapper);
@@ -106,14 +109,19 @@ public class MiruStumptownMain {
 
             RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruReaderHosts(), mapper);
             RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruWriterHosts(), mapper);
-
+            
             LogMill logMill = new LogMill(orderIdProvider);
 
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
+
+            MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
+            MiruClusterClient client = new MiruClusterClientInitializer().initialize(clusterClientConfig, mapper);
+            StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(client);
+
             MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(intakeConfig,
+                stumptownSchemaService,
                 logMill,
                 miruWrites,
-                miruReaders,
                 payloads);
 
             new MiruStumptownInternalLogAppender("unknownDatacenter",

@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.cluster.rcvs;
 
+import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;

@@ -33,15 +33,15 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruWriter;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
+import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientConfig;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
@@ -70,7 +70,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
-import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.util.Collection;
@@ -163,19 +162,7 @@ public class MiruReaderMain {
             HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
                 .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
-            MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize(instanceConfig.getClusterName(),
-                rowColumnValueStoreInitializer, mapper);
-            MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-                registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                registryStore.getWriterPartitionRegistry(),
-                registryConfig.getDefaultNumberOfReplicas(),
-                registryConfig.getDefaultTopologyIsStaleAfterMillis());
-
+           
             MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
             MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer().initialize(miruServiceConfig, miruHost);
@@ -195,14 +182,16 @@ public class MiruReaderMain {
                 termComposer);
 
             final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-            RegistrySchemaProvider registrySchemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(),
-                10_000); //TODO configure
 
+            MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(clusterClientConfig, mapper);
+
+            MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
+            
             MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
-                registryStore,
-                clusterRegistry,
+                clusterClient,
                 miruHost,
-                registrySchemaProvider,
+                miruSchemaProvider,
                 wal,
                 httpClientFactory,
                 miruResourceLocator,
@@ -253,9 +242,7 @@ public class MiruReaderMain {
             }
 
             deployable.addEndpoints(MiruReaderConfigEndpoints.class);
-            deployable.addInjectables(MiruClusterRegistry.class, clusterRegistry);
-            deployable.addInjectables(RegistrySchemaProvider.class, registrySchemaProvider);
-
+            
             deployable.buildServer().start();
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {

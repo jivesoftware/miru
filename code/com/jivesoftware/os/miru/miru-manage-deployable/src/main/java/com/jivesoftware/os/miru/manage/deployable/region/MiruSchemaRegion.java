@@ -9,8 +9,6 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -28,16 +26,13 @@ public class MiruSchemaRegion implements MiruPageRegion<Optional<String>> {
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
-    private final MiruSchemaProvider schemaProvider;
 
     public MiruSchemaRegion(String template,
         MiruSoyRenderer renderer,
-        MiruClusterRegistry clusterRegistry,
-        MiruSchemaProvider schemaProvider) {
+        MiruClusterRegistry clusterRegistry) {
         this.template = template;
         this.renderer = renderer;
         this.clusterRegistry = clusterRegistry;
-        this.schemaProvider = schemaProvider;
     }
 
     @Override
@@ -51,13 +46,13 @@ public class MiruSchemaRegion implements MiruPageRegion<Optional<String>> {
                 int missingCount = 0;
                 List<MiruTenantId> matching = Lists.newArrayList();
                 for (MiruTenantId tenantId : tenantIds) {
-                    try {
-                        MiruSchema schema = schemaProvider.getSchema(tenantId);
+                    MiruSchema schema = clusterRegistry.getSchema(tenantId);
+                    if (schema != null) {
                         JsonNode checkNode = objectMapper.valueToTree(schema);
                         if (schemaNode.equals(checkNode)) {
                             matching.add(tenantId);
                         }
-                    } catch (MiruSchemaUnvailableException e) {
+                    } else {
                         missingCount++;
                     }
                 }

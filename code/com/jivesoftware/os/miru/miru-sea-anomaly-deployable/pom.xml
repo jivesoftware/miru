@@ -130,6 +130,6 @@
             <artifactId>miru-logappender</artifactId>
             <version>0.328-SNAPSHOT</version>
             <type>jar</type>
-        </dependency>
+        </dependency>    
     </dependencies>
 </project>

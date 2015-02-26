@@ -1,34 +1,26 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruPartition;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
-import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
@@ -51,15 +43,15 @@ public class MiruManageServiceTest {
     private MiruPartitionId partitionId;
 
     private MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[] {
+        .setFieldDefinitions(new MiruFieldDefinition[]{
             new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
         })
         .setPairedLatest(ImmutableMap.of(
-            "user", Arrays.asList("doc"),
-            "doc", Arrays.asList("user")))
+                "user", Arrays.asList("doc"),
+                "doc", Arrays.asList("user")))
         .setBloom(ImmutableMap.of(
-            "doc", Arrays.asList("user")))
+                "doc", Arrays.asList("user")))
         .build();
 
     @BeforeClass
@@ -76,7 +68,6 @@ public class MiruManageServiceTest {
         InMemoryRowColumnValueStoreInitializer rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         ObjectMapper mapper = new ObjectMapper();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", rowColumnValueStoreInitializer, mapper);
-        registryStore.getWriterPartitionRegistry().add(MiruVoidByte.INSTANCE, tenantId, 1, MiruPartitionId.of(0), null, null);
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
             registryStore.getHostsRegistry(),
             registryStore.getExpectedTenantsRegistry(),
@@ -84,34 +75,35 @@ public class MiruManageServiceTest {
             registryStore.getReplicaRegistry(),
             registryStore.getTopologyRegistry(),
             registryStore.getConfigRegistry(),
-            registryStore.getWriterPartitionRegistry(),
+            registryStore.getSchemaRegistry(),
             numberOfReplicas,
+            TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1));
         MiruWAL miruWAL = new MiruWALInitializer().initialize("test", rowColumnValueStoreInitializer, mapper);
+        miruWAL.getWriterPartitionRegistry().add(MiruVoidByte.INSTANCE, tenantId, 1, MiruPartitionId.of(0), null, null);
 
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL(),
+            miruWAL.getWriterPartitionRegistry());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
-        MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
+        MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(miruWAL.getActivityLookupTable());
 
-        RegistrySchemaProvider schemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
-        schemaProvider.register(tenantId, miruSchema);
+        clusterRegistry.registerSchema(tenantId, miruSchema);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        miruManageService = new MiruManageInitializer().initialize(renderer, clusterRegistry, schemaProvider, activityWALReader, readTrackingWALReader,
+        miruManageService = new MiruManageInitializer().initialize(renderer, clusterRegistry, activityWALReader, readTrackingWALReader,
             activityLookupTable);
 
-        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
+        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
 
         for (int i = 0; i < numberOfReplicas; i++) {
             MiruHost host = new MiruHost("host" + i, 10_000 + i);
             clusterRegistry.sendHeartbeatForHost(host);
             hosts.add(host);
+            clusterClient.elect(host, tenantId,
+                partitionId,
+                System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
         }
 
-        replicaSetDirector.electToReplicaSetForTenantPartition(tenantId,
-            partitionId,
-            new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), Sets.<MiruHost>newHashSet(), numberOfReplicas),
-            System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
     }
 
     @Test

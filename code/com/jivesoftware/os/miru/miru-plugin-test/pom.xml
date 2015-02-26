@@ -43,11 +43,6 @@
             <version>0.328-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-cluster</artifactId>
-            <version>0.328-SNAPSHOT</version>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-inmemory</artifactId>
         </dependency>
@@ -75,6 +70,26 @@
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.upena</groupId>
+            <artifactId>upena-main</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-cluster-client</artifactId>
+            <version>0.328-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-cluster</artifactId>
+            <version>0.328-SNAPSHOT</version>
+            <type>jar</type>
         </dependency>
     </dependencies>
 </project>

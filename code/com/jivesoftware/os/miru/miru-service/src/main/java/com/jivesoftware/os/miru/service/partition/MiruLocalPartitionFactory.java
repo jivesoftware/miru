@@ -4,7 +4,6 @@ import com.google.common.hash.Hashing;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
-import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
@@ -26,7 +25,7 @@ public class MiruLocalPartitionFactory {
     private final MiruServiceConfig config;
     private final MiruContextFactory miruContextFactory;
     private final MiruActivityWALReader activityWALReader;
-    private final MiruPartitionEventHandler partitionEventHandler;
+    private final MiruPartitionHeartbeatHandler partitionEventHandler;
     private final MiruRebuildDirector rebuildDirector;
     private final ScheduledExecutorService scheduledBoostrapExecutor;
     private final ScheduledExecutorService scheduledRebuildExecutor;
@@ -40,7 +39,7 @@ public class MiruLocalPartitionFactory {
     public MiruLocalPartitionFactory(MiruServiceConfig config,
         MiruContextFactory miruContextFactory,
         MiruActivityWALReader activityWALReader,
-        MiruPartitionEventHandler partitionEventHandler,
+        MiruPartitionHeartbeatHandler partitionEventHandler,
         MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBoostrapExecutor,
         ScheduledExecutorService scheduledRebuildExecutor,
@@ -65,7 +64,7 @@ public class MiruLocalPartitionFactory {
         this.mergeChits = mergeChits;
     }
 
-    public <BM> MiruHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+    public <BM> MiruLocalHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         return new MiruLocalHostedPartition<>(bitmaps,
             coord,
             miruContextFactory,

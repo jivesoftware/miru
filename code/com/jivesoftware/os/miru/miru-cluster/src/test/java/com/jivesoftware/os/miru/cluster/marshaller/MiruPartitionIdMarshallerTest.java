@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.cluster.marshaller;
 
+import com.jivesoftware.os.miru.api.marshall.MiruPartitionIdMarshaller;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import org.testng.annotations.Test;
 

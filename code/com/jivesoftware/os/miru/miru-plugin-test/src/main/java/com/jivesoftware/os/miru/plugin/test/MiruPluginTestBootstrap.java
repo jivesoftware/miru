@@ -3,8 +3,9 @@ package com.jivesoftware.os.miru.plugin.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
+import com.google.common.io.Files;
+import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -17,7 +18,6 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -27,11 +27,15 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig;
+import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -50,6 +54,8 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
+import com.jivesoftware.os.upena.main.Deployable;
+import java.io.File;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -101,23 +107,40 @@ public class MiruPluginTestBootstrap {
 
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
-        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(
-            new CurrentTimestamper(),
-            registryStore.getHostsRegistry(),
-            registryStore.getExpectedTenantsRegistry(),
-            registryStore.getExpectedTenantPartitionsRegistry(),
-            registryStore.getReplicaRegistry(),
-            registryStore.getTopologyRegistry(),
-            registryStore.getConfigRegistry(),
-            registryStore.getWriterPartitionRegistry(),
-            3,
-            TimeUnit.HOURS.toMillis(1));
 
-        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
+        MiruClusterRegistry clusterRegistry = null;
+
+        boolean useAmza = true;
+        if (useAmza) {
+            File amzaDir = Files.createTempDir();
+            AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(AmzaClusterRegistryConfig.class);
+            acrc.setWorkingDirectory(amzaDir.getAbsolutePath());
+            acrc.setReplicationFactor(0);
+            acrc.setTakeFromFactor(0);
+            Deployable deployable = new Deployable(new String[0]);
+            AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
+            clusterRegistry = new AmzaClusterRegistry(amzaService, 3, TimeUnit.HOURS.toMillis(1), TimeUnit.HOURS.toMillis(1));
+        } else {
+            clusterRegistry = new MiruRCVSClusterRegistry(
+                new CurrentTimestamper(),
+                registryStore.getHostsRegistry(),
+                registryStore.getExpectedTenantsRegistry(),
+                registryStore.getExpectedTenantPartitionsRegistry(),
+                registryStore.getReplicaRegistry(),
+                registryStore.getTopologyRegistry(),
+                registryStore.getConfigRegistry(),
+                registryStore.getSchemaRegistry(),
+                3,
+                TimeUnit.HOURS.toMillis(1),
+                TimeUnit.HOURS.toMillis(1));
+        }
+
+        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
+        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterClient);
 
         clusterRegistry.sendHeartbeatForHost(miruHost);
         replicaSetDirector.electToReplicaSetForTenantPartition(tenantId, partitionId,
-            new MiruReplicaSet(ArrayListMultimap.<MiruPartitionState, MiruPartition>create(), new HashSet<MiruHost>(), 3),
+            new MiruReplicaHosts(false, new HashSet<MiruHost>(), 3),
             System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
         clusterRegistry.updateTopology(new MiruPartitionCoord(tenantId, partitionId, miruHost), Optional.<MiruPartitionCoordInfo>absent(),
             Optional.of(System.currentTimeMillis()));
@@ -139,9 +162,9 @@ public class MiruPluginTestBootstrap {
             Interners.<MiruTenantId>newWeakInterner(),
             Interners.<String>newWeakInterner(),
             termComposer);
+
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
-            registryStore,
-            clusterRegistry,
+            clusterClient,
             miruHost,
             new SingleSchemaProvider(miruSchema),
             wal,
