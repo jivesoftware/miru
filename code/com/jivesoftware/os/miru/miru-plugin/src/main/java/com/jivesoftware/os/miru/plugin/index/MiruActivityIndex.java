@@ -9,6 +9,7 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Collection;
+import java.util.List;
 
 /** @author jonathan */
 public interface MiruActivityIndex {
@@ -16,19 +17,31 @@ public interface MiruActivityIndex {
     /**
      * Returns the activity that was recorded at the given index
      *
-     * @param tenantId
+     * @param tenantId the tenant
      * @param index the index of the activity
      * @return the activity at the given index
      */
     MiruInternalActivity get(MiruTenantId tenantId, int index);
 
     /**
+     * Get the terms from the given field for the activity at the requested index.
      *
-     * @param index
-     * @param fieldId
-     * @return
+     * @param tenantId the tenant
+     * @param index the activity index
+     * @param fieldId the field
+     * @return the terms
      */
     MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId);
+
+    /**
+     * Get the terms from the given field for each activity index.
+     *
+     * @param tenantId the tenant
+     * @param indexes the activity indexes
+     * @param fieldId the field
+     * @return the terms
+     */
+    List<MiruTermId[]> getAll(MiruTenantId tenantId, int[] indexes, int fieldId);
 
     /**
      * Returns the index of the last activity.

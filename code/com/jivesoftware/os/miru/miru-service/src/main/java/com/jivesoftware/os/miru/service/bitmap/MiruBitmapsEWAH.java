@@ -358,6 +358,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
+    public int[] indexes(EWAHCompressedBitmap bitmap) {
+        return bitmap.toArray();
+    }
+
+    @Override
     public int lastSetBit(EWAHCompressedBitmap bitmap) {
         MiruIntIterator iterator = intIterator(bitmap);
         int last = -1;

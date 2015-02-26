@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -8,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,6 +47,24 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
         } else {
             return backingIndex.get(tenantId, index, fieldId);
         }
+    }
+
+    @Override
+    public List<MiruTermId[]> getAll(MiruTenantId tenantId, int[] indexes, int fieldId) {
+        List<MiruTermId[]> allTermIds = Lists.newArrayList();
+        int found = 0;
+        for (int i = 0; i < indexes.length; i++) {
+            MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(indexes[i]);
+            if (activityAndId != null) {
+                found++;
+                indexes[i] = -1;
+                allTermIds.add(activityAndId.activity.fieldsValues[fieldId]);
+            }
+        }
+        if (found < indexes.length) {
+            allTermIds.addAll(backingIndex.getAll(tenantId, indexes, fieldId));
+        }
+        return allTermIds;
     }
 
     @Override

@@ -262,6 +262,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
+    public int[] indexes(RoaringBitmap bitmap) {
+        return bitmap.toArray();
+    }
+
+    @Override
     public int lastSetBit(RoaringBitmap bitmap) {
         MiruIntIterator iterator = intIterator(bitmap);
         int last = -1;

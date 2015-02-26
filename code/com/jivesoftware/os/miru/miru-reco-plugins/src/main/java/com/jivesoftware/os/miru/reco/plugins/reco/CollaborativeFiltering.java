@@ -11,9 +11,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -31,7 +29,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import org.apache.commons.lang.mutable.MutableInt;
 
 /**
  *
@@ -68,23 +65,22 @@ public class CollaborativeFiltering {
         MiruFilter removeDistinctsFilter)
         throws Exception {
 
-        log.debug("Get collaborative filtering for allMyActivity={} allOkActivity={} query={}", allMyActivity, okActivity, request);
+        log.debug("Get collaborative filtering for allMyActivity={} okActivity={} query={}", allMyActivity, okActivity, request);
 
         int fieldId1 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName1);
         int fieldId2 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName2);
         int fieldId3 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName3);
         MiruFieldDefinition fieldDefinition3 = requestContext.getSchema().getFieldDefinition(fieldId3);
 
-        // myOkActivity: all my activity
+        // myOkActivity: my activity restricted to what's ok
         BM myOkActivity = bitmaps.create();
         bitmaps.and(myOkActivity, Arrays.asList(allMyActivity, okActivity));
 
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
-        MiruIntIterator iter = bitmaps.intIterator(myOkActivity);
-        while (iter.hasNext()) {
-            int id = iter.next();
-            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, id, fieldId1); //TODO batch get by fieldId
+        int[] indexes = bitmaps.indexes(myOkActivity);
+        List<MiruTermId[]> allFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, indexes, fieldId1);
+        for (MiruTermId[] fieldValues : allFieldValues) {
             Collections.addAll(distinctParents, fieldValues);
         }
 
@@ -153,10 +149,9 @@ public class CollaborativeFiltering {
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);
             }
 
-            MiruIntIterator removeIter = bitmaps.intIterator(remove);
-            while (removeIter.hasNext()) {
-                int id = removeIter.next();
-                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, id, fieldId3); //TODO batch get by fieldId
+            int[] removeIndexes = bitmaps.indexes(remove);
+            List<MiruTermId[]> removeFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, removeIndexes, fieldId3);
+            for (MiruTermId[] fieldValues : removeFieldValues) {
                 Collections.addAll(distinctParents, fieldValues);
             }
         }
@@ -173,11 +168,10 @@ public class CollaborativeFiltering {
                 BM contributorOkActivity = bitmaps.create();
                 bitmaps.and(contributorOkActivity, Arrays.asList(okActivity, contributorAllActivity));
 
-                MiruIntIterator contributorIter = bitmaps.intIterator(contributorOkActivity);
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
-                while (contributorIter.hasNext()) {
-                    int id = contributorIter.next();
-                    MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, id, fieldId3); //TODO batch get by fieldId
+                int[] contributorIndexes = bitmaps.indexes(contributorOkActivity);
+                List<MiruTermId[]> contributorFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, contributorIndexes, fieldId3);
+                for (MiruTermId[] fieldValues : contributorFieldValues) {
                     Collections.addAll(distinctContributorParents, fieldValues);
                 }
 
@@ -197,132 +191,6 @@ public class CollaborativeFiltering {
         }
 
         return composeAnswer(requestContext, fieldDefinition3, scoredHeap);
-    }
-
-    private <BM> BM contributions(MiruBitmaps<BM> bitmaps, MinMaxPriorityQueue<MiruTermCount> userHeap, MiruRequestContext<BM> requestContext, RecoQuery query)
-        throws Exception {
-
-        int fieldId = requestContext.getSchema().getFieldId(query.lookupFieldName2);
-        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.pairedLatest);
-
-        List<BM> toBeORed = new ArrayList<>();
-        for (MiruTermCount tc : userHeap) {
-            Optional<BM> index = fieldIndex.get(
-                fieldId,
-                indexUtil.makePairedLatestTerm(tc.termId, query.aggregateFieldName3))
-                .getIndex();
-            if (index.isPresent()) {
-                toBeORed.add(index.get());
-            }
-        }
-        BM r = bitmaps.create();
-        bitmaps.or(r, toBeORed);
-        return r;
-    }
-
-    private <BM> MinMaxPriorityQueue<MiruTermCount> rankContributors(MiruBitmaps<BM> bitmaps,
-        final MiruRequest<RecoQuery> request,
-        MiruRequestContext<BM> requestContext,
-        BM join1)
-        throws Exception {
-
-        int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName2);
-        log.debug("rankContributors: fieldId={}", fieldId);
-
-        final MinMaxPriorityQueue<MiruTermCount> userHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
-            .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
-            .create();
-
-        aggregateUtil.stream(bitmaps, request.tenantId, requestContext, join1, Optional.<BM>absent(), fieldId, request.query.retrieveFieldName2,
-            new CallbackStream<MiruTermCount>() {
-                @Override
-                public MiruTermCount callback(MiruTermCount v) throws Exception {
-                    if (v != null) {
-                        userHeap.add(v);
-                    }
-                    return v;
-                }
-            });
-        return userHeap;
-    }
-
-    private <BM> BM possibleContributors(MiruBitmaps<BM> bitmaps, MiruRequestContext<BM> requestContext, final MiruRequest<RecoQuery> request, BM answer)
-        throws Exception {
-
-        int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName1);
-        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.pairedLatest);
-        List<BM> toBeORed = new ArrayList<>();
-        MiruIntIterator answerIterator = bitmaps.intIterator(answer);
-        log.debug("possibleContributors: fieldId={}", fieldId);
-        // feeds us our docIds
-        while (answerIterator.hasNext()) {
-            int id = answerIterator.next();
-            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, id, fieldId);
-            log.trace("possibleContributors: fieldValues={}", (Object) fieldValues);
-            if (fieldValues != null && fieldValues.length > 0) {
-                Optional<BM> index = fieldIndex.get(
-                    fieldId,
-                    indexUtil.makePairedLatestTerm(fieldValues[0], request.query.aggregateFieldName2))
-                    .getIndex();
-                if (index.isPresent()) {
-                    toBeORed.add(index.get());
-                }
-            }
-        }
-        BM r = bitmaps.create();
-        log.debug("possibleContributors: toBeORed.size={}", toBeORed.size());
-        bitmaps.or(r, toBeORed);
-        log.trace("possibleContributors: r={}", r);
-        return r;
-    }
-
-    private <BM> RecoAnswer score(MiruBitmaps<BM> bitmaps, final MiruRequest<RecoQuery> request, BM scorable, MiruRequestContext<BM> requestContext,
-        final BloomIndex<BM> bloomIndex, final List<BloomIndex.Mights<MiruTermCount>> wantBits) throws Exception {
-
-        final int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateFieldName3);
-        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
-        log.debug("score: fieldId={}", fieldId);
-
-        final MiruFieldIndex<BM> bloomFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
-        final MinMaxPriorityQueue<MiruTermCount> heap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
-            .maximumSize(request.query.desiredNumberOfDistincts)
-            .create();
-
-        // feeds us all recommended parents <field3>
-        aggregateUtil.stream(bitmaps, request.tenantId, requestContext, scorable, Optional.<BM>absent(), fieldId, request.query.retrieveFieldName3,
-            new CallbackStream<MiruTermCount>() {
-                @Override
-                public MiruTermCount callback(MiruTermCount v) throws Exception {
-                    if (v != null) {
-                        MiruTermId[] fieldValues = v.mostRecent;
-                        log.trace("score.fieldValues={}", (Object) fieldValues);
-                        if (fieldValues != null && fieldValues.length > 0) {
-                            Optional<BM> index = bloomFieldIndex.get(
-                                fieldId,
-                                indexUtil.makeBloomTerm(fieldValues[0], request.query.retrieveFieldName2))
-                                .getIndex();
-                            final MutableInt count = new MutableInt(0);
-                            if (index.isPresent()) {
-                                bloomIndex.mightContain(index.get(), wantBits, new BloomIndex.MightContain<MiruTermCount>() {
-
-                                    @Override
-                                    public void mightContain(MiruTermCount value) {
-                                        count.add(value.count);
-                                    }
-                                });
-                                heap.add(new MiruTermCount(fieldValues[0], null, count.longValue()));
-
-                                for (BloomIndex.Mights<MiruTermCount> boo : wantBits) {
-                                    boo.reset();
-                                }
-                            }
-                        }
-                    }
-                    return v;
-                }
-            });
-
-        return composeAnswer(requestContext, fieldDefinition, heap);
     }
 
     private <BM> RecoAnswer composeAnswer(MiruRequestContext<BM> requestContext,

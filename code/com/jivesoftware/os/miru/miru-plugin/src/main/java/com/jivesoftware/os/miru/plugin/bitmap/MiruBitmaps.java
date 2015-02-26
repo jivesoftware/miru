@@ -91,6 +91,8 @@ public interface MiruBitmaps<BM> {
 
     MiruIntIterator intIterator(BM bitmap);
 
+    int[] indexes(BM bitmap);
+
     int lastSetBit(BM bitmap);
 
 }

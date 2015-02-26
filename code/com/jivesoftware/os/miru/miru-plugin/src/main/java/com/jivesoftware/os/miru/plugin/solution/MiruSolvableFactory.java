@@ -29,6 +29,9 @@ public class MiruSolvableFactory<A, P> {
                     } else {
                         return question.askRemote(handle.getRequestHelper(), handle.getCoord().partitionId, report);
                     }
+                } catch (Throwable t) {
+                    System.out.println("Oh crap!");
+                    throw t;
                 }
             }
         };

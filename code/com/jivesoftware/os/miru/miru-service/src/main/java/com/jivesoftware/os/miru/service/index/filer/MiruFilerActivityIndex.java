@@ -15,6 +15,8 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -69,6 +71,36 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
             return keyedStore.read(FilerIO.intBytes(index), null, new ChunkTransaction<Void, MiruTermId[]>() {
+                @Override
+                public MiruTermId[] commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
+                    if (filer != null) {
+                        synchronized (lock) {
+                            filer.seek(0);
+                            return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
+                        }
+                    } else {
+                        return null;
+                    }
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public List<MiruTermId[]> getAll(MiruTenantId tenantId, int[] indexes, final int fieldId) {
+        if (indexes.length == 0) {
+            return Collections.emptyList();
+        }
+        try {
+            byte[][] bytesForIndexes = new byte[indexes.length][];
+            for (int i = 0; i < indexes.length; i++) {
+                if (indexes[i] >= 0) {
+                    bytesForIndexes[i] = FilerIO.intBytes(indexes[i]);
+                }
+            }
+            return keyedStore.readEach(bytesForIndexes, null, new ChunkTransaction<Void, MiruTermId[]>() {
                 @Override
                 public MiruTermId[] commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
                     if (filer != null) {
