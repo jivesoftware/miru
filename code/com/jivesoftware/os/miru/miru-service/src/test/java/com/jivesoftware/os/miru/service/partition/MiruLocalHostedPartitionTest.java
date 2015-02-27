@@ -185,12 +185,14 @@ public class MiruLocalHostedPartitionTest {
             4_096,
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionDeleteChunkStoreOnClose(),
+            100,
             1_000);
 
         MiruChunkAllocator diskContextAllocator = new OnDiskChunkAllocator(
             new MiruTempDirectoryResourceLocator(),
             new HeapByteBufferFactory(),
             config.getPartitionNumberOfChunkStores(),
+            100,
             1_000);
 
         contextFactory = new MiruContextFactory(schemaProvider,

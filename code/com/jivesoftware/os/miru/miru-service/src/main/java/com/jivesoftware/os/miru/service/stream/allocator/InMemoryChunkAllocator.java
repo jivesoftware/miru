@@ -20,20 +20,23 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final long initialChunkSize;
     private final int numberOfChunkStores;
     private final boolean partitionDeleteChunkStoreOnClose;
-    private final int partitionChunkCacheSize;
+    private final int partitionInitialChunkCacheSize;
+    private final int partitionMaxChunkCacheSize;
 
     public InMemoryChunkAllocator(ByteBufferFactory rebuildByteBufferFactory,
         ByteBufferFactory cacheByteBufferFactory,
         long initialChunkSize,
         int numberOfChunkStores,
         boolean partitionDeleteChunkStoreOnClose,
-        int partitionChunkCacheSize) {
+        int partitionInitialChunkCacheSize,
+        int partitionMaxChunkCacheSize) {
         this.rebuildByteBufferFactory = rebuildByteBufferFactory;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.initialChunkSize = initialChunkSize;
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionDeleteChunkStoreOnClose = partitionDeleteChunkStoreOnClose;
-        this.partitionChunkCacheSize = partitionChunkCacheSize;
+        this.partitionInitialChunkCacheSize = partitionInitialChunkCacheSize;
+        this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
     }
 
     @Override
@@ -45,7 +48,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
             chunkStores[i] = chunkStoreInitializer.create(rebuildByteBufferFactory,
                 initialChunkSize,
                 cacheByteBufferFactory,
-                partitionChunkCacheSize);
+                partitionInitialChunkCacheSize,
+                partitionMaxChunkCacheSize);
         }
         return chunkStores;
     }

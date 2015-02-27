@@ -50,14 +50,14 @@ public class MiruEjjiSLSNGTest {
 
         File dir = Files.createTempDirectory("testNewChunkStore").toFile();
         HeapByteBufferFactory byteBufferFactory = new HeapByteBufferFactory();
-        ChunkStore chunkStore1 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data1", 8, byteBufferFactory, 5_000);
-        ChunkStore chunkStore2 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data2", 8, byteBufferFactory, 5_000);
-        ChunkStore chunkStore3 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data3", 8, byteBufferFactory, 5_000);
-        ChunkStore chunkStore4 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data4", 8, byteBufferFactory, 5_000);
-        ChunkStore chunkStore5 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data5", 8, byteBufferFactory, 5_000);
-        ChunkStore chunkStore6 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data6", 8, byteBufferFactory, 5_000);
-        ChunkStore chunkStore7 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data7", 8, byteBufferFactory, 5_000);
-        ChunkStore chunkStore8 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data8", 8, byteBufferFactory, 5_000);
+        ChunkStore chunkStore1 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data1", 8, byteBufferFactory, 500, 5_000);
+        ChunkStore chunkStore2 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data2", 8, byteBufferFactory, 500, 5_000);
+        ChunkStore chunkStore3 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data3", 8, byteBufferFactory, 500, 5_000);
+        ChunkStore chunkStore4 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data4", 8, byteBufferFactory, 500, 5_000);
+        ChunkStore chunkStore5 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data5", 8, byteBufferFactory, 500, 5_000);
+        ChunkStore chunkStore6 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data6", 8, byteBufferFactory, 500, 5_000);
+        ChunkStore chunkStore7 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data7", 8, byteBufferFactory, 500, 5_000);
+        ChunkStore chunkStore8 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data8", 8, byteBufferFactory, 500, 5_000);
         ChunkStore[] chunkStores = new ChunkStore[]{chunkStore1, chunkStore2, chunkStore3, chunkStore4,
             chunkStore5, chunkStore6, chunkStore7, chunkStore8};
 

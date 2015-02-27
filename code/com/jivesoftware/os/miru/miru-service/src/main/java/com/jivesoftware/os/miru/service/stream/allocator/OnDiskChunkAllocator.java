@@ -21,17 +21,20 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final MiruResourceLocator resourceLocator;
     private final ByteBufferFactory cacheByteBufferFactory;
     private final int numberOfChunkStores;
-    private final int partitionChunkCacheSize;
+    private final int partitionInitialChunkCacheSize;
+    private final int partitionMaxChunkCacheSize;
 
     public OnDiskChunkAllocator(
         MiruResourceLocator resourceLocator,
         ByteBufferFactory cacheByteBufferFactory,
         int numberOfChunkStores,
-        int partitionChunkCacheSize) {
+        int partitionInitialChunkCacheSize,
+        int partitionMaxChunkCacheSize) {
         this.resourceLocator = resourceLocator;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
-        this.partitionChunkCacheSize = partitionChunkCacheSize;
+        this.partitionInitialChunkCacheSize = partitionInitialChunkCacheSize;
+        this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
     }
 
     @Override
@@ -66,7 +69,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 "chunk-" + i,
                 resourceLocator.getOnDiskInitialChunkSize(),
                 cacheByteBufferFactory,
-                partitionChunkCacheSize);
+                partitionInitialChunkCacheSize,
+                partitionMaxChunkCacheSize);
         }
         return chunkStores;
     }

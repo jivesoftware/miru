@@ -137,12 +137,14 @@ public class MiruServiceInitializer {
             resourceLocator.getInMemoryChunkSize(),
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionDeleteChunkStoreOnClose(),
-            config.getPartitionChunkCacheSize());
+            config.getPartitionInitialChunkCacheSize(),
+            config.getPartitionMaxChunkCacheSize());
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(resourceLocator,
             byteBufferFactory,
             config.getPartitionNumberOfChunkStores(),
-            config.getPartitionChunkCacheSize());
+            config.getPartitionInitialChunkCacheSize(),
+            config.getPartitionMaxChunkCacheSize());
 
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache = CacheBuilder.newBuilder()
             .expireAfterAccess(config.getFieldIndexCacheExpireAfterMillis(), TimeUnit.MILLISECONDS)

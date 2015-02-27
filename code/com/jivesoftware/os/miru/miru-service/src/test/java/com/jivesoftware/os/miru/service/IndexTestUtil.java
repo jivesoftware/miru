@@ -68,12 +68,14 @@ public class IndexTestUtil {
             4_096,
             numberOfChunkStores,
             true,
+            100,
             1_000);
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
             new HeapByteBufferFactory(),
             numberOfChunkStores,
+            100,
             1_000);
 
         return new MiruContextFactory(schemaProvider,
@@ -127,7 +129,7 @@ public class IndexTestUtil {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), 5_000);
+            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), 500, 5_000);
         }
 
         return chunkStores;
@@ -143,7 +145,7 @@ public class IndexTestUtil {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(), 5_000);
+            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(), 500, 5_000);
         }
 
         return chunkStores;
