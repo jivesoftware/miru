@@ -78,6 +78,7 @@ if [ "$?" -ne "0" ]; then
 fi
 
 git checkout master
+git pull
 git merge ${ON_BRANCH}
 if [ "$?" -ne "0" ]; then
 	echo "Failed to merge to master."
