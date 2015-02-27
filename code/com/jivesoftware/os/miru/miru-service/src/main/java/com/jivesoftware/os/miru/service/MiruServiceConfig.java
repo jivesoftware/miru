@@ -100,6 +100,9 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(true)
     boolean getPartitionDeleteChunkStoreOnClose();
 
+    @IntDefault(100_000)
+    int getPartitionChunkCacheSize();
+
     @IntDefault(65_536)
     int getFieldIndexNumberOfLocks();
 

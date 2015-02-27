@@ -67,12 +67,14 @@ public class IndexTestUtil {
             new HeapByteBufferFactory(),
             4_096,
             numberOfChunkStores,
-            true);
+            true,
+            1_000);
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
             new HeapByteBufferFactory(),
-            numberOfChunkStores);
+            numberOfChunkStores,
+            1_000);
 
         return new MiruContextFactory(schemaProvider,
             termComposer,

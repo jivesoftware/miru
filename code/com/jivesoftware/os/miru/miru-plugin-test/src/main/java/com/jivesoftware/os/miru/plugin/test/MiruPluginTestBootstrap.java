@@ -54,6 +54,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.merlin.config.Config;
 import org.testng.Assert;
@@ -93,6 +98,13 @@ public class MiruPluginTestBootstrap {
         config.setDefaultStorage(desiredStorage.name());
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
         config.setMergeChitCount(10_000);
+
+        Logger rootLogger = LogManager.getRootLogger();
+        if (rootLogger instanceof org.apache.logging.log4j.core.Logger) {
+            LoggerContext context = ((org.apache.logging.log4j.core.Logger) rootLogger).getContext();
+            LoggerConfig loggerConfig = context.getConfiguration().getLoggerConfig("");
+            loggerConfig.setLevel(Level.WARN);
+        }
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());

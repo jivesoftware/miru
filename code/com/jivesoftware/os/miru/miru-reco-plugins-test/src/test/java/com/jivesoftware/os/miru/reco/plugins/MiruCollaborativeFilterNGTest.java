@@ -100,10 +100,10 @@ public class MiruCollaborativeFilterNGTest {
     @Test(enabled = true)
     public void basicTest() throws Exception {
         System.out.println("Building activities....");
-        long start = System.currentTimeMillis();
+        final long start = System.currentTimeMillis();
         int count = 0;
-        int numGroups = 10;
-        List<MiruPartitionedActivity> batch = new ArrayList<>();
+        final int numGroups = 10;
+        final List<MiruPartitionedActivity> batch = new ArrayList<>();
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
             int randSeed = i % numGroups;
