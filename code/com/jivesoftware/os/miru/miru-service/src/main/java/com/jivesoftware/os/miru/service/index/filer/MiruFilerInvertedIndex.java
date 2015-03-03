@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 /**
  * @author jonathan
@@ -49,30 +48,6 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
         this.mutationLock = mutationLock;
     }
-
-    private final Callable<Optional<BM>> indexLoader = new Callable<Optional<BM>>() {
-        @Override
-        public Optional<BM> call() throws Exception {
-            byte[] rawBytes = keyedFilerStore.read(indexKey.keyBytes, null, getTransaction);
-            if (rawBytes != null) {
-                log.inc("get>total");
-                log.inc("get>bytes", rawBytes.length);
-            } else {
-                log.inc("get>null");
-            }
-
-            BitmapAndLastId<BM> bitmapAndLastId = deser(rawBytes);
-            if (bitmapAndLastId != null) {
-                if (lastId == Integer.MIN_VALUE) {
-                    lastId = bitmapAndLastId.lastId;
-                }
-                return Optional.of(bitmapAndLastId.bitmap);
-            } else {
-                lastId = -1;
-                return Optional.absent();
-            }
-        }
-    };
 
     @Override
     public Optional<BM> getIndex() throws Exception {

@@ -4,9 +4,13 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.jivesoftware.os.filer.chunk.store.transaction.MapBackedKeyedFPIndex;
+import com.jivesoftware.os.filer.chunk.store.transaction.TxCog;
+import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
@@ -77,6 +81,7 @@ public class MiruContextFactory {
     private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[]{0};
     private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[]{1};
 
+    private final TxCogs cogs;
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
@@ -91,7 +96,8 @@ public class MiruContextFactory {
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
 
-    public MiruContextFactory(MiruSchemaProvider schemaProvider,
+    public MiruContextFactory(TxCogs cogs,
+        MiruSchemaProvider schemaProvider,
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
         MiruReadTrackingWALReader readTrackingWALReader,
@@ -104,6 +110,8 @@ public class MiruContextFactory {
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
         StripingLocksProvider<String> authzStripingLocksProvider) {
+
+        this.cogs = cogs;
         this.schemaProvider = schemaProvider;
         this.termComposer = termComposer;
         this.activityInternExtern = activityInternExtern;
@@ -149,8 +157,9 @@ public class MiruContextFactory {
     private <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ChunkStore[] chunkStores) throws Exception {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
-
-        KeyedFilerStore genericFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("generic"), false,
+        int seed = coord.hashCode();
+        TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
+        KeyedFilerStore genericFilerStore = new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("generic"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
             TxNamedMapOfFiler.CHUNK_FILER_OPENER,
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -159,12 +168,12 @@ public class MiruContextFactory {
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new MiruFilerTimeIndex(
             Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
             new KeyedFilerProvider(genericFilerStore, GENERIC_FILER_TIME_INDEX_KEY),
-            new TxKeyValueStore<>(chunkStores,
+            new TxKeyValueStore<>(skyhookCog, seed, chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
                 8, false, 4, false)));
 
-        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(chunkStores, keyBytes("activityIndex"), false,
+        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
             TxNamedMapOfFiler.CHUNK_FILER_OPENER,
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -189,7 +198,7 @@ public class MiruContextFactory {
                     indexes[fieldId] = null;
                 } else {
                     boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
-                    indexes[fieldId] = new TxKeyedFilerStore(chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
+                    indexes[fieldId] = new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
                         TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                         TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                         TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -223,7 +232,7 @@ public class MiruContextFactory {
             new MiruFilerAuthzIndex<>(
                 bitmaps,
                 authzIndexId,
-                new TxKeyedFilerStore(chunkStores, keyBytes("authzIndex"), false,
+                new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("authzIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -241,7 +250,7 @@ public class MiruContextFactory {
             new MiruFilerRemovalIndex<>(
                 bitmaps,
                 removalIndexId,
-                new TxKeyedFilerStore(chunkStores, keyBytes("removalIndex"), false,
+                new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("removalIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -258,7 +267,7 @@ public class MiruContextFactory {
             new MiruFilerUnreadTrackingIndex<>(
                 bitmaps,
                 unreadTrackingIndexId,
-                new TxKeyedFilerStore(chunkStores, keyBytes("unreadTrackingIndex"), false,
+                new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("unreadTrackingIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -273,7 +282,7 @@ public class MiruContextFactory {
             new MiruFilerInboxIndex<>(
                 bitmaps,
                 inboxIndexId,
-                new TxKeyedFilerStore(chunkStores, keyBytes("inboxIndex"), false,
+                new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("inboxIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,

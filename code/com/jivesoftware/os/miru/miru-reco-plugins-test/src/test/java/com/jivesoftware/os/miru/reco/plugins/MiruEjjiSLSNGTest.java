@@ -5,6 +5,7 @@ import com.google.common.collect.ListMultimap;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapCreator;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapOpener;
+import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
@@ -29,6 +30,8 @@ import org.testng.annotations.Test;
  * @author jonathan
  */
 public class MiruEjjiSLSNGTest {
+
+    static TxCogs cogs = new TxCogs(256, 64, null, null, null);
 
     AtomicInteger walIndex = new AtomicInteger();
 
@@ -62,43 +65,43 @@ public class MiruEjjiSLSNGTest {
             chunkStore5, chunkStore6, chunkStore7, chunkStore8};
 
         boolean ordered = false;
-        TxKeyedFilerStore<Integer, MapContext> uto = new TxKeyedFilerStore<>(chunkStores, "uto".getBytes(), ordered,
+        TxKeyedFilerStore<Integer, MapContext> uto = new TxKeyedFilerStore<>(cogs, 0, chunkStores, "uto".getBytes(), ordered,
             new MapCreator(2, (4 + 4), false, 0, false),
             MapOpener.INSTANCE,
             TxMapGrower.MAP_OVERWRITE_GROWER,
             TxMapGrower.MAP_REWRITE_GROWER);
 
-        TxKeyedFilerStore<Integer, MapContext> utot = new TxKeyedFilerStore<>(chunkStores, "utot".getBytes(), ordered,
+        TxKeyedFilerStore<Integer, MapContext> utot = new TxKeyedFilerStore<>(cogs, 0, chunkStores, "utot".getBytes(), ordered,
             new MapCreator(2, (4), false, 0, false),
             MapOpener.INSTANCE,
             TxMapGrower.MAP_OVERWRITE_GROWER,
             TxMapGrower.MAP_REWRITE_GROWER);
 
-        TxKeyedFilerStore<Integer, MapContext> uts = new TxKeyedFilerStore<>(chunkStores, "uts".getBytes(), ordered,
+        TxKeyedFilerStore<Integer, MapContext> uts = new TxKeyedFilerStore<>(cogs, 0, chunkStores, "uts".getBytes(), ordered,
             new MapCreator(2, (4), false, 0, false),
             MapOpener.INSTANCE,
             TxMapGrower.MAP_OVERWRITE_GROWER,
             TxMapGrower.MAP_REWRITE_GROWER);
 
-        TxKeyedFilerStore<Integer, MapContext> otu = new TxKeyedFilerStore<>(chunkStores, "otu".getBytes(), ordered,
+        TxKeyedFilerStore<Integer, MapContext> otu = new TxKeyedFilerStore<>(cogs, 0, chunkStores, "otu".getBytes(), ordered,
             new MapCreator(2, (4), false, 0, false),
             MapOpener.INSTANCE,
             TxMapGrower.MAP_OVERWRITE_GROWER,
             TxMapGrower.MAP_REWRITE_GROWER);
 
-        TxKeyedFilerStore<Integer, MapContext> ots = new TxKeyedFilerStore<>(chunkStores, "ots".getBytes(), ordered,
+        TxKeyedFilerStore<Integer, MapContext> ots = new TxKeyedFilerStore<>(cogs, 0, chunkStores, "ots".getBytes(), ordered,
             new MapCreator(2, (4), false, 0, false),
             MapOpener.INSTANCE,
             TxMapGrower.MAP_OVERWRITE_GROWER,
             TxMapGrower.MAP_REWRITE_GROWER);
 
-        TxKeyedFilerStore<Integer, MapContext> sto = new TxKeyedFilerStore<>(chunkStores, "sto".getBytes(), ordered,
+        TxKeyedFilerStore<Integer, MapContext> sto = new TxKeyedFilerStore<>(cogs, 0, chunkStores, "sto".getBytes(), ordered,
             new MapCreator(2, (4 + 4), false, 0, false),
             MapOpener.INSTANCE,
             TxMapGrower.MAP_OVERWRITE_GROWER,
             TxMapGrower.MAP_REWRITE_GROWER);
 
-        TxKeyedFilerStore<Integer, MapContext> stot = new TxKeyedFilerStore<>(chunkStores, "stot".getBytes(), ordered,
+        TxKeyedFilerStore<Integer, MapContext> stot = new TxKeyedFilerStore<>(cogs, 0, chunkStores, "stot".getBytes(), ordered,
             new MapCreator(2, (4), false, 0, false),
             MapOpener.INSTANCE,
             TxMapGrower.MAP_OVERWRITE_GROWER,

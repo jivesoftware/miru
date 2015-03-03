@@ -8,9 +8,12 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.chunk.store.transaction.KeyToFPCacheFactory;
+import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
+import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -59,7 +62,9 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -152,7 +157,30 @@ public class MiruServiceInitializer {
             .concurrencyLevel(config.getFieldIndexCacheConcurrencyLevel())
             .softValues()
             .build();
-        MiruContextFactory streamFactory = new MiruContextFactory(schemaProvider,
+
+        TxCogs cogs = new TxCogs(256, 64, new KeyToFPCacheFactory() {
+
+            @Override
+            public Map<IBA, Long> createCache() {
+                return new ConcurrentHashMap<>();
+            }
+        }, new KeyToFPCacheFactory() {
+
+            @Override
+            public Map<IBA, Long> createCache() {
+                return new ConcurrentHashMap<>();
+            }
+        }, new KeyToFPCacheFactory() {
+
+            @Override
+            public Map<IBA, Long> createCache() {
+                return new ConcurrentHashMap<>();
+            }
+        });
+
+
+        MiruContextFactory streamFactory = new MiruContextFactory(cogs,
+            schemaProvider,
             termComposer,
             internExtern,
             readTrackingWALReader,
@@ -186,14 +214,14 @@ public class MiruServiceInitializer {
             @Override
             public void repaired(IndexStrategy strategy, MiruPartitionCoord coord, int numberRepaired) {
                 if (monitorStrategies.contains(strategy) && numberRepaired > 0 && current.compareAndSet(true, false)) {
-                    LOG.warn("strategy:" + strategy + " coord:" + coord + " is NOT consistent.");
+                    LOG.debug("strategy:{} coord:{} is NOT consistent.", strategy, coord);
                 }
             }
 
             @Override
             public void current(IndexStrategy strategy, MiruPartitionCoord coord) {
                 if (monitorStrategies.contains(strategy) && current.compareAndSet(false, true)) {
-                    LOG.info("strategy:" + strategy + " coord:" + coord + " is consistent.");
+                    LOG.debug("strategy:{} coord:{} is consistent.", strategy, coord);
                 }
             }
         };

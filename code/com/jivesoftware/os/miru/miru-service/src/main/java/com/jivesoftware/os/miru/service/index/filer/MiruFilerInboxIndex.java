@@ -37,7 +37,7 @@ public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
             new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()),
             store,
             -1,
-            stripingLocksProvider.lock(streamId));
+            stripingLocksProvider.lock(streamId, 0));
     }
 
     @Override

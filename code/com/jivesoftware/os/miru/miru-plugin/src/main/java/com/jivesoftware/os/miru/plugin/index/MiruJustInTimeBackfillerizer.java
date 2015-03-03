@@ -59,7 +59,7 @@ public class MiruJustInTimeBackfillerizer {
             public Void call() throws Exception {
                 try {
 
-                    synchronized (requestContext.getStreamLocks().lock(streamId)) {
+                    synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
                         int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId);
                         int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId());
                         BM answer = bitmaps.create();

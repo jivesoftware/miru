@@ -37,7 +37,7 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
     @Override
     public MiruInvertedIndex<BM> getAuthz(String authz) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), keyedStore, -1,
-            stripingLocksProvider.lock(authz));
+            stripingLocksProvider.lock(authz, 0));
     }
 
     @Override

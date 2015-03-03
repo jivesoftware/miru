@@ -4,6 +4,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
+import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
@@ -44,6 +45,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class IndexTestUtil {
 
+    public static TxCogs cogs = new TxCogs(256, 64, null, null, null);
+
     private static MiruContextFactory factory(int numberOfChunkStores) {
         MiruReadTrackingWALReaderImpl readTrackingWALReader = null; // TODO FActor out!
 
@@ -78,7 +81,8 @@ public class IndexTestUtil {
             100,
             1_000);
 
-        return new MiruContextFactory(schemaProvider,
+        return new MiruContextFactory(cogs,
+            schemaProvider,
             termComposer,
             activityInternExtern,
             readTrackingWALReader,
@@ -109,14 +113,14 @@ public class IndexTestUtil {
 
     public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name, ChunkStore[] chunkStores, KeyValueMarshaller<K, V> keyValueMarshaller,
         int keySize, boolean variableKeySize, int payloadSize, boolean variablePayloadSizes) {
-        return new TxKeyValueStore<>(chunkStores,
+        return new TxKeyValueStore<>(cogs.getSkyhookCog(0), 0, chunkStores,
             keyValueMarshaller,
             keyBytes(name),
             keySize, variableKeySize, payloadSize, variablePayloadSizes);
     }
 
     public static KeyedFilerStore buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {
-        return new TxKeyedFilerStore(chunkStores, keyBytes(name), false,
+        return new TxKeyedFilerStore(cogs, 0, chunkStores, keyBytes(name), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
             TxNamedMapOfFiler.CHUNK_FILER_OPENER,
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,

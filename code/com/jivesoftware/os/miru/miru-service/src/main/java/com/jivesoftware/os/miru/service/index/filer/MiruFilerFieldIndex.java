@@ -64,13 +64,13 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
     @Override
     public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, new IndexKey(indexIds[fieldId], termId.getBytes()), indexes[fieldId], -1,
-            stripingLocksProvider.lock(termId));
+            stripingLocksProvider.lock(termId, 0));
     }
 
     @Override
     public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, new IndexKey(indexIds[fieldId], termId.getBytes()), indexes[fieldId],
-            considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId));
+            considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId, 0));
     }
 
     @Override
@@ -80,6 +80,6 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
 
     private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, new IndexKey(indexIds[fieldId], termId.getBytes()), indexes[fieldId], -1,
-            stripingLocksProvider.lock(termId));
+            stripingLocksProvider.lock(termId, 0));
     }
 }

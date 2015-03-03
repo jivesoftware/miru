@@ -52,16 +52,19 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     @Override
     public List<MiruTermId[]> getAll(MiruTenantId tenantId, int[] indexes, int fieldId) {
         List<MiruTermId[]> allTermIds = Lists.newArrayList();
-        int found = 0;
+        boolean missed = false;
         for (int i = 0; i < indexes.length; i++) {
-            MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(indexes[i]);
-            if (activityAndId != null) {
-                found++;
-                indexes[i] = -1;
-                allTermIds.add(activityAndId.activity.fieldsValues[fieldId]);
+            if (indexes[i] > -1) {
+                MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(indexes[i]);
+                if (activityAndId != null) {
+                    indexes[i] = -1;
+                    allTermIds.add(activityAndId.activity.fieldsValues[fieldId]);
+                } else {
+                    missed = true;
+                }
             }
         }
-        if (found < indexes.length) {
+        if (missed) {
             allTermIds.addAll(backingIndex.getAll(tenantId, indexes, fieldId));
         }
         return allTermIds;
