@@ -2,6 +2,8 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.concurrent.Callable;
 
 /**
@@ -10,6 +12,8 @@ import java.util.concurrent.Callable;
  * @param <P> report type
  */
 public class MiruSolvableFactory<A, P> {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final String queryKey;
     private final Question<A, P> question;
@@ -30,7 +34,7 @@ public class MiruSolvableFactory<A, P> {
                         return question.askRemote(handle.getRequestHelper(), handle.getCoord().partitionId, report);
                     }
                 } catch (Throwable t) {
-                    System.out.println("Oh crap!");
+                    LOG.info("Solvable encountered a problem", t);
                     throw t;
                 }
             }

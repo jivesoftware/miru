@@ -111,9 +111,11 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
 
     @Override
     public Optional<RecoReport> createReport(Optional<RecoAnswer> answer) {
-        Optional<RecoReport> report = Optional.absent();
+        Optional<RecoReport> report;
         if (answer.isPresent()) {
             report = Optional.of(new RecoReport(removeDistinctsFilter, answer.get().results.size()));
+        } else {
+            report = Optional.of(new RecoReport(removeDistinctsFilter, 0));
         }
         return report;
     }
