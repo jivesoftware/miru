@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse.Partition;
+import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
@@ -135,12 +136,12 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
 
         ListMultimap<MiruTenantId, MiruPartitionId> tenantPartitionIds = ArrayListMultimap.create();
         for (Partition active : thumpthump.active) {
-            tenantPartitionIds.put(new MiruTenantId(active.tenantId), MiruPartitionId.of(active.partitionId));
+            tenantPartitionIds.put(active.tenantId, MiruPartitionId.of(active.partitionId));
         }
         expect(host, tenantPartitionIds);
 
-        for (byte[] rawTenants : thumpthump.topologyHasChanged) {
-            routingTopologies.invalidate(new MiruTenantId(rawTenants));
+        for (MiruTenantTopologyUpdate update : thumpthump.topologyHasChanged) {
+            routingTopologies.invalidate(update.tenantId);
         }
     }
 
@@ -180,7 +181,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     }
 
     @Override
-    public boolean prioritizeRebuild(MiruPartitionCoord coord) {
+    public boolean prioritizeRebuild(MiruPartitionCoord coord) throws Exception {
         MiruTenantTopology<?> topology = localTopologies.get(coord.tenantId);
         if (topology == null) {
             LOG.warn("Attempted to prioritize for unknown tenant {} (temporary = {})",

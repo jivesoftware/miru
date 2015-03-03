@@ -51,6 +51,7 @@ public class MiruRCVSClusterRegistryTest {
             timestamper,
             new InMemoryRowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue>(),
             new InMemoryRowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte>(),
+            new InMemoryRowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte>(),
             new InMemoryRowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte>(),
             new InMemoryRowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost>(),
             new InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue>(),

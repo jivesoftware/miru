@@ -116,7 +116,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
 
     /** If the given coordinate is expected on this host, prioritizes the partition's rebuild. */
     @Override
-    public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) {
+    public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return expectedTenants.prioritizeRebuild(new MiruPartitionCoord(tenantId, partitionId, host));
     }
 

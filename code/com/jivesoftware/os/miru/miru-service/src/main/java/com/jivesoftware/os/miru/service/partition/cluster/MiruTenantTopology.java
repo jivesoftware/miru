@@ -79,7 +79,7 @@ public class MiruTenantTopology<BM> {
         }
     }
 
-    public void warm() {
+    public void warm() throws Exception {
         MiruPartitionId latestPartitionId = MiruPartitionId.of(0);
         for (PartitionAndHost partitionAndHost : topology.keySet()) {
             if (partitionAndHost.partitionId.compareTo(latestPartitionId) > 0) {
@@ -94,7 +94,7 @@ public class MiruTenantTopology<BM> {
         }
     }
 
-    public void warm(MiruPartitionCoord coord) {
+    public void warm(MiruPartitionCoord coord) throws Exception {
         for (MiruHostedPartition partition : topology.values()) {
             if (partition.getCoord().equals(coord)) {
                 partition.warm();

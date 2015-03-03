@@ -71,6 +71,7 @@ public class MiruManageServiceTest {
         MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
             registryStore.getHostsRegistry(),
             registryStore.getExpectedTenantsRegistry(),
+            registryStore.getTopologyUpdatesRegistry(),
             registryStore.getExpectedTenantPartitionsRegistry(),
             registryStore.getReplicaRegistry(),
             registryStore.getTopologyRegistry(),

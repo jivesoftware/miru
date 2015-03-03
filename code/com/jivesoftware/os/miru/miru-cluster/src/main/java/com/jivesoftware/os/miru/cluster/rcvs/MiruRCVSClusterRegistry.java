@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
+import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
@@ -35,10 +36,12 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.KeyedColumnValueCallbackStream;
+import com.jivesoftware.os.rcvs.api.RowColumValueTimestampAdd;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.TenantIdAndRow;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +49,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
@@ -56,6 +60,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     private final Timestamper timestamper;
     private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry;
+    private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> topologyUpdatesRegistry;
     private final RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry;
     private final RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry;
@@ -71,6 +76,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     public MiruRCVSClusterRegistry(Timestamper timestamper,
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry,
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry,
+        RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> topologyUpdatesRegistry,
         RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry,
         RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry,
@@ -83,6 +89,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         this.timestamper = timestamper;
         this.hostsRegistry = hostsRegistry;
         this.expectedTenantsRegistry = expectedTenantsRegistry;
+        this.topologyUpdatesRegistry = topologyUpdatesRegistry;
         this.expectedTenantPartitionsRegistry = expectedTenantPartitionsRegistry;
         this.replicaRegistry = replicaRegistry;
         this.topologyRegistry = topologyRegistry;
@@ -273,7 +280,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo,
+    public void updateTopology(MiruPartitionCoord coord,
+        Optional<MiruPartitionCoordInfo> optionalInfo,
         Optional<Long> refreshTimestamp) throws Exception {
 
         synchronized (topologyLocks.lock(new TenantPartitionHostKey(coord))) {
@@ -309,6 +317,40 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 update, null, timestamper);
             log.debug("Updated {} to {} at {}", new Object[]{coord, coordInfo, refreshTimestamp});
         }
+
+        if (optionalInfo.isPresent()) {
+            markTenantTopologyUpdated(Arrays.asList(coord.tenantId));
+        }
+    }
+
+    private void markTenantTopologyUpdated(List<MiruTenantId> tenantIds) throws Exception {
+        List<RowColumValueTimestampAdd<MiruHost, MiruTenantId, MiruVoidByte>> adds = Lists.newArrayList();
+        for (HostHeartbeat heartbeat : getAllHosts()) {
+            for (MiruTenantId tenantId : tenantIds) {
+                adds.add(new RowColumValueTimestampAdd<>(heartbeat.host, tenantId, MiruVoidByte.INSTANCE, null));
+            }
+        }
+        topologyUpdatesRegistry.multiRowsMultiAdd(MiruVoidByte.INSTANCE, adds);
+    }
+
+    @Override
+    public List<MiruTenantTopologyUpdate> getTopologyUpdatesForHost(MiruHost host, long sinceTimestamp) throws Exception {
+        final List<MiruTenantTopologyUpdate> updates = Lists.newArrayList();
+        final long acceptableTimestamp = sinceTimestamp - TimeUnit.MINUTES.toMillis(1); //TODO max GC pause or clock drift
+        topologyUpdatesRegistry.getEntrys(MiruVoidByte.INSTANCE, host, null, Long.MAX_VALUE, 10_000, false, null, null,
+            new CallbackStream<ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long>>() {
+                @Override
+                public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(
+                    ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> cvat) throws Exception {
+                    if (cvat != null) {
+                        if (cvat.getTimestamp() > acceptableTimestamp) {
+                            updates.add(new MiruTenantTopologyUpdate(cvat.getColumn(), cvat.getTimestamp()));
+                        }
+                    }
+                    return cvat;
+                }
+            });
+        return updates;
     }
 
     @Override
@@ -319,24 +361,32 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
     @Override
     public void removeHost(final MiruHost host) throws Exception {
-        hostsRegistry.removeRow(MiruVoidByte.INSTANCE, host, timestamper);
+        final List<MiruTenantId> tenantIds = Lists.newArrayList();
         expectedTenantsRegistry.getEntrys(MiruVoidByte.INSTANCE, host, null, null, 1_000, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> v)
                 throws Exception {
                     if (v != null) {
-                        expectedTenantPartitionsRegistry.removeRow(v.getColumn(), host, timestamper);
+                        tenantIds.add(v.getColumn());
                     }
                     return v;
                 }
             });
+
+        for (MiruTenantId tenantId : tenantIds) {
+            expectedTenantPartitionsRegistry.removeRow(tenantId, host, timestamper);
+        }
         expectedTenantsRegistry.removeRow(MiruVoidByte.INSTANCE, host, timestamper);
+        hostsRegistry.removeRow(MiruVoidByte.INSTANCE, host, timestamper);
+
+        markTenantTopologyUpdated(tenantIds);
     }
 
     @Override
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
         topologyRegistry.remove(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey(partitionId, host), timestamper);
+        markTenantTopologyUpdated(Arrays.asList(tenantId));
     }
 
     @Override
@@ -411,7 +461,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
         MiruTopologyColumnKey key = new MiruTopologyColumnKey(partitionId, host);
         ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>[] valueAndTimestamps = topologyRegistry
-            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[]{key}, null, null);
+            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[] { key }, null, null);
         if (valueAndTimestamps != null && valueAndTimestamps.length > 0 && valueAndTimestamps[0] != null) {
             ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = valueAndTimestamps[0];
             return valueAndTimestamp;
@@ -541,11 +591,13 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     public void addToReplicaRegistry(MiruTenantId tenantId, MiruPartitionId partitionId, long nextId, MiruHost host)
         throws Exception {
         replicaRegistry.add(tenantId, partitionId, nextId, host, null, timestamper);
+        markTenantTopologyUpdated(Arrays.asList(tenantId));
     }
 
     @Override
     public void removeTenantPartionReplicaSet(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         replicaRegistry.removeRow(tenantId, partitionId, timestamper);
+        markTenantTopologyUpdated(Arrays.asList(tenantId));
     }
 
     @Override

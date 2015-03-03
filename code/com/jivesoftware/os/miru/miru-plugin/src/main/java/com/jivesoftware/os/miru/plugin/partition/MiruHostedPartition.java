@@ -28,7 +28,7 @@ public interface MiruHostedPartition {
 
     void index(Iterator<MiruPartitionedActivity> activities) throws Exception;
 
-    void warm();
+    void warm() throws Exception;
 
     void setStorage(MiruBackingStorage storage) throws Exception;
 }

@@ -31,5 +31,5 @@ public interface MiruPartitionDirector {
 
     boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;
 
-    boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId);
+    boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 }

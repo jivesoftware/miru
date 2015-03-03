@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.api.topology;
 
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.util.List;
 
 /**
@@ -9,31 +10,31 @@ import java.util.List;
 public class MiruHeartbeatResponse {
 
     public List<Partition> active;
-    public List<byte[]> topologyHasChanged;
+    public List<MiruTenantTopologyUpdate> topologyHasChanged;
 
     public MiruHeartbeatResponse() {
     }
 
-    public MiruHeartbeatResponse(List<Partition> active, List<byte[]> topologyHasChanged) {
+    public MiruHeartbeatResponse(List<Partition> active, List<MiruTenantTopologyUpdate> topologyHasChanged) {
         this.active = active;
         this.topologyHasChanged = topologyHasChanged;
     }
 
     static public class Partition {
 
-        public byte[] tenantId;
+        public MiruTenantId tenantId;
         public int partitionId;
-        public boolean idle;
         public boolean active;
+        public boolean idle;
 
         public Partition() {
         }
 
-        public Partition(byte[] tenantId, int partitionId, boolean idle, boolean active) {
+        public Partition(MiruTenantId tenantId, int partitionId, boolean active, boolean idle) {
             this.tenantId = tenantId;
             this.partitionId = partitionId;
-            this.idle = idle;
             this.active = active;
+            this.idle = idle;
         }
     }
 }

@@ -27,6 +27,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
@@ -119,12 +120,17 @@ public class MiruPluginTestBootstrap {
             acrc.setTakeFromFactor(0);
             Deployable deployable = new Deployable(new String[0]);
             AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
-            clusterRegistry = new AmzaClusterRegistry(amzaService, 3, TimeUnit.HOURS.toMillis(1), TimeUnit.HOURS.toMillis(1));
+            clusterRegistry = new AmzaClusterRegistry(amzaService,
+                new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
+                3,
+                TimeUnit.HOURS.toMillis(1),
+                TimeUnit.HOURS.toMillis(1));
         } else {
             clusterRegistry = new MiruRCVSClusterRegistry(
                 new CurrentTimestamper(),
                 registryStore.getHostsRegistry(),
                 registryStore.getExpectedTenantsRegistry(),
+                registryStore.getTopologyUpdatesRegistry(),
                 registryStore.getExpectedTenantPartitionsRegistry(),
                 registryStore.getReplicaRegistry(),
                 registryStore.getTopologyRegistry(),

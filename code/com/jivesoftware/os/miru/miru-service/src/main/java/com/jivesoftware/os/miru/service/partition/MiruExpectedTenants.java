@@ -17,7 +17,7 @@ public interface MiruExpectedTenants {
 
     MiruTenantTopology<?> getLocalTopology(MiruTenantId tenantId) throws Exception;
 
-    boolean prioritizeRebuild(MiruPartitionCoord coord);
+    boolean prioritizeRebuild(MiruPartitionCoord coord) throws Exception;
 
     void thumpthump(MiruHost host) throws Exception;
 

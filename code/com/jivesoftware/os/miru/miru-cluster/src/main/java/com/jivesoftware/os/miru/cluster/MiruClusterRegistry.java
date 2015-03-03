@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
+import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -48,6 +49,8 @@ public interface MiruClusterRegistry {
 
     void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo,
         Optional<Long> refreshTimestamp) throws Exception;
+
+    List<MiruTenantTopologyUpdate> getTopologyUpdatesForHost(MiruHost host, long sinceTimestamp) throws Exception;
 
     MiruPartitionActive isPartitionActive(MiruPartitionCoord coord) throws Exception;
 

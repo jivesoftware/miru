@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
+import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -86,10 +87,9 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
             Collections.singletonList(partitionId));
         MiruReplicaSet replicaSet = replicaSets.get(partitionId);
 
-        MiruReplicaHosts replicaHosts = new MiruReplicaHosts(!replicaSet.get(MiruPartitionState.online).isEmpty(),
+        return new MiruReplicaHosts(!replicaSet.get(MiruPartitionState.online).isEmpty(),
             replicaSet.getHostsWithReplica(),
             replicaSet.getCountOfMissingReplicas());
-        return replicaHosts;
     }
 
     @Override
@@ -102,23 +102,27 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
         clusterRegistry.sendHeartbeatForHost(miruHost);
 
         for (MiruHeartbeatRequest.Partition partition : heartbeatRequest.active) {
-            MiruPartitionCoordInfo info = new MiruPartitionCoordInfo(partition.state, partition.storage);
-            clusterRegistry.updateTopology(new MiruPartitionCoord(new MiruTenantId(partition.tenantId), MiruPartitionId.of(partition.partitionId), miruHost),
-                Optional.of(info),
-                (partition.activeTimestamp > -1) ? Optional.of(partition.activeTimestamp) : Optional.<Long>absent());
+            Optional<MiruPartitionCoordInfo> info = Optional.fromNullable(partition.info);
+            Optional<Long> refreshTimestamp = (partition.activeTimestamp > -1) ? Optional.of(partition.activeTimestamp) : Optional.<Long>absent();
+            clusterRegistry.updateTopology(
+                new MiruPartitionCoord(partition.tenantId,
+                    MiruPartitionId.of(partition.partitionId),
+                    miruHost),
+                info,
+                refreshTimestamp);
         }
 
         List<MiruHeartbeatResponse.Partition> partitions = new ArrayList<>();
         for (MiruTenantId tenantId : clusterRegistry.getTenantsForHost(miruHost)) {
             for (MiruTopologyStatus status : clusterRegistry.getTopologyStatusForTenantHost(tenantId, miruHost)) {
                 MiruPartitionActive partitionActive = clusterRegistry.isPartitionActive(status.partition.coord);
-                partitions.add(new MiruHeartbeatResponse.Partition(tenantId.getBytes(),
+                partitions.add(new MiruHeartbeatResponse.Partition(tenantId,
                     status.partition.coord.partitionId.getId(), partitionActive.active, partitionActive.idle));
             }
         }
 
-        List<byte[]> topologyHasChangedForTheseTenantIds = new ArrayList<>();
-        // TODO
+        List<MiruTenantTopologyUpdate> topologyHasChangedForTheseTenantIds = clusterRegistry.getTopologyUpdatesForHost(miruHost,
+            heartbeatRequest.topologyUpdatesSinceTimestamp);
         return new MiruHeartbeatResponse(partitions, topologyHasChangedForTheseTenantIds);
     }
 

@@ -35,6 +35,7 @@ public class MiruRegistryStore {
 
     private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry;
+    private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> topologyUpdatesRegistry;
     private final RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry;
     private final RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry;
@@ -44,6 +45,7 @@ public class MiruRegistryStore {
 
     public MiruRegistryStore(RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry,
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry,
+        RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> topologyUpdatesRegistry,
         RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry,
         RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry,
@@ -52,6 +54,7 @@ public class MiruRegistryStore {
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> activityPayloadTable) {
         this.hostsRegistry = hostsRegistry;
         this.expectedTenantsRegistry = expectedTenantsRegistry;
+        this.topologyUpdatesRegistry = topologyUpdatesRegistry;
         this.expectedTenantPartitionsRegistry = expectedTenantPartitionsRegistry;
         this.replicaRegistry = replicaRegistry;
         this.topologyRegistry = topologyRegistry;
@@ -66,6 +69,10 @@ public class MiruRegistryStore {
 
     public RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> getExpectedTenantsRegistry() {
         return expectedTenantsRegistry;
+    }
+
+    public RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> getTopologyUpdatesRegistry() {
+        return topologyUpdatesRegistry;
     }
 
     public RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> getExpectedTenantPartitionsRegistry() {

@@ -158,7 +158,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
             Optional.<MiruContext<BM>>absent(),
             indexRepairs,
             indexer);
-        accessor.markForRefresh(Optional.<Long>absent());
+        heartbeatHandler.heartbeat(coord, Optional.of(coordInfo), Optional.<Long>absent());
         this.accessorRef.set(accessor);
         log.incAtomic("state>" + accessor.info.state.name());
         log.incAtomic("storage>" + accessor.info.storage.name());
@@ -203,6 +203,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, accessor.info.copyToState(MiruPartitionState.online));
         }
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
         return accessor.getRequestHandle();
     }
 
@@ -297,13 +298,14 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         }
 
         if (partitionWakeOnIndex) {
-            accessor.markForRefresh(Optional.of(System.currentTimeMillis()));
+            heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
         }
     }
 
     @Override
-    public void warm() {
-        accessorRef.get().markForRefresh(Optional.of(System.currentTimeMillis()));
+    public void warm() throws Exception {
+        MiruPartitionAccessor<BM> accessor = accessorRef.get();
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
 
         log.inc("warm", 1);
         log.inc("warm", 1, coord.tenantId.toString());
@@ -361,13 +363,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         }
     }
 
-    private MiruPartitionAccessor<BM> updatePartition(MiruPartitionAccessor<BM> existing, MiruPartitionAccessor<BM> update) {
+    private MiruPartitionAccessor<BM> updatePartition(MiruPartitionAccessor<BM> existing, MiruPartitionAccessor<BM> update) throws Exception {
         synchronized (accessorRef) {
             if (accessorRef.get() != existing) {
                 return null;
             }
 
-            update.markForRefresh(Optional.<Long>absent());
+            heartbeatHandler.heartbeat(coord, Optional.of(update.info), Optional.<Long>absent());
 
             accessorRef.set(update);
 
@@ -396,12 +398,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         public void run() {
             try {
                 try {
-                    refreshTopology();
-                } catch (Throwable t) {
-                    log.error("RefreshTopology encountered a problem", t);
-                }
-
-                try {
                     checkActive();
                 } catch (MiruSchemaUnvailableException sue) {
                     log.warn("Tenant is active but schema not available for {}", coord.tenantId);
@@ -411,14 +407,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                 }
             } catch (Throwable t) {
                 log.error("Bootstrap encountered a problem for {}", new Object[]{coord}, t);
-            }
-        }
-
-        private void refreshTopology() throws Exception {
-            MiruPartitionAccessor<BM> accessor = accessorRef.get();
-            Optional<Long> timestamp = accessor.refreshTimestamp.getAndSet(null);
-            if (timestamp != null) {
-                heartbeatHandler.heartbeat(coord, accessor.info, timestamp);
             }
         }
 

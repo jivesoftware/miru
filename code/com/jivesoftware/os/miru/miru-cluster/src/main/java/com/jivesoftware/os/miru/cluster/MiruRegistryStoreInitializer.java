@@ -83,7 +83,7 @@ public class MiruRegistryStoreInitializer {
                 tableNameSpace,
                 "miru.reg.h", // Host
                 "h",
-                new String[] { "e" },
+                new String[] { "e", "t" },
                 new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruVoidByteMarshaller(),
                     new SaltingDelegatingMarshaller<>(new MiruHostMarshaller()),
@@ -98,7 +98,22 @@ public class MiruRegistryStoreInitializer {
                 tableNameSpace,
                 "miru.reg.h", // Host
                 "e",
-                new String[] { "h" },
+                new String[] { "h", "t" },
+                new DefaultRowColumnValueStoreMarshaller<>(
+                    new MiruVoidByteMarshaller(),
+                    new SaltingDelegatingMarshaller<>(new MiruHostMarshaller()),
+                    new MiruTenantIdMarshaller(),
+                    new MiruVoidByteMarshaller()),
+                new CurrentTimestamper()
+            );
+
+        // Miru Topology Updates Registry
+        RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> topologyUpdatesRegistry =
+            rowColumnValueStoreInitializer.initialize(
+                tableNameSpace,
+                "miru.reg.h", // Host
+                "t",
+                new String[] { "h", "e" },
                 new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruVoidByteMarshaller(),
                     new SaltingDelegatingMarshaller<>(new MiruHostMarshaller()),
@@ -198,6 +213,7 @@ public class MiruRegistryStoreInitializer {
 
         return new MiruRegistryStore(hostsRegistry,
             expectedTenantsRegistry,
+            topologyUpdatesRegistry,
             expectedTenantPartitionsRegistry,
             replicaRegistry,
             topologyRegistry,

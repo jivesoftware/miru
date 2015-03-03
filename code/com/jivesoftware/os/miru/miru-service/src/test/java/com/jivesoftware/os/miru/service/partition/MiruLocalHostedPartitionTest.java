@@ -107,6 +107,7 @@ public class MiruLocalHostedPartitionTest {
     private MiruPartitionedActivityFactory factory;
     private MiruPartitionId partitionId;
     private MiruTenantId tenantId;
+    private MiruHost host;
     private MiruBitmapsEWAH bitmaps;
     private MiruIndexer<EWAHCompressedBitmap> indexer;
     private MiruLocalHostedPartition.Timings timings;
@@ -124,7 +125,7 @@ public class MiruLocalHostedPartitionTest {
         };
         tenantId = new MiruTenantId("test".getBytes(Charsets.UTF_8));
         partitionId = MiruPartitionId.of(0);
-        MiruHost host = new MiruHost("localhost", 49_600);
+        host = new MiruHost("localhost", 49_600);
         coord = new MiruPartitionCoord(tenantId, partitionId, host);
         defaultStorage = MiruBackingStorage.memory;
 
@@ -222,11 +223,13 @@ public class MiruLocalHostedPartitionTest {
             new InMemoryRowColumnValueStore(),
             new InMemoryRowColumnValueStore(),
             new InMemoryRowColumnValueStore(),
+            new InMemoryRowColumnValueStore(),
             3,
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1));
 
         MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
+        clusterClient.elect(host, tenantId, partitionId, System.currentTimeMillis());
 
         activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL, writerPartitionRegistry);
         partitionEventHandler = new MiruPartitionHeartbeatHandler(clusterClient);
@@ -258,7 +261,6 @@ public class MiruLocalHostedPartitionTest {
 
         setActive(true);
         waitForRef(bootstrapRunnable).run();
-        partitionEventHandler.thumpthump(new MiruHost("localhost", 1234));
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
@@ -367,6 +369,7 @@ public class MiruLocalHostedPartitionTest {
             indexer, false, 100, 100, new MiruMergeChits(100_000, 10_000), timings);
 
         indexNormalActivity(localHostedPartition);
+        partitionEventHandler.thumpthump(host);
         waitForRef(bootstrapRunnable).run(); // stays offline
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
@@ -381,6 +384,7 @@ public class MiruLocalHostedPartitionTest {
             indexer, true, 100, 100, new MiruMergeChits(100_000, 10_000), timings);
 
         indexNormalActivity(localHostedPartition);
+        partitionEventHandler.thumpthump(host);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
@@ -412,6 +416,7 @@ public class MiruLocalHostedPartitionTest {
         if (!active) {
             syntheticTimestamp.addAndGet(TimeUnit.HOURS.toMillis(1) + 1000);
         }
+        partitionEventHandler.thumpthump(host);
     }
 
     private void indexNormalActivity(MiruLocalHostedPartition localHostedPartition) throws Exception {

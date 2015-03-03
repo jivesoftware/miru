@@ -28,6 +28,8 @@ import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
@@ -154,6 +156,7 @@ public class MiruManageMain {
                 clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
                     registryStore.getHostsRegistry(),
                     registryStore.getExpectedTenantsRegistry(),
+                    registryStore.getTopologyUpdatesRegistry(),
                     registryStore.getExpectedTenantPartitionsRegistry(),
                     registryStore.getReplicaRegistry(),
                     registryStore.getTopologyRegistry(),
@@ -171,6 +174,7 @@ public class MiruManageMain {
                     "amza-topology-" + instanceConfig.getClusterName(),
                     amzaClusterRegistryConfig);
                 clusterRegistry = new AmzaClusterRegistry(amzaService,
+                    new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                     registryConfig.getDefaultNumberOfReplicas(),
                     registryConfig.getDefaultTopologyIsStaleAfterMillis(),
                     registryConfig.getDefaultTopologyIsIdleAfterMillis());

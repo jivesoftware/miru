@@ -255,7 +255,7 @@ public class MiruService implements Miru {
         return partitionDirector.checkInfo(tenantId, partitionId, info);
     }
 
-    public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) {
+    public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return partitionDirector.prioritizeRebuild(tenantId, partitionId);
     }
 
