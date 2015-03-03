@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.plugin.schema;
 
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 
 /**
  *

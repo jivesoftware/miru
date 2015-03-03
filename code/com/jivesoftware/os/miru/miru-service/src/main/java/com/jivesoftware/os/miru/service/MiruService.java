@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -13,17 +13,16 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
-import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
@@ -38,10 +37,8 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.solver.MiruSolved;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -57,24 +54,18 @@ public class MiruService implements Miru {
     private final MiruPartitionDirector partitionDirector;
     private final MiruSolver solver;
     private final MiruHostedPartitionComparison partitionComparison;
-    private final MiruActivityWALWriter activityWALWriter;
-    private final MiruActivityLookupTable activityLookupTable;
     private final MiruSchemaProvider schemaProvider;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public MiruService(MiruHost localhost,
         MiruPartitionDirector partitionDirector,
         MiruHostedPartitionComparison partitionComparison,
-        MiruActivityWALWriter activityWALWriter,
-        MiruActivityLookupTable activityLookupTable,
         MiruSolver solver,
         MiruSchemaProvider schemaProvider) {
 
         this.localhost = localhost;
         this.partitionDirector = partitionDirector;
         this.partitionComparison = partitionComparison;
-        this.activityWALWriter = activityWALWriter;
-        this.activityLookupTable = activityLookupTable;
         this.solver = solver;
         this.schemaProvider = schemaProvider;
     }
@@ -85,18 +76,6 @@ public class MiruService implements Miru {
             perTenantPartitionedActivities.put(partitionedActivity.tenantId, partitionedActivity);
         }
         partitionDirector.index(perTenantPartitionedActivities);
-    }
-
-    public void writeWAL(List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        ListMultimap<MiruTenantId, MiruPartitionedActivity> perTenantPartitionedActivities = ArrayListMultimap.create();
-        for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
-            perTenantPartitionedActivities.put(partitionedActivity.tenantId, partitionedActivity);
-        }
-        for (MiruTenantId tenantId : perTenantPartitionedActivities.keySet()) {
-            List<MiruPartitionedActivity> tenantPartitionedActivities = perTenantPartitionedActivities.get(tenantId);
-            activityWALWriter.write(tenantId, tenantPartitionedActivities);
-            activityLookupTable.add(tenantId, tenantPartitionedActivities);
-        }
     }
 
     @Override
@@ -134,10 +113,10 @@ public class MiruService implements Miru {
             for (OrderedPartitions<?> orderedPartitions : partitionReplicas) {
 
                 final Optional<A> optionalAnswer = lastAnswer;
-                Collection<MiruSolvable<A>> solvables = Collections2.transform(orderedPartitions.partitions,
-                    new Function<MiruHostedPartition<?>, MiruSolvable<A>>() {
+                Iterable<MiruSolvable<A>> solvables = Iterables.transform(orderedPartitions.partitions,
+                    new Function<MiruQueryablePartition<?>, MiruSolvable<A>>() {
                         @Override
-                        public MiruSolvable<A> apply(final MiruHostedPartition<?> replica) {
+                        public MiruSolvable<A> apply(final MiruQueryablePartition<?> replica) {
                             if (replica.isLocal()) {
                                 solutionLog.log(MiruSolutionLogLevel.INFO, "Created local solvable for coord={}.", replica.getCoord());
                             }
@@ -204,7 +183,7 @@ public class MiruService implements Miru {
         A defaultValue,
         MiruSolutionLogLevel logLevel)
         throws Exception {
-        Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
+        Optional<? extends MiruQueryablePartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
             Callable<MiruPartitionResponse<A>> callable = factory.create(partition.get(), report);
@@ -232,7 +211,7 @@ public class MiruService implements Miru {
      * Inspect a field term.
      */
     public String inspect(MiruTenantId tenantId, MiruPartitionId partitionId, String fieldName, String termValue) throws Exception {
-        Optional<MiruHostedPartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
+        Optional<? extends MiruQueryablePartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
         if (partition.isPresent()) {
             return inspect(partition.get(), fieldName, termValue);
         } else {
@@ -240,8 +219,8 @@ public class MiruService implements Miru {
         }
     }
 
-    private <BM> String inspect(MiruHostedPartition<BM> partition, String fieldName, String termValue) throws Exception {
-        try (MiruRequestHandle<BM> handle = partition.getQueryHandle()) {
+    private <BM> String inspect(MiruQueryablePartition<BM> partition, String fieldName, String termValue) throws Exception {
+        try (MiruRequestHandle<BM> handle = partition.acquireQueryHandle()) {
             MiruRequestContext<BM> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
@@ -276,11 +255,11 @@ public class MiruService implements Miru {
         return partitionDirector.checkInfo(tenantId, partitionId, info);
     }
 
-    public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) {
+    public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return partitionDirector.prioritizeRebuild(tenantId, partitionId);
     }
 
-    private Optional<MiruHostedPartition<?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    private Optional<? extends MiruQueryablePartition<?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         MiruPartitionCoord localPartitionCoord = new MiruPartitionCoord(tenantId, partitionId, localhost);
         return partitionDirector.getQueryablePartition(localPartitionCoord);
     }

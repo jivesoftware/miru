@@ -9,20 +9,17 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.util.Collection;
 
 /**
  *
  */
 public interface MiruPartitionDirector {
 
-    Optional<MiruHostedPartition<?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord) throws Exception;
+    Optional<? extends MiruQueryablePartition<?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord) throws Exception;
 
     void index(ListMultimap<MiruTenantId, MiruPartitionedActivity> perTenantPartitionedActivities) throws Exception;
 
     Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception;
-
-    Collection<? extends MiruHostedPartition<?>> allPartitions(MiruTenantId tenantId) throws Exception;
 
     void warm(MiruTenantId tenantId) throws Exception;
 
@@ -34,5 +31,5 @@ public interface MiruPartitionDirector {
 
     boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;
 
-    boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId);
+    boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 }

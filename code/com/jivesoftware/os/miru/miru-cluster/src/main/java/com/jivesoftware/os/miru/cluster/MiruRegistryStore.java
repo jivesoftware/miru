@@ -20,13 +20,12 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityLookupEntry;
+import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruHostsColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruHostsColumnValue;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnValue;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 
 /**
@@ -36,34 +35,31 @@ public class MiruRegistryStore {
 
     private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry;
+    private final RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> topologyUpdatesRegistry;
     private final RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry;
     private final RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry;
-    private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema, ? extends Exception> schemaRegistry;
-    private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> activityPayloadTable;
 
     public MiruRegistryStore(RowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue, ? extends Exception> hostsRegistry,
         RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> expectedTenantsRegistry,
+        RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> topologyUpdatesRegistry,
         RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> expectedTenantPartitionsRegistry,
         RowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost, ? extends Exception> replicaRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue, ? extends Exception> topologyRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long, ? extends Exception> configRegistry,
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema, ? extends Exception> schemaRegistry,
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> activityPayloadTable) {
         this.hostsRegistry = hostsRegistry;
         this.expectedTenantsRegistry = expectedTenantsRegistry;
+        this.topologyUpdatesRegistry = topologyUpdatesRegistry;
         this.expectedTenantPartitionsRegistry = expectedTenantPartitionsRegistry;
         this.replicaRegistry = replicaRegistry;
         this.topologyRegistry = topologyRegistry;
         this.configRegistry = configRegistry;
-        this.writerPartitionRegistry = writerPartitionRegistry;
         this.schemaRegistry = schemaRegistry;
-        this.activityLookupTable = activityLookupTable;
         this.activityPayloadTable = activityPayloadTable;
     }
 
@@ -73,6 +69,10 @@ public class MiruRegistryStore {
 
     public RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> getExpectedTenantsRegistry() {
         return expectedTenantsRegistry;
+    }
+
+    public RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> getTopologyUpdatesRegistry() {
+        return topologyUpdatesRegistry;
     }
 
     public RowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte, ? extends Exception> getExpectedTenantPartitionsRegistry() {
@@ -91,16 +91,8 @@ public class MiruRegistryStore {
         return configRegistry;
     }
 
-    public RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> getWriterPartitionRegistry() {
-        return writerPartitionRegistry;
-    }
-
     public RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema, ? extends Exception> getSchemaRegistry() {
         return schemaRegistry;
-    }
-
-    public RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> getActivityLookupTable() {
-        return activityLookupTable;
     }
 
     public RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> getActivityPayloadTable() {

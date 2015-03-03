@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
@@ -32,9 +33,11 @@ public class MiruActivityWALReaderImplTest {
             new InMemoryRowColumnValueStore<>();
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
             new InMemoryRowColumnValueStore<>();
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry =
+            new InMemoryRowColumnValueStore<>();
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL, writerPartitionRegistry);
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
         for (int i = 0; i < totalActivities; i++) {
@@ -68,9 +71,11 @@ public class MiruActivityWALReaderImplTest {
             new InMemoryRowColumnValueStore<>();
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
             new InMemoryRowColumnValueStore<>();
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry =
+            new InMemoryRowColumnValueStore<>();
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL, writerPartitionRegistry);
         final AtomicLong clockTimestamp = new AtomicLong();
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(new MiruPartitionedActivityFactory.ClockTimestamper() {
             @Override
@@ -112,9 +117,11 @@ public class MiruActivityWALReaderImplTest {
             new InMemoryRowColumnValueStore<>();
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
             new InMemoryRowColumnValueStore<>();
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry =
+            new InMemoryRowColumnValueStore<>();
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL, writerPartitionRegistry);
         final AtomicLong clockTimestamp = new AtomicLong();
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(new MiruPartitionedActivityFactory.ClockTimestamper() {
             @Override

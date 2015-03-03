@@ -18,6 +18,7 @@
         <module>miru-reader</module>
         <module>miru-logappender</module>
         <module>miru-client</module>
+        <module>miru-cluster-client</module>
         <module>miru-cluster</module>
         <module>miru-wal</module>
         <module>miru-plugin</module>

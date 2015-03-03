@@ -1,9 +1,10 @@
 package com.jivesoftware.os.miru.service.partition;
 
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.util.Collection;
-import java.util.List;
+import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.service.partition.cluster.MiruTenantTopology;
 
 /**
  * To expect a tenant is to consider it active, meaning its partitions are eligible to wake and serve activity.
@@ -14,13 +15,11 @@ import java.util.List;
  */
 public interface MiruExpectedTenants {
 
-    MiruTenantTopology<?> getTopology(MiruTenantId tenantId) throws Exception;
+    MiruTenantTopology<?> getLocalTopology(MiruTenantId tenantId) throws Exception;
 
-    Collection<MiruTenantTopology<?>> topologies();
+    boolean prioritizeRebuild(MiruPartitionCoord coord) throws Exception;
 
-    boolean isExpected(MiruTenantId tenantId);
+    void thumpthump(MiruHost host) throws Exception;
 
-    void expect(List<MiruTenantId> expectedTenantsForHost) throws Exception;
-
-    boolean prioritizeRebuild(MiruPartitionCoord coord);
+    Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(MiruHost host, MiruTenantId tenantId, String queryKey) throws Exception;
 }

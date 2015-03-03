@@ -29,11 +29,6 @@
             <version>0.338-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-cluster</artifactId>
-            <version>0.338-SNAPSHOT</version>
-        </dependency>
-        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>

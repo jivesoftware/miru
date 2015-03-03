@@ -11,9 +11,6 @@ public interface MiruWriter {
 
     public static final String WRITER_SERVICE_ENDPOINT_PREFIX = "/miru/writer";
     public static final String ADD_ACTIVITIES = "/add/activities";
-    public static final String WAL_ACTIVITIES = "/wal/activities";
 
     void writeToIndex(List<MiruPartitionedActivity> activities) throws Exception;
-
-    void writeToWAL(List<MiruPartitionedActivity> activities) throws Exception;
 }

@@ -5,32 +5,29 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.marshaller.JacksonJsonObjectTypeMarshaller;
-import com.jivesoftware.os.miru.cluster.marshaller.MiruActivityLookupEntryMarshaller;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
+import com.jivesoftware.os.miru.api.marshall.MiruPartitionIdMarshaller;
+import com.jivesoftware.os.miru.api.marshall.MiruTenantIdMarshaller;
+import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
+import com.jivesoftware.os.miru.api.marshall.MiruVoidByteMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruHostMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruHostsColumnKeyMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruHostsColumnValueMarshaller;
-import com.jivesoftware.os.miru.cluster.marshaller.MiruPartitionIdMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruSchemaColumnKeyMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruTenantConfigFieldsMarshaller;
-import com.jivesoftware.os.miru.cluster.marshaller.MiruTenantIdMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruTopologyColumnKeyMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruTopologyColumnValueMarshaller;
-import com.jivesoftware.os.miru.cluster.marshaller.MiruVoidByteMarshaller;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruHostsColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruHostsColumnValue;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnKey;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnValue;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruVoidByte;
 import com.jivesoftware.os.rcvs.api.DefaultRowColumnValueStoreMarshaller;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.marshall.id.SaltingDelegatingMarshaller;
 import com.jivesoftware.os.rcvs.marshall.primatives.ByteArrayTypeMarshaller;
-import com.jivesoftware.os.rcvs.marshall.primatives.IntegerTypeMarshaller;
 import com.jivesoftware.os.rcvs.marshall.primatives.LongTypeMarshaller;
 
 /**
@@ -86,7 +83,7 @@ public class MiruRegistryStoreInitializer {
                 tableNameSpace,
                 "miru.reg.h", // Host
                 "h",
-                new String[] { "e" },
+                new String[] { "e", "t" },
                 new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruVoidByteMarshaller(),
                     new SaltingDelegatingMarshaller<>(new MiruHostMarshaller()),
@@ -101,7 +98,22 @@ public class MiruRegistryStoreInitializer {
                 tableNameSpace,
                 "miru.reg.h", // Host
                 "e",
-                new String[] { "h" },
+                new String[] { "h", "t" },
+                new DefaultRowColumnValueStoreMarshaller<>(
+                    new MiruVoidByteMarshaller(),
+                    new SaltingDelegatingMarshaller<>(new MiruHostMarshaller()),
+                    new MiruTenantIdMarshaller(),
+                    new MiruVoidByteMarshaller()),
+                new CurrentTimestamper()
+            );
+
+        // Miru Topology Updates Registry
+        RowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte, ? extends Exception> topologyUpdatesRegistry =
+            rowColumnValueStoreInitializer.initialize(
+                tableNameSpace,
+                "miru.reg.h", // Host
+                "t",
+                new String[] { "h", "e" },
                 new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruVoidByteMarshaller(),
                     new SaltingDelegatingMarshaller<>(new MiruHostMarshaller()),
@@ -168,20 +180,6 @@ public class MiruRegistryStoreInitializer {
                 new CurrentTimestamper()
             );
 
-        // Miru Writer + PartitionId Registry
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry =
-            rowColumnValueStoreInitializer.initialize(
-                tableNameSpace,
-                "miru.reg.t", // Tenant
-                "p",
-                new String[] { "t", "c", "s" },
-                new DefaultRowColumnValueStoreMarshaller<>(
-                    new MiruVoidByteMarshaller(),
-                    new SaltingDelegatingMarshaller<>(new MiruTenantIdMarshaller()),
-                    new IntegerTypeMarshaller(),
-                    new MiruPartitionIdMarshaller()),
-                new CurrentTimestamper()
-            );
 
         // Miru Schema Registry
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema, ? extends Exception> schemaRegistry =
@@ -198,19 +196,6 @@ public class MiruRegistryStoreInitializer {
                 new CurrentTimestamper()
             );
 
-        // Miru Activity Lookup Table
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable =
-            rowColumnValueStoreInitializer.initialize(
-                tableNameSpace,
-                "miru.lookup.t", // Tenant
-                "a",
-                new DefaultRowColumnValueStoreMarshaller<>(
-                    new MiruVoidByteMarshaller(),
-                    new SaltingDelegatingMarshaller<>(new MiruTenantIdMarshaller()),
-                    new LongTypeMarshaller(),
-                    new MiruActivityLookupEntryMarshaller()),
-                new CurrentTimestamper()
-            );
 
         // Miru Activity Payload Table
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, byte[], ? extends Exception> activityPayloadTable =
@@ -228,13 +213,12 @@ public class MiruRegistryStoreInitializer {
 
         return new MiruRegistryStore(hostsRegistry,
             expectedTenantsRegistry,
+            topologyUpdatesRegistry,
             expectedTenantPartitionsRegistry,
             replicaRegistry,
             topologyRegistry,
             configRegistry,
-            writerPartitionRegistry,
             schemaRegistry,
-            activityLookupTable,
             activityPayloadTable);
     }
 

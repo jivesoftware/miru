@@ -5,7 +5,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -25,11 +25,11 @@ public class UnhealthyTopologyShiftPredicate implements ShiftPredicate {
     @Override
     public boolean needsToShift(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        Collection<MiruClusterRegistry.HostHeartbeat> hostHeartbeats,
+        Collection<HostHeartbeat> hostHeartbeats,
         List<MiruPartition> partitions) {
 
         Set<MiruHost> unhealthyHosts = Sets.newHashSet();
-        for (MiruClusterRegistry.HostHeartbeat hostHeartbeat : hostHeartbeats) {
+        for (HostHeartbeat hostHeartbeat : hostHeartbeats) {
             if (hostHeartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
                 unhealthyHosts.add(hostHeartbeat.host);
             }

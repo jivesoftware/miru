@@ -50,25 +50,4 @@ public class MiruWriterEndpoints {
         }
     }
 
-    @POST
-    @Path("/wal/activities")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response writeWAL(List<MiruPartitionedActivity> activities) {
-        if (activities == null) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity("Activities list must not be null.")
-                .build();
-        }
-
-        try {
-            writer.writeToWAL(activities);
-            return responseHelper.jsonResponse("Success");
-        } catch (Exception e) {
-            log.error("Failed to write activities.", e);
-            return Response.serverError().build();
-        }
-    }
-
 }

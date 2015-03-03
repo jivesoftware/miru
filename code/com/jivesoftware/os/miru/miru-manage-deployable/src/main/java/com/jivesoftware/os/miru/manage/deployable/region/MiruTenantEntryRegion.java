@@ -7,8 +7,8 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruTenantConfig;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionBean;
@@ -51,8 +51,8 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         try {
             MiruTenantConfig config = clusterRegistry.getTenantConfig(tenant);
             data.put("config", true);
-            data.put("configNumberOfReplicas", String.valueOf(config.getLong(MiruTenantConfigFields.number_of_replicas, -1)));
-            data.put("configTopologyIsStaleAfterMillis", String.valueOf(config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis, -1)));
+            data.put("configNumberOfReplicas", String.valueOf(config.getLong(MiruTenantConfigFields.number_of_replicas.name(), -1)));
+            data.put("configTopologyIsStaleAfterMillis", String.valueOf(config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis.name(), -1)));
         } catch (Exception e) {
             log.error("Failed to get config for tenant: " + tenant);
             data.put("config", false);
@@ -62,7 +62,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         try {
             List<MiruTopologyStatus> statusForTenant = clusterRegistry.getTopologyStatusForTenant(tenant);
 
-            Optional<MiruPartitionId> latestPartitionId = clusterRegistry.getLatestPartitionIdForTenant(tenant);
+            Optional<MiruPartitionId> latestPartitionId = activityWALReader.getLatestPartitionIdForTenant(tenant);
 
             if (latestPartitionId.isPresent()) {
                 for (MiruPartitionId latest = latestPartitionId.get(); latest != null; latest = latest.prev()) {

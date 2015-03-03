@@ -2,14 +2,14 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import java.util.Map;
 
 /**
  *
  */
-public class MiruHostEntryRegion implements MiruRegion<MiruClusterRegistry.HostHeartbeat> {
+public class MiruHostEntryRegion implements MiruRegion<HostHeartbeat> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
@@ -20,7 +20,7 @@ public class MiruHostEntryRegion implements MiruRegion<MiruClusterRegistry.HostH
     }
 
     @Override
-    public String render(MiruClusterRegistry.HostHeartbeat hostHeartbeat) {
+    public String render(HostHeartbeat hostHeartbeat) {
         Map<String, Object> data = Maps.newHashMap();
         MiruHost host = hostHeartbeat.host;
 

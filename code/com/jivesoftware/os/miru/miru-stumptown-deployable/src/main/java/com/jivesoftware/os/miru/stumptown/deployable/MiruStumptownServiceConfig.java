@@ -15,7 +15,10 @@
  */
 package com.jivesoftware.os.miru.stumptown.deployable;
 
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
+import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import org.merlin.config.Config;
+import org.merlin.config.defaults.ClassDefault;
 import org.merlin.config.defaults.StringDefault;
 
 /**
@@ -32,5 +35,10 @@ public interface MiruStumptownServiceConfig extends Config {
 
     @StringDefault("unspecifiedHost:0")
     public String getMiruReaderHosts();
+
+
+    @ClassDefault(IllegalStateException.class)
+    <C extends Config, I extends RowColumnValueStoreInitializer<E>, E extends Exception> Class<RowColumnValueStoreProvider<C, I, E>>
+    getRowColumnValueStoreProviderClass();
 
 }

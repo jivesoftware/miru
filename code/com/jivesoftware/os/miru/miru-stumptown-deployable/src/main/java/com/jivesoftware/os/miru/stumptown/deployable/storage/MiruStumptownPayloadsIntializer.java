@@ -17,7 +17,7 @@ package com.jivesoftware.os.miru.stumptown.deployable.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.marshaller.MiruTenantIdMarshaller;
+import com.jivesoftware.os.miru.api.marshall.MiruTenantIdMarshaller;
 import com.jivesoftware.os.rcvs.api.DefaultRowColumnValueStoreMarshaller;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;

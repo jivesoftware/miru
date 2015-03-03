@@ -9,6 +9,7 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import java.util.Collections;
 import java.util.List;
@@ -48,7 +49,7 @@ public class ReaderRequestHelpers {
 
     public List<RequestHelper> get(Optional<MiruHost> excludingHost) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
-        for (MiruClusterRegistry.HostHeartbeat heartbeat : clusterRegistry.getAllHosts()) {
+        for (HostHeartbeat heartbeat : clusterRegistry.getAllHosts()) {
             if (heartbeat.heartbeat > (System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1))) {
                 hosts.add(heartbeat.host);
             }

@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -27,15 +28,16 @@ import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
-import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
+import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
-import com.jivesoftware.os.miru.cluster.rcvs.RegistrySchemaProvider;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -55,6 +57,8 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
@@ -108,7 +112,6 @@ public class MiruManageMain {
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.buildManageServer().start();
 
-
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class); //config(DevInstanceConfig.class);
 
             ObjectMapper mapper = new ObjectMapper();
@@ -147,30 +150,50 @@ public class MiruManageMain {
 
             MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
                 .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-            MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-                registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                registryStore.getWriterPartitionRegistry(),
-                registryConfig.getDefaultNumberOfReplicas(),
-                registryConfig.getDefaultTopologyIsStaleAfterMillis());
+
+            MiruClusterRegistry clusterRegistry;
+            if (registryConfig.getClusterRegistryType().equals("hbase")) {
+                clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
+                    registryStore.getHostsRegistry(),
+                    registryStore.getExpectedTenantsRegistry(),
+                    registryStore.getTopologyUpdatesRegistry(),
+                    registryStore.getExpectedTenantPartitionsRegistry(),
+                    registryStore.getReplicaRegistry(),
+                    registryStore.getTopologyRegistry(),
+                    registryStore.getConfigRegistry(),
+                    registryStore.getSchemaRegistry(),
+                    registryConfig.getDefaultNumberOfReplicas(),
+                    registryConfig.getDefaultTopologyIsStaleAfterMillis(),
+                    registryConfig.getDefaultTopologyIsIdleAfterMillis());
+            } else {
+                AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
+                AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable,
+                    instanceConfig.getInstanceName(),
+                    instanceConfig.getHost(),
+                    instanceConfig.getMainPort(),
+                    "amza-topology-" + instanceConfig.getClusterName(),
+                    amzaClusterRegistryConfig);
+                clusterRegistry = new AmzaClusterRegistry(amzaService,
+                    new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
+                    registryConfig.getDefaultNumberOfReplicas(),
+                    registryConfig.getDefaultTopologyIsStaleAfterMillis(),
+                    registryConfig.getDefaultTopologyIsIdleAfterMillis());
+            }
 
             MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
-            MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
+            MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(),
+                miruWAL.getActivitySipWAL(),
+                miruWAL.getWriterPartitionRegistry());
+
             MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
             MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
-            MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
-            MiruSchemaProvider schemaProvider = new RegistrySchemaProvider(registryStore.getSchemaRegistry(), 10_000);
+            MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(miruWAL.getActivityLookupTable());
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
                 clusterRegistry,
-                schemaProvider,
                 activityWALReader,
                 readTrackingWALReader,
                 activityLookupTable);

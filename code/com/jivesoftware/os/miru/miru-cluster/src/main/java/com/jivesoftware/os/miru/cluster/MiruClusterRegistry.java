@@ -8,7 +8,12 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
+import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
+import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,8 +37,6 @@ public interface MiruClusterRegistry {
 
     void ensurePartitionCoord(MiruPartitionCoord coord) throws Exception;
 
-    Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception;
-
     List<MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception;
 
     List<MiruPartition> getPartitionsForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception;
@@ -47,9 +50,9 @@ public interface MiruClusterRegistry {
     void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo,
         Optional<Long> refreshTimestamp) throws Exception;
 
-    MiruPartitionActiveTimestamp isPartitionActive(MiruPartitionCoord coord) throws Exception;
+    List<MiruTenantTopologyUpdate> getTopologyUpdatesForHost(MiruHost host, long sinceTimestamp) throws Exception;
 
-    MiruPartition getPartition(MiruPartitionCoord coord) throws Exception;
+    MiruPartitionActive isPartitionActive(MiruPartitionCoord coord) throws Exception;
 
     void removeHost(MiruHost host) throws Exception;
 
@@ -59,36 +62,7 @@ public interface MiruClusterRegistry {
 
     void topologiesForTenants(List<MiruTenantId> tenantIds, final CallbackStream<MiruTopologyStatus> callbackStream) throws Exception;
 
-    class HostHeartbeat {
+    MiruSchema getSchema(MiruTenantId tenantId) throws Exception;
 
-        public final MiruHost host;
-        public final long heartbeat;
-
-
-        public HostHeartbeat(MiruHost host, long heartbeat) {
-            this.host = host;
-            this.heartbeat = heartbeat;
-        }
-
-        // only host contributes to equals()
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            HostHeartbeat that = (HostHeartbeat) o;
-
-            return !(host != null ? !host.equals(that.host) : that.host != null);
-        }
-
-        // only host contributes to hashCode()
-        @Override
-        public int hashCode() {
-            return host != null ? host.hashCode() : 0;
-        }
-    }
+    void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception;
 }

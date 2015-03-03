@@ -33,12 +33,11 @@ public class MiruStumptownIntakeInitializer {
     }
 
     MiruStumptownIntakeService initialize(MiruStumptownIntakeConfig config,
+        StumptownSchemaService stumptownSchemaService,
         LogMill logMill,
         RequestHelper[] miruWrites,
-        RequestHelper[] miruReaders,
         MiruStumptownPayloads activityPayloads) {
 
-        StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(miruReaders);
         return new MiruStumptownIntakeService(stumptownSchemaService, logMill, config.getMiruIngressEndpoint(), miruWrites, activityPayloads);
     }
 }

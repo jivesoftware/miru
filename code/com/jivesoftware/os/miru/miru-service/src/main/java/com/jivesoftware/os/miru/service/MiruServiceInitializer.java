@@ -20,13 +20,10 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.cluster.MiruActivityLookupTable;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSActivityLookupTable;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -39,11 +36,9 @@ import com.jivesoftware.os.miru.service.partition.MiruIndexRepairs;
 import com.jivesoftware.os.miru.service.partition.MiruLocalPartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionAccessor.IndexStrategy;
-import com.jivesoftware.os.miru.service.partition.MiruPartitionEventHandler;
-import com.jivesoftware.os.miru.service.partition.MiruPartitionInfoProvider;
-import com.jivesoftware.os.miru.service.partition.MiruRemotePartitionFactory;
+import com.jivesoftware.os.miru.service.partition.MiruPartitionHeartbeatHandler;
+import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
-import com.jivesoftware.os.miru.service.partition.cluster.CachedClusterPartitionInfoProvider;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
@@ -55,8 +50,6 @@ import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -77,8 +70,7 @@ public class MiruServiceInitializer {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
-        MiruRegistryStore registryStore,
-        MiruClusterRegistry clusterRegistry,
+        MiruClusterClient clusterClient,
         MiruHost miruHost,
         MiruSchemaProvider schemaProvider,
         MiruWAL wal,
@@ -198,14 +190,13 @@ public class MiruServiceInitializer {
             authzStripingLocksProvider
         );
 
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruPartitionEventHandler partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL(),
+            wal.getWriterPartitionRegistry());
+        MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.registerModule(new GuavaModule());
-
-        MiruPartitionInfoProvider partitionInfoProvider = new CachedClusterPartitionInfoProvider();
 
         MiruIndexRepairs indexRepairs = new MiruIndexRepairs() {
             private final AtomicBoolean current = new AtomicBoolean(false);
@@ -230,7 +221,7 @@ public class MiruServiceInitializer {
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(config,
             streamFactory,
             activityWALReader,
-            partitionEventHandler,
+            heartbeatHandler,
             rebuildDirector,
             scheduledBootstrapExecutor,
             scheduledRebuildExecutor,
@@ -242,24 +233,23 @@ public class MiruServiceInitializer {
             indexRepairs,
             miruMergeChits);
 
-        MiruRemotePartitionFactory remotePartitionFactory = new MiruRemotePartitionFactory(partitionInfoProvider,
+        MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory(
             httpClientFactory,
             objectMapper);
 
         MiruTenantTopologyFactory tenantTopologyFactory = new MiruTenantTopologyFactory(config,
             bitmapsProvider,
             miruHost,
-            localPartitionFactory,
-            remotePartitionFactory,
-            partitionComparison);
+            localPartitionFactory);
 
-        MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(partitionInfoProvider,
+        MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(
             tenantTopologyFactory,
-            clusterRegistry);
+            remotePartitionFactory,
+            heartbeatHandler,
+            partitionComparison,
+            clusterClient);
 
-        final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, clusterRegistry, expectedTenants);
-        MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(registryStore.getActivityLookupTable());
+        final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, clusterClient, expectedTenants);
 
         MiruSolver solver = new MiruLowestLatencySolver(solverExecutor,
             config.getDefaultInitialSolvers(),
@@ -271,8 +261,6 @@ public class MiruServiceInitializer {
             miruHost,
             partitionDirector,
             partitionComparison,
-            activityWALWriter,
-            activityLookupTable,
             solver,
             schemaProvider);
 
@@ -293,14 +281,6 @@ public class MiruServiceInitializer {
                         partitionDirector.heartbeat();
                     }
                 }, 0, heartbeatInterval, TimeUnit.MILLISECONDS);
-                long ensurePartitionsInterval = config.getEnsurePartitionsIntervalInMillis();
-                serviceScheduledExecutor.scheduleWithFixedDelay(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        partitionDirector.ensureServerPartitions();
-                    }
-                }, 0, ensurePartitionsInterval, TimeUnit.MILLISECONDS);
             }
 
             @Override

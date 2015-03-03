@@ -61,7 +61,6 @@ public class MiruPartitionAccessor<BM> {
     public final MiruPartitionCoordInfo info;
     public final Optional<MiruContext<BM>> context;
 
-    public final AtomicReference<Optional<Long>> refreshTimestamp;
     public final AtomicReference<Set<TimeAndVersion>> seenLastSip;
 
     public final Set<Integer> beginWriters;
@@ -81,7 +80,6 @@ public class MiruPartitionAccessor<BM> {
         MiruPartitionCoordInfo info,
         Optional<MiruContext<BM>> context,
         AtomicLong rebuildTimestamp,
-        AtomicReference<Optional<Long>> refreshTimestamp,
         Set<TimeAndVersion> seenLastSip,
         Set<Integer> beginWriters,
         Set<Integer> endWriters,
@@ -95,7 +93,6 @@ public class MiruPartitionAccessor<BM> {
         this.info = info;
         this.context = context;
         this.rebuildTimestamp = rebuildTimestamp;
-        this.refreshTimestamp = refreshTimestamp;
         this.seenLastSip = new AtomicReference<>(seenLastSip);
         this.beginWriters = beginWriters;
         this.endWriters = endWriters;
@@ -112,13 +109,13 @@ public class MiruPartitionAccessor<BM> {
         Optional<MiruContext<BM>> context,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer) {
-        this(bitmaps, coord, info, context, new AtomicLong(), new AtomicReference<Optional<Long>>(),
+        this(bitmaps, coord, info, context, new AtomicLong(),
             Sets.<TimeAndVersion>newHashSet(), Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean(),
             indexRepairs, indexer, new AtomicLong(System.currentTimeMillis()));
     }
 
     MiruPartitionAccessor<BM> copyToState(MiruPartitionState toState) {
-        return new MiruPartitionAccessor<>(bitmaps, coord, info.copyToState(toState), context, rebuildTimestamp, refreshTimestamp,
+        return new MiruPartitionAccessor<>(bitmaps, coord, info.copyToState(toState), context, rebuildTimestamp,
             seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
     }
 
@@ -150,10 +147,6 @@ public class MiruPartitionAccessor<BM> {
 
     boolean canAutoMigrate() {
         return info.storage == MiruBackingStorage.memory && info.state == MiruPartitionState.online;
-    }
-
-    void markForRefresh(Optional<Long> timestamp) {
-        refreshTimestamp.set(timestamp);
     }
 
     long getRebuildTimestamp() throws IOException {
@@ -471,7 +464,6 @@ public class MiruPartitionAccessor<BM> {
 
     MiruRequestHandle<BM> getRequestHandle() {
         log.debug("Request handle requested for {}", coord);
-        markForRefresh(Optional.of(System.currentTimeMillis()));
 
         try {
             semaphore.acquire();
@@ -590,7 +582,6 @@ public class MiruPartitionAccessor<BM> {
             + "coord=" + coord
             + ", info=" + info
             + ", rebuildTimestamp=" + rebuildTimestamp
-            + ", refreshTimestamp=" + refreshTimestamp
             + ", closed=" + closed
             + '}';
     }

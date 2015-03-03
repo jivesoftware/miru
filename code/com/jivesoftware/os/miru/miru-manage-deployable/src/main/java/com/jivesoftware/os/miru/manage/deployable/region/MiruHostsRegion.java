@@ -5,6 +5,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -43,11 +44,11 @@ public class MiruHostsRegion implements MiruPageRegion<Optional<MiruHost>> {
     public String render(Optional<MiruHost> optionalHost) {
         Map<String, Object> data = Maps.newHashMap();
         try {
-            LinkedHashSet<MiruClusterRegistry.HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
-            data.put("hosts", Collections2.transform(hostHeartbeats, new Function<MiruClusterRegistry.HostHeartbeat, String>() {
+            LinkedHashSet<HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
+            data.put("hosts", Collections2.transform(hostHeartbeats, new Function<HostHeartbeat, String>() {
                 @Nullable
                 @Override
-                public String apply(@Nullable MiruClusterRegistry.HostHeartbeat input) {
+                public String apply(@Nullable HostHeartbeat input) {
                     return input != null ? hostEntryRegion.render(input) : null;
                 }
             }));

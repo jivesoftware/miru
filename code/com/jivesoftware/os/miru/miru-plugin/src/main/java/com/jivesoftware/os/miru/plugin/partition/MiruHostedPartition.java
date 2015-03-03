@@ -6,18 +6,15 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import java.util.Iterator;
 
 /**
  *
  * @author jonathan
  */
-public interface MiruHostedPartition<BM> {
+public interface MiruHostedPartition {
 
     void remove() throws Exception;
-
-    boolean isLocal();
 
     MiruPartitionCoord getCoord();
 
@@ -31,9 +28,7 @@ public interface MiruHostedPartition<BM> {
 
     void index(Iterator<MiruPartitionedActivity> activities) throws Exception;
 
-    void warm();
+    void warm() throws Exception;
 
     void setStorage(MiruBackingStorage storage) throws Exception;
-
-    MiruRequestHandle<BM> getQueryHandle() throws Exception;
 }

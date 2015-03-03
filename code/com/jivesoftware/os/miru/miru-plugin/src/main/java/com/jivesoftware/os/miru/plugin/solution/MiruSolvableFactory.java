@@ -1,9 +1,7 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
-import com.jivesoftware.os.mlogger.core.MetricLogger;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import java.util.concurrent.Callable;
 
 /**
@@ -23,11 +21,11 @@ public class MiruSolvableFactory<A, P> {
         this.question = question;
     }
 
-    public <BM> MiruSolvable<A> create(final MiruHostedPartition<BM> replica, final Optional<P> report) {
+    public <BM> MiruSolvable<A> create(final MiruQueryablePartition<BM> replica, final Optional<P> report) {
         Callable<MiruPartitionResponse<A>> callable = new Callable<MiruPartitionResponse<A>>() {
             @Override
             public MiruPartitionResponse<A> call() throws Exception {
-                try (MiruRequestHandle<BM> handle = replica.getQueryHandle()) {
+                try (MiruRequestHandle<BM> handle = replica.acquireQueryHandle()) {
                     if (handle.isLocal()) {
                         return question.askLocal(handle, report);
                     } else {

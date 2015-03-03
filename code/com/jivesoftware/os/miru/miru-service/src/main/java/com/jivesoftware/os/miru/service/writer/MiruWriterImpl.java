@@ -22,8 +22,4 @@ public class MiruWriterImpl implements MiruWriter {
         miruService.writeToIndex(activities);
     }
 
-    @Override
-    public void writeToWAL(List<MiruPartitionedActivity> activities) throws Exception {
-        miruService.writeWAL(activities);
-    }
 }

@@ -14,12 +14,13 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.MiruPartitionActiveTimestamp;
-import com.jivesoftware.os.miru.cluster.schema.MiruSchemaUnvailableException;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.NamedThreadFactory;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
@@ -50,7 +51,7 @@ import org.merlin.config.defaults.StringDefault;
 /**
  * @author jonathan
  */
-public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
+public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQueryablePartition<BM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -58,7 +59,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     private final MiruPartitionCoord coord;
     private final MiruContextFactory contextFactory;
     private final MiruActivityWALReader activityWALReader;
-    private final MiruPartitionEventHandler partitionEventHandler;
+    private final MiruPartitionHeartbeatHandler heartbeatHandler;
     private final MiruRebuildDirector rebuildDirector;
     private final AtomicBoolean removed = new AtomicBoolean(false);
 
@@ -110,7 +111,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         MiruPartitionCoord coord,
         MiruContextFactory contextFactory,
         MiruActivityWALReader activityWALReader,
-        MiruPartitionEventHandler partitionEventHandler,
+        MiruPartitionHeartbeatHandler heartbeatHandler,
         MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBootstrapExecutor,
         ScheduledExecutorService scheduledRebuildExecutor,
@@ -132,7 +133,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         this.coord = coord;
         this.contextFactory = contextFactory;
         this.activityWALReader = activityWALReader;
-        this.partitionEventHandler = partitionEventHandler;
+        this.heartbeatHandler = heartbeatHandler;
         this.rebuildDirector = rebuildDirector;
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
         this.scheduledSipExecutor = scheduledSipExecutor;
@@ -158,7 +159,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             Optional.<MiruContext<BM>>absent(),
             indexRepairs,
             indexer);
-        accessor.markForRefresh(Optional.<Long>absent());
+        heartbeatHandler.heartbeat(coord, Optional.of(coordInfo), Optional.<Long>absent());
         this.accessorRef.set(accessor);
         log.incAtomic("state>" + accessor.info.state.name());
         log.incAtomic("storage>" + accessor.info.storage.name());
@@ -197,12 +198,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
     }
 
     @Override
-    public MiruRequestHandle<BM> getQueryHandle() throws Exception {
+    public MiruRequestHandle<BM> acquireQueryHandle() throws Exception {
         MiruPartitionAccessor<BM> accessor = accessorRef.get();
         if (!removed.get() && accessor.canHotDeploy()) {
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, accessor.info.copyToState(MiruPartitionState.online));
         }
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
         return accessor.getRequestHandle();
     }
 
@@ -298,13 +300,14 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
 
         if (partitionWakeOnIndex) {
-            accessor.markForRefresh(Optional.of(System.currentTimeMillis()));
+            heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
         }
     }
 
     @Override
-    public void warm() {
-        accessorRef.get().markForRefresh(Optional.of(System.currentTimeMillis()));
+    public void warm() throws Exception {
+        MiruPartitionAccessor<BM> accessor = accessorRef.get();
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
 
         log.inc("warm", 1);
         log.inc("warm", 1, coord.tenantId.toString());
@@ -362,13 +365,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         }
     }
 
-    private MiruPartitionAccessor<BM> updatePartition(MiruPartitionAccessor<BM> existing, MiruPartitionAccessor<BM> update) {
+    private MiruPartitionAccessor<BM> updatePartition(MiruPartitionAccessor<BM> existing, MiruPartitionAccessor<BM> update) throws Exception {
         synchronized (accessorRef) {
             if (accessorRef.get() != existing) {
                 return null;
             }
 
-            update.markForRefresh(Optional.<Long>absent());
+            heartbeatHandler.heartbeat(coord, Optional.of(update.info), Optional.<Long>absent());
 
             accessorRef.set(update);
 
@@ -397,29 +400,15 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
         public void run() {
             try {
                 try {
-                    refreshTopology();
-                } catch (Throwable t) {
-                    log.error("RefreshTopology encountered a problem", t);
-                }
-
-                try {
                     checkActive();
                 } catch (MiruSchemaUnvailableException sue) {
                     log.warn("Tenant is active but schema not available for {}", coord.tenantId);
                     log.debug("Tenant is active but schema not available", sue);
                 } catch (Throwable t) {
-                    log.error("CheckActive encountered a problem for {}", new Object[] { coord }, t);
+                    log.error("CheckActive encountered a problem for {}", new Object[]{coord}, t);
                 }
             } catch (Throwable t) {
-                log.error("Bootstrap encountered a problem for {}", new Object[] { coord }, t);
-            }
-        }
-
-        private void refreshTopology() throws Exception {
-            MiruPartitionAccessor<BM> accessor = accessorRef.get();
-            Optional<Long> timestamp = accessor.refreshTimestamp.getAndSet(null);
-            if (timestamp != null) {
-                partitionEventHandler.updateTopology(coord, Optional.of(accessor.info), timestamp);
+                log.error("Bootstrap encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 
@@ -429,8 +418,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             }
 
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
-            MiruPartitionActiveTimestamp activeTimestamp = partitionEventHandler.isCoordActive(coord);
-            if (activeTimestamp.active) {
+            MiruPartitionActive partitionActive = heartbeatHandler.isCoordActive(coord);
+            if (partitionActive.active) {
                 if (accessor.info.state == MiruPartitionState.offline) {
                     if (accessor.info.storage == MiruBackingStorage.memory) {
                         try {
@@ -446,8 +435,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             open(accessor, accessor.info.copyToState(MiruPartitionState.online));
                         }
                     }
-                } else if (accessor.context.isPresent()
-                    && activeTimestamp.timestamp < (System.currentTimeMillis() - timings.partitionReleaseContextCacheAfterMillis)) {
+                } else if (accessor.context.isPresent() && partitionActive.idle) {
                     MiruContext<BM> context = accessor.context.get();
                     contextFactory.releaseCaches(context, accessor.info.storage);
                 }
@@ -494,7 +482,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                                         }
                                     }
                                 } catch (Throwable t) {
-                                    log.error("Rebuild encountered a problem for {}", new Object[] { coord }, t);
+                                    log.error("Rebuild encountered a problem for {}", new Object[]{coord}, t);
                                 }
                             }
                         } catch (MiruPartitionUnavailableException e) {
@@ -509,7 +497,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     }
                 }
             } catch (Throwable t) {
-                log.error("RebuildIndex encountered a problem for {}", new Object[] { coord }, t);
+                log.error("RebuildIndex encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 
@@ -679,7 +667,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             updateStorage(accessor, MiruBackingStorage.disk, false);
                         }
                     } catch (Throwable t) {
-                        log.error("Migrate encountered a problem for {}", new Object[] { coord }, t);
+                        log.error("Migrate encountered a problem for {}", new Object[]{coord}, t);
                     }
                     try {
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
@@ -688,11 +676,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                             accessor.refundChits(mergeChits);
                         }
                     } catch (Throwable t) {
-                        log.error("Sip encountered a problem for {}", new Object[] { coord }, t);
+                        log.error("Sip encountered a problem for {}", new Object[]{coord}, t);
                     }
                 }
             } catch (Throwable t) {
-                log.error("SipMigrateIndex encountered a problem for {}", new Object[] { coord }, t);
+                log.error("SipMigrateIndex encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 

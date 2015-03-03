@@ -15,9 +15,35 @@
         <rcvs-version>0.12</rcvs-version>
         <filer-version>0.64</filer-version>
         <upena-version>0.43</upena-version>
+        <amza-version>0.13</amza-version>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>de.ruedigermoeller</groupId>
+                <artifactId>fst</artifactId>
+                <version>1.28</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.amza</groupId>
+                <artifactId>amza-transport</artifactId>
+                <version>${amza-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.amza</groupId>
+                <artifactId>amza-storage</artifactId>
+                <version>${amza-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.amza</groupId>
+                <artifactId>amza-service</artifactId>
+                <version>${amza-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.amza</groupId>
+                <artifactId>amza-shared</artifactId>
+                <version>${amza-version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.upena</groupId>
                 <artifactId>upena-scripts</artifactId>

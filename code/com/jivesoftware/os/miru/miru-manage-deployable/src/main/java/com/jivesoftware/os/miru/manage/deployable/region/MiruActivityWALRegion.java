@@ -57,7 +57,7 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
             data.put("tenant", new String(tenantId.getBytes(), Charsets.UTF_8));
 
             try {
-                Optional<MiruPartitionId> latestPartitionId = clusterRegistry.getLatestPartitionIdForTenant(tenantId);
+                Optional<MiruPartitionId> latestPartitionId = activityWALReader.getLatestPartitionIdForTenant(tenantId);
                 List<MiruPartitionId> partitionIds = Lists.newArrayList();
                 if (latestPartitionId.isPresent()) {
                     for (MiruPartitionId latest = latestPartitionId.get(); latest != null; latest = latest.prev()) {

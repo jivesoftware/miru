@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable.region.bean;
 
-import com.jivesoftware.os.miru.cluster.rcvs.MiruActivityLookupEntry;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupEntry;
 
 /**
  *
