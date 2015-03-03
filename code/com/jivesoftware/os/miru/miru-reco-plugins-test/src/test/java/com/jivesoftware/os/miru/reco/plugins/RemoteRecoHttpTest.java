@@ -160,7 +160,7 @@ public class RemoteRecoHttpTest {
         }
     }
 
-    @Test(enabled = true, description = "Needs REMOTE constants")
+    @Test(enabled = false, description = "Needs REMOTE constants")
     public void testSystemRecommended() throws Exception {
 
         String tenant = "999"; //brewspace
