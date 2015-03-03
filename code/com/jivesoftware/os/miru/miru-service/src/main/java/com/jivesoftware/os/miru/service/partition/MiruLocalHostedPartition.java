@@ -33,13 +33,11 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -519,14 +517,12 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
             final ArrayBlockingQueue<List<MiruPartitionedActivity>> queue = new ArrayBlockingQueue<>(1);
             final AtomicLong rebuildTimestamp = new AtomicLong(accessor.getRebuildTimestamp());
             final AtomicReference<Sip> sip = new AtomicReference<>(accessor.getSip());
+            final AtomicBoolean rebuilding = new AtomicBoolean(true);
+            final AtomicBoolean endOfWAL = new AtomicBoolean(false);
 
             log.debug("Starting rebuild at {} for {}", rebuildTimestamp.get(), coord);
 
-            final ExecutorService rebuildIndexExecutor = Executors.newFixedThreadPool(rebuildIndexerThreads,
-                new NamedThreadFactory(Thread.currentThread().getThreadGroup(), "rebuild_index_" + coord.tenantId + "_" + coord.partitionId));
-
-            Future<?> walFuture = rebuildWALExecutors.submit(new Runnable() {
-
+            rebuildWALExecutors.submit(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -542,83 +538,86 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
 
                                 @Override
                                 public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                                    if (Thread.interrupted()) {
-                                        throw new InterruptedException("Interrupted while streaming rebuild");
-                                    }
-
                                     batch.add(partitionedActivity);
                                     if (batch.size() == partitionRebuildBatchSize) {
                                         log.debug("Delivering batch of size {} for {}", partitionRebuildBatchSize, coord);
-                                        queue.put(batch);
-                                        batch = Lists.newArrayListWithCapacity(partitionRebuildBatchSize);
-                                        batchRef.set(batch);
+                                        boolean success = tryQueuePut(rebuilding, queue, batch);
+                                        if (success) {
+                                            batch = Lists.newArrayListWithCapacity(partitionRebuildBatchSize);
+                                            batchRef.set(batch);
+                                        }
                                     }
 
                                     // stop if the rebuild has died, or the accessor has changed
-                                    return accessorRef.get() == accessor;
+                                    return rebuilding.get() && accessorRef.get() == accessor;
                                 }
                             }
                         );
 
                         List<MiruPartitionedActivity> batch = batchRef.get();
-                        if (!batch.isEmpty()) {
+                        if (rebuilding.get() && !batch.isEmpty()) {
                             log.debug("Delivering batch of size {} for {}", batch.size(), coord);
-                            queue.put(batch);
+                            tryQueuePut(rebuilding, queue, batch);
                         }
 
                         // signals end of rebuild
                         log.debug("Signaling end of rebuild for {}", coord);
-                        queue.put(Collections.<MiruPartitionedActivity>emptyList());
+                        endOfWAL.set(true);
                     } catch (Exception x) {
                         log.error("Failure while rebuilding {}", new Object[] { coord }, x);
+                    } finally {
+                        rebuilding.set(false);
                     }
                 }
             });
 
-            List<MiruPartitionedActivity> partitionedActivities;
-            int totalIndexed = 0;
-            while (true) {
-                partitionedActivities = queue.take();
-                if (partitionedActivities.isEmpty()) {
-                    // end of rebuild
-                    log.debug("Ending rebuild for {}", coord);
-                    break;
-                }
+            final ExecutorService rebuildIndexExecutor = Executors.newFixedThreadPool(rebuildIndexerThreads,
+                new NamedThreadFactory(Thread.currentThread().getThreadGroup(), "rebuild_index_" + coord.tenantId + "_" + coord.partitionId));
 
-                int count = partitionedActivities.size();
-                totalIndexed += count;
-                log.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
-                for (int i = count - 1; i > -1; i--) {
-                    MiruPartitionedActivity partitionedActivity = partitionedActivities.get(i);
-                    // only adjust timestamps for activity types
-                    if (partitionedActivity.type.isActivityType()) {
-                        // rebuild offset is based on the activity timestamp
-                        if (partitionedActivity.timestamp > rebuildTimestamp.get()) {
-                            rebuildTimestamp.set(partitionedActivity.timestamp);
-                        }
-
-                        // activityWAL uses CurrentTimestamper, so column version implies desired sip offset
-                        Sip suggestion = new Sip(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
-                        if (suggestion.compareTo(sip.get()) > 0) {
-                            sip.set(suggestion);
-                        }
+            Exception failure = null;
+            try {
+                List<MiruPartitionedActivity> partitionedActivities;
+                int totalIndexed = 0;
+                while (true) {
+                    partitionedActivities = null;
+                    while ((rebuilding.get() || !queue.isEmpty()) && partitionedActivities == null) {
+                        partitionedActivities = queue.poll(1, TimeUnit.SECONDS);
+                    }
+                    if (!rebuilding.get() || partitionedActivities == null) {
+                        // end of rebuild
+                        log.debug("Ending rebuild for {}", coord);
                         break;
                     }
-                }
 
-                log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
-                try {
+                    int count = partitionedActivities.size();
+                    totalIndexed += count;
+                    log.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
+                    for (int i = count - 1; i > -1; i--) {
+                        MiruPartitionedActivity partitionedActivity = partitionedActivities.get(i);
+                        // only adjust timestamps for activity types
+                        if (partitionedActivity.type.isActivityType()) {
+                            // rebuild offset is based on the activity timestamp
+                            if (partitionedActivity.timestamp > rebuildTimestamp.get()) {
+                                rebuildTimestamp.set(partitionedActivity.timestamp);
+                            }
+
+                            // activityWAL uses CurrentTimestamper, so column version implies desired sip offset
+                            Sip suggestion = new Sip(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
+                            if (suggestion.compareTo(sip.get()) > 0) {
+                                sip.set(suggestion);
+                            }
+                            break;
+                        }
+                    }
+
+                    log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                     boolean repair = firstRebuild.compareAndSet(true, false);
                     accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, repair, mergeChits,
                         rebuildIndexExecutor, mergeExecutor);
                     accessor.merge(mergeChits, mergeExecutor);
                     accessor.setRebuildTimestamp(rebuildTimestamp.get());
                     accessor.setSip(sip.get());
-                } catch (Exception e) {
-                    log.error("Failure during rebuild index for {}", coord);
-                    walFuture.cancel(true);
-                    throw e;
-                } finally {
+
                     log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                     log.inc("rebuild>count>calls", 1);
                     log.inc("rebuild>count>total", count);
@@ -626,17 +625,44 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition<BM> {
                     log.inc("rebuild", count, coord.tenantId.toString());
                     log.inc("rebuild>partition>" + coord.partitionId, count, coord.tenantId.toString());
                 }
+            } catch (Exception e) {
+                log.error("Failure during rebuild index for {}", new Object[] { coord }, e);
+                failure = e;
             }
 
-            rebuildIndexExecutor.shutdown();
-            try {
-                rebuildIndexExecutor.awaitTermination(1, TimeUnit.MINUTES); //TODO expose to config
-            } catch (InterruptedException e) {
-                log.warn("Rebuild index executor for {} never shut down, threads may leak", coord);
-                Thread.interrupted();
+            rebuilding.set(false);
+            boolean shutdown = false;
+            boolean interrupted = false;
+            while (!shutdown) {
+                rebuildIndexExecutor.shutdown();
+                try {
+                    shutdown = rebuildIndexExecutor.awaitTermination(1, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    log.warn("Ignored interrupt while awaiting shutdown of rebuild index executor for {}", coord);
+                    interrupted = true;
+                }
+            }
+            if (interrupted) {
+                if (failure != null) {
+                    failure = new InterruptedException("Interrupted awaiting rebuild index executor termination after failure: " + failure.getMessage());
+                } else {
+                    failure = new InterruptedException("Interrupted awaiting rebuild index executor termination");
+                }
+            }
+            if (failure != null) {
+                throw failure;
             }
 
-            return accessorRef.get() == accessor;
+            return endOfWAL.get() && accessorRef.get() == accessor;
+        }
+
+        private boolean tryQueuePut(AtomicBoolean rebuilding, ArrayBlockingQueue<List<MiruPartitionedActivity>> queue, List<MiruPartitionedActivity> batch)
+            throws InterruptedException {
+            boolean success = false;
+            while (rebuilding.get() && !success) {
+                success = queue.offer(batch, 1, TimeUnit.SECONDS);
+            }
+            return success;
         }
     }
 

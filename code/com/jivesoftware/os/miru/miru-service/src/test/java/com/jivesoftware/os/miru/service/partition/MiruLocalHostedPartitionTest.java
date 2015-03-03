@@ -111,6 +111,7 @@ public class MiruLocalHostedPartitionTest {
     private MiruLocalHostedPartition.Timings timings;
     private Timestamper timestamper;
     private AtomicLong syntheticTimestamp = new AtomicLong(System.currentTimeMillis());
+    private long topologyIsStaleAfterMillis = TimeUnit.HOURS.toMillis(1);
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -226,7 +227,7 @@ public class MiruLocalHostedPartitionTest {
             new InMemoryRowColumnValueStore(),
             new InMemoryRowColumnValueStore(),
             3,
-            TimeUnit.HOURS.toMillis(1));
+            topologyIsStaleAfterMillis);
 
         activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
         partitionEventHandler = new MiruPartitionEventHandler(clusterRegistry);
@@ -410,7 +411,7 @@ public class MiruLocalHostedPartitionTest {
     private void setActive(boolean active) throws Exception {
         clusterRegistry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(syntheticTimestamp.incrementAndGet()));
         if (!active) {
-            syntheticTimestamp.addAndGet(TimeUnit.HOURS.toMillis(1) + 1000);
+            syntheticTimestamp.addAndGet(topologyIsStaleAfterMillis * 2);
         }
     }
 
