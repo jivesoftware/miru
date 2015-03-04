@@ -11,6 +11,11 @@ public class HostHeartbeat {
     public final MiruHost host;
     public final long heartbeat;
 
+    public HostHeartbeat() {
+        this.host = null;
+        this.heartbeat = 0;
+    }
+    
     public HostHeartbeat(MiruHost host, long heartbeat) {
         this.host = host;
         this.heartbeat = heartbeat;

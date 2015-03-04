@@ -120,8 +120,12 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                         public MiruQueryablePartition<?> apply(MiruRoutablePartition input) {
                             MiruPartitionCoord key = new MiruPartitionCoord(tenantId, input.partitionId, input.host);
                             if (input.local) {
-                                Optional<MiruLocalHostedPartition<?>> partition = localTopology.getPartition(key);
-                                return partition.orNull();
+                                if (localTopology == null) {
+                                    return null;
+                                } else {
+                                    Optional<MiruLocalHostedPartition<?>> partition = localTopology.getPartition(key);
+                                    return partition.orNull();
+                                }
                             } else {
                                 return remotePartitionFactory.create(key, new MiruPartitionCoordInfo(input.state, input.storage));
                             }
