@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.342</version>
+        <version>0.343-SNAPSHOT</version>
         <relativePath>../global-build-management/pom.xml</relativePath>
     </parent>
     <artifactId>upena-deployable-management</artifactId>
