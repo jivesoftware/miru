@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -29,10 +28,12 @@ public class ReaderRequestHelpers {
     private final ConcurrentMap<MiruHost, RequestHelper> hostToHelper = Maps.newConcurrentMap();
     private final HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
         .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+    private final long ignoreHostThatHaveNotHeartBeatedInMillis;
 
-    public ReaderRequestHelpers(MiruClusterRegistry clusterRegistry, ObjectMapper objectMapper) {
+    public ReaderRequestHelpers(MiruClusterRegistry clusterRegistry, ObjectMapper objectMapper, long ignoreHostThatHaveNotHeartBeatedInMillis) {
         this.clusterRegistry = clusterRegistry;
         this.objectMapper = objectMapper;
+        this.ignoreHostThatHaveNotHeartBeatedInMillis = ignoreHostThatHaveNotHeartBeatedInMillis;
     }
 
     public RequestHelper get(MiruHost host) throws Exception {
@@ -50,7 +51,7 @@ public class ReaderRequestHelpers {
     public List<RequestHelper> get(Optional<MiruHost> excludingHost) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
         for (HostHeartbeat heartbeat : clusterRegistry.getAllHosts()) {
-            if (heartbeat.heartbeat > (System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1))) {
+            if (heartbeat.heartbeat > (System.currentTimeMillis() - ignoreHostThatHaveNotHeartBeatedInMillis)) {
                 hosts.add(heartbeat.host);
             }
         }

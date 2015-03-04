@@ -71,6 +71,7 @@ import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruManageMain {
@@ -202,7 +203,7 @@ public class MiruManageMain {
                 readTrackingWALReader,
                 activityLookupTable);
 
-            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper);
+            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper, TimeUnit.MINUTES.toMillis(10));// TODO expos to config
 
             List<MiruManagePlugin> plugins = Lists.newArrayList(
                 new MiruManagePlugin("Distincts",
