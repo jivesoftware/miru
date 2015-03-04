@@ -27,10 +27,10 @@ public class StumptownSchemaService {
         this.client = client;
     }
 
-    public void ensureSchema(MiruTenantId serviceId, MiruSchema schema) throws Exception {
-        if (!registered.contains(serviceId)) {
-            client.registerSchema(serviceId, schema);
-            registered.add(serviceId);
+    public void ensureSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception {
+        if (!registered.contains(tenantId)) {
+            client.registerSchema(tenantId, schema);
+            registered.add(tenantId);
         }
     }
 }

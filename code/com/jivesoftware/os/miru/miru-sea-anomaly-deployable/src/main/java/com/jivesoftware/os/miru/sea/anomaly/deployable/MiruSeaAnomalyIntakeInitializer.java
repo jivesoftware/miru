@@ -32,11 +32,10 @@ public class MiruSeaAnomalyIntakeInitializer {
     }
 
     MiruSeaAnomalyIntakeService initialize(MiruSeaAnomalyIntakeConfig config,
+        SeaAnomalySchemaService seaAnomalySchemaService,
         SampleTrawl logMill,
-        RequestHelper[] miruWrites,
-        RequestHelper[] miruReaders) {
+        RequestHelper[] miruWrites) {
 
-        SeaAnomalySchemaService seaAnomalySchemaService = new SeaAnomalySchemaService(miruReaders);
         return new MiruSeaAnomalyIntakeService(seaAnomalySchemaService, logMill, config.getMiruIngressEndpoint(), miruWrites);
     }
 }

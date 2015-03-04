@@ -28,6 +28,9 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientConfig;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSeaAnomalyIntakeInitializer.MiruSeaAnomalyIntakeConfig;
@@ -90,15 +93,20 @@ public class MiruSeaAnomalyMain {
 
             serviceStartupHealthCheck.info("building request helpers...", null);
             RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruReaderHosts(), mapper);
-            RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruWriterHosts(), mapper);
+            RequestHelper[] miruWriters = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruWriterHosts(), mapper);
 
             SampleTrawl logMill = new SampleTrawl(orderIdProvider);
 
             MiruSeaAnomalyIntakeConfig intakeConfig = deployable.config(MiruSeaAnomalyIntakeConfig.class);
+
+            MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
+            MiruClusterClient client = new MiruClusterClientInitializer().initialize(clusterClientConfig, mapper);
+            SeaAnomalySchemaService seaAnomalySchemaService = new SeaAnomalySchemaService(client);
+
             MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,
+                seaAnomalySchemaService,
                 logMill,
-                miruWrites,
-                miruReaders);
+                miruWriters);
 
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
