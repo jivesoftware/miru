@@ -2,10 +2,11 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.concurrent.Callable;
 
 /**
- *
  * @param <A> answer type
  * @param <P> report type
  */

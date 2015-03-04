@@ -252,6 +252,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         final SetMultimap<MiruPartitionId, MiruHost> hostsWithReplicaPerPartition = HashMultimap.create();
         final Set<MiruHost> availableHosts = Sets.newHashSet();
         for (HostHeartbeat heartbeat : getAllHosts()) {
+            System.out.println("Available " + heartbeat.host);
             availableHosts.add(heartbeat.host);
         }
         List<KeyedColumnValueCallbackStream<MiruPartitionId, Long, MiruHost, Long>> rowKeyCallbackStreamPair = new ArrayList<>();
@@ -263,6 +264,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                     public ColumnValueAndTimestamp<Long, MiruHost, Long> callback(ColumnValueAndTimestamp<Long, MiruHost, Long> v) throws Exception {
                         if (v != null) {
                             MiruHost host = v.getValue();
+                            System.out.println("See " + host);
                             if (availableHosts.contains(host)) {
                                 hostsWithReplicaPerPartition.put(miruPartitionId, host);
                                 if (hostsWithReplicaPerPartition.get(miruPartitionId).size() < numberOfReplicas) {

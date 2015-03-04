@@ -96,13 +96,14 @@ public class MiruManageServiceTest {
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
 
+        long electTime = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
         for (int i = 0; i < numberOfReplicas; i++) {
             MiruHost host = new MiruHost("host" + i, 10_000 + i);
             clusterRegistry.sendHeartbeatForHost(host);
             hosts.add(host);
             clusterClient.elect(host, tenantId,
                 partitionId,
-                System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
+                electTime - i);
         }
 
     }

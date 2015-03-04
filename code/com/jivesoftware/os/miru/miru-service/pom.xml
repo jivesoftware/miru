@@ -149,7 +149,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.328-SNAPSHOT</version>
+            <version>0.338-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
