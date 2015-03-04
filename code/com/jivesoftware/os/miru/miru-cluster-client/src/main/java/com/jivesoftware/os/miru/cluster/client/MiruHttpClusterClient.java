@@ -115,7 +115,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
             @Override
             public String call(RequestHelper requestHelper) {
                 return requestHelper.executeRequest(null,
-                    "/miru/topology/remove/"
+                    "/miru/topology/remove/replica/"
                     + tenantId + "/"
                     + partitionId.getId(),
                     String.class, null);

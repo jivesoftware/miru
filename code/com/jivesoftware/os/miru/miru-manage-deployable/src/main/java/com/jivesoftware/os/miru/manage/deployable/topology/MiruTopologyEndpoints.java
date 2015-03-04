@@ -114,7 +114,7 @@ public class MiruTopologyEndpoints {
     }
 
     @POST
-    @Path("/remove/{tenantId}/{partitionId}")
+    @Path("/remove/replica/{tenantId}/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response removeTenantPartionReplicaSet(@PathParam("tenantId") String tenantId,
