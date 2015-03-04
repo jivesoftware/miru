@@ -14,8 +14,8 @@ public interface MiruRegistryConfig extends Config {
     @IntDefault(3)
     int getDefaultNumberOfReplicas();
 
-    @StringDefault("hbase")
-    String getClusterRegistryType(); // hbase or amza
+    @StringDefault("rcvs")
+    String getClusterRegistryType(); // rcvs or amza
 
     // 1 hour
     @LongDefault(3_600_000)

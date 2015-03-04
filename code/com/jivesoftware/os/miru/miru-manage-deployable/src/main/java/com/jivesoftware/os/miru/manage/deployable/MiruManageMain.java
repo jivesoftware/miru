@@ -152,7 +152,7 @@ public class MiruManageMain {
                 .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
             MiruClusterRegistry clusterRegistry;
-            if (registryConfig.getClusterRegistryType().equals("hbase")) {
+            if (registryConfig.getClusterRegistryType().equals("rcvs")) {
                 clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
                     registryStore.getHostsRegistry(),
                     registryStore.getExpectedTenantsRegistry(),
@@ -165,7 +165,7 @@ public class MiruManageMain {
                     registryConfig.getDefaultNumberOfReplicas(),
                     registryConfig.getDefaultTopologyIsStaleAfterMillis(),
                     registryConfig.getDefaultTopologyIsIdleAfterMillis());
-            } else {
+            } else if (registryConfig.getClusterRegistryType().equals("amza")) {
                 AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
                 AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable,
                     instanceConfig.getInstanceName(),
@@ -178,6 +178,8 @@ public class MiruManageMain {
                     registryConfig.getDefaultNumberOfReplicas(),
                     registryConfig.getDefaultTopologyIsStaleAfterMillis(),
                     registryConfig.getDefaultTopologyIsIdleAfterMillis());
+            } else {
+                throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
             }
 
             MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
