@@ -3,6 +3,10 @@ package com.jivesoftware.os.miru.service.partition.cluster;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
+import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -18,6 +22,8 @@ import com.jivesoftware.os.miru.service.partition.MiruLocalPartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
 import java.util.Iterator;
 import java.util.Map;
+import org.merlin.config.BindInterfaceToConfiguration;
+import org.merlin.config.Config;
 import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -45,6 +51,23 @@ public class MiruTenantTopologyTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+        HealthFactory.initialize(
+            new HealthCheckConfigBinder() {
+                @Override
+                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
+                    return BindInterfaceToConfiguration.bindDefault(configurationInterfaceClass);
+                }
+            },
+            new HealthCheckRegistry() {
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
+
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
+
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         tenantId = new MiruTenantId("test".getBytes(Charsets.UTF_8));
         localhost = new MiruHost("localhost", 49_600);
@@ -121,9 +144,9 @@ public class MiruTenantTopologyTest {
         when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class))).thenAnswer(answer);
 
         tenantTopology.index(Lists.newArrayList(
-            factory.activity(0, p0, 0, new MiruActivity.Builder(tenantId, 0, new String[]{"authz"}, 1_111).build()),
-            factory.activity(0, p1, 0, new MiruActivity.Builder(tenantId, 1, new String[]{"authz"}, 2_222).build()),
-            factory.activity(0, p2, 0, new MiruActivity.Builder(tenantId, 2, new String[]{"authz"}, 3_333).build())));
+            factory.activity(0, p0, 0, new MiruActivity.Builder(tenantId, 0, new String[] { "authz" }, 1_111).build()),
+            factory.activity(0, p1, 0, new MiruActivity.Builder(tenantId, 1, new String[] { "authz" }, 2_222).build()),
+            factory.activity(0, p2, 0, new MiruActivity.Builder(tenantId, 2, new String[] { "authz" }, 3_333).build())));
 
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)));
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)));
