@@ -32,6 +32,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
@@ -49,6 +50,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.RecoPluginEndpoints;
 import com.jivesoftware.os.miru.manage.deployable.region.RecoPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginEndpoints;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion;
+import com.jivesoftware.os.miru.manage.deployable.topology.MiruTopologyEndpoints;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
@@ -246,6 +248,9 @@ public class MiruManageMain {
                 deployable.addEndpoints(plugin.endpointsClass);
                 deployable.addInjectables(plugin.region.getClass(), plugin.region);
             }
+
+            deployable.addEndpoints(MiruTopologyEndpoints.class);
+            deployable.addInjectables(MiruRegistryClusterClient.class, new MiruRegistryClusterClient(clusterRegistry));
 
             deployable.addResource(sourceTree);
             deployable.buildServer().start();
