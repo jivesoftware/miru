@@ -252,7 +252,6 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         final SetMultimap<MiruPartitionId, MiruHost> hostsWithReplicaPerPartition = HashMultimap.create();
         final Set<MiruHost> availableHosts = Sets.newHashSet();
         for (HostHeartbeat heartbeat : getAllHosts()) {
-            System.out.println("Available " + heartbeat.host);
             availableHosts.add(heartbeat.host);
         }
         List<KeyedColumnValueCallbackStream<MiruPartitionId, Long, MiruHost, Long>> rowKeyCallbackStreamPair = new ArrayList<>();
@@ -264,7 +263,6 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                     public ColumnValueAndTimestamp<Long, MiruHost, Long> callback(ColumnValueAndTimestamp<Long, MiruHost, Long> v) throws Exception {
                         if (v != null) {
                             MiruHost host = v.getValue();
-                            System.out.println("See " + host);
                             if (availableHosts.contains(host)) {
                                 hostsWithReplicaPerPartition.put(miruPartitionId, host);
                                 if (hostsWithReplicaPerPartition.get(miruPartitionId).size() < numberOfReplicas) {
@@ -389,22 +387,6 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
         topologyRegistry.remove(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey(partitionId, host), timestamper);
         markTenantTopologyUpdated(Arrays.asList(tenantId));
-    }
-
-    @Override
-    public List<MiruTenantId> allTenantIds() throws Exception {
-        final List<MiruTenantId> tenantIds = Lists.newArrayList();
-        topologyRegistry.getAllRowKeys(1_000, null, new CallbackStream<TenantIdAndRow<MiruVoidByte, MiruTenantId>>() {
-            @Override
-            public TenantIdAndRow<MiruVoidByte, MiruTenantId> callback(TenantIdAndRow<MiruVoidByte, MiruTenantId> r)
-                throws Exception {
-                if (r != null) {
-                    tenantIds.add(r.getRow());
-                }
-                return r;
-            }
-        });
-        return tenantIds;
     }
 
     @Override

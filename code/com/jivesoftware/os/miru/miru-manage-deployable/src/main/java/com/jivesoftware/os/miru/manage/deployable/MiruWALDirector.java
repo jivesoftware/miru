@@ -4,10 +4,10 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
@@ -20,22 +20,22 @@ public class MiruWALDirector {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruClusterRegistry clusterRegistry;
+    private final MiruActivityLookupTable activityLookupTable;
     private final MiruActivityWALReader activityWALReader;
     private final MiruActivityWALWriter activityWALWriter;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
-    public MiruWALDirector(MiruClusterRegistry clusterRegistry,
+    public MiruWALDirector(MiruActivityLookupTable activityLookupTable,
         MiruActivityWALReader activityWALReader,
         MiruActivityWALWriter activityWALWriter) {
-        this.clusterRegistry = clusterRegistry;
+        this.activityLookupTable = activityLookupTable;
         this.activityWALReader = activityWALReader;
         this.activityWALWriter = activityWALWriter;
     }
 
     public void repairActivityWAL() throws Exception {
-        List<MiruTenantId> tenantIds = clusterRegistry.allTenantIds();
+        List<MiruTenantId> tenantIds = activityLookupTable.allTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             Optional<MiruPartitionId> latestPartitionId = activityWALReader.getLatestPartitionIdForTenant(tenantId);
             if (latestPartitionId.isPresent()) {

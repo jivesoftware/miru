@@ -58,8 +58,6 @@ public interface MiruClusterRegistry {
 
     void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
 
-    List<MiruTenantId> allTenantIds() throws Exception;
-
     void topologiesForTenants(List<MiruTenantId> tenantIds, final CallbackStream<MiruTopologyStatus> callbackStream) throws Exception;
 
     MiruSchema getSchema(MiruTenantId tenantId) throws Exception;

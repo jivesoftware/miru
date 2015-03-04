@@ -38,11 +38,13 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -130,6 +132,9 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         });
     }
 
+    private final AtomicReference<Map<MiruTenantId, MiruTenantTopologyUpdate>> lastTopologyChanges =
+        new AtomicReference<Map<MiruTenantId, MiruTenantTopologyUpdate>>(Maps.<MiruTenantId, MiruTenantTopologyUpdate>newHashMap());
+
     @Override
     public void thumpthump(MiruHost host) throws Exception {
         MiruHeartbeatResponse thumpthump = heartbeatHandler.thumpthump(host);
@@ -140,9 +145,19 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         }
         expect(host, tenantPartitionIds);
 
+        Map<MiruTenantId, MiruTenantTopologyUpdate> last = lastTopologyChanges.get();
         for (MiruTenantTopologyUpdate update : thumpthump.topologyHasChanged) {
-            routingTopologies.invalidate(update.tenantId);
+            MiruTenantTopologyUpdate lastUpdate = last.get(update.tenantId);
+            if (lastUpdate == null || lastUpdate.timestamp < update.timestamp) {
+                routingTopologies.invalidate(update.tenantId);
+            }
         }
+        lastTopologyChanges.set(Maps.uniqueIndex(thumpthump.topologyHasChanged, new Function<MiruTenantTopologyUpdate, MiruTenantId>() {
+            @Override
+            public MiruTenantId apply(MiruTenantTopologyUpdate input) {
+                return input.tenantId;
+            }
+        }));
     }
 
     private void expect(MiruHost host, ListMultimap<MiruTenantId, MiruPartitionId> expected) throws Exception {

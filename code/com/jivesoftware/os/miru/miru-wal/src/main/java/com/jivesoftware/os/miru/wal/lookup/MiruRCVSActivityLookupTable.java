@@ -1,11 +1,13 @@
 package com.jivesoftware.os.miru.wal.lookup;
 
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
+import com.jivesoftware.os.rcvs.api.TenantIdAndRow;
 import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
 import java.util.List;
 
@@ -66,5 +68,20 @@ public class MiruRCVSActivityLookupTable implements MiruActivityLookupTable {
                         return v;
                     }
             });
+    }
+
+    @Override
+    public List<MiruTenantId> allTenantIds() throws Exception {
+        final List<MiruTenantId> tenantIds = Lists.newArrayList();
+        lookupTable.getAllRowKeys(10_000, null, new CallbackStream<TenantIdAndRow<MiruVoidByte, MiruTenantId>>() {
+            @Override
+            public TenantIdAndRow<MiruVoidByte, MiruTenantId> callback(TenantIdAndRow<MiruVoidByte, MiruTenantId> r) throws Exception {
+                if (r != null) {
+                    tenantIds.add(r.getRow());
+                }
+                return r;
+            }
+        });
+        return tenantIds;
     }
 }

@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.LinkedHashSet;
@@ -34,13 +35,16 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
+    private final MiruActivityLookupTable activityLookupTable;
 
     public MiruBalancerRegion(String template,
         MiruSoyRenderer renderer,
-        MiruClusterRegistry clusterRegistry) {
+        MiruClusterRegistry clusterRegistry,
+        MiruActivityLookupTable activityLookupTable) {
         this.template = template;
         this.renderer = renderer;
         this.clusterRegistry = clusterRegistry;
+        this.activityLookupTable = activityLookupTable;
     }
 
     @Override
@@ -50,7 +54,7 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
             LinkedHashSet<HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
 
             final ListMultimap<MiruHost, MiruTopologyStatus> topologies = ArrayListMultimap.create();
-            List<MiruTenantId> tenantIds = clusterRegistry.allTenantIds();
+            List<MiruTenantId> tenantIds = activityLookupTable.allTenantIds();
             clusterRegistry.topologiesForTenants(tenantIds, new CallbackStream<MiruTopologyStatus>() {
                 @Override
                 public MiruTopologyStatus callback(MiruTopologyStatus status) throws Exception {

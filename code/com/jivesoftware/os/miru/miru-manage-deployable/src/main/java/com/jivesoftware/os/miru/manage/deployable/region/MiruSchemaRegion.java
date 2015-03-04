@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -26,13 +27,16 @@ public class MiruSchemaRegion implements MiruPageRegion<Optional<String>> {
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
+    private final MiruActivityLookupTable activityLookupTable;
 
     public MiruSchemaRegion(String template,
         MiruSoyRenderer renderer,
-        MiruClusterRegistry clusterRegistry) {
+        MiruClusterRegistry clusterRegistry,
+        MiruActivityLookupTable activityLookupTable) {
         this.template = template;
         this.renderer = renderer;
         this.clusterRegistry = clusterRegistry;
+        this.activityLookupTable = activityLookupTable;
     }
 
     @Override
@@ -42,7 +46,7 @@ public class MiruSchemaRegion implements MiruPageRegion<Optional<String>> {
             ObjectMapper objectMapper = new ObjectMapper();
             if (optionalSchema.isPresent()) {
                 JsonNode schemaNode = objectMapper.readValue(optionalSchema.get(), JsonNode.class);
-                List<MiruTenantId> tenantIds = clusterRegistry.allTenantIds();
+                List<MiruTenantId> tenantIds = activityLookupTable.allTenantIds();
                 int missingCount = 0;
                 List<MiruTenantId> matching = Lists.newArrayList();
                 for (MiruTenantId tenantId : tenantIds) {

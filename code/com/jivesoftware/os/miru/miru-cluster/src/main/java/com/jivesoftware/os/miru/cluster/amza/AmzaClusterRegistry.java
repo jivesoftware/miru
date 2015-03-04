@@ -530,32 +530,6 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public List<MiruTenantId> allTenantIds() throws Exception {
-        final Set<MiruTenantId> allTenants = new HashSet<>();
-        hosts.scan(new RowScan<Exception>() {
-
-            @Override
-            public boolean row(long transactionId, RowIndexKey key, RowIndexValue value) throws Exception {
-                if (!value.getTombstoned()) { // paranoid
-                    MiruHost host = hostMarshaller.fromBytes(key.getKey());
-                    AmzaTable topologyReg = amzaService.getTable(new TableName("master", "host-" + host.toStringForm() + "-partition-registry", null, null));
-                    topologyReg.scan(new RowScan<Exception>() {
-
-                        @Override
-                        public boolean row(long transactionId, RowIndexKey key, RowIndexValue value) throws Exception {
-                            TenantAndPartition topologyKey = topologyKey(key);
-                            allTenants.add(new MiruTenantId(topologyKey.tenantBytes));
-                            return true;
-                        }
-                    });
-                }
-                return true;
-            }
-        });
-        return new ArrayList<>(allTenants);
-    }
-
-    @Override
     public void topologiesForTenants(List<MiruTenantId> tenantIds, CallbackStream<MiruTopologyStatus> callbackStream) throws Exception {
         for (MiruTenantId tenantId : tenantIds) {
             List<MiruTopologyStatus> statuses = getTopologyStatusForTenant(tenantId);

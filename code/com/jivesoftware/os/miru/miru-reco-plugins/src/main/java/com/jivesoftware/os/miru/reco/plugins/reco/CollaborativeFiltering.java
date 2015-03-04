@@ -226,8 +226,13 @@ public class CollaborativeFiltering {
                 added++;
             }
 
+            int[] actualIds = new int[added];
+            System.arraycopy(ids, 0, actualIds, 0, added);
+            BM seen = bitmaps.createWithBits(actualIds);
+
             List<BM> andNots = new ArrayList<>();
-            List<MiruTermId[]> all = activityIndex.getAll(tenantId, ids, field);
+            andNots.add(seen);
+            List<MiruTermId[]> all = activityIndex.getAll(tenantId, actualIds, field);
             for (MiruTermId[] termIds : all) {
                 if (termIds != null && termIds.length > 0) {
                     for (MiruTermId termId : termIds) {

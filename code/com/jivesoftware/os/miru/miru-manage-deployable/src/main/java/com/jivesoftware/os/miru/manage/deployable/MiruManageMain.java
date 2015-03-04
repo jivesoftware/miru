@@ -222,10 +222,10 @@ public class MiruManageMain {
                     AggregateCountsPluginEndpoints.class,
                     new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, readerRequestHelpers)));
 
-            MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
+            MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry, activityLookupTable,
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
 
-            MiruWALDirector walDirector = new MiruWALDirector(clusterRegistry, activityWALReader, activityWALWriter);
+            MiruWALDirector walDirector = new MiruWALDirector(activityLookupTable, activityWALReader, activityWALWriter);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

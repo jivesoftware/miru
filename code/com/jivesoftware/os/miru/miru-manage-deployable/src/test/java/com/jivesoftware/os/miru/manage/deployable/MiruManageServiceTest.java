@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
@@ -81,6 +82,7 @@ public class MiruManageServiceTest {
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1));
         MiruWAL miruWAL = new MiruWALInitializer().initialize("test", rowColumnValueStoreInitializer, mapper);
+        miruWAL.getActivityLookupTable().add(MiruVoidByte.INSTANCE, tenantId, -1L, new MiruActivityLookupEntry(-1, -1, -1, false), null, null);
         miruWAL.getWriterPartitionRegistry().add(MiruVoidByte.INSTANCE, tenantId, 1, MiruPartitionId.of(0), null, null);
 
         MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL(),

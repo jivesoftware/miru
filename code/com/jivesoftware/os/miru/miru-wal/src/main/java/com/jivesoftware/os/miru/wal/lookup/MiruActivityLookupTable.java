@@ -15,6 +15,8 @@ public interface MiruActivityLookupTable {
 
     void stream(MiruTenantId tenantId, long afterTimestamp, StreamLookupEntry streamLookupEntry) throws Exception;
 
+    List<MiruTenantId> allTenantIds() throws Exception;
+
     public interface StreamLookupEntry {
 
         boolean stream(long activityTimestamp, MiruActivityLookupEntry entry, long version) throws Exception;
