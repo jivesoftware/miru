@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruChromeRegion;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruFrameRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruPageRegion;
@@ -61,6 +62,10 @@ public class MiruManageService {
 
     private <I, R extends MiruPageRegion<I>> MiruChromeRegion<I, R> chrome(R region) {
         return new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion, plugins, region);
+    }
+
+    private <I, R extends MiruPageRegion<I>> MiruFrameRegion<I, R> frame(R region) {
+        return new MiruFrameRegion<>("soy.miru.frame.chromeRegion", renderer, region);
     }
 
     public String render() {
@@ -144,4 +149,9 @@ public class MiruManageService {
     public <I> String renderPlugin(MiruPageRegion<I> pluginRegion, I input) {
         return chrome(pluginRegion).render(input);
     }
+
+    public <I> String renderFramePlugin(MiruPageRegion<I> pluginRegion, I input) {
+        return frame(pluginRegion).render(input);
+    }
+
 }

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.manage.deployable;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
+import com.jivesoftware.os.miru.manage.deployable.region.RealwaveFramePluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.RealwavePluginRegion;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -30,12 +31,16 @@ public class RealwavePluginEndpoints {
 
     private final MiruManageService miruManageService;
     private final RealwavePluginRegion realwavePluginRegion;
+    private final RealwaveFramePluginRegion realwaveFramePluginRegion;
 
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public RealwavePluginEndpoints(@Context MiruManageService miruManageService, @Context RealwavePluginRegion realwavePluginRegion) {
+    public RealwavePluginEndpoints(@Context MiruManageService miruManageService,
+        @Context RealwavePluginRegion realwavePluginRegion,
+        @Context RealwaveFramePluginRegion realwaveFramePluginRegion) {
         this.miruManageService = miruManageService;
         this.realwavePluginRegion = realwavePluginRegion;
+        this.realwaveFramePluginRegion = realwaveFramePluginRegion;
     }
 
     @GET
@@ -51,6 +56,33 @@ public class RealwavePluginEndpoints {
         @QueryParam("filters") @DefaultValue("") String filters,
         @QueryParam("graphType") @DefaultValue("Line") String graphType) {
         String rendered = miruManageService.renderPlugin(realwavePluginRegion,
+            Optional.of(new RealwavePluginRegion.RealwavePluginRegionInput(
+                tenantId,
+                -1,
+                lookbackSeconds,
+                buckets,
+                field1.trim(),
+                terms1.trim(),
+                field2.trim(),
+                terms2.trim(),
+                filters.trim(),
+                graphType.trim())));
+        return Response.ok(rendered).build();
+    }
+
+    @GET
+    @Path("/frame")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getRealwaveFrame(@QueryParam("tenantId") @DefaultValue("") String tenantId,
+        @QueryParam("lookbackSeconds") @DefaultValue("300") int lookbackSeconds,
+        @QueryParam("buckets") @DefaultValue("30") int buckets,
+        @QueryParam("field1") @DefaultValue("activityType") String field1,
+        @QueryParam("terms1") @DefaultValue("0, 1, 11, 65") String terms1,
+        @QueryParam("field2") @DefaultValue("") String field2,
+        @QueryParam("terms2") @DefaultValue("") String terms2,
+        @QueryParam("filters") @DefaultValue("") String filters,
+        @QueryParam("graphType") @DefaultValue("Line") String graphType) {
+        String rendered = miruManageService.renderFramePlugin(realwaveFramePluginRegion,
             Optional.of(new RealwavePluginRegion.RealwavePluginRegionInput(
                 tenantId,
                 -1,

@@ -46,6 +46,8 @@ import com.jivesoftware.os.miru.manage.deployable.region.AggregateCountsPluginRe
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.DistinctsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruRegion;
+import com.jivesoftware.os.miru.manage.deployable.region.RealwaveFramePluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.RealwavePluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.RecoPluginEndpoints;
 import com.jivesoftware.os.miru.manage.deployable.region.RecoPluginRegion;
@@ -234,7 +236,8 @@ public class MiruManageMain {
                 new MiruManagePlugin("Realwave",
                     "/miru/manage/realwave",
                     RealwavePluginEndpoints.class,
-                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, readerRequestHelpers)));
+                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, readerRequestHelpers),
+                    new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)));
 
             MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry, activityLookupTable,
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
@@ -257,6 +260,9 @@ public class MiruManageMain {
                 miruManageService.registerPlugin(plugin);
                 deployable.addEndpoints(plugin.endpointsClass);
                 deployable.addInjectables(plugin.region.getClass(), plugin.region);
+                for (MiruRegion<?> otherRegion : plugin.otherRegions) {
+                    deployable.addInjectables(otherRegion.getClass(), otherRegion);
+                }
             }
 
             deployable.addEndpoints(MiruTopologyEndpoints.class);

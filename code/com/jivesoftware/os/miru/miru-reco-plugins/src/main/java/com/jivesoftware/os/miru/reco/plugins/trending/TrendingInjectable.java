@@ -120,13 +120,22 @@ public class TrendingInjectable {
             MinMaxPriorityQueue<Trendy> trendies = MinMaxPriorityQueue
                 .maximumSize(request.query.desiredNumberOfDistincts)
                 .create();
+            // only consider results with at least one count in the waveform
             for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
                 long[] waveform = entry.getValue().waveform;
-                SimpleRegression regression = WaveformRegression.getRegression(waveform);
-                trendies.add(new Trendy(entry.getKey(), regression.getSlope(), waveform));
+                boolean hasCounts = false;
+                for (long w : waveform) {
+                    if (w > 0) {
+                        hasCounts = true;
+                        break;
+                    }
+                }
+                if (hasCounts) {
+                    SimpleRegression regression = WaveformRegression.getRegression(waveform);
+                    trendies.add(new Trendy(entry.getKey(), regression.getSlope(), waveform));
+                }
             }
 
-            // only consider results with at least one count in the waveform
             List<Trendy> sortedTrendies = Lists.newArrayList(Iterables.filter(trendies, new Predicate<Trendy>() {
                 @Override
                 public boolean apply(Trendy input) {

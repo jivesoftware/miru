@@ -1,0 +1,32 @@
+{namespace soy.miru.page}
+
+/**
+ * Realwave frame plugin page
+ *
+ * @param? tenant
+ * @param? lookbackSeconds
+ * @param? buckets
+ * @param? field1
+ * @param? terms1
+ * @param? field2
+ * @param? terms2
+ * @param? filters
+ * @param? graphType
+ */
+{template .realwaveFramePluginRegion}
+    <div id="rw-legend"></div>
+    <div class="panel-body" id="rw-waveform"
+        data-tenant-id="{$tenant?:''}"
+        data-lookback-seconds="{$lookbackSeconds?:''}"
+        data-buckets="{$buckets?:''}"
+        data-field1="{$field1?:''}"
+        data-terms1="{$terms1?:''}"
+        data-field2="{$field2?:''}"
+        data-terms2="{$terms2?:''}"
+        data-filters="{$filters?:''}"
+        data-graph-type="{$graphType?:''}">
+        <div>
+            <canvas id="rw-canvas" height="320" width="480"></canvas>
+        </div>
+    </div>
+{/template}
