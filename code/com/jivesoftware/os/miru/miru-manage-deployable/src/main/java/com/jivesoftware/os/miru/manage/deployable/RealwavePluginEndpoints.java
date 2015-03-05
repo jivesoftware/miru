@@ -9,6 +9,7 @@ import java.util.Map;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -66,18 +67,17 @@ public class RealwavePluginEndpoints {
     @Path("/poll")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response pollRealwave(@QueryParam("tenantId") @DefaultValue("") String tenantId,
-        @QueryParam("startTimestamp") @DefaultValue("0") long startTimestamp,
-        @QueryParam("lookbackSeconds") @DefaultValue("300") int lookbackSeconds,
-        @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("field1") @DefaultValue("activityType") String field1,
-        @QueryParam("terms1") @DefaultValue("0, 1, 11, 65") String terms1,
-        @QueryParam("field2") @DefaultValue("") String field2,
-        @QueryParam("terms2") @DefaultValue("") String terms2,
-        @QueryParam("filters") @DefaultValue("") String filters) {
-        Map<String, Object> result = null;
+    public Response pollRealwave(@FormParam("tenantId") @DefaultValue("") String tenantId,
+        @FormParam("startTimestamp") @DefaultValue("0") long startTimestamp,
+        @FormParam("lookbackSeconds") @DefaultValue("300") int lookbackSeconds,
+        @FormParam("buckets") @DefaultValue("30") int buckets,
+        @FormParam("field1") @DefaultValue("activityType") String field1,
+        @FormParam("terms1") @DefaultValue("0, 1, 11, 65") String terms1,
+        @FormParam("field2") @DefaultValue("") String field2,
+        @FormParam("terms2") @DefaultValue("") String terms2,
+        @FormParam("filters") @DefaultValue("") String filters) {
         try {
-            result = realwavePluginRegion.poll(
+            Map<String, Object> result = realwavePluginRegion.poll(
                 new RealwavePluginRegion.RealwavePluginRegionInput(
                     tenantId,
                     startTimestamp,
