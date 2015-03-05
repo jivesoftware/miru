@@ -272,10 +272,10 @@ miru.realwave = {
                     tooltipFillColor: "rgba(0,0,0,1)",
                     pointDot: false,
                     bezierCurve: true,
-                    bezierCurveTension: true,
+                    bezierCurveTension: 0.4,
                     datasetFill: false,
                     responsive: true,
-                    animation: true
+                    animation: false
                 });
                 $('#rw-legend').html(miru.realwave.chart.generateLegend());
             }
@@ -307,6 +307,7 @@ $(document).ready(function () {
         miru.realwave.init();
     }
 });
+
 $(window).focus(function () {
     miru.windowFocused = true;
     for (var i = 0; i < miru.onWindowFocus.length; i++) {
