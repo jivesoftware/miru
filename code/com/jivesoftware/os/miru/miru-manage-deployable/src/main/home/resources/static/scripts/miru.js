@@ -149,22 +149,6 @@ miru.realwave = {
     input: {},
     lastBucketIndex: -1,
     chart: null,
-    labels: [],
-
-    init: function () {
-        $waveform = $('#rw-waveform');
-        miru.realwave.input.tenantId = $waveform.data('tenantId');
-        miru.realwave.input.startTimestamp = new Date().getTime();
-        miru.realwave.input.lookbackSeconds = parseInt($waveform.data('lookbackSeconds'));
-        miru.realwave.input.buckets = parseInt($waveform.data('buckets'));
-        miru.realwave.input.field1 = $waveform.data('field1');
-        miru.realwave.input.terms1 = $waveform.data('terms1');
-        miru.realwave.input.field2 = $waveform.data('field2');
-        miru.realwave.input.terms2 = $waveform.data('terms2');
-        miru.realwave.input.filters = $waveform.data('filters');
-
-        miru.realwave.poll();
-    },
 
     fillColors: [
         "rgba(220,220,220,0.5)",
@@ -203,6 +187,32 @@ miru.realwave = {
         "rgba(187,151,205,1)"
     ],
 
+    init: function () {
+        $waveform = $('#rw-waveform');
+        miru.realwave.input.tenantId = $waveform.data('tenantId');
+        miru.realwave.input.startTimestamp = new Date().getTime();
+        miru.realwave.input.lookbackSeconds = parseInt($waveform.data('lookbackSeconds'));
+        miru.realwave.input.buckets = parseInt($waveform.data('buckets'));
+        miru.realwave.input.field1 = $waveform.data('field1');
+        miru.realwave.input.terms1 = $waveform.data('terms1');
+        miru.realwave.input.field2 = $waveform.data('field2');
+        miru.realwave.input.terms2 = $waveform.data('terms2');
+        miru.realwave.input.filters = $waveform.data('filters');
+
+        miru.realwave.graphType = $waveform.data('graphType');
+        miru.realwave.graphProp = (miru.realwave.graphType == 'Line' || miru.realwave.graphType == 'Radar') ? 'points'
+            : (miru.realwave.graphType == 'Bar' || miru.realwave.graphType == 'StackedBar') ? 'bars'
+            : 'unknown';
+
+        miru.onWindowFocus.push(function () {
+            if (miru.realwave.chart) {
+                miru.realwave.chart.update();
+            }
+        });
+
+        miru.realwave.poll();
+    },
+
     poll: function () {
         $.ajax({
             type: "POST",
@@ -233,7 +243,7 @@ miru.realwave = {
         if (data.waveforms) {
             var i;
             if (!miru.realwave.chart) {
-                var ctx = $('#waveforms')[0].getContext("2d");
+                var ctx = $('#rw-canvas')[0].getContext("2d");
                 var chartData = {
                     labels: [],
                     datasets: []
@@ -255,9 +265,9 @@ miru.realwave = {
                     });
                     i++;
                 });
-                miru.realwave.chart = new Chart(ctx).StackedBar(chartData, {
+                miru.realwave.chart = (new Chart(ctx))[miru.realwave.input.graphType](chartData, {
                     multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
-                    legendTemplate : "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>",
+                    legendTemplate: "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>",
                     scaleLineColor: "rgba(128,128,128,0.5)",
                     tooltipFillColor: "rgba(0,0,0,1)",
                     pointDot: false,
@@ -266,24 +276,44 @@ miru.realwave = {
                     responsive: true,
                     animation: true
                 });
+                $('#rw-legend').html(miru.realwave.chart.generateLegend());
             }
             //data.startBucketIndex;
             //data.elapse;
             i = 0;
             $.each(data.waveforms, function (key, value) {
-                for (var j = 0; j < value.length; j++) {
-                    miru.realwave.chart.datasets[i].bars[j].value = value[j];
+                if (i < miru.realwave.chart.datasets.length) {
+                    for (var j = 0; j < value.length; j++) {
+                        miru.realwave.chart.datasets[i][miru.realwave.graphProp][j].value = value[j];
+                    }
                 }
                 i++;
             });
-            miru.realwave.chart.update();
+            if (miru.windowFocused) {
+                miru.realwave.chart.update();
+            }
         }
         setTimeout(miru.realwave.poll, 1000);
     }
 };
 
 $(document).ready(function () {
+    miru.windowFocused = true;
+    miru.onWindowFocus = [];
+    miru.onWindowBlur = [];
+
     if ($('#rw-waveform').length) {
         miru.realwave.init();
+    }
+});
+$(window).focus(function () {
+    miru.windowFocused = true;
+    for (var i = 0; i < miru.onWindowFocus.length; i++) {
+        miru.onWindowFocus[i]();
+    }
+}).blur(function () {
+    miru.windowFocused = false;
+    for (var i = 0; i < miru.onWindowBlur.length; i++) {
+        miru.onWindowBlur[i]();
     }
 });

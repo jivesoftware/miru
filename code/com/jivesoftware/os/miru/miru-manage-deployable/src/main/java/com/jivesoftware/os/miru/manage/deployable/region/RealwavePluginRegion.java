@@ -67,6 +67,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
         final String field2;
         final String terms2;
         final String filters;
+        final String graphType;
 
         public RealwavePluginRegionInput(String tenant,
             long startTimestamp,
@@ -76,7 +77,8 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             String terms1,
             String field2,
             String terms2,
-            String filters) {
+            String filters,
+            String graphType) {
             this.tenant = tenant;
             this.startTimestamp = startTimestamp;
             this.lookbackSeconds = lookbackSeconds;
@@ -86,6 +88,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             this.field2 = field2;
             this.terms2 = terms2;
             this.filters = filters;
+            this.graphType = graphType;
         }
     }
 
@@ -104,6 +107,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                 data.put("field2", input.field2);
                 data.put("terms2", input.terms2);
                 data.put("filters", input.filters);
+                data.put("graphType", input.graphType);
 
                 boolean execute = !input.tenant.isEmpty()
                     && input.lookbackSeconds > 0

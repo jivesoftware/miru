@@ -11,6 +11,7 @@
  * @param? field2
  * @param? terms2
  * @param? filters
+ * @param? graphType
  * @param? execute
  */
 {template .realwavePluginRegion}
@@ -86,6 +87,17 @@
                             <em>(e.g. user:3 3765, parentType:102|2|38)</em>
                         </td>
                     </tr>
+                    <tr>
+                        <td>Graph Type</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;" placeholder="Graph Type" name="graphType" >
+                                <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
+                                <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
+                                <option value="Bar" {if $graphType == 'Bar'}selected="selected"{/if}>Bar</option>
+                                <option value="StackedBar" {if $graphType == 'StackedBar'}selected="selected"{/if}>StackedBar</option>
+                            </select>
+                        </td>
+                    </tr>
                 </table>
                 <input type="submit" value="Run"/>
             </form>
@@ -94,8 +106,9 @@
     {if $execute}
         <div class="panel panel-default">
             <div class="panel-heading">
-                Waveform
+                Realtime Waveform
             </div>
+            <div id="rw-legend"></div>
             <div class="panel-body" id="rw-waveform"
                 data-tenant-id="{$tenant?:''}"
                 data-lookback-seconds="{$lookbackSeconds?:''}"
@@ -104,8 +117,11 @@
                 data-terms1="{$terms1?:''}"
                 data-field2="{$field2?:''}"
                 data-terms2="{$terms2?:''}"
-                data-filters="{$filters?:''}">
-                <canvas id="waveforms" height="400" width="1070"></canvas>
+                data-filters="{$filters?:''}"
+                data-graph-type="{$graphType?:''}">
+                <div>
+                    <canvas id="rw-canvas" height="400" width="1070"></canvas>
+                </div>
             </div>
         </div>
     {/if}

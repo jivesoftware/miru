@@ -48,7 +48,8 @@ public class RealwavePluginEndpoints {
         @QueryParam("terms1") @DefaultValue("0, 1, 11, 65") String terms1,
         @QueryParam("field2") @DefaultValue("") String field2,
         @QueryParam("terms2") @DefaultValue("") String terms2,
-        @QueryParam("filters") @DefaultValue("") String filters) {
+        @QueryParam("filters") @DefaultValue("") String filters,
+        @QueryParam("graphType") @DefaultValue("Line") String graphType) {
         String rendered = miruManageService.renderPlugin(realwavePluginRegion,
             Optional.of(new RealwavePluginRegion.RealwavePluginRegionInput(
                 tenantId,
@@ -59,7 +60,8 @@ public class RealwavePluginEndpoints {
                 terms1.trim(),
                 field2.trim(),
                 terms2.trim(),
-                filters.trim())));
+                filters.trim(),
+                graphType.trim())));
         return Response.ok(rendered).build();
     }
 
@@ -87,7 +89,8 @@ public class RealwavePluginEndpoints {
                     terms1.trim(),
                     field2.trim(),
                     terms2.trim(),
-                    filters.trim()));
+                    filters.trim(),
+                    null));
             return responseHelper.jsonResponse(result != null ? result : "");
         } catch (Exception e) {
             LOG.error("Realwave poll failed", e);
