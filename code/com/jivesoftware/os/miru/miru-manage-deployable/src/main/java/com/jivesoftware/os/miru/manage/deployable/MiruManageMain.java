@@ -46,6 +46,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.AggregateCountsPluginRe
 import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.DistinctsPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.miru.manage.deployable.region.RealwavePluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.RecoPluginEndpoints;
 import com.jivesoftware.os.miru.manage.deployable.region.RecoPluginRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginEndpoints;
@@ -203,7 +204,8 @@ public class MiruManageMain {
                 readTrackingWALReader,
                 activityLookupTable);
 
-            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper, TimeUnit.MINUTES.toMillis(10));// TODO expos to config
+            //TODO expose to config
+            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper, TimeUnit.MINUTES.toMillis(10));
 
             List<MiruManagePlugin> plugins = Lists.newArrayList(
                 new MiruManagePlugin("Distincts",
@@ -225,7 +227,11 @@ public class MiruManageMain {
                 new MiruManagePlugin("Aggregate Counts",
                     "/miru/manage/aggregate",
                     AggregateCountsPluginEndpoints.class,
-                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, readerRequestHelpers)));
+                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruManagePlugin("Realwave",
+                    "/miru/manage/realwave",
+                    RealwavePluginEndpoints.class,
+                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, readerRequestHelpers)));
 
             MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry, activityLookupTable,
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);

@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.api.topology;
 import com.jivesoftware.os.miru.api.MiruHost;
 
 /**
- *
  * @author jonathan.colt
  */
 public class HostHeartbeat {
@@ -15,7 +14,7 @@ public class HostHeartbeat {
         this.host = null;
         this.heartbeat = 0;
     }
-    
+
     public HostHeartbeat(MiruHost host, long heartbeat) {
         this.host = host;
         this.heartbeat = heartbeat;
