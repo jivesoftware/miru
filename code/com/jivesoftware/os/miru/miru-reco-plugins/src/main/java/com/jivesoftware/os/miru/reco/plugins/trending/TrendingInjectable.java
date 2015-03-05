@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -124,7 +126,18 @@ public class TrendingInjectable {
                 trendies.add(new Trendy(entry.getKey(), regression.getSlope(), waveform));
             }
 
-            List<Trendy> sortedTrendies = Lists.newArrayList(trendies);
+            // only consider results with at least one count in the waveform
+            List<Trendy> sortedTrendies = Lists.newArrayList(Iterables.filter(trendies, new Predicate<Trendy>() {
+                @Override
+                public boolean apply(Trendy input) {
+                    for (long w : input.waveform) {
+                        if (w > 0) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            }));
             Collections.sort(sortedTrendies);
 
             ImmutableList<String> solutionLog = ImmutableList.<String>builder()
