@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>shared-lib-build-management</artifactId>
-        <version>0.355-SNAPSHOT</version>
+        <version>0.355</version>
         <relativePath>../inheritance-poms/shared-lib-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-logappender</artifactId>
-    <version>0.355-SNAPSHOT</version>
+    <version>0.355</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
