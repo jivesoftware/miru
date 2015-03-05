@@ -104,8 +104,6 @@ public class AmzaClusterRegistryInitializer {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
-        final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
-
         RowsStorageProvider rowsStorageProvider = new RowsStorageProvider() {
             @Override
             public RowsStorage createRowsStorage(File workingDirectory,
@@ -149,14 +147,14 @@ public class AmzaClusterRegistryInitializer {
         UpdatesSender changeSetSender = new HttpUpdatesSender();
         UpdatesTaker tableTaker = new HttpUpdatesTaker();
 
-        AmzaServiceConfig serviceConfig = new AmzaServiceConfig();
-        serviceConfig.workingDirectory = config.getWorkingDirectory();
-        serviceConfig.replicationFactor = config.getReplicationFactor();
-        serviceConfig.takeFromFactor = config.getTakeFromFactor();
-        serviceConfig.resendReplicasIntervalInMillis = config.getResendReplicasIntervalInMillis();
-        serviceConfig.applyReplicasIntervalInMillis = config.getApplyReplicasIntervalInMillis();
-        serviceConfig.takeFromNeighborsIntervalInMillis = config.getTakeFromNeighborsIntervalInMillis();
-        serviceConfig.compactTombstoneIfOlderThanNMillis = config.getCompactTombstoneIfOlderThanNMillis();
+        final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
+        amzaServiceConfig.workingDirectory = config.getWorkingDirectory();
+        amzaServiceConfig.replicationFactor = config.getReplicationFactor();
+        amzaServiceConfig.takeFromFactor = config.getTakeFromFactor();
+        amzaServiceConfig.resendReplicasIntervalInMillis = config.getResendReplicasIntervalInMillis();
+        amzaServiceConfig.applyReplicasIntervalInMillis = config.getApplyReplicasIntervalInMillis();
+        amzaServiceConfig.takeFromNeighborsIntervalInMillis = config.getTakeFromNeighborsIntervalInMillis();
+        amzaServiceConfig.compactTombstoneIfOlderThanNMillis = config.getCompactTombstoneIfOlderThanNMillis();
 
         AmzaService amzaService = new AmzaServiceInitializer().initialize(amzaServiceConfig,
             orderIdProvider,
