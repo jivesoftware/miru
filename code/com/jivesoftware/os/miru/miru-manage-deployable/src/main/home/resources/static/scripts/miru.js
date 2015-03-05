@@ -163,30 +163,44 @@ miru.realwave = {
         miru.realwave.input.terms2 = $waveform.data('terms2');
         miru.realwave.input.filters = $waveform.data('filters');
 
-        var secsPerBucket = miru.realwave.input.lookbackSeconds / miru.realwave.input.buckets;
-        for (var i = 0; i < miru.realwave.input.buckets; i++) {
-            var secsAgo = secsPerBucket * (miru.realwave.input.buckets - i);
-            miru.realwave.labels.push(Math.round(secsAgo) + "s");
-        }
-
         miru.realwave.poll();
     },
 
     fillColors: [
         "rgba(220,220,220,0.5)",
-        "rgba(151,187,205,0.5)"
+        "rgba(151,187,205,0.5)",
+        "rgba(205,151,187,0.5)",
+        "rgba(187,205,151,0.5)",
+        "rgba(151,205,187,0.5)",
+        "rgba(205,187,151,0.5)",
+        "rgba(187,151,205,0.5)"
     ],
     strokeColors: [
         "rgba(220,220,220,0.8)",
-        "rgba(151,187,205,0.8)"
+        "rgba(151,187,205,0.8)",
+        "rgba(205,151,187,0.8)",
+        "rgba(187,205,151,0.8)",
+        "rgba(151,205,187,0.8)",
+        "rgba(205,187,151,0.8)",
+        "rgba(187,151,205,0.8)"
     ],
     highlightFills: [
         "rgba(220,220,220,0.75)",
-        "rgba(151,187,205,0.75)"
+        "rgba(151,187,205,0.75)",
+        "rgba(205,151,187,0.75)",
+        "rgba(187,205,151,0.75)",
+        "rgba(151,205,187,0.75)",
+        "rgba(205,187,151,0.75)",
+        "rgba(187,151,205,0.75)"
     ],
     highlightStrokes: [
         "rgba(220,220,220,1)",
-        "rgba(151,187,205,1)"
+        "rgba(151,187,205,1)",
+        "rgba(205,151,187,1)",
+        "rgba(187,205,151,1)",
+        "rgba(151,205,187,1)",
+        "rgba(205,187,151,1)",
+        "rgba(187,151,205,1)"
     ],
 
     poll: function () {
@@ -221,14 +235,13 @@ miru.realwave = {
             if (!miru.realwave.chart) {
                 var ctx = $('#waveforms')[0].getContext("2d");
                 var chartData = {
-                    labels: miru.realwave.labels,
+                    labels: [],
                     datasets: []
                 };
-                var empty = [];
+                var secsPerBucket = miru.realwave.input.lookbackSeconds / miru.realwave.input.buckets;
                 for (i = 0; i < miru.realwave.input.buckets; i++) {
                     var secsAgo = secsPerBucket * (miru.realwave.input.buckets - i);
-                    miru.realwave.labels.push(Math.round(secsAgo) + "s");
-                    empty.push(0);
+                    chartData.labels.push(Math.round(secsAgo) + "s");
                 }
                 i = 0;
                 $.each(data.waveforms, function (key, value) {
@@ -244,6 +257,7 @@ miru.realwave = {
                 });
                 miru.realwave.chart = new Chart(ctx).StackedBar(chartData, {
                     multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                    legendTemplate : "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>",
                     scaleLineColor: "rgba(128,128,128,0.5)",
                     tooltipFillColor: "rgba(0,0,0,1)",
                     pointDot: false,
