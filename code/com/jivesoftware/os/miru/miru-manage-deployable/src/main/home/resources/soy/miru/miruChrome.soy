@@ -19,6 +19,7 @@
         <script src="/static/scripts/Chart.StackedBar.js"></script>
         <script src="/static/scripts/legend.js"></script>
         <script src="/static/scripts/miru.js"></script>
+        <link href="/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
 	</head>
 	<body>
         {$header|noAutoescape}
@@ -73,10 +74,10 @@
  *
  */
 {template .headerRegion}
-	<div class="navbar navbar-default" role="navigation">
+	<div class="navbar navbar-inverse navbar-default" role="navigation">
 	    <div class="navbar-header">
             <a class="navbar-brand" href="/miru/manage">
-                Miru
+                <img src="/static/img/icon.png" alt="Fun with bits" width="100" height="50"><img>
             </a>
 	    </div>
 	</div>
