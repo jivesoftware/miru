@@ -267,11 +267,12 @@ miru.realwave = {
                 });
                 miru.realwave.chart = (new Chart(ctx))[miru.realwave.graphType](chartData, {
                     multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
-                    legendTemplate: "<ul style=\"list-style-type:none;\"><% for (var i=0; i<datasets.length; i++){%><li style=\"display:inline-block;\"><span style=\"background-color:<%=datasets[i].strokeColor%>; width:16px; height:16px; display:inline-block; margin:4px; vertical-align:middle;\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>",
+                    legendTemplate: "<ul style=\"list-style-type:none; margin:20px 0 0 0;\"><% for (var i=0; i<datasets.length; i++){%><li style=\"display:inline-block;\"><span style=\"background-color:<%=datasets[i].strokeColor%>; width:16px; height:16px; display:inline-block; margin:4px; vertical-align:middle;\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>",
                     scaleLineColor: "rgba(128,128,128,0.5)",
                     tooltipFillColor: "rgba(0,0,0,1)",
                     pointDot: false,
-                    bezierCurve: false,
+                    bezierCurve: true,
+                    bezierCurveTension: true,
                     datasetFill: false,
                     responsive: true,
                     animation: true
