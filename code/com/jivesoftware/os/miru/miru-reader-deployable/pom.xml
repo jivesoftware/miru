@@ -157,5 +157,9 @@
             <version>0.348-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>server-http-jetty-jersey</artifactId>
+        </dependency>
     </dependencies>
 </project>
