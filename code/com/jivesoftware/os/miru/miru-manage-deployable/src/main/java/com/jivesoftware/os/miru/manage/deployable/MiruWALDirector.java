@@ -79,8 +79,11 @@ public class MiruWALDirector {
         activityWALReader.stream(tenantId, partitionId, afterTimestamp, 10_000, 1_000, new MiruActivityWALReader.StreamMiruActivityWAL() {
             @Override
             public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                badKeys.add(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(), collisionId));
-                LOG.warn("Sanitizer is removing activity " + collisionId + "/" + timestamp + " from " + tenantId + "/" + partitionId);
+                if (partitionedActivity.type.isActivityType()) {
+                    LOG.warn("Sanitizer is removing activity " + collisionId + "/" + partitionedActivity.timestamp + " from " +
+                        tenantId + "/" + partitionId);
+                    badKeys.add(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(), collisionId));
+                }
                 return partitionedActivity.type.isActivityType();
             }
         });
@@ -90,16 +93,18 @@ public class MiruWALDirector {
     public void sanitizeActivitySipWAL(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
         final long afterTimestamp = packTimestamp(TimeUnit.DAYS.toMillis(1));
         final List<MiruActivitySipWALColumnKey> badKeys = Lists.newArrayList();
-        activityWALReader.stream(tenantId, partitionId, 0, 10_000, 1_000, new MiruActivityWALReader.StreamMiruActivityWAL() {
-            @Override
-            public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                if (timestamp > afterTimestamp) {
-                    LOG.warn("Sanitizer is removing sip activity " + collisionId + "/" + timestamp + " from " + tenantId + "/" + partitionId);
-                    badKeys.add(new MiruActivitySipWALColumnKey(partitionedActivity.type.getSort(), collisionId, timestamp));
+        activityWALReader.streamSip(tenantId, partitionId, new MiruActivityWALReader.Sip(0, 0), 10_000, 1_000,
+            new MiruActivityWALReader.StreamMiruActivityWAL() {
+                @Override
+                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
+                    if (partitionedActivity.timestamp > afterTimestamp && partitionedActivity.type.isActivityType()) {
+                        LOG.warn("Sanitizer is removing sip activity " + collisionId + "/" + partitionedActivity.timestamp + " from " +
+                            tenantId + "/" + partitionId);
+                        badKeys.add(new MiruActivitySipWALColumnKey(partitionedActivity.type.getSort(), collisionId, timestamp));
+                    }
+                    return partitionedActivity.type.isActivityType();
                 }
-                return partitionedActivity.type.isActivityType();
-            }
-        });
+            });
         activityWALReader.deleteSip(tenantId, partitionId, badKeys);
     }
 
