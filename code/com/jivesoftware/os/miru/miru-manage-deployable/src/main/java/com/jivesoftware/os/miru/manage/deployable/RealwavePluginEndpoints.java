@@ -69,7 +69,8 @@ public class RealwavePluginEndpoints {
                 graphType.trim(),
                 true,
                 480,
-                320)));
+                320,
+                true)));
         return Response.ok(rendered).build();
     }
 
@@ -87,7 +88,8 @@ public class RealwavePluginEndpoints {
         @QueryParam("graphType") @DefaultValue("Line") String graphType,
         @QueryParam("legend") @DefaultValue("false") boolean legend,
         @QueryParam("width") @DefaultValue("480") int width,
-        @QueryParam("height") @DefaultValue("320") int height) {
+        @QueryParam("height") @DefaultValue("320") int height,
+        @QueryParam("requireFocus") @DefaultValue("false") boolean requireFocus) {
         String rendered = miruManageService.renderFramePlugin(realwaveFramePluginRegion,
             Optional.of(new RealwavePluginRegion.RealwavePluginRegionInput(
                 tenantId,
@@ -102,7 +104,8 @@ public class RealwavePluginEndpoints {
                 graphType.trim(),
                 legend,
                 width,
-                height)));
+                height,
+                requireFocus)));
         return Response.ok(rendered).build();
     }
 
@@ -134,7 +137,8 @@ public class RealwavePluginEndpoints {
                     null,
                     false,
                     -1,
-                    -1));
+                    -1,
+                    false));
             return responseHelper.jsonResponse(result != null ? result : "");
         } catch (Exception e) {
             LOG.error("Realwave poll failed", e);

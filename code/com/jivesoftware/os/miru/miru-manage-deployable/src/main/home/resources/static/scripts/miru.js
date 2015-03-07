@@ -173,6 +173,7 @@ miru.realwave = {
     input: {},
     lastBucketIndex: -1,
     chart: null,
+    requireFocus: true,
 
     fillColors: [
         "rgba(220,220,220,0.5)",
@@ -223,16 +224,19 @@ miru.realwave = {
         miru.realwave.input.terms2 = $waveform.data('terms2');
         miru.realwave.input.filters = $waveform.data('filters');
 
+        miru.realwave.requireFocus = $waveform.data('requireFocus') != "false";
         miru.realwave.graphType = $waveform.data('graphType');
         miru.realwave.graphProp = (miru.realwave.graphType == 'Line' || miru.realwave.graphType == 'Radar') ? 'points'
             : (miru.realwave.graphType == 'Bar' || miru.realwave.graphType == 'StackedBar') ? 'bars'
             : 'unknown';
 
-        miru.onWindowFocus.push(function () {
-            if (miru.realwave.chart) {
-                miru.realwave.chart.update();
-            }
-        });
+        if (miru.realwave.requireFocus) {
+            miru.onWindowFocus.push(function () {
+                if (miru.realwave.chart) {
+                    miru.realwave.chart.update();
+                }
+            });
+        }
 
         miru.realwave.poll();
     },
@@ -314,7 +318,7 @@ miru.realwave = {
                 }
                 i++;
             });
-            if (miru.windowFocused) {
+            if (!miru.realwave.requireFocus || miru.windowFocused) {
                 miru.realwave.chart.update();
             }
         }

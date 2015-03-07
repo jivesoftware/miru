@@ -15,6 +15,7 @@
  * @param? legend
  * @param? width
  * @param? height
+ * @param? requireFocus
  */
 {template .realwaveFramePluginRegion}
     <div id="rw-legend" {if not $legend}style="display:none;"{/if}></div>
@@ -27,7 +28,8 @@
         data-field2="{$field2?:''}"
         data-terms2="{$terms2?:''}"
         data-filters="{$filters?:''}"
-        data-graph-type="{$graphType?:''}">
+        data-graph-type="{$graphType?:''}"
+        data-require-focus="{$requireFocus?:''}">
         <div>
             <canvas id="rw-canvas" height="{$height}" width="{$width}"></canvas>
         </div>

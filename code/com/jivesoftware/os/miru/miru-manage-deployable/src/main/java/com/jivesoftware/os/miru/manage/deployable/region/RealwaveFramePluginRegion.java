@@ -39,6 +39,7 @@ public class RealwaveFramePluginRegion implements MiruPageRegion<Optional<Realwa
             data.put("legend", input.legend);
             data.put("width", input.width);
             data.put("height", input.height);
+            data.put("requireFocus", input.requireFocus);
         }
 
         return renderer.render(template, data);

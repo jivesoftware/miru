@@ -71,6 +71,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
         final boolean legend;
         final int width;
         final int height;
+        final boolean requireFocus;
 
         public RealwavePluginRegionInput(String tenant,
             long startTimestamp,
@@ -84,7 +85,8 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             String graphType,
             boolean legend,
             int width,
-            int height) {
+            int height,
+            boolean requireFocus) {
             this.tenant = tenant;
             this.startTimestamp = startTimestamp;
             this.lookbackSeconds = lookbackSeconds;
@@ -98,6 +100,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             this.legend = legend;
             this.width = width;
             this.height = height;
+            this.requireFocus = requireFocus;
         }
     }
 
