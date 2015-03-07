@@ -141,6 +141,30 @@ miru.activitywal = {
                 }, 2000);
             }
         });
+    },
+
+    sanitize: function (ele, tenantId, partitionId) {
+        var $button = $(ele);
+        $button.attr('disabled', 'disabled');
+        var value = $button.val();
+        $.ajax({
+            type: "POST",
+            url: "/miru/manage/wal/sanitize/" + tenantId + "/" + partitionId,
+            data: {},
+            //contentType: "application/json",
+            success: function () {
+                $button.val('Success');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            },
+            error: function () {
+                $button.val('Failure');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            }
+        });
     }
 };
 

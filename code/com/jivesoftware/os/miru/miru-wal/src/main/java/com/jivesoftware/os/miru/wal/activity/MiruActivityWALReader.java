@@ -4,6 +4,9 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
+import java.util.Collection;
 
 /** @author jonathan */
 public interface MiruActivityWALReader {
@@ -38,6 +41,10 @@ public interface MiruActivityWALReader {
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception;
+
+    void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception;
+
+    void deleteSip(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivitySipWALColumnKey> keys) throws Exception;
 
     public static class Sip implements Comparable<Sip> {
 

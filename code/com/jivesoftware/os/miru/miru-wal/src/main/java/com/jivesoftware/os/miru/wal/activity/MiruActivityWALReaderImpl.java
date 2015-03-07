@@ -14,6 +14,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang.mutable.MutableLong;
@@ -269,4 +270,15 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
         return Optional.fromNullable(latestPartitionId.get());
     }
 
+    @Override
+    public void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception {
+        MiruActivityWALColumnKey[] remove = keys.toArray(new MiruActivityWALColumnKey[keys.size()]);
+        activityWAL.multiRemove(tenantId, new MiruActivityWALRow(partitionId.getId()), remove, null);
+    }
+
+    @Override
+    public void deleteSip(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivitySipWALColumnKey> keys) throws Exception {
+        MiruActivitySipWALColumnKey[] remove = keys.toArray(new MiruActivitySipWALColumnKey[keys.size()]);
+        activitySipWAL.multiRemove(tenantId, new MiruActivityWALRow(partitionId.getId()), remove, null);
+    }
 }

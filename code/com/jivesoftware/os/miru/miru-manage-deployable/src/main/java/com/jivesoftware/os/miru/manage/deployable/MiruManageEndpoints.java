@@ -323,6 +323,22 @@ public class MiruManageEndpoints {
     }
 
     @POST
+    @Path("/wal/sanitize/{tenantId}/{partitionId}")
+    @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response sanitizeWAL(@PathParam("tenantId") @DefaultValue("") String tenantId,
+        @PathParam("partitionId") @DefaultValue("-1") int partitionId) {
+        try {
+            walDirector.sanitizeActivityWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            walDirector.sanitizeActivitySipWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /wal/sanitize/" + tenantId + "/" + partitionId, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @POST
     @Path("/tenants/rebuild")
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)

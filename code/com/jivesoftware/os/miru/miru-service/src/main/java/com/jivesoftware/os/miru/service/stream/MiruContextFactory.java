@@ -159,7 +159,7 @@ public class MiruContextFactory {
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         int seed = coord.hashCode();
         TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
-        KeyedFilerStore genericFilerStore = new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("generic"), false,
+        KeyedFilerStore<Long, Void> genericFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("generic"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
             TxNamedMapOfFiler.CHUNK_FILER_OPENER,
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -167,13 +167,13 @@ public class MiruContextFactory {
 
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new MiruFilerTimeIndex(
             Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
-            new KeyedFilerProvider(genericFilerStore, GENERIC_FILER_TIME_INDEX_KEY),
+            new KeyedFilerProvider<>(genericFilerStore, GENERIC_FILER_TIME_INDEX_KEY),
             new TxKeyValueStore<>(skyhookCog, seed, chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
                 8, false, 4, false)));
 
-        TxKeyedFilerStore activityFilerStore = new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
+        TxKeyedFilerStore<Long, Void> activityFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
             TxNamedMapOfFiler.CHUNK_FILER_OPENER,
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -183,12 +183,13 @@ public class MiruContextFactory {
             new MiruFilerActivityIndex(
                 activityFilerStore,
                 new MiruInternalActivityMarshaller(),
-                new KeyedFilerProvider(activityFilerStore, keyBytes("activityIndex-size"))));
+                new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size"))));
 
         @SuppressWarnings("unchecked")
         MiruFieldIndex<BM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
-            KeyedFilerStore[] indexes = new KeyedFilerStore[schema.fieldCount()];
+            @SuppressWarnings("unchecked")
+            KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
             long[] indexIds = new long[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 int fieldId = fieldDefinition.fieldId;
@@ -198,7 +199,7 @@ public class MiruContextFactory {
                     indexes[fieldId] = null;
                 } else {
                     boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
-                    indexes[fieldId] = new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
+                    indexes[fieldId] = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
                         TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                         TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                         TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -215,7 +216,7 @@ public class MiruContextFactory {
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
-        MiruSipIndex sipIndex = new MiruDeltaSipIndex(new MiruFilerSipIndex(new KeyedFilerProvider(genericFilerStore, GENERIC_FILER_SIP_INDEX_KEY)));
+        MiruSipIndex sipIndex = new MiruDeltaSipIndex(new MiruFilerSipIndex(new KeyedFilerProvider<>(genericFilerStore, GENERIC_FILER_SIP_INDEX_KEY)));
 
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -232,7 +233,7 @@ public class MiruContextFactory {
             new MiruFilerAuthzIndex<>(
                 bitmaps,
                 authzIndexId,
-                new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("authzIndex"), false,
+                new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("authzIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -250,7 +251,7 @@ public class MiruContextFactory {
             new MiruFilerRemovalIndex<>(
                 bitmaps,
                 removalIndexId,
-                new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("removalIndex"), false,
+                new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("removalIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -267,7 +268,7 @@ public class MiruContextFactory {
             new MiruFilerUnreadTrackingIndex<>(
                 bitmaps,
                 unreadTrackingIndexId,
-                new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("unreadTrackingIndex"), false,
+                new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("unreadTrackingIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
@@ -282,7 +283,7 @@ public class MiruContextFactory {
             new MiruFilerInboxIndex<>(
                 bitmaps,
                 inboxIndexId,
-                new TxKeyedFilerStore(cogs, seed, chunkStores, keyBytes("inboxIndex"), false,
+                new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("inboxIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
