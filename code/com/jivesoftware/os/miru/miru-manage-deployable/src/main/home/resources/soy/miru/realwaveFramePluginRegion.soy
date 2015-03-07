@@ -12,11 +12,12 @@
  * @param? terms2
  * @param? filters
  * @param? graphType
+ * @param? legend
  * @param? width
  * @param? height
  */
 {template .realwaveFramePluginRegion}
-    <div id="rw-legend"></div>
+    <div id="rw-legend" {if not $legend}style="display:none;"{/if}></div>
     <div class="panel-body" id="rw-waveform"
         data-tenant-id="{$tenant?:''}"
         data-lookback-seconds="{$lookbackSeconds?:''}"

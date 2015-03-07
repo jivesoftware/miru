@@ -67,6 +67,7 @@ public class RealwavePluginEndpoints {
                 terms2.trim(),
                 filters.trim(),
                 graphType.trim(),
+                true,
                 480,
                 320)));
         return Response.ok(rendered).build();
@@ -84,6 +85,7 @@ public class RealwavePluginEndpoints {
         @QueryParam("terms2") @DefaultValue("") String terms2,
         @QueryParam("filters") @DefaultValue("") String filters,
         @QueryParam("graphType") @DefaultValue("Line") String graphType,
+        @QueryParam("legend") @DefaultValue("false") boolean legend,
         @QueryParam("width") @DefaultValue("480") int width,
         @QueryParam("height") @DefaultValue("320") int height) {
         String rendered = miruManageService.renderFramePlugin(realwaveFramePluginRegion,
@@ -98,6 +100,7 @@ public class RealwavePluginEndpoints {
                 terms2.trim(),
                 filters.trim(),
                 graphType.trim(),
+                legend,
                 width,
                 height)));
         return Response.ok(rendered).build();
@@ -129,6 +132,7 @@ public class RealwavePluginEndpoints {
                     terms2.trim(),
                     filters.trim(),
                     null,
+                    false,
                     -1,
                     -1));
             return responseHelper.jsonResponse(result != null ? result : "");

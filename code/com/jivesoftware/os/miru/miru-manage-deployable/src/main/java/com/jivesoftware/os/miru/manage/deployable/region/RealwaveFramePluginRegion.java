@@ -36,6 +36,7 @@ public class RealwaveFramePluginRegion implements MiruPageRegion<Optional<Realwa
             data.put("terms2", input.terms2);
             data.put("filters", input.filters);
             data.put("graphType", input.graphType);
+            data.put("legend", input.legend);
             data.put("width", input.width);
             data.put("height", input.height);
         }

@@ -68,6 +68,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
         final String terms2;
         final String filters;
         final String graphType;
+        final boolean legend;
         final int width;
         final int height;
 
@@ -81,6 +82,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             String terms2,
             String filters,
             String graphType,
+            boolean legend,
             int width,
             int height) {
             this.tenant = tenant;
@@ -93,6 +95,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             this.terms2 = terms2;
             this.filters = filters;
             this.graphType = graphType;
+            this.legend = legend;
             this.width = width;
             this.height = height;
         }
