@@ -14,4 +14,6 @@ public interface MiruClusterClientConfig extends Config {
 
     @StringDefault("unknownhost:port,unknownhost:port")
     String getManageHostAddresses();
+
+    void setManageHostAddresses(String hostPort);
 }

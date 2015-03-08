@@ -52,8 +52,9 @@ public class MiruTestRecoQueryDistributor {
         return new MiruRequest<>(featureSupplier.miruTenantId(),
             new MiruActorId(userId),
             new MiruAuthzExpression(Lists.newArrayList(featureSupplier.userAuthz(userId))),
-            new TrendingQuery(
+            new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
                 new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
+                null,
                 32,
                 new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(viewClassesFilter()), null),
                 MiruFieldName.ACTIVITY_PARENT.getFieldName(),

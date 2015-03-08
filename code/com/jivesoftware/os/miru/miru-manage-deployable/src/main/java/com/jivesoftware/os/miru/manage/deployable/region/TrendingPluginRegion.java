@@ -128,7 +128,9 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                             MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
                                 new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
                                     new TrendingQuery(
+                                        TrendingQuery.Strategy.LINEAR_REGRESSION,
                                         new MiruTimeRange(fromTime, toTime),
+                                        null,
                                         input.buckets,
                                         constraintsFilter,
                                         input.field,

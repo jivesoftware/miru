@@ -103,8 +103,9 @@ public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnom
                             new MiruRequest<>(tenantId,
                                 MiruActorId.NOT_PROVIDED,
                                 MiruAuthzExpression.NOT_PROVIDED,
-                                new TrendingQuery(
+                                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
                                     new MiruTimeRange(fromTime, toTime),
+                                    null,
                                     30,
                                     constraintsFilter,
                                     input.service != null ? "instance" : "service",

@@ -149,8 +149,7 @@ public class MiruManageMain {
 
             MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
 
-            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
-                .newInstance();
+            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass().newInstance();
             @SuppressWarnings("unchecked")
             RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
                 .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));

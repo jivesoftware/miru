@@ -52,7 +52,7 @@ public class Trending {
         }
 
         List<Trendy> trendies = new ArrayList<>();
-        final long trendInterval = request.query.timeRange.largestTimestamp - request.query.timeRange.smallestTimestamp;
+        long trendInterval = request.query.timeRange.largestTimestamp - request.query.timeRange.smallestTimestamp;
         MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
         log.debug("fieldId={}", fieldId);

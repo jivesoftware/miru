@@ -272,8 +272,9 @@ public class RecoCorrectnessTest {
                 tenant1,
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
-                new TrendingQuery(
+                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
                     timeRange,
+                    null,
                     27,
                     constraintsFilter,
                     "parent",

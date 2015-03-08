@@ -7,20 +7,20 @@ import org.apache.commons.math.stat.regression.SimpleRegression;
  */
 public class WaveformRegression {
 
-    public static SimpleRegression getRegression(long[] smooth) {
-        double[] raw = new double[smooth.length];
-        for (int i = 0; i < smooth.length; i++) {
-            raw[i] = smooth[i];
+    public static SimpleRegression getRegression(long[] samples, int start, int length) {
+        double[] raw = new double[length];
+        for (int i = start; i < length; i++) {
+            raw[i] = samples[i];
         }
         return getRegression(raw);
     }
 
-    public static SimpleRegression getRegression(double[] smooth) {
+    public static SimpleRegression getRegression(double[] samples) {
         SimpleRegression r = new SimpleRegression();
-        int l = smooth.length;
+        int l = samples.length;
         for (int i = 0; i < l; i++) {
             double s = i / (l - 1);
-            r.addData(s, smooth[i]);
+            r.addData(s, samples[i]);
         }
         return r;
     }

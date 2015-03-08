@@ -127,8 +127,9 @@ public class RemoteRecoHttpTest {
                     MiruTenantId tenantId = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
                     MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3_765)),
                         MiruAuthzExpression.NOT_PROVIDED,
-                        new TrendingQuery(
+                        new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
                             new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
+                            null,
                             32,
                             constraintsFilter,
                             "parent",

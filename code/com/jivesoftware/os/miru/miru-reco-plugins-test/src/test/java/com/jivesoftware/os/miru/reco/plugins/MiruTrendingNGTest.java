@@ -174,8 +174,9 @@ public class MiruTrendingNGTest {
             MiruRequest<TrendingQuery> request = new MiruRequest<>(tenant1,
                 new MiruActorId(new Id(1)),
                 MiruAuthzExpression.NOT_PROVIDED,
-                new TrendingQuery(
+                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
                     timeRange,
+                    null,
                     32,
                     filter,
                     "obj",
