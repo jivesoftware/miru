@@ -96,6 +96,7 @@ public class TrendingInjectable {
                 combinedTimeRange = new MiruTimeRange(
                     Math.min(request.query.timeRange.smallestTimestamp, request.query.relativeChangeTimeRange.smallestTimestamp),
                     Math.min(request.query.timeRange.largestTimestamp, request.query.relativeChangeTimeRange.largestTimestamp));
+
                 long combinedRange = combinedTimeRange.largestTimestamp - combinedTimeRange.smallestTimestamp;
                 divideTimeRangeIntoNSegments = (int) (combinedRange / (range / divideTimeRangeIntoNSegments));
 
@@ -109,7 +110,12 @@ public class TrendingInjectable {
                     request.query.relativeChangeTimeRange.smallestTimestamp));
 
                 lastRelativeBucket = (int) (divideTimeRangeIntoNSegments * zeroToOne(combinedTimeRange.smallestTimestamp, combinedTimeRange.largestTimestamp,
-                    request.query.relativeChangeTimeRange.smallestTimestamp));
+                    request.query.relativeChangeTimeRange.largestTimestamp));
+
+                divideTimeRangeIntoNSegments = Math.max(lastBucket, lastRelativeBucket + 1); // HACk
+
+                System.out.println("BUCKETS:" + firstBucket + "-" + lastBucket + " " + firstRelativeBucket + "-" + lastRelativeBucket
+                    + " segs:" + request.query.divideTimeRangeIntoNSegments + " newSegs:" + divideTimeRangeIntoNSegments);
 
             }
 
