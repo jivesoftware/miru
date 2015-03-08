@@ -179,7 +179,7 @@ public class TrendingInjectable {
                             SimpleRegression regression = WaveformRegression.getRegression(waveform, firstBucket, lastBucket);
                             SimpleRegression regressionRelative = WaveformRegression.getRegression(waveform, firstRelativeBucket, lastRelativeBucket);
                             double rankDelta = regression.getSlope() - regressionRelative.getSlope();
-                            int l = lastBucket-firstBucket;
+                            int l = lastBucket - firstBucket;
                             if (l < 1) {
                                 l = 1;
                             }
@@ -201,7 +201,7 @@ public class TrendingInjectable {
                                 relativeSum += waveform[i];
                             }
                             double rankDelta = sum - relativeSum;
-                            int l = lastBucket-firstBucket;
+                            int l = lastBucket - firstBucket;
                             if (l < 1) {
                                 l = 1;
                             }
@@ -226,7 +226,7 @@ public class TrendingInjectable {
                                 relativeSum += (waveform[i] - waveform[i - 1]);
                             }
                             double rankDelta = sum - relativeSum;
-                            int l = lastBucket-firstBucket;
+                            int l = lastBucket - firstBucket;
                             if (l < 1) {
                                 l = 1;
                             }
