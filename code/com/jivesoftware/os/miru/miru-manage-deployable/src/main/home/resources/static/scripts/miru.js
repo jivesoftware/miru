@@ -279,7 +279,7 @@ miru.realwave = {
                 var secsPerBucket = miru.realwave.input.lookbackSeconds / miru.realwave.input.buckets;
                 for (i = 0; i < miru.realwave.input.buckets; i++) {
                     var secsAgo = secsPerBucket * (miru.realwave.input.buckets - i);
-                    chartData.labels.push(Math.round(secsAgo) + "s");
+                    chartData.labels.push(miru.realwave.elapsed(Math.round(secsAgo)));
                 }
                 i = 0;
                 $.each(data.waveforms, function (key, value) {
@@ -323,6 +323,63 @@ miru.realwave = {
             }
         }
         setTimeout(miru.realwave.poll, 1000);
+    },
+
+    elapsed: function (seconds) {
+        var years, months, days, hours, minutes;
+        if (seconds < 0) {
+            return '0s';
+        }
+        if (seconds < 60) {
+            return seconds + 's';
+        }
+        if (seconds < 60 * 60) {
+            minutes = Math.floor(seconds / 60);
+            seconds -= minutes * 60;
+            if (seconds > 0) {
+                return minutes + 'm ' + seconds + 's';
+            } else {
+                return minutes + 'm';
+            }
+        }
+        if (seconds < 60 * 60 * 24) {
+            hours = Math.floor(seconds / 60 / 60);
+            seconds -= hours * 60 * 60;
+            minutes = Math.floor(seconds / 60);
+            if (minutes > 0) {
+                return hours + 'h ' + minutes + 'm';
+            } else {
+                return hours + 'h';
+            }
+        }
+        if (seconds < 60 * 60 * 24 * 31) {
+            days = Math.floor(seconds / 60 / 60 / 24);
+            seconds -= days * 60 * 60 * 24;
+            hours = Math.floor(seconds / 60 / 60);
+            if (hours > 0) {
+                return days + 'd ' + hours + 'h';
+            } else {
+                return days + 'd';
+            }
+        }
+        if (seconds < 60 * 60 * 24 * 365) {
+            months = Math.floor(seconds / 60 / 60 / 24 / 31);
+            seconds -= months * 60 * 60 * 24 * 31;
+            days = Math.floor(seconds / 60 / 60 / 24);
+            if (days > 0) {
+                return months + 'mo ' + days + 'd';
+            } else {
+                return months + 'mo';
+            }
+        }
+        years = Math.floor(seconds / 60 / 60 / 24 / 365);
+        seconds -= years * 60 * 60 * 24 * 365;
+        months = Math.floor(seconds / 60 / 60 / 24 / 31);
+        if (months > 0) {
+            return years + 'y ' + months + 'mo';
+        } else {
+            return years + 'y';
+        }
     }
 };
 
