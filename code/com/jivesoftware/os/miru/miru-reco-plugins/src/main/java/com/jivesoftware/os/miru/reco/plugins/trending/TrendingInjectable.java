@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -12,7 +11,6 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswerMerge
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuestion;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
@@ -21,12 +19,9 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
-import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
-import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
@@ -95,7 +90,7 @@ public class TrendingInjectable {
                 long range = request.query.timeRange.largestTimestamp - request.query.timeRange.smallestTimestamp;
                 combinedTimeRange = new MiruTimeRange(
                     Math.min(request.query.timeRange.smallestTimestamp, request.query.relativeChangeTimeRange.smallestTimestamp),
-                    Math.min(request.query.timeRange.largestTimestamp, request.query.relativeChangeTimeRange.largestTimestamp));
+                    Math.max(request.query.timeRange.largestTimestamp, request.query.relativeChangeTimeRange.largestTimestamp));
 
                 long combinedRange = combinedTimeRange.largestTimestamp - combinedTimeRange.smallestTimestamp;
                 divideTimeRangeIntoNSegments = (int) (combinedRange / (range / divideTimeRangeIntoNSegments));
@@ -112,10 +107,12 @@ public class TrendingInjectable {
                 lastRelativeBucket = (int) (divideTimeRangeIntoNSegments * zeroToOne(combinedTimeRange.smallestTimestamp, combinedTimeRange.largestTimestamp,
                     request.query.relativeChangeTimeRange.largestTimestamp));
 
-                divideTimeRangeIntoNSegments = Math.max(lastBucket, lastRelativeBucket + 1); // HACk
+                divideTimeRangeIntoNSegments = Math.max(lastBucket, lastRelativeBucket);
 
-                System.out.println("BUCKETS:" + firstBucket + "-" + lastBucket + " " + firstRelativeBucket + "-" + lastRelativeBucket
-                    + " segs:" + request.query.divideTimeRangeIntoNSegments + " newSegs:" + divideTimeRangeIntoNSegments);
+                LOG.debug("BUCKETS: {} - {} {} - {} segs:{} newSegs:{}",
+                    new Object[]{firstBucket, lastBucket, firstRelativeBucket, lastRelativeBucket,
+                        request.query.divideTimeRangeIntoNSegments, divideTimeRangeIntoNSegments
+                    });
 
             }
 
@@ -276,46 +273,6 @@ public class TrendingInjectable {
         } catch (Exception e) {
             //TODO throw http error codes
             throw new MiruQueryServiceException("Failed to score trending stream", e);
-        }
-    }
-
-    public MiruResponse<OldTrendingAnswer> old_scoreTrending(MiruRequest<TrendingQuery> request) throws MiruQueryServiceException {
-        try {
-            LOG.debug("askAndMerge: request={}", request);
-            MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
-            return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, request)),
-                new TrendingAnswerEvaluator(),
-                new TrendingAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments, request.query.desiredNumberOfDistincts),
-                OldTrendingAnswer.EMPTY_RESULTS, request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
-            throw e;
-        } catch (Exception e) {
-            //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed to score trending stream", e);
-        }
-    }
-
-    public MiruPartitionResponse<OldTrendingAnswer> scoreTrending(MiruPartitionId partitionId,
-        MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport)
-        throws MiruQueryServiceException {
-        try {
-            LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
-            LOG.trace("askImmediate: report={}", requestAndReport.report);
-            MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
-            return miru.askImmediate(tenantId,
-                partitionId,
-                new MiruSolvableFactory<>("scoreTrending", new TrendingQuestion(trending, requestAndReport.request)),
-                Optional.fromNullable(requestAndReport.report),
-                OldTrendingAnswer.EMPTY_RESULTS,
-                MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
-            throw e;
-        } catch (Exception e) {
-            //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed to score trending stream for partition: " + partitionId.getId(), e);
         }
     }
 
