@@ -103,6 +103,11 @@ public class MiruTenantTopology<BM> {
         }
     }
 
+    public boolean updateStorage(MiruPartitionCoord coord, MiruBackingStorage backingStorage) throws Exception {
+        Optional<MiruLocalHostedPartition<?>> partition = getPartition(coord);
+        return partition.isPresent() && partition.get().setStorage(backingStorage);
+    }
+
     public void setStorageForHost(MiruPartitionId partitionId, MiruBackingStorage storage, MiruHost host) throws Exception {
         Optional<MiruLocalHostedPartition<?>> partition = getPartition(new MiruPartitionCoord(tenantId, partitionId, host));
         if (partition.isPresent()) {

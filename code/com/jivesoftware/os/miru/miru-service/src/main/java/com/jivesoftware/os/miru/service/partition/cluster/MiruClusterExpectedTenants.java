@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -216,6 +217,8 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
             } else if (partition.getState() == MiruPartitionState.offline) {
                 topology.warm(coord);
                 return true;
+            } else if (partition.getState() == MiruPartitionState.online) {
+                return topology.updateStorage(coord, MiruBackingStorage.memory);
             }
         }
         return false;

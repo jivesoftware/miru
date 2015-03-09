@@ -315,8 +315,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
     }
 
     @Override
-    public void setStorage(MiruBackingStorage storage) throws Exception {
-        updateStorage(accessorRef.get(), storage, true);
+    public boolean setStorage(MiruBackingStorage storage) throws Exception {
+        return updateStorage(accessorRef.get(), storage, true);
     }
 
     private boolean updateStorage(MiruPartitionAccessor<BM> accessor, MiruBackingStorage destinationStorage, boolean force) throws Exception {
@@ -354,6 +354,25 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             log.warn("Partition at {} failed to migrate to {}, attempting to rewind", coord, destinationStorage);
                             contextFactory.close(toContext, destinationStorage);
                             contextFactory.cleanDisk(coord);
+                            contextFactory.markStorage(coord, existingStorage);
+                        }
+                    } else if (existingStorage == MiruBackingStorage.disk && destinationStorage == MiruBackingStorage.memory) {
+                        MiruContext<BM> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
+                        MiruPartitionAccessor<BM> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
+                            Optional.<MiruPartitionState>absent());
+
+                        migrated = updatePartition(accessor, migrated);
+                        if (migrated != null) {
+                            Optional<MiruContext<BM>> closed = accessor.close();
+                            if (closed.isPresent()) {
+                                contextFactory.close(closed.get(), existingStorage);
+                            }
+                            contextFactory.cleanDisk(coord);
+                            contextFactory.markStorage(coord, destinationStorage);
+                            updated = true;
+                        } else {
+                            log.warn("Partition at {} failed to migrate to {}, attempting to rewind", coord, destinationStorage);
+                            contextFactory.close(toContext, destinationStorage);
                             contextFactory.markStorage(coord, existingStorage);
                         }
                     } else {

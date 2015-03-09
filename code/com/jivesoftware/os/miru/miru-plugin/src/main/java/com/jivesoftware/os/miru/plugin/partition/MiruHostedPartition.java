@@ -30,5 +30,5 @@ public interface MiruHostedPartition {
 
     void warm() throws Exception;
 
-    void setStorage(MiruBackingStorage storage) throws Exception;
+    boolean setStorage(MiruBackingStorage storage) throws Exception;
 }
