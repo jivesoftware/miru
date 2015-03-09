@@ -35,6 +35,10 @@
             <artifactId>server-http-jetty-jersey</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>jaxrs-util</artifactId>
+        </dependency>
+        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
         </dependency>

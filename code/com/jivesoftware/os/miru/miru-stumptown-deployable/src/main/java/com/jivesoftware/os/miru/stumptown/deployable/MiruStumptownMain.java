@@ -156,7 +156,10 @@ public class MiruStumptownMain {
                     new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, miruReaders)),
                 new MiruManagePlugin("search", "Query", "/stumptown/query",
                     StumptownQueryPluginEndpoints.class,
-                    new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion", renderer, miruReaders, payloads)));
+                    new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion",
+                        "soy.stumptown.page.stumptownQueryLogEvent",
+                        "soy.stumptown.page.stumptownQueryNoEvents",
+                        renderer, miruReaders, payloads)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

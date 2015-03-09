@@ -17,12 +17,11 @@
  * @param? logger
  * @param? message
  * @param? thrown
- * @param? waveform
  * @param? events
  * @param? buckets
  * @param? messageCount
- * @param? summary
- * @param? elapse
+ * @param? graphType
+ * @param? execute
  */
 {template .stumptownQueryPluginRegion}
     <div class="panel panel-default">
@@ -182,6 +181,18 @@
                                 name="messageCount" id="messageCountPicker" data-original-title="" title="">
                         </td>
                     </tr>
+                    <tr class="stump-query-advanced">
+                        <td>Graph Type</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;" class="form-control"
+                                placeholder="Graph Type" name="graphType" id="graphTypePicker">
+                                <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
+                                <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
+                                <option value="Bar" {if $graphType == 'Bar'}selected="selected"{/if}>Bar</option>
+                                <option value="StackedBar" {if $graphType == 'StackedBar'}selected="selected"{/if}>StackedBar</option>
+                            </select>
+                        </td>
+                    </tr>
                 </table>
                 <br/>
                 <input class="form-control btn btn-primary" type="submit" value="Refresh"/>
@@ -189,77 +200,92 @@
             </form>
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <table>
-                <tr>
-                    <td>
-                        Results
-                    </td>
-                    <td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="datacenter">
-                            Datacenter &nbsp;</label>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="cluster">
-                            Cluster &nbsp;</label>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="host">
-                            Host &nbsp;</label>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="service"/>
-                            Service &nbsp;</label></span>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="instance"/>
-                            Instance &nbsp;</label>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="version" />
-                            Version &nbsp;</label>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="time" />
-                            Time &nbsp;</label>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="thread" />
-                            Thread &nbsp;</label>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="level" />
-                            Level &nbsp;</label>
-                        </div>
-                    </td><td>
-                        <div class="checkbox">
-                            <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="message" />
-                            Message &nbsp;</label>
-                        </div>
-                    </td>
-                <tr>
-            </table>
-        </div>
-        <div class="panel-body">
-            {if $waveform}
-                <img alt="waveform" src="{$waveform}">
-                <br/>
-            {/if}
-            
-            {if $events}
-                
-                <br/>
-                <table id="stump-events" class="table table-condensed">
+    {if $execute}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <table>
+                    <tr>
+                        <td>
+                            Results
+                        </td>
+                        <td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="datacenter">
+                                Datacenter &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="cluster">
+                                Cluster &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="host">
+                                Host &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="service"/>
+                                Service &nbsp;</label></span>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="instance"/>
+                                Instance &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="version" />
+                                Version &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="time" />
+                                Time &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="thread" />
+                                Thread &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="level" />
+                                Level &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="message" />
+                                Message &nbsp;</label>
+                            </div>
+                        </td>
+                    <tr>
+                </table>
+            </div>
+            <div class="panel-body" id="stump-rt-poll"
+                data-cluster="{$cluster?:''}"
+                data-host="{$host?:''}"
+                data-version="{$version?:''}"
+                data-service="{$service?:''}"
+                data-instance="{$instance?:''}"
+                data-log-levels="{$logLevels?:''}"
+                data-from-ago="{$fromAgo?:''}"
+                data-to-ago="{$toAgo?:''}"
+                data-from-time-unit="{$fromTimeUnit?:''}"
+                data-to-time-unit="{$toTimeUnit?:''}"
+                data-thread="{$thread?:''}"
+                data-logger="{$logger?:''}"
+                data-message="{$message?:''}"
+                data-thrown="{$thrown?:''}"
+                data-events="{$events?:''}"
+                data-buckets="{$buckets?:''}"
+                data-message-count="{$messageCount?:''}"
+                data-graph-type="{$graphType?:''}">
+                <div id="stump-rt-legend"></div>
+                <div>
+                    <canvas id="stump-rt-canvas" height="120" width="480"></canvas>
+                </div>
+                <table id="stump-rt-events" class="table table-condensed">
                     <tbody>
                         <tr style="background-color: #ccc; font-weight: bold;">
                             <th class="stump-event-datacenter">Datacenter</th>
@@ -273,43 +299,45 @@
                             <th class="stump-event-level">Level</th>
                             <th class="stump-event-message" width="99%">Message</th>
                         </tr>
-                        {foreach $event in $events}
-                            <tr>
-                                <td class="stump-event-datacenter">{$event.datacenter}</td>
-                                <td class="stump-event-cluster">{$event.cluster}</td>
-                                <td class="stump-event-host">{$event.host}</td>
-                                <td class="stump-event-service">{$event.service}</td>
-                                <td class="stump-event-instance">{$event.instance}</td>
-                                <td class="stump-event-version">{$event.version}</td>
-                                <td class="stump-event-time" style="white-space: nowrap;">{$event.timestamp}</td>
-                                <td class="stump-event-thread">{$event.threadName}</td>
-                                <td class="stump-event-level">{$event.level}</td>
-                                <td class="stump-event-message">
-                                    {$event.loggerName} - {$event.message}
-                                    {if $event.thrownStackTrace}
-                                        <br/>
-                                        {foreach $line in $event.thrownStackTrace}
-                                            {$line}<br/>
-                                        {/foreach}
-                                    {/if}
-                                </td>
-                            </tr>
-                        {ifempty}
-                            <tr>
-                                <td colspan="10">No log events found</td>
-                            </tr>
-                        {/foreach}
+                        <!-- logEvents or noEvents go here -->
                     </tbody>
                 </table>
-            {/if}
-        </div>
-    </div>
-    {if $summary}
-        <div class="panel panel-default">
-            <div class="panel-heading">Query Summary {$elapse}</div>
-            <div class="panel-body">
-                <pre>{$summary}</pre>
             </div>
         </div>
     {/if}
+{/template}
+
+/**
+ * @param event
+ */
+{template .stumptownQueryLogEvent}
+    <tr class="stump-rt-log-event">
+        <td class="stump-event-datacenter">{$event.datacenter}</td>
+        <td class="stump-event-cluster">{$event.cluster}</td>
+        <td class="stump-event-host">{$event.host}</td>
+        <td class="stump-event-service">{$event.service}</td>
+        <td class="stump-event-instance">{$event.instance}</td>
+        <td class="stump-event-version">{$event.version}</td>
+        <td class="stump-event-time" style="white-space: nowrap;">{$event.timestamp}</td>
+        <td class="stump-event-thread">{$event.threadName}</td>
+        <td class="stump-event-level">{$event.level}</td>
+        <td class="stump-event-message">
+            {$event.loggerName} - {$event.message}
+            {if $event.thrownStackTrace}
+                <br/>
+                {foreach $line in $event.thrownStackTrace}
+                    {$line}<br/>
+                {/foreach}
+            {/if}
+        </td>
+    </tr>
+{/template}
+
+/**
+ *
+ */
+{template .stumptownQueryNoEvents}
+    <tr class="stump-rt-log-event">
+        <td colspan="10">No log events found</td>
+    </tr>
 {/template}
