@@ -359,7 +359,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     } else if (existingStorage == MiruBackingStorage.disk && destinationStorage == MiruBackingStorage.memory) {
                         MiruContext<BM> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
                         MiruPartitionAccessor<BM> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
-                            Optional.<MiruPartitionState>absent());
+                            Optional.of(MiruPartitionState.bootstrap));
 
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
