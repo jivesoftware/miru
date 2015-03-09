@@ -27,8 +27,7 @@ import com.jivesoftware.os.amza.shared.UpdatesSender;
 import com.jivesoftware.os.amza.shared.UpdatesTaker;
 import com.jivesoftware.os.amza.storage.RowTable;
 import com.jivesoftware.os.amza.storage.binary.BinaryRowMarshaller;
-import com.jivesoftware.os.amza.storage.binary.BinaryRowReader;
-import com.jivesoftware.os.amza.storage.binary.BinaryRowWriter;
+import com.jivesoftware.os.amza.storage.binary.BinaryRowsTx;
 import com.jivesoftware.os.amza.storage.filer.Filer;
 import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesSender;
 import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesTaker;
@@ -104,6 +103,20 @@ public class AmzaClusterRegistryInitializer {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
+        final RowsIndexProvider tableIndexProvider = new RowsIndexProvider() {
+
+            @Override
+            public RowsIndex createRowsIndex(TableName tableName) throws Exception {
+                NavigableMap<RowIndexKey, RowIndexValue> navigableMap = new ConcurrentSkipListMap<>();
+                return new MemoryRowsIndex(navigableMap, new Flusher() {
+
+                    @Override
+                    public void flush() {
+                    }
+                });
+            }
+        };
+
         RowsStorageProvider rowsStorageProvider = new RowsStorageProvider() {
             @Override
             public RowsStorage createRowsStorage(File workingDirectory,
@@ -114,30 +127,13 @@ public class AmzaClusterRegistryInitializer {
                 File file = new File(directory, tableName.getTableName() + ".kvt");
 
                 Filer filer = new Filer(file.getAbsolutePath(), "rw");
-                BinaryRowReader reader = new BinaryRowReader(filer);
-                BinaryRowWriter writer = new BinaryRowWriter(filer);
                 BinaryRowMarshaller rowMarshaller = new BinaryRowMarshaller();
-
-                RowsIndexProvider tableIndexProvider = new RowsIndexProvider() {
-
-                    @Override
-                    public RowsIndex createRowsIndex(TableName tableName) throws Exception {
-                        NavigableMap<RowIndexKey, RowIndexValue> navigableMap = new ConcurrentSkipListMap<>();
-                        return new MemoryRowsIndex(navigableMap, new Flusher() {
-
-                            @Override
-                            public void flush() {
-                            }
-                        });
-                    }
-                };
 
                 return new RowTable(tableName,
                     orderIdProvider,
                     tableIndexProvider,
                     rowMarshaller,
-                    reader,
-                    writer);
+                    new BinaryRowsTx(file, rowMarshaller));
             }
         };
 
