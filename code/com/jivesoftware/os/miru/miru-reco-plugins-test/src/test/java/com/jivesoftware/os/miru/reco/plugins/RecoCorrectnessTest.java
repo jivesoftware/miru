@@ -40,7 +40,6 @@ import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
-import com.jivesoftware.os.miru.reco.plugins.trending.Trending;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -128,7 +127,7 @@ public class RecoCorrectnessTest {
 
         this.service = miruProvider.getMiru(tenant1);
         this.recoInjectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(aggregateUtil, indexUtil), new Distincts(termComposer));
-        this.trendingInjectable = new TrendingInjectable(miruProvider, new Trending(), new Distincts(termComposer), new Analytics());
+        this.trendingInjectable = new TrendingInjectable(miruProvider, new Distincts(termComposer), new Analytics());
     }
 
     @Test(enabled = false)

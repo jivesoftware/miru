@@ -46,16 +46,13 @@ public class TrendingInjectable {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruProvider<? extends Miru> miruProvider;
-    private final Trending trending;
     private final Distincts distincts;
     private final Analytics analytics;
 
     public TrendingInjectable(MiruProvider<? extends Miru> miruProvider,
-        Trending trending,
         Distincts distincts,
         Analytics analytics) {
         this.miruProvider = miruProvider;
-        this.trending = trending;
         this.distincts = distincts;
         this.analytics = analytics;
     }

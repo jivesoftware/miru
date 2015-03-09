@@ -30,7 +30,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
-import com.jivesoftware.os.miru.reco.plugins.trending.Trending;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -86,7 +85,7 @@ public class MiruTrendingNGTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new TrendingInjectable(miruProvider, new Trending(), new Distincts(miruProvider.getTermComposer()), new Analytics());
+        this.injectable = new TrendingInjectable(miruProvider, new Distincts(miruProvider.getTermComposer()), new Analytics());
     }
 
     @Test(enabled = true)

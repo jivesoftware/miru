@@ -1,18 +1,14 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
-import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
-import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -56,49 +52,4 @@ public class TrendingEndpoints {
             return Response.serverError().build();
         }
     }
-
-    @POST
-    @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response scoreTrending(@PathParam("partitionId") int id, MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport) {
-        MiruPartitionId partitionId = MiruPartitionId.of(id);
-        try {
-            MiruPartitionResponse<OldTrendingAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
-            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(OldTrendingAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
-        } catch (Exception e) {
-            log.error("Failed to score trending for partition: " + partitionId.getId(), e);
-            return Response.serverError().build();
-        }
-    }
-
-    /*
-    @POST
-    @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
-    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response scoreTrending(@PathParam("partitionId") int id, byte[] requestAndReportBytes) {
-        MiruPartitionId partitionId = MiruPartitionId.of(id);
-        try {
-            MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = (MiruRequestAndReport<TrendingQuery, TrendingReport>)fstMarshaller
-                .deserialize(new ByteArrayInputStream(requestAndReportBytes), MiruRequestAndReport.class);
-
-            MiruPartitionResponse<TrendingAnswer> response = injectable.scoreTrending(partitionId, requestAndReport);
-            byte[] responseBytes = null;
-            if (response != null) {
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                fstMarshaller.serialize(response, outputStream);
-                responseBytes = outputStream.toByteArray();
-            }
-            return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
-        } catch (Exception e) {
-            log.error("Failed to score trending for partition: " + partitionId.getId(), e);
-            return Response.serverError().build();
-        }
-    }
-    */
 }
