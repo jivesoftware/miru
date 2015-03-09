@@ -13,7 +13,7 @@
         <mlogger-version>0.8</mlogger-version>
         <jive-utils-version>0.74</jive-utils-version>
         <rcvs-version>0.12</rcvs-version>
-        <filer-version>0.64</filer-version>
+        <filer-version>0.65</filer-version>
         <upena-version>0.53</upena-version>
         <amza-version>0.16</amza-version>
     </properties>
