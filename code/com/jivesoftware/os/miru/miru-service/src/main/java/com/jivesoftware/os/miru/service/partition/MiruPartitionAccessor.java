@@ -110,7 +110,7 @@ public class MiruPartitionAccessor<BM> {
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer) {
         this(bitmaps, coord, info, context, new AtomicLong(),
-            Sets.<TimeAndVersion>newHashSet(), Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS), new AtomicBoolean(),
+            Sets.<TimeAndVersion>newHashSet(), Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS, true), new AtomicBoolean(),
             indexRepairs, indexer, new AtomicLong(System.currentTimeMillis()));
     }
 
