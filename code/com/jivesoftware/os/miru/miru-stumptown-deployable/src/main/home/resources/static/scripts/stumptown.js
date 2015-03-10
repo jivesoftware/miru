@@ -4,7 +4,7 @@ window.stump = {};
 
 stump.query = {
 
-    advanced: function(ele) {
+    advanced: function (ele) {
         var $e = $(ele);
         if ($e.prop('checked')) {
             $('#stump-query-filters').addClass('stump-query-show-advanced');
@@ -13,7 +13,7 @@ stump.query = {
         }
     },
 
-    toggle: function(ele) {
+    toggle: function (ele) {
         var $e = $(ele);
         if ($e.prop('checked')) {
             $('#stump-rt-events').addClass('stump-show-' + $e.data('name'));
@@ -22,15 +22,17 @@ stump.query = {
         }
     },
 
-    initEvents: function() {
+    initEvents: function () {
         var $toggle = $('.stump-toggle');
         var $toggleOn = $('.stump-toggle-on');
 
         $toggle.prop('checked', false);
         $toggleOn.prop('checked', true);
-        $toggle.each(function(index, ele) {
+        $toggle.each(function (index, ele) {
             stump.query.toggle(ele);
         });
+
+        stump.realtime.init();
     }
 };
 
@@ -83,15 +85,24 @@ stump.realtime = {
         stump.realtime.eventsBody = $('#stump-rt-events > tbody');
 
         $waveform = $('#stump-rt-poll');
-        stump.realtime.input.tenantId = $waveform.data('tenantId');
-        stump.realtime.input.startTimestamp = new Date().getTime();
-        stump.realtime.input.lookbackSeconds = parseInt($waveform.data('lookbackSeconds'));
-        stump.realtime.input.buckets = parseInt($waveform.data('buckets'));
-        stump.realtime.input.field1 = $waveform.data('field1');
-        stump.realtime.input.terms1 = $waveform.data('terms1');
-        stump.realtime.input.field2 = $waveform.data('field2');
-        stump.realtime.input.terms2 = $waveform.data('terms2');
-        stump.realtime.input.filters = $waveform.data('filters');
+
+        stump.realtime.input.cluster = $waveform.data('cluster');
+        stump.realtime.input.host = $waveform.data('host');
+        stump.realtime.input.version = $waveform.data('version');
+        stump.realtime.input.service = $waveform.data('service');
+        stump.realtime.input.instance = $waveform.data('instance');
+        stump.realtime.input.logLevels = $waveform.data('logLevels');
+        stump.realtime.input.fromAgo = $waveform.data('fromAgo');
+        stump.realtime.input.toAgo = $waveform.data('toAgo');
+        stump.realtime.input.fromTimeUnit = $waveform.data('fromTimeUnit');
+        stump.realtime.input.toTimeUnit = $waveform.data('toTimeUnit');
+        stump.realtime.input.thread = $waveform.data('thread');
+        stump.realtime.input.logger = $waveform.data('logger');
+        stump.realtime.input.message = $waveform.data('message');
+        stump.realtime.input.thrown = $waveform.data('thrown');
+        stump.realtime.input.events = $waveform.data('events');
+        stump.realtime.input.buckets = $waveform.data('buckets');
+        stump.realtime.input.messageCount = $waveform.data('messageCount');
 
         stump.realtime.requireFocus = $waveform.data('requireFocus') != "false";
         stump.realtime.graphType = $waveform.data('graphType');
@@ -100,7 +111,7 @@ stump.realtime = {
             : 'unknown';
 
         if (stump.realtime.requireFocus) {
-            miru.onWindowFocus.push(function () {
+            stump.onWindowFocus.push(function () {
                 if (stump.realtime.chart) {
                     stump.realtime.chart.update();
                 }
@@ -115,15 +126,23 @@ stump.realtime = {
             type: "POST",
             url: "/stumptown/query/poll",
             data: {
-                tenantId: stump.realtime.input.tenantId,
-                startTimestamp: stump.realtime.input.startTimestamp,
-                lookbackSeconds: stump.realtime.input.lookbackSeconds,
+                cluster: stump.realtime.input.cluster,
+                host: stump.realtime.input.host,
+                version: stump.realtime.input.version,
+                service: stump.realtime.input.service,
+                instance: stump.realtime.input.instance,
+                logLevels: stump.realtime.input.logLevels,
+                fromAgo: stump.realtime.input.fromAgo,
+                toAgo: stump.realtime.input.toAgo,
+                fromTimeUnit: stump.realtime.input.fromTimeUnit,
+                toTimeUnit: stump.realtime.input.toTimeUnit,
+                thread: stump.realtime.input.thread,
+                logger: stump.realtime.input.logger,
+                message: stump.realtime.input.message,
+                thrown: stump.realtime.input.thrown,
+                events: stump.realtime.input.events,
                 buckets: stump.realtime.input.buckets,
-                field1: stump.realtime.input.field1,
-                terms1: stump.realtime.input.terms1,
-                field2: stump.realtime.input.field2,
-                terms2: stump.realtime.input.terms2,
-                filters: stump.realtime.input.filters
+                messageCount: stump.realtime.input.messageCount
             },
             //contentType: "application/json",
             success: function (data) {
@@ -139,15 +158,17 @@ stump.realtime = {
     update: function (data) {
         var i;
         if (data.waveforms) {
+
             if (!stump.realtime.chart) {
                 var ctx = $('#stump-rt-canvas')[0].getContext("2d");
                 var chartData = {
                     labels: [],
                     datasets: []
                 };
-                var secsPerBucket = stump.realtime.input.lookbackSeconds / stump.realtime.input.buckets;
+                var rangeInSecs = data.fromAgoSecs - data.toAgoSecs;
+                var secsPerBucket = rangeInSecs / stump.realtime.input.buckets;
                 for (i = 0; i < stump.realtime.input.buckets; i++) {
-                    var secsAgo = secsPerBucket * (stump.realtime.input.buckets - i);
+                    var secsAgo = data.toAgoSecs + secsPerBucket * (stump.realtime.input.buckets - i);
                     chartData.labels.push(stump.realtime.elapsed(Math.round(secsAgo)));
                 }
                 i = 0;
@@ -187,7 +208,7 @@ stump.realtime = {
                 }
                 i++;
             });
-            if (!stump.realtime.requireFocus || miru.windowFocused) {
+            if (!stump.realtime.requireFocus || stump.windowFocused) {
                 stump.realtime.chart.update();
             }
         }
@@ -258,6 +279,22 @@ stump.realtime = {
     }
 };
 
-$(document).ready(function() {
+$(document).ready(function () {
+    stump.windowFocused = true;
+    stump.onWindowFocus = [];
+    stump.onWindowBlur = [];
+
     stump.query.initEvents();
+});
+
+$(window).focus(function () {
+    stump.windowFocused = true;
+    for (var i = 0; i < stump.onWindowFocus.length; i++) {
+        stump.onWindowFocus[i]();
+    }
+}).blur(function () {
+    stump.windowFocused = false;
+    for (var i = 0; i < stump.onWindowBlur.length; i++) {
+        stump.onWindowBlur[i]();
+    }
 });

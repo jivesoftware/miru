@@ -36,17 +36,17 @@ form#stump-query-filters .stump-query-advanced { display: none; }
 form#stump-query-filters.stump-query-show-advanced tr.stump-query-advanced { display: table-row; }
 form#stump-query-filters.stump-query-show-advanced td.stump-query-advanced { display: table-cell; }
 
-table#stump-events td, table#stump-events th { display: none; }
-table#stump-events.stump-show-datacenter .stump-event-datacenter { display: table-cell; }
-table#stump-events.stump-show-cluster .stump-event-cluster { display: table-cell; }
-table#stump-events.stump-show-host .stump-event-host { display: table-cell; }
-table#stump-events.stump-show-service .stump-event-service { display: table-cell; }
-table#stump-events.stump-show-instance .stump-event-instance { display: table-cell; }
-table#stump-events.stump-show-version .stump-event-version { display: table-cell; }
-table#stump-events.stump-show-time .stump-event-time { display: table-cell; }
-table#stump-events.stump-show-thread .stump-event-thread { display: table-cell; }
-table#stump-events.stump-show-level .stump-event-level { display: table-cell; }
-table#stump-events.stump-show-message .stump-event-message { display: table-cell; }
+table#stump-rt-events td, table#stump-rt-events th { display: none; }
+table#stump-rt-events.stump-show-datacenter .stump-event-datacenter { display: table-cell; }
+table#stump-rt-events.stump-show-cluster .stump-event-cluster { display: table-cell; }
+table#stump-rt-events.stump-show-host .stump-event-host { display: table-cell; }
+table#stump-rt-events.stump-show-service .stump-event-service { display: table-cell; }
+table#stump-rt-events.stump-show-instance .stump-event-instance { display: table-cell; }
+table#stump-rt-events.stump-show-version .stump-event-version { display: table-cell; }
+table#stump-rt-events.stump-show-time .stump-event-time { display: table-cell; }
+table#stump-rt-events.stump-show-thread .stump-event-thread { display: table-cell; }
+table#stump-rt-events.stump-show-level .stump-event-level { display: table-cell; }
+table#stump-rt-events.stump-show-message .stump-event-message { display: table-cell; }
 
 /*
 <th class="stump-event-datacenter">Datacenter</th>

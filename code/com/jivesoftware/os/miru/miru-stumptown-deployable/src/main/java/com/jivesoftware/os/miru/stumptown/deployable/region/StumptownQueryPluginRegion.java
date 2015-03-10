@@ -29,14 +29,19 @@ import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloa
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownQuery;
+import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+
+import static com.google.common.base.Objects.firstNonNull;
 
 /**
  *
@@ -163,6 +168,9 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                 data.put("buckets", String.valueOf(input.buckets));
                 data.put("messageCount", String.valueOf(input.messageCount));
                 data.put("graphType", input.graphType);
+
+                boolean execute = !logLevelSet.isEmpty();
+                data.put("execute", execute);
             }
         } catch (Exception e) {
             log.error("Unable to retrieve data", e);
@@ -179,9 +187,11 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
 
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
         // e.g. mpb=10,000, current=24,478, modulus=4,478, ceiling=30,000
-        long rangeMillis = TimeUnit.valueOf(input.fromTimeUnit).toMillis(fromAgo) - TimeUnit.valueOf(input.toTimeUnit).toMillis(toAgo);
+        TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
+        TimeUnit toTimeUnit = TimeUnit.valueOf(input.toTimeUnit);
+        long rangeMillis = fromTimeUnit.toMillis(fromAgo) - toTimeUnit.toMillis(toAgo);
         long millisPerBucket = rangeMillis / input.buckets;
-        long jiveToTime = new JiveEpochTimestampProvider().getTimestamp() - TimeUnit.valueOf(input.fromTimeUnit).toMillis(toAgo);
+        long jiveToTime = new JiveEpochTimestampProvider().getTimestamp() - fromTimeUnit.toMillis(toAgo);
         long jiveModulusTime = jiveToTime % millisPerBucket;
         long jiveCeilingTime = jiveToTime - jiveModulusTime + millisPerBucket;
         final long packCeilingTime = snowflakeIdPacker.pack(jiveCeilingTime, 0, 0);
@@ -264,6 +274,8 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                 waveformData.put(entry.getKey(), counts);
             }
             data.put("waveforms", waveformData);
+            data.put("fromAgoSecs", fromTimeUnit.toSeconds(fromAgo));
+            data.put("toAgoSecs", toTimeUnit.toSeconds(toAgo));
 
             List<Long> activityTimes = Lists.newArrayList();
             for (StumptownAnswer.Waveform waveform : waveforms.values()) {
@@ -273,11 +285,26 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
             }
             List<MiruLogEvent> logEvents = Lists.newArrayList(payloads.multiGet(tenantId, activityTimes, MiruLogEvent.class));
             Collections.reverse(logEvents);
-            if (logEvents.isEmpty()) {
+            if (!logEvents.isEmpty()) {
                 data.put("logEvents", Lists.transform(logEvents, new Function<MiruLogEvent, String>() {
                     @Override
                     public String apply(MiruLogEvent input) {
-                        return renderer.render(logEventTemplate, ImmutableMap.of("event", input));
+                        return renderer.render(logEventTemplate, ImmutableMap.of("event", ImmutableMap.<String, Object>builder()
+                            .put("datacenter", firstNonNull(input.datacenter, ""))
+                            .put("cluster", firstNonNull(input.cluster, ""))
+                            .put("host", firstNonNull(input.host, ""))
+                            .put("service", firstNonNull(input.service, ""))
+                            .put("instance", firstNonNull(input.instance, ""))
+                            .put("version", firstNonNull(input.version, ""))
+                            .put("level", firstNonNull(input.level, ""))
+                            .put("threadName", firstNonNull(input.threadName, ""))
+                            .put("loggerName", firstNonNull(input.loggerName, ""))
+                            .put("message", firstNonNull(input.message, ""))
+                            .put("timestamp", input.timestamp != null
+                                ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
+                                : "")
+                            .put("thrownStackTrace", input.thrownStackTrace != null ? Arrays.asList(input.thrownStackTrace) : Arrays.asList())
+                            .build()));
                     }
                 }));
             } else {
