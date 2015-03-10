@@ -13,6 +13,7 @@ import java.util.Map;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -88,22 +89,22 @@ public class StumptownQueryPluginEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response poll(
-        @QueryParam("cluster") @DefaultValue("dev") String cluster,
-        @QueryParam("host") @DefaultValue("") String host,
-        @QueryParam("service") @DefaultValue("") String service,
-        @QueryParam("instance") @DefaultValue("") String instance,
-        @QueryParam("version") @DefaultValue("") String version,
-        @QueryParam("logLevels") @DefaultValue("INFO") List<String> logLevels,
-        @QueryParam("fromAgo") @DefaultValue("8") int fromAgo,
-        @QueryParam("toAgo") @DefaultValue("0") int toAgo,
-        @QueryParam("fromTimeUnit") @DefaultValue("MINUTES") String fromTimeUnit,
-        @QueryParam("toTimeUnit") @DefaultValue("MINUTES") String toTimeUnit,
-        @QueryParam("thread") @DefaultValue("") String thread,
-        @QueryParam("logger") @DefaultValue("") String logger,
-        @QueryParam("message") @DefaultValue("") String message,
-        @QueryParam("thrown") @DefaultValue("") String thrown,
-        @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("messageCount") @DefaultValue("100") int messageCount) {
+        @FormParam("cluster") @DefaultValue("dev") String cluster,
+        @FormParam("host") @DefaultValue("") String host,
+        @FormParam("service") @DefaultValue("") String service,
+        @FormParam("instance") @DefaultValue("") String instance,
+        @FormParam("version") @DefaultValue("") String version,
+        @FormParam("logLevels") @DefaultValue("INFO") List<String> logLevels,
+        @FormParam("fromAgo") @DefaultValue("8") int fromAgo,
+        @FormParam("toAgo") @DefaultValue("0") int toAgo,
+        @FormParam("fromTimeUnit") @DefaultValue("MINUTES") String fromTimeUnit,
+        @FormParam("toTimeUnit") @DefaultValue("MINUTES") String toTimeUnit,
+        @FormParam("thread") @DefaultValue("") String thread,
+        @FormParam("logger") @DefaultValue("") String logger,
+        @FormParam("message") @DefaultValue("") String message,
+        @FormParam("thrown") @DefaultValue("") String thrown,
+        @FormParam("buckets") @DefaultValue("30") int buckets,
+        @FormParam("messageCount") @DefaultValue("100") int messageCount) {
         try {
             Map<String, Object> result = pluginRegion.poll(new StumptownPluginRegionInput(cluster,
                 host,

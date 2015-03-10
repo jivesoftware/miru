@@ -163,6 +163,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                     "info", logLevelSet.contains("INFO"),
                     "warn", logLevelSet.contains("WARN"),
                     "error", logLevelSet.contains("ERROR")));
+                data.put("logLevelsList", input.logLevel);
                 data.put("fromAgo", String.valueOf(fromAgo));
                 data.put("toAgo", String.valueOf(toAgo));
                 data.put("buckets", String.valueOf(input.buckets));
