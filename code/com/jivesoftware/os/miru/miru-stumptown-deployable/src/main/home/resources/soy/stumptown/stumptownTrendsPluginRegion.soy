@@ -38,9 +38,9 @@
                         <td>
                             <div class="btn-group-horizontal" data-toggle="buttons">
                                 {foreach $af in $aggregatableFields}
-                                    <label style="text-align: left;" class="btn btn-default btn-group-md btn-sm {if $aggregateAroundField == {$af}}{sp}active{sp}{/if}">
-                                        <input {if $aggregateAroundField == {$af}}{sp}checked{sp}{/if} onclick="this.form.submit()" type="radio" 
-                                        name="aggregateAroundField" value="{$aggregatableFields}">today
+                                    <label style="text-align: left;" class="btn btn-default btn-group-md btn-sm {if $aggregateAroundField == $af}{sp}active{sp}{/if}">
+                                        <input {if $aggregateAroundField == $af}{sp}checked{sp}{/if} onclick="this.form.submit()" type="radio" 
+                                        name="aggregateAroundField" value="{$aggregatableFields}">{$af}
                                     </label>
                                 {/foreach}
                             </div>

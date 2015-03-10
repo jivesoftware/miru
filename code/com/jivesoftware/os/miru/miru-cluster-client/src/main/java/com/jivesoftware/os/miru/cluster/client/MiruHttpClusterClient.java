@@ -55,7 +55,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
             @Override
             public MiruTopologyResponse call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                HttpResponse response = client.get("*",
+                HttpResponse response = client.get(tenantId.toString(),
                     "/miru/topology/routing/" + tenantId.toString());
                 return responseMapper.extractResultFromResponse(response, MiruTopologyResponse.class, null);
             }
@@ -69,7 +69,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
             @Override
             public MiruHeartbeatResponse call(TenantAwareHttpClient<String> client) throws Exception {
                 String jsonHeartbeatRequest = requestMapper.writeValueAsString(heartbeatRequest);
-                HttpResponse response = client.postJson("*",
+                HttpResponse response = client.postJson(tenantId.toString(),
                     "/miru/topology/thumpthump/"
                     + host.getLogicalName() + "/"
                     + host.getPort(),
@@ -84,7 +84,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         return send(new HttpCallable<List<HostHeartbeat>>() {
             @Override
             public List<HostHeartbeat> call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.postJson("*",
+                HttpResponse response = client.postJson(tenantId.toString(),
                     "/miru/topology/allHosts",
                     "null");
                 return responseMapper.extractResultFromResponse(response, List.class, new Class[]{HostHeartbeat.class}, null);
@@ -97,7 +97,8 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         return send(new HttpCallable<MiruTenantConfig>() {
             @Override
             public MiruTenantConfig call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.get("*", "/miru/topology/tenantConfig/" + tenantId.toString());
+                HttpResponse response = client.get(tenantId.toString(),
+                    "/miru/topology/tenantConfig/" + tenantId.toString());
                 return responseMapper.extractResultFromResponse(response, MiruTenantConfig.class, null);
             }
         });
@@ -108,7 +109,8 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         send(new HttpCallable<String>() {
             @Override
             public String call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.postJson("*", "/miru/topology/elect/"
+                HttpResponse response = client.postJson(tenantId.toString(),
+                    "/miru/topology/elect/"
                     + host.getLogicalName() + "/"
                     + host.getPort() + "/"
                     + tenantId + "/"
@@ -125,7 +127,8 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         send(new HttpCallable<String>() {
             @Override
             public String call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.postJson("*", "/miru/topology/remove/replica/"
+                HttpResponse response = client.postJson(tenantId.toString(),
+                    "/miru/topology/remove/replica/"
                     + tenantId + "/"
                     + partitionId.getId(), "null");
                 return responseMapper.extractResultFromResponse(response, String.class, null);
@@ -139,7 +142,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         return send(new HttpCallable<List<MiruPartition>>() {
             @Override
             public List<MiruPartition> call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.postJson("*",
+                HttpResponse response = client.postJson(tenantId.toString(),
                     "/miru/topology/partitions/" + tenantId.toString(), "null");
                 return responseMapper.extractResultFromResponse(response, List.class, new Class[]{MiruPartition.class}, null);
             }
@@ -151,7 +154,8 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         return send(new HttpCallable<MiruReplicaHosts>() {
             @Override
             public MiruReplicaHosts call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.get("*", "/miru/topology/replicas/" + tenantId.toString() + "/" + partitionId.getId());
+                HttpResponse response = client.get(tenantId.toString(),
+                    "/miru/topology/replicas/" + tenantId.toString() + "/" + partitionId.getId());
                 return responseMapper.extractResultFromResponse(response, MiruReplicaHosts.class, null);
             }
         });
@@ -162,7 +166,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         send(new HttpCallable<String>() {
             @Override
             public String call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.postJson("*",
+                HttpResponse response = client.postJson(tenantId.toString(),
                     "/miru/topology/remove/"
                     + host.getLogicalName() + "/"
                     + host.getPort(), "null");
@@ -176,7 +180,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         send(new HttpCallable<String>() {
             @Override
             public String call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.postJson("*",
+                HttpResponse response = client.postJson(tenantId.toString(),
                     "/miru/topology/remove/"
                     + host.getLogicalName() + "/"
                     + host.getPort() + "/"
@@ -192,7 +196,8 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         return send(new HttpCallable<MiruSchema>() {
             @Override
             public MiruSchema call(TenantAwareHttpClient<String> client) throws Exception {
-                HttpResponse response = client.get("*", "/miru/topology/schema/" + tenantId.toString());
+                HttpResponse response = client.get(tenantId.toString(),
+                    "/miru/topology/schema/" + tenantId.toString());
                 return responseMapper.extractResultFromResponse(response, MiruSchema.class, null);
             }
         });
@@ -204,7 +209,8 @@ public class MiruHttpClusterClient implements MiruClusterClient {
             @Override
             public String call(TenantAwareHttpClient<String> client) throws Exception {
                 String jsonSchema = requestMapper.writeValueAsString(schema);
-                HttpResponse response = client.postJson("*", "/miru/topology/schema/" + tenantId.toString(), jsonSchema);
+                HttpResponse response = client.postJson(tenantId.toString(),
+                    "/miru/topology/schema/" + tenantId.toString(), jsonSchema);
                 return responseMapper.extractResultFromResponse(response, String.class, null);
             }
         });
