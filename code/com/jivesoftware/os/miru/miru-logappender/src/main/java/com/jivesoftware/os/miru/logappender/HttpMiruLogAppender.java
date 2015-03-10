@@ -107,6 +107,21 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
         if (!isStarted()) {
             throw new IllegalStateException("MiruLogAppender " + getName() + " is not active");
         } else {
+            String methodName = null;
+            String lineNumber = null;
+            StackTraceElement source = logEvent.getSource();
+            if (source != null) {
+                methodName = source.getMethodName();
+                lineNumber = String.valueOf(source.getLineNumber());
+            }
+
+            String exceptionClass = null;
+            Throwable thrown = logEvent.getThrown();
+            if (thrown != null) {
+                exceptionClass = thrown.getClass().getCanonicalName();
+            }
+
+
             MiruLogEvent miruLogEvent = new MiruLogEvent(datacenter,
                 cluster,
                 host,
@@ -116,9 +131,12 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                 logEvent.getLevel().name(),
                 logEvent.getThreadName(),
                 logEvent.getLoggerName(),
+                methodName,
+                lineNumber,
                 logEvent.getMessage().getFormattedMessage(),
                 String.valueOf(logEvent.getTimeMillis()),
-                toStackTrace(logEvent.getThrown()));
+                exceptionClass,
+                toStackTrace(thrown));
 
             if (blocking) {
                 try {

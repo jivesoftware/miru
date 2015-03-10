@@ -98,7 +98,10 @@ stump.realtime = {
         stump.realtime.input.toTimeUnit = $waveform.data('toTimeUnit');
         stump.realtime.input.thread = $waveform.data('thread');
         stump.realtime.input.logger = $waveform.data('logger');
+        stump.realtime.input.method = $waveform.data('method');
+        stump.realtime.input.line = $waveform.data('line');
         stump.realtime.input.message = $waveform.data('message');
+        stump.realtime.input.exceptionClass = $waveform.data('exceptionClass');
         stump.realtime.input.thrown = $waveform.data('thrown');
         stump.realtime.input.events = $waveform.data('events');
         stump.realtime.input.buckets = $waveform.data('buckets');
@@ -138,7 +141,10 @@ stump.realtime = {
                 toTimeUnit: stump.realtime.input.toTimeUnit,
                 thread: stump.realtime.input.thread,
                 logger: stump.realtime.input.logger,
+                method: stump.realtime.input.method,
+                line: stump.realtime.input.line,
                 message: stump.realtime.input.message,
+                exceptionClass: stump.realtime.input.exceptionClass,
                 thrown: stump.realtime.input.thrown,
                 events: stump.realtime.input.events,
                 buckets: stump.realtime.input.buckets,

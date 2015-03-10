@@ -14,8 +14,11 @@ public class MiruLogEvent {
     public String level;
     public String threadName;
     public String loggerName;
+    public String methodName;
+    public String lineNumber;
     public String message;
     public String timestamp;
+    public String exceptionClass;
     public String[] thrownStackTrace;
 
     public MiruLogEvent() {
@@ -29,9 +32,12 @@ public class MiruLogEvent {
         String version,
         String level,
         String threadName,
+        String methodName,
+        String lineNumber,
         String loggerName,
         String message,
         String timestamp,
+        String exceptionClass,
         String[] thrownStackTrace) {
         this.datacenter = datacenter;
         this.cluster = cluster;
@@ -41,9 +47,12 @@ public class MiruLogEvent {
         this.version = version;
         this.level = level;
         this.threadName = threadName;
+        this.methodName = methodName;
+        this.lineNumber = lineNumber;
         this.loggerName = loggerName;
         this.message = message;
         this.timestamp = timestamp;
+        this.exceptionClass = exceptionClass;
         this.thrownStackTrace = thrownStackTrace;
     }
 }

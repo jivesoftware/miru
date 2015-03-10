@@ -66,9 +66,12 @@ public class LogMill {
             .putFieldValue("version", firstNonNull(logEvent.version, "unknown"))
             .putFieldValue("level", firstNonNull(logEvent.level, "unknown"))
             .putFieldValue("thread", firstNonNull(logEvent.threadName, "unknown"))
+            .putFieldValue("methodName", firstNonNull(logEvent.methodName, "unknown"))
+            .putFieldValue("lineNumber", firstNonNull(logEvent.lineNumber, "unknown"))
             .putFieldValue("logger", firstNonNull(logEvent.loggerName, "unknown"))
             .putAllFieldValues("message", tokenize(logEvent.message))
             .putFieldValue("timestamp", firstNonNull(logEvent.timestamp, "unknown"))
+            .putFieldValue("exceptionClass", firstNonNull(logEvent.exceptionClass, "unknown"))
             .putAllFieldValues("thrownStackTrace", tokenizeStackTrace(logEvent.thrownStackTrace))
             .build();
     }

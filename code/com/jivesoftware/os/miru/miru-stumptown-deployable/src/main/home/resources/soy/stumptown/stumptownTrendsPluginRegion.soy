@@ -5,6 +5,8 @@
  *
  * @param? logLevel
  * @param? service
+ * @param? aggregateAroundField
+ * @param? aggregatableFields
  * @param? results
  * @param? fromHoursAgo
  * @param? summary
@@ -31,6 +33,20 @@
                             </select>
                         </td>
                     </tr>
+                    <tr>
+                        <td>Focus&nbsp;&nbsp</td>
+                        <td>
+                            <div class="btn-group-horizontal" data-toggle="buttons">
+                                {foreach $af in $aggregatableFields}
+                                    <label style="text-align: left;" class="btn btn-default btn-group-md btn-sm {if $aggregateAroundField == {$af}}{sp}active{sp}{/if}">
+                                        <input {if $aggregateAroundField == {$af}}{sp}checked{sp}{/if} onclick="this.form.submit()" type="radio" 
+                                        name="aggregateAroundField" value="{$aggregatableFields}">today
+                                    </label>
+                                {/foreach}
+                            </div>
+                        </td>
+                    </tr>
+                                        
                 </table>
                 <input class="form-control btn btn-primary" type="submit" value="Refresh"/>
             </form>
@@ -58,7 +74,7 @@
                                 <td>{$service}</td>
                                 <td>{$result.name}</td>
                             {else}
-                                <td><a href="#" onclick="document.location.href='/stumptown/trends?service={$result.name}&amp;logLevel='+document.getElementById('logLevelPicker').value; return false;">{$result.name}</a></td>
+                                <td><a href="#" onclick="document.location.href='/stumptown/trends?aggregateAroundField=instance&amp;service={$result.name}&amp;logLevel='+document.getElementById('logLevelPicker').value; return false;">{$result.name}</a></td>
                             {/if}
                             <td>{$result.rank}</td>
                             <td>

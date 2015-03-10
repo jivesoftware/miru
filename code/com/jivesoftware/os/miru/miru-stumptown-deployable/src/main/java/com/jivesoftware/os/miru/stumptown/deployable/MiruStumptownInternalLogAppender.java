@@ -116,6 +116,20 @@ public class MiruStumptownInternalLogAppender implements Appender {
                 }
             }
 
+            String methodName = null;
+            String lineNumber = null;
+            StackTraceElement source = logEvent.getSource();
+            if (source != null) {
+                methodName = source.getMethodName();
+                lineNumber = String.valueOf(source.getLineNumber());
+            }
+
+            String exceptionClass = null;
+            Throwable thrown = logEvent.getThrown();
+            if (thrown != null) {
+                exceptionClass = thrown.getClass().getCanonicalName();
+            }
+
             MiruLogEvent miruLogEvent = new MiruLogEvent(datacenter,
                 cluster,
                 host,
@@ -125,8 +139,11 @@ public class MiruStumptownInternalLogAppender implements Appender {
                 logEvent.getLevel().name(),
                 logEvent.getThreadName(),
                 logEvent.getLoggerName(),
+                methodName,
+                lineNumber,
                 logEvent.getMessage().getFormattedMessage(),
                 String.valueOf(logEvent.getTimeMillis()),
+                exceptionClass,
                 toStackTrace(logEvent.getThrown()));
 
             if (blocking) {

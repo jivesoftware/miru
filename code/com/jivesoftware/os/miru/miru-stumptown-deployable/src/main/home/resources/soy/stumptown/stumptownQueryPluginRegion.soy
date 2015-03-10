@@ -16,7 +16,10 @@
  * @param? toTimeUnit
  * @param? thread
  * @param? logger
+ * @param? method
+ * @param? line
  * @param? message
+ * @param? exceptionClass
  * @param? thrown
  * @param? events
  * @param? buckets
@@ -106,6 +109,20 @@
                     </tr>
                 </table>
                 <table cellspacing="5">
+                    <tr class="stump-query-advanced">
+                        <td>Method</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:300px; padding-left:10px;"
+                                class="form-control" placeholder="Method" value="{$method?:''}"
+                                name="method" id="methodPicker" data-original-title="" title="">
+                        </td>
+                        <td>Line</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:100px; padding-left:10px;"
+                                class="form-control" placeholder="Line" value="{$line?:''}"
+                                name="line" id="linePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
                     <tr>
                         <td>Message</td>
                         <td colspan="3">
@@ -161,6 +178,12 @@
                         </td>
                     </tr>
                     <tr class="stump-query-advanced">
+                        <td>Exception Class</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:250px; padding-left:10px;"
+                                class="form-control" placeholder="Thrown Stack Trace" value="{$exceptionClass?:''}"
+                                name="exceptionClass" id="exceptionClassPicker" data-original-title="" title="">
+                        </td>
                         <td>Thrown</td>
                         <td colspan="3">
                             <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
@@ -190,7 +213,6 @@
                                 <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
                                 <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
                                 <option value="Bar" {if $graphType == 'Bar'}selected="selected"{/if}>Bar</option>
-                                <option value="StackedBar" {if $graphType == 'StackedBar'}selected="selected"{/if}>StackedBar</option>
                             </select>
                         </td>
                     </tr>
@@ -256,6 +278,16 @@
                             </div>
                         </td><td>
                             <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="method" />
+                                Method &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="line" />
+                                Line &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
                                 <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="message" />
                                 Message &nbsp;</label>
                             </div>
@@ -276,7 +308,10 @@
                 data-to-time-unit="{$toTimeUnit?:''}"
                 data-thread="{$thread?:''}"
                 data-logger="{$logger?:''}"
+                data-method="{$method?:''}"
+                data-line="{$line?:''}"
                 data-message="{$message?:''}"
+                data-exception-class="{$exceptionClass?:''}"
                 data-thrown="{$thrown?:''}"
                 data-events="{$events?:''}"
                 data-buckets="{$buckets?:''}"
@@ -298,6 +333,8 @@
                             <th class="stump-event-time">Time</th>
                             <th class="stump-event-thread">Thread</th>
                             <th class="stump-event-level">Level</th>
+                            <th class="stump-event-method">Method</th>
+                            <th class="stump-event-line">Line</th>
                             <th class="stump-event-message" width="99%">Message</th>
                         </tr>
                         <!-- logEvents or noEvents go here -->
@@ -322,6 +359,8 @@
         <td class="stump-event-time" style="white-space: nowrap;">{$event.timestamp}</td>
         <td class="stump-event-thread">{$event.threadName}</td>
         <td class="stump-event-level">{$event.level}</td>
+        <td class="stump-event-method">{$event.method}</td>
+        <td class="stump-event-line">{$event.line}</td>
         <td class="stump-event-message">
             {$event.loggerName} - {$event.message}
             {if $event.thrownStackTrace}

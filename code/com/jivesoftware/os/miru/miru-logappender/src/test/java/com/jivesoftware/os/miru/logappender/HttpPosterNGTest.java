@@ -32,8 +32,10 @@ public class HttpPosterNGTest {
 
         HttpPoster httpPoster = new HttpPoster("soa-prime-data7.phx1.jivehosted.com", 10000, 30000);
 
-        httpPoster.send(Arrays.asList(new MiruLogEvent(null, "dev", "foo", "bar", "baz", "1", "INFO", "main", "logger", "hi", "time", null)));
-        httpPoster.send(Arrays.asList(new MiruLogEvent(null, "dev", "foo", "bar", "baz", "1", "INFO", "main", "logger", "hi", "time", null)));
+        httpPoster.send(Arrays.asList(
+            new MiruLogEvent(null, "dev", "foo", "bar", "baz", "1", "INFO", "main", "logger", "meth", "line", "hi", "time", null, null)));
+        httpPoster.send(Arrays.asList(
+            new MiruLogEvent(null, "dev", "foo", "bar", "baz", "1", "INFO", "main", "logger", "meth", "line", "hi", "time", null, null)));
     }
 
 }

@@ -33,13 +33,14 @@ public class StumptownTrendsPluginEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getTrends(@QueryParam("logLevel") @DefaultValue("ERROR") String logLevel,
-        @QueryParam("service") @DefaultValue("") String service) {
+        @QueryParam("service") @DefaultValue("") String service,
+        @QueryParam("aggregateAroundField") @DefaultValue("service") String aggregateAroundField) {
 
         if (service.trim().isEmpty()) {
             service = null;
         }
         String rendered = miruStumptownService.renderPlugin(trendingPluginRegion,
-            Optional.of(new TrendingPluginRegionInput(logLevel, service)));
+            Optional.of(new TrendingPluginRegionInput(logLevel, service, aggregateAroundField)));
         return Response.ok(rendered).build();
     }
 }

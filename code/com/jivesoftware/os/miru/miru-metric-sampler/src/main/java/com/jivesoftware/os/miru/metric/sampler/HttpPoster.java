@@ -23,6 +23,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.List;
 
 /**
@@ -91,6 +92,8 @@ public class HttpPoster implements MiruMetricSampleSender {
         String toJson = gson.toJson(events);
         try {
             post(toJson);
+        } catch (SocketException x) {
+            destroy();
         } catch (Exception x) {
             System.err.println("Failed to metrics sizeInBytes:" + toJson.length() + " to http://" + host + ":" + port + "" + path);
             x.printStackTrace();

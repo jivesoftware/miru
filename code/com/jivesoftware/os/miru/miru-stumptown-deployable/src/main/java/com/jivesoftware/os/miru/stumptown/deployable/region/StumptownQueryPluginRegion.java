@@ -89,7 +89,10 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
 
         final String thread;
         final String logger;
+        final String method;
+        final String line;
         final String message;
+        final String exceptionClass;
         final String thrown;
 
         final int buckets;
@@ -108,7 +111,10 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
             String toTimeUnit,
             String thread,
             String logger,
+            String method,
+            String line,
             String message,
+            String exceptionClass,
             String thrown,
             int buckets,
             int messageCount,
@@ -126,7 +132,10 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
             this.toTimeUnit = toTimeUnit;
             this.thread = thread;
             this.logger = logger;
+            this.method = method;
+            this.line = line;
             this.message = message;
+            this.exceptionClass = exceptionClass;
             this.thrown = thrown;
             this.buckets = buckets;
             this.messageCount = messageCount;
@@ -153,7 +162,10 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                 data.put("toTimeUnit", input.toTimeUnit);
                 data.put("thread", input.thread);
                 data.put("logger", input.logger);
+                data.put("method", input.method);
+                data.put("line", input.line);
                 data.put("message", input.message);
+                data.put("exceptionClass", input.exceptionClass);
                 data.put("thrown", input.thrown);
 
                 Set<String> logLevelSet = Sets.newHashSet(Splitter.on(',').split(input.logLevel));
@@ -176,7 +188,6 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
         } catch (Exception e) {
             log.error("Unable to retrieve data", e);
         }
-
         return renderer.render(template, data);
     }
 
@@ -210,9 +221,12 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                 addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
                 addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
                 addFieldFilter(fieldFilters, notFieldFilters, "thread", input.thread);
+                addFieldFilter(fieldFilters, notFieldFilters, "methodName", input.method);
+                addFieldFilter(fieldFilters, notFieldFilters, "lineNumber", input.line);
                 addFieldFilter(fieldFilters, notFieldFilters, "logger", input.logger);
                 addFieldFilter(fieldFilters, notFieldFilters, "message", input.message.toLowerCase());
                 addFieldFilter(fieldFilters, notFieldFilters, "level", input.logLevel);
+                addFieldFilter(fieldFilters, notFieldFilters, "exceptionClass", input.exceptionClass);
                 addFieldFilter(fieldFilters, notFieldFilters, "thrownStackTrace", input.thrown.toLowerCase());
 
                 List<MiruFilter> notFilters = null;
@@ -278,6 +292,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
             data.put("fromAgoSecs", fromTimeUnit.toSeconds(fromAgo));
             data.put("toAgoSecs", toTimeUnit.toSeconds(toAgo));
 
+
             List<Long> activityTimes = Lists.newArrayList();
             for (StumptownAnswer.Waveform waveform : waveforms.values()) {
                 for (MiruActivity activity : waveform.results) {
@@ -300,10 +315,13 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                             .put("level", firstNonNull(input.level, ""))
                             .put("threadName", firstNonNull(input.threadName, ""))
                             .put("loggerName", firstNonNull(input.loggerName, ""))
+                            .put("method", firstNonNull(input.methodName, ""))
+                            .put("line", firstNonNull(input.lineNumber, ""))
                             .put("message", firstNonNull(input.message, ""))
                             .put("timestamp", input.timestamp != null
                                 ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
                                 : "")
+                            .put("exceptionClass", firstNonNull(input.exceptionClass, ""))
                             .put("thrownStackTrace", input.thrownStackTrace != null ? Arrays.asList(input.thrownStackTrace) : Arrays.asList())
                             .build()));
                     }

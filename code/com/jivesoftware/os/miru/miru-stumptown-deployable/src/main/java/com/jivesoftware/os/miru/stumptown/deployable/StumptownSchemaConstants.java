@@ -33,7 +33,10 @@ public class StumptownSchemaConstants {
             new MiruFieldDefinition(8, "logger", singleTerm, Prefix.WILDCARD),
             new MiruFieldDefinition(9, "message", multiTerm, Prefix.WILDCARD),
             new MiruFieldDefinition(10, "timestamp", singleTerm, Prefix.NONE),
-            new MiruFieldDefinition(11, "thrownStackTrace", multiTerm, Prefix.WILDCARD)
+            new MiruFieldDefinition(11, "thrownStackTrace", multiTerm, Prefix.WILDCARD),
+            new MiruFieldDefinition(12, "exceptionClass", singleTerm, Prefix.WILDCARD),
+            new MiruFieldDefinition(13, "methodName", singleTerm, Prefix.WILDCARD),
+            new MiruFieldDefinition(14, "lineNumber", singleTerm, Prefix.NONE)
         }).build();
 
 }
