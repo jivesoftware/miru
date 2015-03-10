@@ -7,8 +7,8 @@ import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClien
 
 public class MiruClusterClientInitializer {
 
-    public MiruClusterClient initialize(TenantAwareHttpClient<String> client, ObjectMapper mapper) throws Exception {
+    public MiruClusterClient initialize(String routingTenantId, TenantAwareHttpClient<String> client, ObjectMapper mapper) throws Exception {
 
-        return new MiruHttpClusterClient(client, mapper, new ResponseMapper(mapper));
+        return new MiruHttpClusterClient(routingTenantId, client, mapper, new ResponseMapper(mapper));
     }
 }
