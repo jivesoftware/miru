@@ -160,5 +160,13 @@
             <version>0.371-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.upena</groupId>
+            <artifactId>tenant-routing-http-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.upena</groupId>
+            <artifactId>upena-routing-shared</artifactId>
+        </dependency>
     </dependencies>
 </project>

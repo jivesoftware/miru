@@ -40,7 +40,6 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
-import com.jivesoftware.os.miru.cluster.client.MiruClusterClientConfig;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
@@ -73,6 +72,9 @@ import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
+import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -184,8 +186,14 @@ public class MiruReaderMain {
 
             final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
 
-            MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(clusterClientConfig, mapper);
+            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-manage", // TODO expose to conf
+                "main");
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(connections);
+
+            // TODO add fall back to config
+            //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruManageClient, mapper);
 
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 

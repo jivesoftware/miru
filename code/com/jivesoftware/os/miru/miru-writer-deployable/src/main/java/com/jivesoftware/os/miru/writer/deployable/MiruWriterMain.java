@@ -32,7 +32,6 @@ import com.jivesoftware.os.miru.client.MiruClient;
 import com.jivesoftware.os.miru.client.MiruClientConfig;
 import com.jivesoftware.os.miru.client.MiruClientInitializer;
 import com.jivesoftware.os.miru.client.endpoints.MiruClientEndpoints;
-import com.jivesoftware.os.miru.cluster.client.MiruClusterClientConfig;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
@@ -45,6 +44,9 @@ import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
+import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import org.merlin.config.Config;
 
 public class MiruWriterMain {
@@ -117,8 +119,14 @@ public class MiruWriterMain {
             MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
 
 
-            MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(clusterClientConfig, mapper);
+            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-manage", // TODO expose to conf
+                "main");
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(connections);
+
+            // TODO add fall back to config
+            //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruManageClient, mapper);
 
             MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),

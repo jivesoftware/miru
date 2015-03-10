@@ -29,7 +29,6 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
-import com.jivesoftware.os.miru.cluster.client.MiruClusterClientConfig;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
@@ -46,6 +45,9 @@ import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
+import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -103,9 +105,15 @@ public class MiruSeaAnomalyMain {
 
             MiruSeaAnomalyIntakeConfig intakeConfig = deployable.config(MiruSeaAnomalyIntakeConfig.class);
 
-            MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
-            MiruClusterClient client = new MiruClusterClientInitializer().initialize(clusterClientConfig, mapper);
-            SeaAnomalySchemaService seaAnomalySchemaService = new SeaAnomalySchemaService(client);
+            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-manage", // TODO expose to conf
+                "main");
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(connections);
+
+            // TODO add fall back to config
+            //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruManageClient, mapper);
+            SeaAnomalySchemaService seaAnomalySchemaService = new SeaAnomalySchemaService(clusterClient);
 
             MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,
                 seaAnomalySchemaService,
