@@ -199,14 +199,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
     @Override
     public List<MiruTenantTopologyUpdate> getTopologyUpdatesForHost(MiruHost host, long sinceTimestamp) throws Exception {
         final List<MiruTenantTopologyUpdate> updates = Lists.newArrayList();
-        final long acceptableTimestamp = amzaService.getTimestamp(sinceTimestamp, TimeUnit.MINUTES.toMillis(1));
+        final long acceptableTimestampId = amzaService.getTimestamp(sinceTimestamp, TimeUnit.MINUTES.toMillis(1));
 
         AmzaTable topology = amzaService.getTable(new TableName("master", "host-" + host.toStringForm() + "-topology-updates", null, null));
         topology.scan(new RowScan<Exception>() {
             @Override
             public boolean row(long transactionId, RowIndexKey key, RowIndexValue value) throws Exception {
-                if (value.getTimestamp() > acceptableTimestamp) {
-                    updates.add(new MiruTenantTopologyUpdate(new MiruTenantId(key.getKey()), value.getTimestamp()));
+                if (value.getTimestampId() > acceptableTimestampId) {
+                    updates.add(new MiruTenantTopologyUpdate(new MiruTenantId(key.getKey()), value.getTimestampId()));
                 }
                 return true;
             }

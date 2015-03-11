@@ -11,11 +11,11 @@
     <packaging>pom</packaging>
     <properties>
         <mlogger-version>0.8</mlogger-version>
-        <jive-utils-version>0.75</jive-utils-version>
+        <jive-utils-version>0.78</jive-utils-version>
         <rcvs-version>0.12</rcvs-version>
         <filer-version>0.65</filer-version>
         <upena-version>0.57</upena-version>
-        <amza-version>0.16</amza-version>
+        <amza-version>0.18</amza-version>
     </properties>
     <dependencyManagement>
         <dependencies>

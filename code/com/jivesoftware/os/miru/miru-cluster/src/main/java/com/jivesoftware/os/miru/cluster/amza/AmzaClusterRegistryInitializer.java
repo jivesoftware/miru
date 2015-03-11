@@ -36,8 +36,8 @@ import com.jivesoftware.os.amza.transport.tcp.replication.serialization.FstMarsh
 import com.jivesoftware.os.amza.transport.tcp.replication.serialization.MessagePayload;
 import com.jivesoftware.os.amza.transport.tcp.replication.serialization.MessagePayloadSerializer;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.upena.main.Deployable;
 import de.ruedigermoeller.serialization.FSTConfiguration;
 import java.io.File;
@@ -80,6 +80,9 @@ public class AmzaClusterRegistryInitializer {
         @IntDefault(1000)
         public int getTakeFromNeighborsIntervalInMillis();
 
+        @LongDefault(60_000)
+        public long getCheckIfCompactionIsNeededIntervalInMillis();
+
         @LongDefault(1 * 24 * 60 * 60 * 1000L)
         public long getCompactTombstoneIfOlderThanNMillis();
 
@@ -97,7 +100,7 @@ public class AmzaClusterRegistryInitializer {
 
         RingHost ringHost = new RingHost(hostName, port);
 
-        final OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId));
+        final TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId));
 
         final ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -131,9 +134,8 @@ public class AmzaClusterRegistryInitializer {
 
                 return new RowTable(tableName,
                     orderIdProvider,
-                    tableIndexProvider,
                     rowMarshaller,
-                    new BinaryRowsTx(file, rowMarshaller));
+                    new BinaryRowsTx(file, rowMarshaller, tableIndexProvider));
             }
         };
 
@@ -150,6 +152,7 @@ public class AmzaClusterRegistryInitializer {
         amzaServiceConfig.resendReplicasIntervalInMillis = config.getResendReplicasIntervalInMillis();
         amzaServiceConfig.applyReplicasIntervalInMillis = config.getApplyReplicasIntervalInMillis();
         amzaServiceConfig.takeFromNeighborsIntervalInMillis = config.getTakeFromNeighborsIntervalInMillis();
+        amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis = config.getCheckIfCompactionIsNeededIntervalInMillis();
         amzaServiceConfig.compactTombstoneIfOlderThanNMillis = config.getCompactTombstoneIfOlderThanNMillis();
 
         AmzaService amzaService = new AmzaServiceInitializer().initialize(amzaServiceConfig,
@@ -171,6 +174,7 @@ public class AmzaClusterRegistryInitializer {
         amzaService.start(ringHost, amzaServiceConfig.resendReplicasIntervalInMillis,
             amzaServiceConfig.applyReplicasIntervalInMillis,
             amzaServiceConfig.takeFromNeighborsIntervalInMillis,
+            amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis,
             amzaServiceConfig.compactTombstoneIfOlderThanNMillis);
 
         System.out.println("-----------------------------------------------------------------------");
