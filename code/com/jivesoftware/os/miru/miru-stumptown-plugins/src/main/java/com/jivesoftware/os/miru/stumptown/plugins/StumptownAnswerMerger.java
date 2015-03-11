@@ -48,8 +48,8 @@ public class StumptownAnswerMerger implements MiruAnswerMerger<StumptownAnswer> 
             }
         } else {
             mergedWaveforms = Maps.newHashMap();
-            mergeWaveform(mergedWaveforms, currentAnswer, solutionLog);
             mergeWaveform(mergedWaveforms, lastAnswer, solutionLog);
+            mergeWaveform(mergedWaveforms, currentAnswer, solutionLog);
             solutionLog.log(MiruSolutionLogLevel.INFO, "merge: merged last answer size={}, with current answer size={}.",
                 lastAnswer.waveforms.size(), currentAnswer.waveforms.size());
         }
