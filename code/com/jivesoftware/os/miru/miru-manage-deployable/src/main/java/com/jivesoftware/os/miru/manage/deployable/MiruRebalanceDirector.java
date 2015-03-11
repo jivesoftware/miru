@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.client.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;

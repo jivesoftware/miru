@@ -11,6 +11,7 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -18,6 +19,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.cluster.client.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -55,14 +57,14 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
     private final String logEventTemplate;
     private final String noEventsTemplate;
     private final MiruSoyRenderer renderer;
-    private final RequestHelper[] miruReaders;
+    private final ReaderRequestHelpers miruReaders;
     private final MiruStumptownPayloads payloads;
 
     public StumptownQueryPluginRegion(String template,
         String logEventTemplate,
         String noEventsTemplate,
         MiruSoyRenderer renderer,
-        RequestHelper[] miruReaders,
+        ReaderRequestHelpers miruReaders,
         MiruStumptownPayloads payloads) {
 
         this.template = template;
@@ -211,7 +213,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
 
         MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
         MiruResponse<StumptownAnswer> response = null;
-        for (RequestHelper requestHelper : miruReaders) {
+        for (RequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
             try {
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                 List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();

@@ -30,6 +30,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.cluster.client.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSeaAnomalyIntakeInitializer.MiruSeaAnomalyIntakeConfig;
@@ -51,6 +52,7 @@ import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpCli
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruSeaAnomalyMain {
@@ -98,7 +100,7 @@ public class MiruSeaAnomalyMain {
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
             serviceStartupHealthCheck.info("building request helpers...", null);
-            RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruReaderHosts(), mapper);
+
             RequestHelper[] miruWriters = RequestHelperUtil.buildRequestHelpers(seaAnomalyServiceConfig.getMiruWriterHosts(), mapper);
 
             SampleTrawl logMill = new SampleTrawl(orderIdProvider);
@@ -136,16 +138,18 @@ public class MiruSeaAnomalyMain {
 
             serviceStartupHealthCheck.info("installing ui plugins...", null);
 
+            //TODO expose to config TimeUnit.MINUTES.toMillis(10)
+            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
             List<MiruManagePlugin> plugins = Lists.newArrayList(
                 new MiruManagePlugin("eye-open", "Status", "/seaAnomaly/status",
                     SeaAnomalyStatusPluginEndpoints.class,
                     new SeaAnomalyStatusPluginRegion("soy.sea.anomaly.page.seaAnomalyStatusPluginRegion", renderer, logMill)),
                 new MiruManagePlugin("stats", "Trends", "/seaAnomaly/trends",
                     SeaAnomalyTrendsPluginEndpoints.class,
-                    new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, miruReaders)),
+                    new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, readerRequestHelpers)),
                 new MiruManagePlugin("search", "Query", "/seaAnomaly/query",
                     SeaAnomalyQueryPluginEndpoints.class,
-                    new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, miruReaders)));
+                    new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, readerRequestHelpers)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

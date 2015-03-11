@@ -30,6 +30,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
@@ -38,6 +39,7 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig;
+import com.jivesoftware.os.miru.cluster.client.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
@@ -208,8 +210,9 @@ public class MiruManageMain {
                 readTrackingWALReader,
                 activityLookupTable);
 
-            //TODO expose to config
-            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterRegistry, mapper, TimeUnit.MINUTES.toMillis(10));
+            MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
+            //TODO expose to config TimeUnit.MINUTES.toMillis(10)
+            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
 
             List<MiruManagePlugin> plugins = Lists.newArrayList(
                 new MiruManagePlugin("Distincts",

@@ -78,10 +78,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>http-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>id</artifactId>
         </dependency>
         <dependency>
@@ -174,6 +170,11 @@
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>jaxrs-util</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-cluster-client</artifactId>
+            <version>0.374-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

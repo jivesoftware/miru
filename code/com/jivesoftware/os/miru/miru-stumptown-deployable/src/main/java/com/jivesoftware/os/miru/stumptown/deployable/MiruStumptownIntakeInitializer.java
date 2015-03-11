@@ -15,8 +15,9 @@
  */
 package com.jivesoftware.os.miru.stumptown.deployable;
 
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.StringDefault;
 
@@ -35,9 +36,15 @@ public class MiruStumptownIntakeInitializer {
     MiruStumptownIntakeService initialize(MiruStumptownIntakeConfig config,
         StumptownSchemaService stumptownSchemaService,
         LogMill logMill,
-        RequestHelper[] miruWrites,
+        ObjectMapper activityMapper,
+        TenantAwareHttpClient<String> miruWriters,
         MiruStumptownPayloads activityPayloads) {
 
-        return new MiruStumptownIntakeService(stumptownSchemaService, logMill, config.getMiruIngressEndpoint(), miruWrites, activityPayloads);
+        return new MiruStumptownIntakeService(stumptownSchemaService,
+            logMill,
+            config.getMiruIngressEndpoint(),
+            activityMapper,
+            miruWriters,
+            activityPayloads);
     }
 }

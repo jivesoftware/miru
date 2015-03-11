@@ -24,12 +24,12 @@ import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.cluster.client.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownIntakeInitializer.MiruStumptownIntakeConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownQueryPluginEndpoints;
@@ -47,12 +47,12 @@ import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
-import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruStumptownMain {
@@ -111,17 +111,18 @@ public class MiruStumptownMain {
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
-            RequestHelper[] miruReaders = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruReaderHosts(), mapper);
-            RequestHelper[] miruWrites = RequestHelperUtil.buildRequestHelpers(stumptownServiceConfig.getMiruWriterHosts(), mapper);
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+
+            TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                .getTenantRoutingProvider()
+                .getConnections("miru-write", "main"));  // TODO expose to conf
+
+            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                .getTenantRoutingProvider()
+                .getConnections("miru-manage", "main")); // TODO expose to conf
 
             LogMill logMill = new LogMill(orderIdProvider);
-
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
-
-            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-manage", // TODO expose to conf
-                "main");
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(connections);
 
             // TODO add fall back to config
             //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
@@ -131,7 +132,8 @@ public class MiruStumptownMain {
             MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(intakeConfig,
                 stumptownSchemaService,
                 logMill,
-                miruWrites,
+                mapper,
+                miruWriteClient,
                 payloads);
 
             new MiruStumptownInternalLogAppender("unknownDatacenter",
@@ -155,19 +157,21 @@ public class MiruStumptownMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
             MiruStumptownService queryService = new MiruQueryStumptownInitializer().initialize(renderer);
 
+            //TODO expose to config TimeUnit.MINUTES.toMillis(10)
+            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
             List<MiruManagePlugin> plugins = Lists.newArrayList(
                 new MiruManagePlugin("eye-open", "Status", "/stumptown/status",
                     StumptownStatusPluginEndpoints.class,
                     new StumptownStatusPluginRegion("soy.stumptown.page.stumptownStatusPluginRegion", renderer, logMill)),
                 new MiruManagePlugin("stats", "Trends", "/stumptown/trends",
                     StumptownTrendsPluginEndpoints.class,
-                    new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, miruReaders)),
+                    new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, readerRequestHelpers)),
                 new MiruManagePlugin("search", "Query", "/stumptown/query",
                     StumptownQueryPluginEndpoints.class,
                     new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion",
                         "soy.stumptown.page.stumptownQueryLogEvent",
                         "soy.stumptown.page.stumptownQueryNoEvents",
-                        renderer, miruReaders, payloads)));
+                        renderer, readerRequestHelpers, payloads)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

@@ -149,7 +149,7 @@
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-marshall-primatives</artifactId>
         </dependency>
-<!--        <dependency>
+        <!--        <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-inmemory</artifactId>
             <type>jar</type>
@@ -167,6 +167,10 @@
         <dependency>
             <groupId>com.jivesoftware.os.upena</groupId>
             <artifactId>upena-routing-shared</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
         </dependency>
     </dependencies>
 </project>

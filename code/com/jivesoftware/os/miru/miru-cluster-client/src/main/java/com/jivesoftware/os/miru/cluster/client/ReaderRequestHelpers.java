@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.manage.deployable;
+package com.jivesoftware.os.miru.cluster.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
@@ -10,7 +10,7 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class ReaderRequestHelpers {
 
-    private final MiruClusterRegistry clusterRegistry;
+    private final MiruClusterClient clusterClient;
     private final ObjectMapper objectMapper;
 
     private final Random random = new Random();
@@ -30,8 +30,8 @@ public class ReaderRequestHelpers {
         .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
     private final long ignoreHostThatHaveNotHeartBeatedInMillis;
 
-    public ReaderRequestHelpers(MiruClusterRegistry clusterRegistry, ObjectMapper objectMapper, long ignoreHostThatHaveNotHeartBeatedInMillis) {
-        this.clusterRegistry = clusterRegistry;
+    public ReaderRequestHelpers(MiruClusterClient clusterClient, ObjectMapper objectMapper, long ignoreHostThatHaveNotHeartBeatedInMillis) {
+        this.clusterClient = clusterClient;
         this.objectMapper = objectMapper;
         this.ignoreHostThatHaveNotHeartBeatedInMillis = ignoreHostThatHaveNotHeartBeatedInMillis;
     }
@@ -50,7 +50,7 @@ public class ReaderRequestHelpers {
 
     public List<RequestHelper> get(Optional<MiruHost> excludingHost) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
-        for (HostHeartbeat heartbeat : clusterRegistry.getAllHosts()) {
+        for (HostHeartbeat heartbeat : clusterClient.allhosts()) {
             if (heartbeat.heartbeat > (System.currentTimeMillis() - ignoreHostThatHaveNotHeartBeatedInMillis)) {
                 hosts.add(heartbeat.host);
             }

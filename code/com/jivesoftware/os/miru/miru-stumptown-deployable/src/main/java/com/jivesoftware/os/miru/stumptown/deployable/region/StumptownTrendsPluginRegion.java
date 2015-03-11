@@ -12,12 +12,14 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.cluster.client.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -47,11 +49,11 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final RequestHelper[] miruReaders;
+    private final ReaderRequestHelpers miruReaders;
 
     public StumptownTrendsPluginRegion(String template,
         MiruSoyRenderer renderer,
-        RequestHelper[] miruReaders) {
+        ReaderRequestHelpers miruReaders) {
         this.template = template;
         this.renderer = renderer;
         this.miruReaders = miruReaders;
@@ -100,7 +102,7 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
 
                 MiruResponse<TrendingAnswer> response = null;
                 MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
-                for (RequestHelper requestHelper : miruReaders) {
+                for (RequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
                     try {
                         @SuppressWarnings("unchecked")
                         MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
