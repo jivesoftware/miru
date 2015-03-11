@@ -5,16 +5,15 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -37,6 +36,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -61,15 +61,33 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
 
     public static class TrendingPluginRegionInput {
 
-        final String logLevel;
+        final String logLevels;
+
+        final int fromAgo;
+        final int toAgo;
+        final String fromTimeUnit;
+        final String toTimeUnit;
+        final int buckets;
+
         final String service;
         final String aggregateAroundField;
 
-        public TrendingPluginRegionInput(String logLevel, String service, String aggregateAroundField) {
-            this.logLevel = logLevel;
+        final String strategy;
+
+        public TrendingPluginRegionInput(String logLevels, int fromAgo, int toAgo, String fromTimeUnit, String toTimeUnit, int buckets, String service,
+            String aggregateAroundField,
+            String strategy) {
+            this.logLevels = logLevels;
+            this.fromAgo = fromAgo;
+            this.toAgo = toAgo;
+            this.fromTimeUnit = fromTimeUnit;
+            this.toTimeUnit = toTimeUnit;
+            this.buckets = buckets;
             this.service = service;
             this.aggregateAroundField = aggregateAroundField;
+            this.strategy = strategy;
         }
+
     }
 
     @Override
@@ -78,24 +96,38 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
         try {
             if (optionalInput.isPresent()) {
                 TrendingPluginRegionInput input = optionalInput.get();
-                int fromHoursAgo = 8;
-                int toHoursAgo = 0;
+                int fromAgo = input.fromAgo > input.toAgo ? input.fromAgo : input.toAgo;
+                int toAgo = input.fromAgo > input.toAgo ? input.toAgo : input.fromAgo;
 
-                data.put("logLevel", input.logLevel);
+                Set<String> logLevelSet = Sets.newHashSet(Splitter.on(',').split(input.logLevels));
+                data.put("logLevels", ImmutableMap.of(
+                    "trace", logLevelSet.contains("TRACE"),
+                    "debug", logLevelSet.contains("DEBUG"),
+                    "info", logLevelSet.contains("INFO"),
+                    "warn", logLevelSet.contains("WARN"),
+                    "error", logLevelSet.contains("ERROR")));
+
+                data.put("fromTimeUnit", input.fromTimeUnit);
+                data.put("fromAgo", String.valueOf(fromAgo));
+                data.put("toAgo", String.valueOf(toAgo));
+                data.put("toTimeUnit", input.toTimeUnit);
+                data.put("buckets", String.valueOf(input.buckets));
                 data.put("service", input.service);
                 data.put("aggregateAroundField", input.aggregateAroundField);
-                data.put("fromHoursAgo", fromHoursAgo);
                 data.put("aggregatableFields", Arrays.asList("service", "instance", "level", "thread", "logger", "exceptionClass", "methodName", "lineNumber"));
 
-                SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
-                long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
-                final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
-                final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
-                final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
+                data.put("strategy", input.strategy);
+                data.put("strategyFields", Arrays.asList(TrendingQuery.Strategy.LEADER.name(), TrendingQuery.Strategy.LINEAR_REGRESSION.name()));
+
+                TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
+                TimeUnit toTimeUnit = TimeUnit.valueOf(input.toTimeUnit);
+                MiruTimeRange miruTimeRange = QueryUtils.toMiruTimeRange(fromAgo, fromTimeUnit, toAgo, toTimeUnit, input.buckets);
+
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "level", Arrays.asList(String.valueOf(input.logLevel))));
+
+                QueryUtils.addFieldFilter(fieldFilters, fieldFilters, "level", input.logLevels);
                 if (input.service != null) {
-                    fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "service", Arrays.asList(input.service)));
+                    QueryUtils.addFieldFilter(fieldFilters, fieldFilters, "service", input.service);
                 }
 
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);
@@ -107,8 +139,8 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                         @SuppressWarnings("unchecked")
                         MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
                             new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
-                                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
-                                    new MiruTimeRange(fromTime, toTime),
+                                new TrendingQuery(TrendingQuery.Strategy.valueOf(input.strategy),
+                                    miruTimeRange,
                                     null,
                                     30,
                                     constraintsFilter,

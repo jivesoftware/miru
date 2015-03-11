@@ -32,15 +32,22 @@ public class StumptownTrendsPluginEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response getTrends(@QueryParam("logLevel") @DefaultValue("ERROR") String logLevel,
+    public Response getTrends(@QueryParam("logLevels") @DefaultValue("ERROR") String logLevels,
+        @QueryParam("fromAgo") @DefaultValue("8") int fromAgo,
+        @QueryParam("toAgo") @DefaultValue("0") int toAgo,
+        @QueryParam("fromTimeUnit") @DefaultValue("MINUTES") String fromTimeUnit,
+        @QueryParam("toTimeUnit") @DefaultValue("MINUTES") String toTimeUnit,
+        @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("service") @DefaultValue("") String service,
-        @QueryParam("aggregateAroundField") @DefaultValue("service") String aggregateAroundField) {
+        @QueryParam("aggregateAroundField") @DefaultValue("service") String aggregateAroundField,
+        @QueryParam("strategy") @DefaultValue("LINEAR_REGRESSION") String strategy
+    ) {
 
         if (service.trim().isEmpty()) {
             service = null;
         }
         String rendered = miruStumptownService.renderPlugin(trendingPluginRegion,
-            Optional.of(new TrendingPluginRegionInput(logLevel, service, aggregateAroundField)));
+            Optional.of(new TrendingPluginRegionInput(logLevels, fromAgo, toAgo, fromTimeUnit, toTimeUnit, buckets, service, aggregateAroundField, strategy)));
         return Response.ok(rendered).build();
     }
 }

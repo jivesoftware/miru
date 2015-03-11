@@ -8,13 +8,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -199,17 +196,9 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
         int fromAgo = input.fromAgo > input.toAgo ? input.fromAgo : input.toAgo;
         int toAgo = input.fromAgo > input.toAgo ? input.toAgo : input.fromAgo;
 
-        SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
-        // e.g. mpb=10,000, current=24,478, modulus=4,478, ceiling=30,000
         TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
         TimeUnit toTimeUnit = TimeUnit.valueOf(input.toTimeUnit);
-        long rangeMillis = fromTimeUnit.toMillis(fromAgo) - toTimeUnit.toMillis(toAgo);
-        long millisPerBucket = rangeMillis / input.buckets;
-        long jiveToTime = new JiveEpochTimestampProvider().getTimestamp() - toTimeUnit.toMillis(toAgo);
-        long jiveModulusTime = jiveToTime % millisPerBucket;
-        long jiveCeilingTime = jiveToTime - jiveModulusTime + millisPerBucket;
-        final long packCeilingTime = snowflakeIdPacker.pack(jiveCeilingTime, 0, 0);
-        final long packLookbackTime = packCeilingTime - snowflakeIdPacker.pack(rangeMillis, 0, 0);
+        MiruTimeRange miruTimeRange = QueryUtils.toMiruTimeRange(fromAgo, fromTimeUnit, toAgo, toTimeUnit, input.buckets);
 
         MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
         MiruResponse<StumptownAnswer> response = null;
@@ -217,19 +206,19 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
             try {
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                 List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
-                addFieldFilter(fieldFilters, notFieldFilters, "cluster", input.cluster);
-                addFieldFilter(fieldFilters, notFieldFilters, "host", input.host);
-                addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
-                addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
-                addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
-                addFieldFilter(fieldFilters, notFieldFilters, "thread", input.thread);
-                addFieldFilter(fieldFilters, notFieldFilters, "methodName", input.method);
-                addFieldFilter(fieldFilters, notFieldFilters, "lineNumber", input.line);
-                addFieldFilter(fieldFilters, notFieldFilters, "logger", input.logger);
-                addFieldFilter(fieldFilters, notFieldFilters, "message", input.message.toLowerCase());
-                addFieldFilter(fieldFilters, notFieldFilters, "level", input.logLevel);
-                addFieldFilter(fieldFilters, notFieldFilters, "exceptionClass", input.exceptionClass);
-                addFieldFilter(fieldFilters, notFieldFilters, "thrownStackTrace", input.thrown.toLowerCase());
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "cluster", input.cluster);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "host", input.host);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "thread", input.thread);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "methodName", input.method);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "lineNumber", input.line);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "logger", input.logger);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "message", input.message.toLowerCase());
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "level", input.logLevel);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "exceptionClass", input.exceptionClass);
+                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "thrownStackTrace", input.thrown.toLowerCase());
 
                 List<MiruFilter> notFilters = null;
                 if (!notFieldFilters.isEmpty()) {
@@ -251,14 +240,14 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                 MiruResponse<StumptownAnswer> analyticsResponse = requestHelper.executeRequest(
                     new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
                         new StumptownQuery(
-                            new MiruTimeRange(packLookbackTime, packCeilingTime),
+                            miruTimeRange,
                             input.buckets,
                             input.messageCount,
                             MiruFilter.NO_FILTER,
                             stumptownFilters),
                         MiruSolutionLogLevel.NONE),
                     StumptownConstants.STUMPTOWN_PREFIX + StumptownConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                    new Class[] { StumptownAnswer.class },
+                    new Class[]{StumptownAnswer.class},
                     null);
                 response = analyticsResponse;
                 if (response != null && response.answer != null) {
@@ -267,13 +256,11 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                     log.warn("Empty stumptown response from {}, trying another", requestHelper);
                 }
             } catch (Exception e) {
-                log.warn("Failed stumptown request to {}, trying another", new Object[] { requestHelper }, e);
+                log.warn("Failed stumptown request to {}, trying another", new Object[]{requestHelper}, e);
             }
         }
 
         if (response != null && response.answer != null) {
-            final long startBucketIndex = packLookbackTime / millisPerBucket;
-            data.put("startBucketIndex", String.valueOf(startBucketIndex));
             data.put("elapse", String.valueOf(response.totalElapsed));
 
             Map<String, StumptownAnswer.Waveform> waveforms = response.answer.waveforms;
@@ -293,7 +280,6 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
             data.put("waveforms", waveformData);
             data.put("fromAgoSecs", fromTimeUnit.toSeconds(fromAgo));
             data.put("toAgoSecs", toTimeUnit.toSeconds(toAgo));
-
 
             List<Long> activityTimes = Lists.newArrayList();
             for (StumptownAnswer.Waveform waveform : waveforms.values()) {
@@ -320,8 +306,8 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                             .put("line", firstNonNull(input.lineNumber, ""))
                             .put("message", firstNonNull(input.message, ""))
                             .put("timestamp", input.timestamp != null
-                                ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
-                                : "")
+                                    ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
+                                    : "")
                             .put("exceptionClass", firstNonNull(input.exceptionClass, ""))
                             .put("thrownStackTrace", input.thrownStackTrace != null ? Arrays.asList(input.thrownStackTrace) : Arrays.asList())
                             .build()));
@@ -333,33 +319,6 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
         }
 
         return data;
-    }
-
-    private void addFieldFilter(List<MiruFieldFilter> fieldFilters, List<MiruFieldFilter> notFilters, String fieldName, String values) {
-        if (values != null) {
-            values = values.trim();
-            String[] valueArray = values.split("\\s*,\\s*");
-            List<String> terms = Lists.newArrayList();
-            List<String> notTerms = Lists.newArrayList();
-            for (String value : valueArray) {
-                String trimmed = value.trim();
-                if (!trimmed.isEmpty()) {
-                    if (trimmed.startsWith("!")) {
-                        if (trimmed.length() > 1) {
-                            notTerms.add(trimmed.substring(1));
-                        }
-                    } else {
-                        terms.add(trimmed);
-                    }
-                }
-            }
-            if (!terms.isEmpty()) {
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, terms));
-            }
-            if (!notTerms.isEmpty()) {
-                notFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, notTerms));
-            }
-        }
     }
 
     @Override

@@ -226,8 +226,6 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
 
         Map<String, Object> data = Maps.newHashMap();
         if (response != null && response.answer != null) {
-            final long startBucketIndex = packLookbackTime / millisPerBucket;
-            data.put("startBucketIndex", String.valueOf(startBucketIndex));
             data.put("elapse", String.valueOf(response.totalElapsed));
 
             Map<String, AnalyticsAnswer.Waveform> waveforms = response.answer.waveforms;

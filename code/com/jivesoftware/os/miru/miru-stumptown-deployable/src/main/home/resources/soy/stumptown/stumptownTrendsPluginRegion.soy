@@ -3,12 +3,18 @@
 /**
  * Trending plugin page
  *
- * @param? logLevel
+ * @param? logLevels
+ * @param? fromAgo
+ * @param? toAgo
+ * @param? fromTimeUnit
+ * @param? toTimeUnit
+ * @param? buckets
  * @param? service
  * @param? aggregateAroundField
  * @param? aggregatableFields
+ * @param? strategy
+ * @param? strategyFields
  * @param? results
- * @param? fromHoursAgo
  * @param? summary
  * @param? elapse
  */
@@ -20,17 +26,67 @@
                 data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
                 <table>
                     <tr>
+                        <td>
+                            From
+                        </td><td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                                class="form-control" placeholder="To Time Ago" value="{$toAgo?:''}"
+                                name="toAgo" id="toTimePicker" data-original-title="" title="">
+                        </td><td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="ToTimeUnit"
+                                name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td><td>
+                            &nbsp;to&nbsp;
+                        </td><td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                             class="form-control" placeholder="From Time Ago" value="{$fromAgo?:''}"
+                             name="fromAgo" id="fromTimePicker" data-original-title="" title="">
+                        </td><td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="FromTimeUnit"
+                                name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td><td>
+                            ago broken into Buckets
+                        </td><td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="form-control" placeholder="Buckets" value="{$buckets?:''}"
+                                name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Log Level&nbsp;&nbsp</td>
                         <td>
-                            <select style="width:280px; padding-left:10px;"
-                                class="form-control" placeholder="Log Level"
-                                name="logLevel" id="logLevelPicker" data-original-title="" title="">
-                                <option value="TRACE" {if $logLevel == 'TRACE'}selected="selected"{/if}>TRACE</option>
-                                <option value="DEBUG" {if $logLevel == 'DEBUG'}selected="selected"{/if}>DEBUG</option>
-                                <option value="INFO" {if $logLevel == 'INFO'}selected="selected"{/if}>INFO</option>
-                                <option value="WARN" {if $logLevel == 'WARN'}selected="selected"{/if}>WARN</option>
-                                <option value="ERROR" {if $logLevel == 'ERROR'}selected="selected"{/if}>ERROR</option>
-                            </select>
+                            <div class="checkbox">
+                                <label><input type="checkbox" name="logLevels" value="TRACE" {if $logLevels.trace}checked="checked"{/if}>
+                                Trace &nbsp;</label>
+                            </div>
+                            <div class="checkbox">
+                                <label><input type="checkbox" name="logLevels" value="DEBUG" {if $logLevels.debug}checked="checked"{/if}>
+                                Debug &nbsp;</label>
+                            </div>
+                            <div class="checkbox">
+                                <label><input type="checkbox" name="logLevels" value="INFO" {if $logLevels.info}checked="checked"{/if}>
+                                Info &nbsp;</label>
+                            </div>
+                            <div class="checkbox">
+                                <label><input type="checkbox" name="logLevels" value="WARN" {if $logLevels.warn}checked="checked"{/if}>
+                                Warn &nbsp;</label>
+                            </div>
+                            <div class="checkbox">
+                                <label><input type="checkbox" name="logLevels" value="ERROR" {if $logLevels.error}checked="checked"{/if}>
+                                Error &nbsp;</label>
+                            </div>
                         </td>
                     </tr>
                     <tr>
@@ -40,7 +96,20 @@
                                 {foreach $af in $aggregatableFields}
                                     <label style="text-align: left;" class="btn btn-default btn-group-md btn-sm {if $aggregateAroundField == $af}{sp}active{sp}{/if}">
                                         <input {if $aggregateAroundField == $af}{sp}checked{sp}{/if} onclick="this.form.submit()" type="radio" 
-                                        name="aggregateAroundField" value="{$aggregatableFields}">{$af}
+                                        name="aggregateAroundField" value="{$af}">{$af}
+                                    </label>
+                                {/foreach}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Strategy&nbsp;&nbsp</td>
+                        <td>
+                            <div class="btn-group-horizontal" data-toggle="buttons">
+                                {foreach $s in $strategyFields}
+                                    <label style="text-align: left;" class="btn btn-default btn-group-md btn-sm {if $strategy == $s}{sp}active{sp}{/if}">
+                                        <input {if $strategy == $s}{sp}checked{sp}{/if} onclick="this.form.submit()" type="radio" 
+                                        name="strategy" value="{$s}">{$s}
                                     </label>
                                 {/foreach}
                             </div>
@@ -58,12 +127,7 @@
             <div class="panel-body">
                 <table>
                     <tr>
-                        {if $service}
-                            <td>Service</td>
-                            <td>Instance</td>
-                        {else}
-                            <td>Service</td>
-                        {/if}
+                        <td>{$aggregateAroundField}</td>
                         <td>Rank</td>
                         <td>Action</td>
                         <td>Waveform</td>
