@@ -4,6 +4,7 @@
  * Trending plugin page
  *
  * @param? logLevels
+ * @param? logLevelList
  * @param? fromAgo
  * @param? toAgo
  * @param? fromTimeUnit
@@ -138,14 +139,14 @@
                                 <td>{$service}</td>
                                 <td>{$result.name}</td>
                             {else}
-                                <td><a href="#" onclick="document.location.href='/stumptown/trends?aggregateAroundField=instance&amp;service={$result.name}&amp;logLevel='+document.getElementById('logLevelPicker').value; return false;">{$result.name}</a></td>
+                                <td><a href="#" onclick="document.location.href='/stumptown/trends?aggregateAroundField=instance&amp;service={$result.name}&amp;logLevels='+document.getElementById('logLevelPicker').value; return false;">{$result.name}</a></td>
                             {/if}
                             <td>{$result.rank}</td>
                             <td>
                                 {if $service}
-                                    <a href="/stumptown/query?service={$service}&amp;instance={$result.name}&amp;fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;logLevels={$logLevel}">Query</a>
+                                    <a href="/stumptown/query?service={$service}&amp;instance={$result.name}&amp;fromAgo={$fromAgo}&amp;fromTimeUnit={$fromTimeUnit}&amp;toAgo={$toAgo}&amp;toTimeUnit={$toTimeUnit}&amp;logLevels={$logLevelList}">Query</a>
                                 {else}
-                                    <a href="/stumptown/query?service={$result.name}&amp;fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;logLevels={$logLevel}">Query</a>
+                                    <a href="/stumptown/query?service={$result.name}&amp;fromAgo={$fromAgo}&amp;fromTimeUnit={$fromTimeUnit}&amp;toAgo={$toAgo}&amp;toTimeUnit={$toTimeUnit}&amp;logLevels={$logLevelList}">Query</a>
                                 {/if}
                             </td>
                             <td><img alt="waveform" src="{$result.waveform}"></td>

@@ -107,6 +107,8 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                     "warn", logLevelSet.contains("WARN"),
                     "error", logLevelSet.contains("ERROR")));
 
+                data.put("logLevelList", input.logLevels);
+
                 data.put("fromTimeUnit", input.fromTimeUnit);
                 data.put("fromAgo", String.valueOf(fromAgo));
                 data.put("toAgo", String.valueOf(toAgo));
