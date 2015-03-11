@@ -32,9 +32,9 @@ public class MiruLogEvent {
         String version,
         String level,
         String threadName,
+        String loggerName,
         String methodName,
         String lineNumber,
-        String loggerName,
         String message,
         String timestamp,
         String exceptionClass,
@@ -47,9 +47,9 @@ public class MiruLogEvent {
         this.version = version;
         this.level = level;
         this.threadName = threadName;
+        this.loggerName = loggerName;
         this.methodName = methodName;
         this.lineNumber = lineNumber;
-        this.loggerName = loggerName;
         this.message = message;
         this.timestamp = timestamp;
         this.exceptionClass = exceptionClass;

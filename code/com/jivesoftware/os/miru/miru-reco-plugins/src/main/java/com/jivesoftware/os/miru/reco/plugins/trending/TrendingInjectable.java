@@ -107,7 +107,7 @@ public class TrendingInjectable {
                 divideTimeRangeIntoNSegments = Math.max(lastBucket, lastRelativeBucket);
 
                 LOG.debug("BUCKETS: {} - {} {} - {} segs:{} newSegs:{}",
-                    new Object[]{firstBucket, lastBucket, firstRelativeBucket, lastRelativeBucket,
+                    new Object[] { firstBucket, lastBucket, firstRelativeBucket, lastRelativeBucket,
                         request.query.divideTimeRangeIntoNSegments, divideTimeRangeIntoNSegments
                     });
 
@@ -115,14 +115,14 @@ public class TrendingInjectable {
 
             MiruResponse<DistinctsAnswer> distinctsResponse = miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>("trendingDistincts", new DistinctsQuestion(distincts, new MiruRequest<>(
-                            request.tenantId,
-                            request.actorId,
-                            request.authzExpression,
-                            new DistinctsQuery(combinedTimeRange,
-                                request.query.aggregateCountAroundField,
-                                request.query.distinctsFilter,
-                                request.query.distinctPrefixes),
-                            request.logLevel))),
+                    request.tenantId,
+                    request.actorId,
+                    request.authzExpression,
+                    new DistinctsQuery(combinedTimeRange,
+                        request.query.aggregateCountAroundField,
+                        request.query.distinctsFilter,
+                        request.query.distinctPrefixes),
+                    request.logLevel))),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(),
                 DistinctsAnswer.EMPTY_RESULTS,
@@ -137,20 +137,20 @@ public class TrendingInjectable {
                     new MiruFilter(MiruFilterOperation.and,
                         false,
                         Collections.singletonList(new MiruFieldFilter(
-                                MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(term))),
+                            MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(term))),
                         null));
             }
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>("trendingAnalytics", new AnalyticsQuestion(analytics, new MiruRequest<>(
-                            request.tenantId,
-                            request.actorId,
-                            request.authzExpression,
-                            new AnalyticsQuery(combinedTimeRange,
-                                divideTimeRangeIntoNSegments,
-                                request.query.constraintsFilter,
-                                constraintsFilters),
-                            request.logLevel))),
+                    request.tenantId,
+                    request.actorId,
+                    request.authzExpression,
+                    new AnalyticsQuery(combinedTimeRange,
+                        divideTimeRangeIntoNSegments,
+                        request.query.constraintsFilter,
+                        constraintsFilters),
+                    request.logLevel))),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(combinedTimeRange),
                 AnalyticsAnswer.EMPTY_RESULTS,
@@ -255,15 +255,15 @@ public class TrendingInjectable {
 
             return new MiruResponse<>(new TrendingAnswer(sortedTrendies),
                 ImmutableList.<MiruSolution>builder()
-                .addAll(distinctsResponse.solutions)
-                .addAll(analyticsResponse.solutions)
-                .build(),
+                    .addAll(distinctsResponse.solutions)
+                    .addAll(analyticsResponse.solutions)
+                    .build(),
                 distinctsResponse.totalElapsed + analyticsResponse.totalElapsed,
                 distinctsResponse.missingSchema || analyticsResponse.missingSchema,
                 ImmutableList.<Integer>builder()
-                .addAll(distinctsResponse.incompletePartitionIds)
-                .addAll(analyticsResponse.incompletePartitionIds)
-                .build(),
+                    .addAll(distinctsResponse.incompletePartitionIds)
+                    .addAll(analyticsResponse.incompletePartitionIds)
+                    .build(),
                 solutionLog);
         } catch (MiruPartitionUnavailableException e) {
             throw e;

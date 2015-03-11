@@ -205,7 +205,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
         TimeUnit toTimeUnit = TimeUnit.valueOf(input.toTimeUnit);
         long rangeMillis = fromTimeUnit.toMillis(fromAgo) - toTimeUnit.toMillis(toAgo);
         long millisPerBucket = rangeMillis / input.buckets;
-        long jiveToTime = new JiveEpochTimestampProvider().getTimestamp() - fromTimeUnit.toMillis(toAgo);
+        long jiveToTime = new JiveEpochTimestampProvider().getTimestamp() - toTimeUnit.toMillis(toAgo);
         long jiveModulusTime = jiveToTime % millisPerBucket;
         long jiveCeilingTime = jiveToTime - jiveModulusTime + millisPerBucket;
         final long packCeilingTime = snowflakeIdPacker.pack(jiveCeilingTime, 0, 0);
@@ -302,7 +302,6 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                 }
             }
             List<MiruLogEvent> logEvents = Lists.newArrayList(payloads.multiGet(tenantId, activityTimes, MiruLogEvent.class));
-            Collections.reverse(logEvents);
             if (!logEvents.isEmpty()) {
                 data.put("logEvents", Lists.transform(logEvents, new Function<MiruLogEvent, String>() {
                     @Override

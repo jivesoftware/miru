@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -45,10 +46,11 @@ public class Stumptown {
         MiruIntIterator iter = bitmaps.intIterator(answer);
         for (long i = 0; i < cardinality && iter.hasNext(); i++) {
             int index = iter.next();
-            if (i > (cardinality - desiredNumberOfResults)) {
+            if (i > (cardinality - 1 - desiredNumberOfResults)) {
                 results.add(internExtern.extern(requestContext.getActivityIndex().get(tenantId, index), schema));
             }
         }
+        Collections.reverse(results); // chronologically descending (for proper alignment when merging/appending older partitions)
 
         return new Waveform(bitmaps.boundedCardinalities(answer, indexes), results);
     }
