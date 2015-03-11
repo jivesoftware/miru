@@ -22,6 +22,7 @@ import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.api.HealthTimer;
 import com.jivesoftware.os.jive.utils.health.api.TimerHealthCheckConfig;
 import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
+import com.jivesoftware.os.jive.utils.http.client.HttpResponse;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
@@ -99,7 +100,10 @@ public class MiruSeaAnomalyIntakeService {
             String jsonActivities = activityMapper.writeValueAsString(activities);
             while (true) {
                 try {
-                    miruWriterClient.postJson("", miruIngressEndpoint, jsonActivities); // TODO expose "" tenant to config?
+                    HttpResponse postJson = miruWriterClient.postJson("", miruIngressEndpoint, jsonActivities); // TODO expose "" tenant to config?
+                    if (postJson.getStatusCode() < 200 || postJson.getStatusCode() >= 300) {
+                        throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
+                    }
                     log.inc("ingressed");
                     break;
                 } catch (Exception x) {
