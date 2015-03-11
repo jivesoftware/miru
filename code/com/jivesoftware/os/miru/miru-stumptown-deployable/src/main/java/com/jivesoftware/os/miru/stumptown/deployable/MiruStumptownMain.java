@@ -115,7 +115,7 @@ public class MiruStumptownMain {
 
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-write", "main"));  // TODO expose to conf
+                .getConnections("miru-writer", "main"));  // TODO expose to conf
 
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()

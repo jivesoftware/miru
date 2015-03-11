@@ -15,7 +15,8 @@
  */
 package com.jivesoftware.os.miru.sea.anomaly.deployable;
 
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.StringDefault;
 
@@ -34,8 +35,9 @@ public class MiruSeaAnomalyIntakeInitializer {
     MiruSeaAnomalyIntakeService initialize(MiruSeaAnomalyIntakeConfig config,
         SeaAnomalySchemaService seaAnomalySchemaService,
         SampleTrawl logMill,
-        RequestHelper[] miruWrites) {
+        ObjectMapper intakeMapper,
+        TenantAwareHttpClient<String> miruWriteClient) {
 
-        return new MiruSeaAnomalyIntakeService(seaAnomalySchemaService, logMill, config.getMiruIngressEndpoint(), miruWrites);
+        return new MiruSeaAnomalyIntakeService(seaAnomalySchemaService, logMill, config.getMiruIngressEndpoint(), intakeMapper, miruWriteClient);
     }
 }

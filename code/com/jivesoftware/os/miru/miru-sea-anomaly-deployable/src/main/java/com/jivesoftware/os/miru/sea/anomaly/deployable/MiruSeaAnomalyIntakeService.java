@@ -15,17 +15,19 @@
  */
 package com.jivesoftware.os.miru.sea.anomaly.deployable;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.api.HealthTimer;
 import com.jivesoftware.os.jive.utils.health.api.TimerHealthCheckConfig;
 import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import java.util.List;
 import java.util.Random;
 import org.merlin.config.defaults.DoubleDefault;
@@ -58,16 +60,19 @@ public class MiruSeaAnomalyIntakeService {
     private final SeaAnomalySchemaService seaAnomalySchemaService;
     private final SampleTrawl logMill;
     private final String miruIngressEndpoint;
-    private final RequestHelper[] miruWriter;
+    private final ObjectMapper activityMapper;
+    private final TenantAwareHttpClient<String> miruWriterClient;
 
     public MiruSeaAnomalyIntakeService(SeaAnomalySchemaService seaAnomalySchemaService,
         SampleTrawl logMill,
         String miruIngressEndpoint,
-        RequestHelper[] miruWrites) {
+        ObjectMapper activityMapper,
+        TenantAwareHttpClient<String> miruWriterClient) {
         this.seaAnomalySchemaService = seaAnomalySchemaService;
         this.logMill = logMill;
         this.miruIngressEndpoint = miruIngressEndpoint;
-        this.miruWriter = miruWrites;
+        this.activityMapper = activityMapper;
+        this.miruWriterClient = miruWriterClient;
     }
 
     void ingressEvents(List<AnomalyMetric> events) throws Exception {
@@ -87,15 +92,14 @@ public class MiruSeaAnomalyIntakeService {
         }
     }
 
-    private void ingress(List<MiruActivity> activities) {
+    private void ingress(List<MiruActivity> activities) throws JsonProcessingException {
         int index = 0;
         ingressLatency.startTimer();
         try {
+            String jsonActivities = activityMapper.writeValueAsString(activities);
             while (true) {
                 try {
-                    index = rand.nextInt(miruWriter.length);
-                    RequestHelper requestHelper = miruWriter[index];
-                    requestHelper.executeRequest(activities, miruIngressEndpoint, String.class, null);
+                    miruWriterClient.postJson("", miruIngressEndpoint, jsonActivities); // TODO expose "" tenant to config?
                     log.inc("ingressed");
                     break;
                 } catch (Exception x) {
