@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.wal.partition;
 
-import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
@@ -9,10 +8,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
-import com.jivesoftware.os.mlogger.core.MetricLogger;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
@@ -24,16 +20,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
-
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
-    private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activitySipWAL;
 
     private final ConcurrentHashMap<TenantPartitionWriterKey, AtomicInteger> cursors = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<TenantWriterKey, MiruPartitionId> tenantWriterLargestPartition = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<TenantPartitionKey, Long> tenantPartitionSmallestTimestamp = new ConcurrentHashMap<>();
     private final Cache<MiruTenantId, MiruPartitionId> tenantLargestPartition = CacheBuilder.<MiruTenantId, MiruPartitionId>newBuilder()
         .expireAfterWrite(1, TimeUnit.MINUTES)
         .build();
@@ -41,31 +33,10 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
 
     public MiruRCVSPartitionIdProvider(int totalCapacity,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry,
-        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
         this.writerPartitionRegistry = writerPartitionRegistry;
-        this.activityWAL = activityWAL;
         this.activitySipWAL = activitySipWAL;
-        // TODO - wire up a task that periodically checks how many writers we have and divide totalCapacity by that number
         this.perClientCapacity = totalCapacity;
-    }
-
-    @Override
-    public Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception {
-        final AtomicReference<MiruPartitionId> latestPartitionId = new AtomicReference<>();
-        writerPartitionRegistry.getValues(MiruVoidByte.INSTANCE, tenantId, null, null, 1_000, false, null, null, new CallbackStream<MiruPartitionId>() {
-            @Override
-            public MiruPartitionId callback(MiruPartitionId partitionId) throws Exception {
-                if (partitionId != null) {
-                    MiruPartitionId latest = latestPartitionId.get();
-                    if (latest == null || partitionId.compareTo(latest) > 0) {
-                        latestPartitionId.set(partitionId);
-                    }
-                }
-                return partitionId;
-            }
-        });
-        return Optional.fromNullable(latestPartitionId.get());
     }
 
     @Override

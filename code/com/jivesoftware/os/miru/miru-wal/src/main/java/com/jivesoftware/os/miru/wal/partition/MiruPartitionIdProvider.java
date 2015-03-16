@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.wal.partition;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 
@@ -10,8 +9,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
  * @author jonathan
  */
 public interface MiruPartitionIdProvider {
-
-    Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception;
 
     MiruPartitionCursor getCursor(MiruTenantId tenantId, int writerId) throws Exception;
 

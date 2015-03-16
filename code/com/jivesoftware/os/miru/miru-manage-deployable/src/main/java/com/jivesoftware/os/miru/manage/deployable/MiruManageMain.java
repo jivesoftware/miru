@@ -204,7 +204,6 @@ public class MiruManageMain {
 
             MiruPartitionIdProvider partitionIdProvider = new MiruRCVSPartitionIdProvider(0,
                 miruWAL.getWriterPartitionRegistry(),
-                miruWAL.getActivityWAL(),
                 miruWAL.getActivitySipWAL());
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);

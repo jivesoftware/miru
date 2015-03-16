@@ -93,7 +93,6 @@ public class MiruManageServiceTest {
 
         MiruPartitionIdProvider partitionIdProvider = new MiruRCVSPartitionIdProvider(0,
             miruWAL.getWriterPartitionRegistry(),
-            miruWAL.getActivityWAL(),
             miruWAL.getActivitySipWAL());
 
         clusterRegistry.registerSchema(tenantId, miruSchema);

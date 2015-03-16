@@ -58,7 +58,6 @@ public class MiruClientInitializer {
 
         MiruPartitionIdProvider miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(config.getTotalCapacity(),
             miruWAL.getWriterPartitionRegistry(),
-            miruWAL.getActivityWAL(),
             miruWAL.getActivitySipWAL());
 
         MiruPartitioner miruPartitioner = new MiruPartitioner(writerId,

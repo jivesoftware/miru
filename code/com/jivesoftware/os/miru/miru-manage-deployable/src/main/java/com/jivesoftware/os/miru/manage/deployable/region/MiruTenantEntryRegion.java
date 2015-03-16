@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -66,10 +65,10 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         try {
             List<MiruTopologyStatus> statusForTenant = clusterRegistry.getTopologyStatusForTenant(tenant);
 
-            Optional<MiruPartitionId> latestPartitionId = partitionIdProvider.getLatestPartitionIdForTenant(tenant);
+            MiruPartitionId latestPartitionId = partitionIdProvider.getLargestPartitionIdAcrossAllWriters(tenant);
 
-            if (latestPartitionId.isPresent()) {
-                for (MiruPartitionId latest = latestPartitionId.get(); latest != null; latest = latest.prev()) {
+            if (latestPartitionId != null) {
+                for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
                     MiruActivityWALStatus status = activityWALReader.getStatus(tenant, latest);
                     partitionsMap.put(latest, new PartitionBean(latest.getId(), status.count, status.begins.size(), status.ends.size()));
                 }

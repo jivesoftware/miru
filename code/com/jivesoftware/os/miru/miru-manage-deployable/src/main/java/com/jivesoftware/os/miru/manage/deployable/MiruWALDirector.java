@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
@@ -48,9 +47,9 @@ public class MiruWALDirector {
     public void repairActivityWAL() throws Exception {
         List<MiruTenantId> tenantIds = activityLookupTable.allTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
-            Optional<MiruPartitionId> latestPartitionId = partitionIdProvider.getLatestPartitionIdForTenant(tenantId);
-            if (latestPartitionId.isPresent()) {
-                for (MiruPartitionId partitionId = latestPartitionId.get().prev(); partitionId != null; partitionId = partitionId.prev()) {
+            MiruPartitionId latestPartitionId = partitionIdProvider.getLargestPartitionIdAcrossAllWriters(tenantId);
+            if (latestPartitionId != null) {
+                for (MiruPartitionId partitionId = latestPartitionId.prev(); partitionId != null; partitionId = partitionId.prev()) {
                     MiruActivityWALStatus status = activityWALReader.getStatus(tenantId, partitionId);
                     if (!status.begins.equals(status.ends)) {
                         for (int begin : status.begins) {

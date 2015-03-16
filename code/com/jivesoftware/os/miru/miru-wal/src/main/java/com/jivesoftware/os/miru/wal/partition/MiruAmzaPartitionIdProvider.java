@@ -15,7 +15,6 @@
  */
 package com.jivesoftware.os.miru.wal.partition;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaTable;
 import com.jivesoftware.os.amza.shared.RowIndexKey;
@@ -44,11 +43,6 @@ public class MiruAmzaPartitionIdProvider implements MiruPartitionIdProvider {
         this.latestPartitions = amzaService.getTable(new TableName("master", "latestPartitions", null, null));
         this.cursors = amzaService.getTable(new TableName("master", "cursors", null, null));
         this.capacity = capacity;
-    }
-
-    @Override
-    public Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception {
-        throw new UnsupportedOperationException("Not yet implemented!!!.");
     }
 
     private byte[] key(MiruTenantId tenantId, int writerId) {
@@ -151,5 +145,6 @@ public class MiruAmzaPartitionIdProvider implements MiruPartitionIdProvider {
         }
         return raw;
     }
+
 
 }
