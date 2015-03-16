@@ -22,6 +22,8 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
+import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
@@ -85,16 +87,20 @@ public class MiruManageServiceTest {
         miruWAL.getActivityLookupTable().add(MiruVoidByte.INSTANCE, tenantId, -1L, new MiruActivityLookupEntry(-1, -1, -1, false), null, null);
         miruWAL.getWriterPartitionRegistry().add(MiruVoidByte.INSTANCE, tenantId, 1, MiruPartitionId.of(0), null, null);
 
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL(),
-            miruWAL.getWriterPartitionRegistry());
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
         MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(miruWAL.getActivityLookupTable());
+
+        MiruPartitionIdProvider partitionIdProvider = new MiruRCVSPartitionIdProvider(0,
+            miruWAL.getWriterPartitionRegistry(),
+            miruWAL.getActivityWAL(),
+            miruWAL.getActivitySipWAL());
 
         clusterRegistry.registerSchema(tenantId, miruSchema);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         miruManageService = new MiruManageInitializer().initialize(renderer, clusterRegistry, activityWALReader, readTrackingWALReader,
-            activityLookupTable);
+            activityLookupTable, partitionIdProvider);
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
 

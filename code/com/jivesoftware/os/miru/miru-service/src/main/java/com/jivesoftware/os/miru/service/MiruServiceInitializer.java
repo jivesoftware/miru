@@ -190,8 +190,7 @@ public class MiruServiceInitializer {
             authzStripingLocksProvider
         );
 
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL(),
-            wal.getWriterPartitionRegistry());
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());
         ObjectMapper objectMapper = new ObjectMapper();

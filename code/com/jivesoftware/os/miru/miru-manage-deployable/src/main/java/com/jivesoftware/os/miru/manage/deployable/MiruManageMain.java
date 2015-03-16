@@ -66,6 +66,8 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
+import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
@@ -194,13 +196,16 @@ public class MiruManageMain {
 
             MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
-            MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(),
-                miruWAL.getActivitySipWAL(),
-                miruWAL.getWriterPartitionRegistry());
+            MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
 
             MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
             MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
             MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(miruWAL.getActivityLookupTable());
+
+            MiruPartitionIdProvider partitionIdProvider = new MiruRCVSPartitionIdProvider(0,
+                miruWAL.getWriterPartitionRegistry(),
+                miruWAL.getActivityWAL(),
+                miruWAL.getActivitySipWAL());
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
@@ -208,7 +213,8 @@ public class MiruManageMain {
                 clusterRegistry,
                 activityWALReader,
                 readTrackingWALReader,
-                activityLookupTable);
+                activityLookupTable,
+                partitionIdProvider);
 
             MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
             //TODO expose to config TimeUnit.MINUTES.toMillis(10)
@@ -244,7 +250,7 @@ public class MiruManageMain {
             MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry, activityLookupTable,
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
 
-            MiruWALDirector walDirector = new MiruWALDirector(activityLookupTable, activityWALReader, activityWALWriter);
+            MiruWALDirector walDirector = new MiruWALDirector(activityLookupTable, activityWALReader, activityWALWriter, partitionIdProvider);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

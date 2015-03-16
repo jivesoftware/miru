@@ -240,7 +240,7 @@ public class MiruLocalHostedPartitionTest {
         MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
         clusterClient.elect(host, tenantId, partitionId, System.currentTimeMillis());
 
-        activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL, writerPartitionRegistry);
+        activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
         partitionEventHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         rebuildDirector = new MiruRebuildDirector(Long.MAX_VALUE);
         factory = new MiruPartitionedActivityFactory();

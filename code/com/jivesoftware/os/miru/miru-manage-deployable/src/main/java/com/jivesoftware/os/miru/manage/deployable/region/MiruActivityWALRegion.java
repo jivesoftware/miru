@@ -10,12 +10,12 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.WALBean;
 import com.jivesoftware.os.miru.manage.deployable.region.input.MiruActivityWALRegionInput;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
@@ -35,14 +35,15 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruClusterRegistry clusterRegistry;
     private final MiruActivityWALReader activityWALReader;
+    private final MiruPartitionIdProvider partitionIdProvider;
 
-    public MiruActivityWALRegion(String template, MiruSoyRenderer renderer, MiruClusterRegistry clusterRegistry, MiruActivityWALReader activityWALReader) {
+    public MiruActivityWALRegion(String template, MiruSoyRenderer renderer, MiruActivityWALReader activityWALReader,
+        MiruPartitionIdProvider partitionIdProvider) {
         this.template = template;
         this.renderer = renderer;
-        this.clusterRegistry = clusterRegistry;
         this.activityWALReader = activityWALReader;
+        this.partitionIdProvider = partitionIdProvider;
     }
 
     @Override
@@ -57,7 +58,7 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
             data.put("tenant", new String(tenantId.getBytes(), Charsets.UTF_8));
 
             try {
-                Optional<MiruPartitionId> latestPartitionId = activityWALReader.getLatestPartitionIdForTenant(tenantId);
+                Optional<MiruPartitionId> latestPartitionId = partitionIdProvider.getLatestPartitionIdForTenant(tenantId);
                 List<MiruPartitionId> partitionIds = Lists.newArrayList();
                 if (latestPartitionId.isPresent()) {
                     for (MiruPartitionId latest = latestPartitionId.get(); latest != null; latest = latest.prev()) {

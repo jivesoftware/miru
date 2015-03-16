@@ -1,12 +1,10 @@
 package com.jivesoftware.os.miru.wal.activity;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
@@ -16,7 +14,6 @@ import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /** @author jonathan */
@@ -24,21 +21,18 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final RowColumnValueStore<MiruTenantId,
-        MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
-    private final RowColumnValueStore<MiruTenantId,
-        MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL;
-    private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
+    private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception>
+        activityWAL;
+    private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
+        activitySipWAL;
 
     public MiruActivityWALReaderImpl(
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
-        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL,
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry
-        ) {
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL
+    ) {
 
         this.activityWAL = activityWAL;
         this.activitySipWAL = activitySipWAL;
-        this.writerPartitionRegistry = writerPartitionRegistry;
     }
 
     private MiruActivityWALRow rowKey(MiruPartitionId partition) {
@@ -250,24 +244,6 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                 }
             });
         return oldestClockTimestamp.longValue();
-    }
-
-    @Override
-    public Optional<MiruPartitionId> getLatestPartitionIdForTenant(MiruTenantId tenantId) throws Exception {
-        final AtomicReference<MiruPartitionId> latestPartitionId = new AtomicReference<>();
-        writerPartitionRegistry.getValues(MiruVoidByte.INSTANCE, tenantId, null, null, 1_000, false, null, null, new CallbackStream<MiruPartitionId>() {
-            @Override
-            public MiruPartitionId callback(MiruPartitionId partitionId) throws Exception {
-                if (partitionId != null) {
-                    MiruPartitionId latest = latestPartitionId.get();
-                    if (latest == null || partitionId.compareTo(latest) > 0) {
-                        latestPartitionId.set(partitionId);
-                    }
-                }
-                return partitionId;
-            }
-        });
-        return Optional.fromNullable(latestPartitionId.get());
     }
 
     @Override

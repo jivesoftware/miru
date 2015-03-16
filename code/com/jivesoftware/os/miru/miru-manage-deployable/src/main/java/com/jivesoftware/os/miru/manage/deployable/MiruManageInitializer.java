@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 
 public class MiruManageInitializer {
@@ -23,7 +24,8 @@ public class MiruManageInitializer {
         MiruClusterRegistry clusterRegistry,
         MiruActivityWALReader activityWALReader,
         MiruReadTrackingWALReader readTrackingWALReader,
-        MiruActivityLookupTable activityLookupTable)
+        MiruActivityLookupTable activityLookupTable,
+        MiruPartitionIdProvider partitionIdProvider)
         throws Exception {
 
         return new MiruManageService(
@@ -36,9 +38,9 @@ public class MiruManageInitializer {
             new MiruBalancerRegion("soy.miru.page.balancerRegion", renderer, clusterRegistry, activityLookupTable),
             new MiruSchemaRegion("soy.miru.page.schemaRegion", renderer, clusterRegistry, activityLookupTable),
             new MiruTenantsRegion("soy.miru.page.tenantsRegion", renderer,
-                new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry, activityWALReader)),
+                new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry, activityWALReader, partitionIdProvider)),
             new MiruLookupRegion("soy.miru.page.lookupRegion", renderer, activityLookupTable),
-            new MiruActivityWALRegion("soy.miru.page.activityWalRegion", renderer, clusterRegistry, activityWALReader),
+            new MiruActivityWALRegion("soy.miru.page.activityWalRegion", renderer, activityWALReader, partitionIdProvider),
             new MiruReadWALRegion("soy.miru.page.readWalRegion", renderer, readTrackingWALReader));
     }
 }

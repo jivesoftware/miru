@@ -33,11 +33,9 @@ public class MiruActivityWALReaderImplTest {
             new InMemoryRowColumnValueStore<>();
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
             new InMemoryRowColumnValueStore<>();
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry =
-            new InMemoryRowColumnValueStore<>();
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL, writerPartitionRegistry);
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
         for (int i = 0; i < totalActivities; i++) {
@@ -75,7 +73,7 @@ public class MiruActivityWALReaderImplTest {
             new InMemoryRowColumnValueStore<>();
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL, writerPartitionRegistry);
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
         final AtomicLong clockTimestamp = new AtomicLong();
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(new MiruPartitionedActivityFactory.ClockTimestamper() {
             @Override
@@ -121,7 +119,7 @@ public class MiruActivityWALReaderImplTest {
             new InMemoryRowColumnValueStore<>();
 
         MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(activityWAL, activitySipWAL);
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL, writerPartitionRegistry);
+        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(activityWAL, activitySipWAL);
         final AtomicLong clockTimestamp = new AtomicLong();
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(new MiruPartitionedActivityFactory.ClockTimestamper() {
             @Override

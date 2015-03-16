@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionBean;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionCoordBean;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -33,16 +34,19 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
     private final MiruActivityWALReader activityWALReader;
+    private final MiruPartitionIdProvider partitionIdProvider;
 
     public MiruTenantEntryRegion(String template,
         MiruSoyRenderer renderer,
         MiruClusterRegistry clusterRegistry,
-        MiruActivityWALReader activityWALReader) {
+        MiruActivityWALReader activityWALReader,
+        MiruPartitionIdProvider partitionIdProvider) {
 
         this.template = template;
         this.renderer = renderer;
         this.clusterRegistry = clusterRegistry;
         this.activityWALReader = activityWALReader;
+        this.partitionIdProvider = partitionIdProvider;
     }
 
     @Override
@@ -62,7 +66,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         try {
             List<MiruTopologyStatus> statusForTenant = clusterRegistry.getTopologyStatusForTenant(tenant);
 
-            Optional<MiruPartitionId> latestPartitionId = activityWALReader.getLatestPartitionIdForTenant(tenant);
+            Optional<MiruPartitionId> latestPartitionId = partitionIdProvider.getLatestPartitionIdForTenant(tenant);
 
             if (latestPartitionId.isPresent()) {
                 for (MiruPartitionId latest = latestPartitionId.get(); latest != null; latest = latest.prev()) {

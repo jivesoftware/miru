@@ -37,4 +37,10 @@ public class MiruPartitionCursor {
     public int last() {
         return index.get();
     }
+
+    @Override
+    public String toString() {
+        return "MiruPartitionCursor{" + "partitionId=" + partitionId + ", index=" + index + ", capacity=" + capacity + '}';
+    }
+
 }

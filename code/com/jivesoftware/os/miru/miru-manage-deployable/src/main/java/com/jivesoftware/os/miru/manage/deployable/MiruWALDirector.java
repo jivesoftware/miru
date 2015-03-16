@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
@@ -30,21 +31,24 @@ public class MiruWALDirector {
     private final MiruActivityLookupTable activityLookupTable;
     private final MiruActivityWALReader activityWALReader;
     private final MiruActivityWALWriter activityWALWriter;
+    private final MiruPartitionIdProvider partitionIdProvider;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
     public MiruWALDirector(MiruActivityLookupTable activityLookupTable,
         MiruActivityWALReader activityWALReader,
-        MiruActivityWALWriter activityWALWriter) {
+        MiruActivityWALWriter activityWALWriter,
+        MiruPartitionIdProvider partitionIdProvider) {
         this.activityLookupTable = activityLookupTable;
         this.activityWALReader = activityWALReader;
         this.activityWALWriter = activityWALWriter;
+        this.partitionIdProvider = partitionIdProvider;
     }
 
     public void repairActivityWAL() throws Exception {
         List<MiruTenantId> tenantIds = activityLookupTable.allTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
-            Optional<MiruPartitionId> latestPartitionId = activityWALReader.getLatestPartitionIdForTenant(tenantId);
+            Optional<MiruPartitionId> latestPartitionId = partitionIdProvider.getLatestPartitionIdForTenant(tenantId);
             if (latestPartitionId.isPresent()) {
                 for (MiruPartitionId partitionId = latestPartitionId.get().prev(); partitionId != null; partitionId = partitionId.prev()) {
                     MiruActivityWALStatus status = activityWALReader.getStatus(tenantId, partitionId);
