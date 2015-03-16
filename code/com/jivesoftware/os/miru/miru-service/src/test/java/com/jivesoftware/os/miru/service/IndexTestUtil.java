@@ -113,7 +113,7 @@ public class IndexTestUtil {
 
     public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name, ChunkStore[] chunkStores, KeyValueMarshaller<K, V> keyValueMarshaller,
         int keySize, boolean variableKeySize, int payloadSize, boolean variablePayloadSizes) {
-        return new TxKeyValueStore<>(cogs.getSkyhookCog(0), 0, chunkStores,
+        return new TxKeyValueStore<>(cogs.getSkyhookCog(0), cogs.getSkyHookKeySemaphores(), 0, chunkStores,
             keyValueMarshaller,
             keyBytes(name),
             keySize, variableKeySize, payloadSize, variablePayloadSizes);

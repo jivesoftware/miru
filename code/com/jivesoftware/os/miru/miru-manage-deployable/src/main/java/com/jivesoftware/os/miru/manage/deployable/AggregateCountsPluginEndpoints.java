@@ -33,7 +33,7 @@ public class AggregateCountsPluginEndpoints {
     public Response getAggregates(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("forUser") @DefaultValue("") String forUser,
         @QueryParam("inbox") @DefaultValue("false") String inbox,
-        @QueryParam("fromTimestamp") @DefaultValue("-1") int fromTimestamp,
+        @QueryParam("fromTimestamp") @DefaultValue("-1") long fromTimestamp,
         @QueryParam("field") @DefaultValue("parent") String field,
         @QueryParam("streamFilters") @DefaultValue("") String streamFilters,
         @QueryParam("constraintsFilters") @DefaultValue("") String constraintsFilters,

@@ -150,26 +150,10 @@ public class MiruServiceInitializer {
             .softValues()
             .build();
 
-        TxCogs cogs = new TxCogs(256, 64, new KeyToFPCacheFactory() {
-
-            @Override
-            public Map<IBA, Long> createCache() {
-                return new ConcurrentHashMap<>();
-            }
-        }, new KeyToFPCacheFactory() {
-
-            @Override
-            public Map<IBA, Long> createCache() {
-                return new ConcurrentHashMap<>();
-            }
-        }, new KeyToFPCacheFactory() {
-
-            @Override
-            public Map<IBA, Long> createCache() {
-                return new ConcurrentHashMap<>();
-            }
-        });
-
+        TxCogs cogs = new TxCogs(256, 64,
+            new ConcurrentKeyToFPCacheFactory(),
+            new NullKeyToFPCacheFactory(),
+            new NullKeyToFPCacheFactory());
 
         MiruContextFactory streamFactory = new MiruContextFactory(cogs,
             schemaProvider,
@@ -294,4 +278,19 @@ public class MiruServiceInitializer {
         };
     }
 
+    private static class ConcurrentKeyToFPCacheFactory implements KeyToFPCacheFactory {
+
+        @Override
+        public Map<IBA, Long> createCache() {
+            return new ConcurrentHashMap<>();
+        }
+    }
+
+    private static class NullKeyToFPCacheFactory implements KeyToFPCacheFactory {
+
+        @Override
+        public Map<IBA, Long> createCache() {
+            return null;
+        }
+    }
 }

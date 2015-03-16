@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.math.stat.regression.SimpleRegression;
 
+import static com.google.common.base.Objects.firstNonNull;
+
 /**
  *
  */
@@ -255,14 +257,14 @@ public class TrendingInjectable {
 
             return new MiruResponse<>(new TrendingAnswer(sortedTrendies),
                 ImmutableList.<MiruSolution>builder()
-                    .addAll(distinctsResponse.solutions)
-                    .addAll(analyticsResponse.solutions)
+                    .addAll(firstNonNull(distinctsResponse.solutions, Collections.<MiruSolution>emptyList()))
+                    .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
                     .build(),
                 distinctsResponse.totalElapsed + analyticsResponse.totalElapsed,
                 distinctsResponse.missingSchema || analyticsResponse.missingSchema,
                 ImmutableList.<Integer>builder()
-                    .addAll(distinctsResponse.incompletePartitionIds)
-                    .addAll(analyticsResponse.incompletePartitionIds)
+                    .addAll(firstNonNull(distinctsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
+                    .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
                     .build(),
                 solutionLog);
         } catch (MiruPartitionUnavailableException e) {

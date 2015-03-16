@@ -168,7 +168,7 @@ public class MiruContextFactory {
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new MiruFilerTimeIndex(
             Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
             new KeyedFilerProvider<>(genericFilerStore, GENERIC_FILER_TIME_INDEX_KEY),
-            new TxKeyValueStore<>(skyhookCog, seed, chunkStores,
+            new TxKeyValueStore<>(skyhookCog, cogs.getSkyHookKeySemaphores(), seed, chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
                 8, false, 4, false)));

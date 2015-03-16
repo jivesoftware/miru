@@ -50,11 +50,11 @@ public class RemoteRecoHttpTest {
     };
     private static final int REMOTE_PORT = 10_004;
 
-    /*
     final String[] tenants = new String[] {
         "EVy", "Nv9", "KJt", "WVB", "ZlR", "iXM", "lPm", "Z49", "nyc", "oFd", "yso", "1MO", "40M", "2RV", "999", "EVy", "Nv9", "KJt", "WVB", "ZlR",
         "iXM", "lPm", "Z49", "nyc", "yso", "1MO", "9yG", "999", "EVy", "Nv9", "KJt"
     };
+    /*
     final String[] tenants = new String[] {
         "fsz", "TWG", "eD6", "Tcb", "3vU", "Hh9", "tw2", "BQs", "2L5", "Vub", "59t", "ZlR", "ueW", "AQ3", "xEK", "wkV", "2xQ", "7Bo", "XZe", "DQP", "MU6",
         "xwj", "vmJ", "HkQ", "9yG", "1Jv", "6Pb", "rDB", "PXz", "yvu", "MIF", "g52", "MZf", "6Vs", "yox", "EIz", "CoH", "a0s", "4tM", "611", "Tko", "9qQ",
@@ -77,8 +77,8 @@ public class RemoteRecoHttpTest {
         "2rH", "bE1", "KDH", "bEl", "0eB", "KzG", "las", "FFZ"
     };
     */
-    final String[] tenants = new String[] { "999" }; //brewspace
     /*
+    final String[] tenants = new String[] { "999" }; //brewspace
     */
     final int[] userIds = new int[] { 3765, 2902, 3251, 3080, 6668, 8190, 5786, 3957, 3585, 5675, 2112, 3183, 4699, 3624, 5710, 7195, 8433, 5760, 5648,
         8619, 5752, 3384, 2858, 2885, 2021, 8296, 5372, 3251, 2873, 8417, 5571, 7841, 8419, 3763, 4473, 2002, 4177, 5446, 2035, 5514, 8217 };
