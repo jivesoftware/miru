@@ -57,6 +57,7 @@ import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import com.jivesoftware.os.upena.main.Deployable;
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -160,8 +161,11 @@ public class MiruPluginTestBootstrap {
         replicaSetDirector.electToReplicaSetForTenantPartition(tenantId, partitionId,
             new MiruReplicaHosts(false, new HashSet<MiruHost>(), 3),
             System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
-        clusterRegistry.updateTopology(new MiruPartitionCoord(tenantId, partitionId, miruHost), Optional.<MiruPartitionCoordInfo>absent(),
-            Optional.of(System.currentTimeMillis()));
+        clusterRegistry.updateTopologies(miruHost, Arrays.asList(
+            new MiruClusterRegistry.TopologyUpdate(
+                new MiruPartitionCoord(tenantId, partitionId, miruHost),
+                Optional.<MiruPartitionCoordInfo>absent(),
+                Optional.of(System.currentTimeMillis()))));
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
         if (!partitionedActivities.isEmpty()) {

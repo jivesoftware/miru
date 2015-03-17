@@ -280,46 +280,50 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public void updateTopology(MiruPartitionCoord coord,
-        Optional<MiruPartitionCoordInfo> optionalInfo,
-        Optional<Long> refreshTimestamp) throws Exception {
+    public void updateTopologies(MiruHost host, List<TopologyUpdate> topologyUpdates) throws Exception {
+        //TODO batch update more efficiently
+        for (TopologyUpdate topologyUpdate : topologyUpdates) {
+            MiruPartitionCoord coord = topologyUpdate.coord;
+            Optional<MiruPartitionCoordInfo> optionalInfo = topologyUpdate.optionalInfo;
+            Optional<Long> refreshTimestamp = topologyUpdate.refreshTimestamp;
 
-        synchronized (topologyLocks.lock(new TenantPartitionHostKey(coord))) {
-            MiruPartitionCoordInfo coordInfo;
+            synchronized (topologyLocks.lock(new TenantPartitionHostKey(coord))) {
+                MiruPartitionCoordInfo coordInfo;
+                if (optionalInfo.isPresent()) {
+                    coordInfo = optionalInfo.get();
+                } else {
+                    ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = getTopologyValueAndTimestamp(
+                        coord.tenantId, coord.partitionId, coord.host);
+                    if (valueAndTimestamp != null) {
+                        coordInfo = new MiruPartitionCoordInfo(valueAndTimestamp.getValue().state, valueAndTimestamp.getValue().storage);
+                    } else {
+                        coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
+                    }
+                }
+
+                long timestamp;
+                if (refreshTimestamp.isPresent()) {
+                    timestamp = refreshTimestamp.get();
+                } else {
+                    ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = getTopologyValueAndTimestamp(
+                        coord.tenantId, coord.partitionId, coord.host);
+                    if (valueAndTimestamp != null) {
+                        timestamp = valueAndTimestamp.getValue().lastActiveTimestamp;
+                    } else {
+                        timestamp = 0;
+                    }
+                }
+
+                MiruTopologyColumnValue update = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, timestamp);
+
+                topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
+                    update, null, timestamper);
+                log.debug("Updated {} to {} at {}", new Object[]{coord, coordInfo, refreshTimestamp});
+            }
+
             if (optionalInfo.isPresent()) {
-                coordInfo = optionalInfo.get();
-            } else {
-                ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = getTopologyValueAndTimestamp(
-                    coord.tenantId, coord.partitionId, coord.host);
-                if (valueAndTimestamp != null) {
-                    coordInfo = new MiruPartitionCoordInfo(valueAndTimestamp.getValue().state, valueAndTimestamp.getValue().storage);
-                } else {
-                    coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
-                }
+                markTenantTopologyUpdated(Arrays.asList(coord.tenantId));
             }
-
-            long timestamp;
-            if (refreshTimestamp.isPresent()) {
-                timestamp = refreshTimestamp.get();
-            } else {
-                ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> valueAndTimestamp = getTopologyValueAndTimestamp(
-                    coord.tenantId, coord.partitionId, coord.host);
-                if (valueAndTimestamp != null) {
-                    timestamp = valueAndTimestamp.getValue().lastActiveTimestamp;
-                } else {
-                    timestamp = 0;
-                }
-            }
-
-            MiruTopologyColumnValue update = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, timestamp);
-
-            topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
-                update, null, timestamper);
-            log.debug("Updated {} to {} at {}", new Object[]{coord, coordInfo, refreshTimestamp});
-        }
-
-        if (optionalInfo.isPresent()) {
-            markTenantTopologyUpdated(Arrays.asList(coord.tenantId));
         }
     }
 

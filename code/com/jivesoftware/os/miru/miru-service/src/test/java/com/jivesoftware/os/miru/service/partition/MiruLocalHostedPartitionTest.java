@@ -33,6 +33,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
@@ -61,6 +62,7 @@ import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -211,9 +213,9 @@ public class MiruLocalHostedPartitionTest {
             activityInternExtern,
             readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, hybridContextAllocator)
-            .put(MiruBackingStorage.disk, diskContextAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
             new MiruTempDirectoryResourceLocator(),
             defaultStorage,
             config.getPartitionAuthzCacheSize(),
@@ -422,7 +424,8 @@ public class MiruLocalHostedPartitionTest {
     }
 
     private void setActive(boolean active) throws Exception {
-        clusterRegistry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(syntheticTimestamp.incrementAndGet()));
+        clusterRegistry.updateTopologies(host, Arrays.asList(
+            new MiruClusterRegistry.TopologyUpdate(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(syntheticTimestamp.incrementAndGet()))));
         if (!active) {
             syntheticTimestamp.addAndGet(topologyIsStaleAfterMillis * 2);
         }
@@ -432,9 +435,9 @@ public class MiruLocalHostedPartitionTest {
     private void indexNormalActivity(MiruLocalHostedPartition localHostedPartition) throws Exception {
         localHostedPartition.index(Lists.newArrayList(
             factory.activity(1, partitionId, 0, new MiruActivity(
-                    tenantId, System.currentTimeMillis(), new String[0], 0,
-                    Collections.<String, List<String>>emptyMap(),
-                    Collections.<String, List<String>>emptyMap()))
+                tenantId, System.currentTimeMillis(), new String[0], 0,
+                Collections.<String, List<String>>emptyMap(),
+                Collections.<String, List<String>>emptyMap()))
         ).iterator());
     }
 

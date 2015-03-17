@@ -52,7 +52,8 @@ public class MiruTopologyEndpoints {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response thumpthump(@PathParam("host") String host,
-        @PathParam("port") int port, MiruHeartbeatRequest request) {
+        @PathParam("port") int port,
+        MiruHeartbeatRequest request) {
         try {
             MiruHost miruHost = new MiruHost(host, port);
             return ResponseHelper.INSTANCE.jsonResponse(registry.thumpthump(miruHost, request));

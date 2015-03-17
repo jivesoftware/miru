@@ -47,8 +47,7 @@ public interface MiruClusterRegistry {
 
     Map<MiruPartitionId, MiruReplicaSet> getReplicaSets(MiruTenantId tenantId, Collection<MiruPartitionId> requiredPartitionId) throws Exception;
 
-    void updateTopology(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo,
-        Optional<Long> refreshTimestamp) throws Exception;
+    void updateTopologies(MiruHost host, List<TopologyUpdate> topologyUpdates) throws Exception;
 
     List<MiruTenantTopologyUpdate> getTopologyUpdatesForHost(MiruHost host, long sinceTimestamp) throws Exception;
 
@@ -63,4 +62,16 @@ public interface MiruClusterRegistry {
     MiruSchema getSchema(MiruTenantId tenantId) throws Exception;
 
     void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception;
+
+    class TopologyUpdate {
+        public final MiruPartitionCoord coord;
+        public final Optional<MiruPartitionCoordInfo> optionalInfo;
+        public final Optional<Long> refreshTimestamp;
+
+        public TopologyUpdate(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo, Optional<Long> refreshTimestamp) {
+            this.coord = coord;
+            this.optionalInfo = optionalInfo;
+            this.refreshTimestamp = refreshTimestamp;
+        }
+    }
 }

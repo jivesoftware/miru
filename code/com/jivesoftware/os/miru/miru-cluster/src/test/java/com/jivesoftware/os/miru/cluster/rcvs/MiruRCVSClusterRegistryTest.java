@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
+import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
@@ -38,7 +39,7 @@ import static org.testng.Assert.assertTrue;
 public class MiruRCVSClusterRegistryTest {
 
     private final int numReplicas = 3;
-    private final MiruTenantId tenantId = new MiruTenantId(new byte[]{1, 2, 3, 4});
+    private final MiruTenantId tenantId = new MiruTenantId(new byte[] { 1, 2, 3, 4 });
     private final MiruPartitionId partitionId = MiruPartitionId.of(0);
 
     private Timestamper timestamper = new CurrentTimestamper();
@@ -77,8 +78,10 @@ public class MiruRCVSClusterRegistryTest {
         assertEquals(electedHosts.size(), 1);
 
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
-        registry.updateTopology(coord, Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)),
-            Optional.of(timestamper.get()));
+        registry.updateTopologies(hosts[0], Arrays.asList(
+            new MiruClusterRegistry.TopologyUpdate(coord,
+                Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)),
+                Optional.of(timestamper.get()))));
 
         List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
         List<MiruTopologyStatus> onlineStatus = Lists.newArrayList();
@@ -105,7 +108,8 @@ public class MiruRCVSClusterRegistryTest {
         assertEquals(electedHosts.size(), 1);
 
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
-        registry.updateTopology(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(timestamper.get()));
+        registry.updateTopologies(hosts[0], Arrays.asList(
+            new MiruClusterRegistry.TopologyUpdate(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(timestamper.get()))));
 
         List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
         List<MiruTopologyStatus> offlineStatus = Lists.newArrayList();
@@ -156,14 +160,14 @@ public class MiruRCVSClusterRegistryTest {
     public void testSchemaProvider() throws Exception {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[]{
+            .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
         MiruTenantId tenantId2 = new MiruTenantId("tenant2".getBytes());
         MiruSchema schema2 = new MiruSchema.Builder("test2", 2)
-            .setFieldDefinitions(new MiruFieldDefinition[]{
+            .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
@@ -191,13 +195,13 @@ public class MiruRCVSClusterRegistryTest {
     public void testSchemaVersions() throws Exception {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[]{
+            .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
         MiruSchema schema2 = new MiruSchema.Builder("test1", 2)
-            .setFieldDefinitions(new MiruFieldDefinition[]{
+            .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
