@@ -77,7 +77,7 @@ public class MiruWriterUIServiceNGTest {
     public void testRenderActivityWALWithTenant() throws Exception {
         String rendered = service.renderActivityWALWithTenant(tenantId);
         assertTrue(rendered.contains(tenantId.toString()));
-        assertTrue(rendered.contains("/miru/manage/wal/activity/" + tenantId + "/" + partitionId + "#focus"));
+        assertTrue(rendered.contains("/miru/writer/wal/activity/" + tenantId + "/" + partitionId + "#focus"));
     }
 
 }

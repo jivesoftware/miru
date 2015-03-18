@@ -30,7 +30,7 @@
             <form id="tenantPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#tenantPicker" data-form-el="#tenantPickerForm"
                 data-jive-ui="jive/ui/typeahead/tenant_typeahead" method="post" name="tenantPickerForm" action="#"
                 //TODO wire this up correctly
-                onsubmit="location.href='/miru/manage/wal/activity/'+document.getElementById('tenantPicker').value+'#focus'; return false">
+                onsubmit="location.href='/miru/writer/wal/activity/'+document.getElementById('tenantPicker').value+'#focus'; return false">
                 <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                     class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
                     name="tenantId" id="tenantPicker" data-original-title="" title="">
@@ -45,7 +45,7 @@
                 <p>
                 {foreach $p in $partitions}
                     {if not isFirst($p)} {/if}
-                    <a href="/miru/manage/wal/activity/{$tenant}/{$p.id}#focus" class="activity-wal-partition">
+                    <a href="/miru/writer/wal/activity/{$tenant}/{$p.id}#focus" class="activity-wal-partition">
                         <span style="font-size:125%;">{$p.id}</span>
                         {$p.count}
                         {if $p.begins != $p.ends}
@@ -77,7 +77,7 @@
                         <option value="1000"{if $limit == 1000} selected="selected"{/if}>1000</option>
                     </select>
                     <input type="button" value="Go" onclick="
-                        location.href='/miru/manage/wal/activity/{$tenant}/{$partition}'+
+                        location.href='/miru/writer/wal/activity/{$tenant}/{$partition}'+
                             '?sip='+document.getElementById('sip').checked+
                             '&amp;afterTimestamp='+document.getElementById('fromTimestamp').value+
                             '&amp;limit='+document.getElementById('withLimit').value+
@@ -149,7 +149,7 @@
                 {if length($activities) == $limit}
                     <div style="float:right; margin-right:10px;">
                         <a href="#" onclick="
-                            location.href='/miru/manage/wal/activity/{$tenant}/{$partition}'+
+                            location.href='/miru/writer/wal/activity/{$tenant}/{$partition}'+
                                  '?sip='+document.getElementById('sip').checked+
                                  '&amp;afterTimestamp={$nextTimestamp}'+
                                  '&amp;limit='+document.getElementById('withLimit').value+

@@ -242,7 +242,6 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
         MiruPartitionedActivity largestPartitionId = null;
         int gaps = 0;
         while (true) {
-
             MiruPartitionedActivity got = activitySipWAL.get(tenantId,
                 new MiruActivityWALRow(partitionId),
                 new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId, Long.MAX_VALUE),
@@ -250,11 +249,13 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
             if (got != null) {
                 gaps = 0;
                 largestPartitionId = got;
+            } else {
+                gaps++;
+                if (gaps > largestRunOfGaps) {
+                    break;
+                }
             }
-            gaps++;
-            if (gaps > largestRunOfGaps) {
-                break;
-            }
+            partitionId++;
         }
 
         if (largestPartitionId == null) {

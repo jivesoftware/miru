@@ -27,8 +27,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.lang.mutable.MutableByte;
+import org.apache.commons.lang.mutable.MutableLong;
 
 /**
  *
@@ -166,9 +166,9 @@ public class MiruWALDirector implements MiruWALClient {
         final int batchSize) throws Exception {
 
         final List<MiruWALEntry> batch = new ArrayList<>();
-        final AtomicLong largestCollisionId = new AtomicLong(cursor.collisionId);
-        final AtomicLong largestSipId = new AtomicLong(cursor.sipId);
-        final AtomicReference<Byte> sortOrder = new AtomicReference<>(cursor.sort);
+        final MutableLong lastCollisionId = new MutableLong(cursor.collisionId);
+        final MutableLong lastSipId = new MutableLong(cursor.sipId);
+        final MutableByte sortOrder = new MutableByte(cursor.sort);
 
         activityWALReader.streamSip(tenantId, partitionId, cursor.sort, new Sip(cursor.collisionId, cursor.sipId), batchSize,
             new MiruActivityWALReader.StreamMiruActivityWAL() {
@@ -176,16 +176,14 @@ public class MiruWALDirector implements MiruWALClient {
                 @Override
                 public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
                     batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                    if (collisionId > largestCollisionId.get()) {
-                        largestCollisionId.set(collisionId);
-                        largestSipId.set(partitionedActivity.timestamp);
-                        sortOrder.set(partitionedActivity.type.getSort());
-                    }
+                    lastCollisionId.setValue(collisionId);
+                    lastSipId.setValue(partitionedActivity.timestamp);
+                    sortOrder.setValue(partitionedActivity.type.getSort());
                     return batch.size() < batchSize;
                 }
             });
 
-        return new StreamBatch<>(batch, new SipActivityCursor(sortOrder.get(), largestCollisionId.get(), largestSipId.get() + 1));
+        return new StreamBatch<>(batch, new SipActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue(), lastSipId.longValue() + 1));
     }
 
     @Override
@@ -196,23 +194,21 @@ public class MiruWALDirector implements MiruWALClient {
         throws Exception {
 
         final List<MiruWALEntry> batch = new ArrayList<>();
-        final AtomicLong largestCollisionId = new AtomicLong(cursor.collisionId);
-        final AtomicReference<Byte> sortOrder = new AtomicReference<>(cursor.sort);
+        final MutableLong lastCollisionId = new MutableLong(cursor.collisionId);
+        final MutableByte sortOrder = new MutableByte(cursor.sort);
         activityWALReader.stream(tenantId, partitionId, cursor.sort, cursor.collisionId, batchSize,
             new MiruActivityWALReader.StreamMiruActivityWAL() {
 
                 @Override
                 public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
                     batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                    if (collisionId > largestCollisionId.get()) {
-                        largestCollisionId.set(collisionId);
-                        sortOrder.set(partitionedActivity.type.getSort());
-                    }
+                    lastCollisionId.setValue(collisionId);
+                    sortOrder.setValue(partitionedActivity.type.getSort());
                     return batch.size() < batchSize;
                 }
             });
 
-        return new StreamBatch<>(batch, new GetActivityCursor(sortOrder.get(), largestCollisionId.get() + 1));
+        return new StreamBatch<>(batch, new GetActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue() + 1));
     }
 
     @Override
@@ -221,23 +217,21 @@ public class MiruWALDirector implements MiruWALClient {
         throws Exception {
 
         final List<MiruReadSipEntry> batch = new ArrayList<>();
-        final AtomicLong largestEventId = new AtomicLong(cursor.eventId);
-        final AtomicLong largestSipId = new AtomicLong(cursor.sipId);
+        final MutableLong lastEventId = new MutableLong(cursor.eventId);
+        final MutableLong lastSipId = new MutableLong(cursor.sipId);
 
         readTrackingWALReader.streamSip(tenantId, streamId, cursor.eventId, new MiruReadTrackingWALReader.StreamReadTrackingSipWAL() {
 
             @Override
             public boolean stream(long eventId, long timestamp) throws Exception {
                 batch.add(new MiruReadSipEntry(eventId, timestamp));
-                if (eventId > largestEventId.get()) {
-                    largestEventId.set(eventId);
-                    largestSipId.set(timestamp);
-                }
+                lastEventId.setValue(eventId);
+                lastSipId.setValue(timestamp);
                 return batch.size() < batchSize;
             }
         });
 
-        return new StreamBatch<>(batch, new SipReadCursor(largestEventId.get(), largestSipId.get() + 1));
+        return new StreamBatch<>(batch, new SipReadCursor(lastEventId.longValue(), lastSipId.longValue() + 1));
     }
 
     @Override
@@ -247,21 +241,19 @@ public class MiruWALDirector implements MiruWALClient {
         final int batchSize) throws Exception {
 
         final List<MiruWALEntry> batch = new ArrayList<>();
-        final AtomicLong largestEventId = new AtomicLong(cursor.eventId);
+        final MutableLong lastEventId = new MutableLong(cursor.eventId);
 
         readTrackingWALReader.stream(tenantId, streamId, cursor.eventId, new MiruReadTrackingWALReader.StreamReadTrackingWAL() {
 
             @Override
             public boolean stream(long eventId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
                 batch.add(new MiruWALEntry(eventId, timestamp, partitionedActivity));
-                if (eventId > largestEventId.get()) {
-                    largestEventId.set(eventId);
-                }
+                lastEventId.setValue(eventId);
                 return batch.size() < batchSize;
             }
         });
 
-        return new StreamBatch<>(batch, new GetReadCursor(largestEventId.get() + 1));
+        return new StreamBatch<>(batch, new GetReadCursor(lastEventId.longValue() + 1));
     }
 
 }

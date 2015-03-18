@@ -236,6 +236,7 @@ public class MiruWriterMain {
             deployable.addInjectables(MiruActivityIngress.class, activityIngress);
             deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 
+            deployable.addResource(sourceTree);
             deployable.buildServer().start();
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
