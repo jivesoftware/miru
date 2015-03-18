@@ -1,20 +1,6 @@
-/*
- * Copyright 2015 jonathan.colt.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.jivesoftware.os.miru.writer.deployable.endpoints;
 
+import com.google.common.base.Charsets;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -44,7 +30,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
- *
  * @author jonathan.colt
  */
 @Singleton
@@ -61,8 +46,7 @@ public class MiruWALEndpoints {
     }
 
     @POST
-    @Path("repair")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/repair")
     @Produces(MediaType.APPLICATION_JSON)
     public Response repairActivityWAL() throws Exception {
         try {
@@ -75,38 +59,35 @@ public class MiruWALEndpoints {
     }
 
     @POST
-    @Path("sanitize/activity/wal/{tenantId}/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/sanitize/activity/wal/{tenantId}/{partitionId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response sanitizeActivityWAL(@PathParam("tenantId") MiruTenantId tenantId,
-        @PathParam("partitionId") MiruPartitionId partitionId) throws Exception {
+    public Response sanitizeActivityWAL(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) throws Exception {
         try {
-            walDirector.sanitizeActivityWAL(tenantId, partitionId);
+            walDirector.sanitizeActivityWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
-            log.error("Failed calling sanitizeActivityWAL({}, {})", new Object[]{tenantId, partitionId}, x);
+            log.error("Failed calling sanitizeActivityWAL({}, {})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @POST
-    @Path("sanitize/sip/wal/{tenantId}/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/sanitize/sip/wal/{tenantId}/{partitionId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response sanitizeActivitySipWAL(@PathParam("tenantId") MiruTenantId tenantId,
-        @PathParam("partitionId") MiruPartitionId partitionId) throws Exception {
+    public Response sanitizeActivitySipWAL(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) throws Exception {
         try {
-            walDirector.sanitizeActivitySipWAL(tenantId, partitionId);
+            walDirector.sanitizeActivitySipWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
-            log.error("Failed calling sanitizeActivitySipWAL({}, {})", new Object[]{tenantId, partitionId}, x);
+            log.error("Failed calling sanitizeActivitySipWAL({}, {})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @GET
-    @Path("tenants/all")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/tenants/all")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllTenantIds() throws Exception {
         try {
@@ -119,116 +100,118 @@ public class MiruWALEndpoints {
     }
 
     @GET
-    @Path("largestPartitionId/{tenantId}")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/largestPartitionId/{tenantId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getLargestPartitionIdAcrossAllWriters(@PathParam("tenantId") MiruTenantId tenantId) throws Exception {
+    public Response getLargestPartitionIdAcrossAllWriters(@PathParam("tenantId") String tenantId) throws Exception {
         try {
-            MiruPartitionId partitionId = walDirector.getLargestPartitionIdAcrossAllWriters(tenantId);
+            MiruPartitionId partitionId = walDirector.getLargestPartitionIdAcrossAllWriters(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
             return responseHelper.jsonResponse(partitionId);
         } catch (Exception x) {
-            log.error("Failed calling getLargestPartitionIdAcrossAllWriters({})", new Object[]{tenantId}, x);
+            log.error("Failed calling getLargestPartitionIdAcrossAllWriters({})", new Object[] { tenantId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @POST
-    @Path("partition/status/{tenantId}")
+    @Path("/partition/status/{tenantId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getPartitionStatus(@PathParam("tenantId") MiruTenantId tenantId,
+    public Response getPartitionStatus(@PathParam("tenantId") String tenantId,
         List<MiruPartitionId> partitionIds) throws Exception {
         try {
-            List<MiruActivityWALStatus> partitionStatus = walDirector.getPartitionStatus(tenantId, partitionIds);
+            List<MiruActivityWALStatus> partitionStatus = walDirector.getPartitionStatus(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), partitionIds);
             return responseHelper.jsonResponse(partitionStatus);
         } catch (Exception x) {
-            log.error("Failed calling getPartitionStatus({},{})", new Object[]{tenantId, partitionIds}, x);
+            log.error("Failed calling getPartitionStatus({},{})", new Object[] { tenantId, partitionIds }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @GET
-    @Path("lookup/activity/{tenantId}/{batchSize}/{afterTimestamp}")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/lookup/activity/{tenantId}/{batchSize}/{afterTimestamp}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response lookupActivity(@PathParam("tenantId") MiruTenantId tenantId,
+    public Response lookupActivity(@PathParam("tenantId") String tenantId,
         @PathParam("batchSize") int batchSize,
         @PathParam("afterTimestamp") long afterTimestamp) throws Exception {
         try {
-            List<MiruLookupEntry> lookupActivity = walDirector.lookupActivity(tenantId, afterTimestamp, batchSize);
+            List<MiruLookupEntry> lookupActivity = walDirector.lookupActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), afterTimestamp, batchSize);
             return responseHelper.jsonResponse(lookupActivity);
         } catch (Exception x) {
-            log.error("Failed calling lookupActivity({},{},{},{})", new Object[]{tenantId, afterTimestamp, batchSize}, x);
+            log.error("Failed calling lookupActivity({},{},{},{})", new Object[] { tenantId, afterTimestamp, batchSize }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @POST
-    @Path("sip/activity/{tenantId}/{partitionId}/{batchSize}")
+    @Path("/sip/activity/{tenantId}/{partitionId}/{batchSize}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response sipActivity(@PathParam("tenantId") MiruTenantId tenantId,
-        @PathParam("partitionId") MiruPartitionId partitionId,
+    public Response sipActivity(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
         @PathParam("batchSize") int batchSize,
         SipActivityCursor cursor)
         throws Exception {
         try {
-            StreamBatch<MiruWALEntry, SipActivityCursor> sipActivity = walDirector.sipActivity(tenantId, partitionId, cursor, batchSize);
+            StreamBatch<MiruWALEntry, SipActivityCursor> sipActivity = walDirector.sipActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId), cursor, batchSize);
             return responseHelper.jsonResponse(sipActivity);
         } catch (Exception x) {
-            log.error("Failed calling sipActivity({},{},{},{})", new Object[]{tenantId, partitionId, batchSize, cursor}, x);
+            log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @POST
-    @Path("activity/{tenantId}/{partitionId}/{batchSize}")
+    @Path("/activity/{tenantId}/{partitionId}/{batchSize}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getActivity(@PathParam("tenantId") MiruTenantId tenantId,
-        @PathParam("partitionId") MiruPartitionId partitionId,
+    public Response getActivity(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
         @PathParam("batchSize") int batchSize,
         GetActivityCursor cursor)
         throws Exception {
         try {
-            StreamBatch<MiruWALEntry, GetActivityCursor> activity = walDirector.getActivity(tenantId, partitionId, cursor, batchSize);
+            StreamBatch<MiruWALEntry, GetActivityCursor> activity = walDirector.getActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId), cursor, batchSize);
             return responseHelper.jsonResponse(activity);
         } catch (Exception x) {
-            log.error("Failed calling getActivity({},{},{},{})", new Object[]{tenantId, partitionId, batchSize, cursor}, x);
+            log.error("Failed calling getActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @POST
-    @Path("sip/read/{tenantId}/{streamId}/{batchSize}")
+    @Path("/sip/read/{tenantId}/{streamId}/{batchSize}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response sipRead(@PathParam("tenantId") MiruTenantId tenantId,
-        @PathParam("streamId") MiruStreamId streamId,
+    public Response sipRead(@PathParam("tenantId") String tenantId,
+        @PathParam("streamId") String streamId,
         @PathParam("batchSize") int batchSize,
         SipReadCursor cursor) throws Exception {
         try {
-            StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead = walDirector.sipRead(tenantId, streamId, cursor, batchSize);
+            StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead = walDirector.sipRead(
+                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
             return responseHelper.jsonResponse(sipRead);
         } catch (Exception x) {
-            log.error("Failed calling sipRead({},{},{},{})", new Object[]{tenantId, streamId, batchSize, cursor}, x);
+            log.error("Failed calling sipRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @POST
-    @Path("read/{tenantId}/{streamId}/{batchSize}")
+    @Path("/read/{tenantId}/{streamId}/{batchSize}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getRead(@PathParam("tenantId") MiruTenantId tenantId,
-        @PathParam("streamId") MiruStreamId streamId,
+    public Response getRead(@PathParam("tenantId") String tenantId,
+        @PathParam("streamId") String streamId,
         @PathParam("batchSize") int batchSize,
         GetReadCursor cursor) throws Exception {
         try {
-            StreamBatch<MiruWALEntry, GetReadCursor> read = walDirector.getRead(tenantId, streamId, cursor, batchSize);
+            StreamBatch<MiruWALEntry, GetReadCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
             return responseHelper.jsonResponse(read);
         } catch (Exception x) {
-            log.error("Failed calling getRead({},{},{},{})", new Object[]{tenantId, streamId, batchSize, cursor}, x);
+            log.error("Failed calling getRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
