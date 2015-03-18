@@ -22,7 +22,6 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import javax.annotation.Nullable;
 
 /**
  *
@@ -189,9 +188,8 @@ public class MiruTestStreamQueryDistributor {
     }
 
     private static final Function<Id, String> ID_TO_TERMID = new Function<Id, String>() {
-        @Nullable
         @Override
-        public String apply(@Nullable Id input) {
+        public String apply(Id input) {
             return input != null ? input.toStringForm() : null;
         }
     };

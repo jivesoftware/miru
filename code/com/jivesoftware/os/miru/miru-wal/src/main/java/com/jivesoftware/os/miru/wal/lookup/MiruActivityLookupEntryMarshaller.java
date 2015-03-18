@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.wal.lookup;
 
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 import java.nio.ByteBuffer;
 

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.hash.Hashing;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
@@ -13,7 +14,6 @@ import com.jivesoftware.os.miru.service.stream.MiruIndexLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexPairedLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -24,7 +24,7 @@ public class MiruLocalPartitionFactory {
 
     private final MiruServiceConfig config;
     private final MiruContextFactory miruContextFactory;
-    private final MiruActivityWALReader activityWALReader;
+    private final MiruWALClient walClient;
     private final MiruPartitionHeartbeatHandler partitionEventHandler;
     private final MiruRebuildDirector rebuildDirector;
     private final ScheduledExecutorService scheduledBoostrapExecutor;
@@ -39,7 +39,7 @@ public class MiruLocalPartitionFactory {
 
     public MiruLocalPartitionFactory(MiruServiceConfig config,
         MiruContextFactory miruContextFactory,
-        MiruActivityWALReader activityWALReader,
+        MiruWALClient walClient,
         MiruPartitionHeartbeatHandler partitionEventHandler,
         MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBoostrapExecutor,
@@ -53,7 +53,7 @@ public class MiruLocalPartitionFactory {
         MiruMergeChits mergeChits) {
         this.config = config;
         this.miruContextFactory = miruContextFactory;
-        this.activityWALReader = activityWALReader;
+        this.walClient = walClient;
         this.partitionEventHandler = partitionEventHandler;
         this.rebuildDirector = rebuildDirector;
         this.scheduledBoostrapExecutor = scheduledBoostrapExecutor;
@@ -71,7 +71,7 @@ public class MiruLocalPartitionFactory {
         return new MiruLocalHostedPartition<>(bitmaps,
             coord,
             miruContextFactory,
-            activityWALReader,
+            walClient,
             partitionEventHandler,
             rebuildDirector,
             scheduledBoostrapExecutor,

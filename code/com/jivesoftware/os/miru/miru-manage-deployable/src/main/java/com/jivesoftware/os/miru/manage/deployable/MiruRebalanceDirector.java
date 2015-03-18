@@ -21,9 +21,9 @@ import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
+import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.client.ReaderRequestHelpers;
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.awt.Color;
@@ -52,7 +52,7 @@ public class MiruRebalanceDirector {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruClusterRegistry clusterRegistry;
-    private final MiruActivityLookupTable activityLookupTable;
+    private final MiruWALClient miruWALClient;
     private final OrderIdProvider orderIdProvider;
     private final ReaderRequestHelpers readerRequestHelpers;
 
@@ -72,11 +72,11 @@ public class MiruRebalanceDirector {
     private final AtomicReference<List<MiruTopologyStatus>> topologies = new AtomicReference<>();
 
     public MiruRebalanceDirector(MiruClusterRegistry clusterRegistry,
-        MiruActivityLookupTable activityLookupTable,
+        MiruWALClient miruWALClient,
         OrderIdProvider orderIdProvider,
         ReaderRequestHelpers readerRequestHelpers) {
         this.clusterRegistry = clusterRegistry;
-        this.activityLookupTable = activityLookupTable;
+        this.miruWALClient = miruWALClient;
         this.orderIdProvider = orderIdProvider;
         this.readerRequestHelpers = readerRequestHelpers;
     }
@@ -92,7 +92,7 @@ public class MiruRebalanceDirector {
         if (fromHost.isPresent()) {
             tenantIds = clusterRegistry.getTenantsForHost(fromHost.get());
         } else {
-            tenantIds = activityLookupTable.allTenantIds();
+            tenantIds = miruWALClient.getAllTenantIds();
         }
         for (MiruTenantId tenantId : tenantIds) {
             int numberOfReplicas = clusterRegistry.getNumberOfReplicas(tenantId);
@@ -251,7 +251,7 @@ public class MiruRebalanceDirector {
                         }
                     }
 
-                    List<MiruTenantId> allTenantIds = activityLookupTable.allTenantIds();
+                    List<MiruTenantId> allTenantIds = miruWALClient.getAllTenantIds();
                     List<List<MiruTenantId>> splitTenantIds = Lists.partition(allTenantIds, Math.max(1, (allTenantIds.size() + split - 1) / split));
 
                     return new VisualizeContext(allHosts, unhealthyHosts, splitTenantIds);

@@ -32,6 +32,8 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
+import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
@@ -39,7 +41,6 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig;
-import com.jivesoftware.os.miru.cluster.client.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
@@ -59,17 +60,7 @@ import com.jivesoftware.os.miru.manage.deployable.topology.MiruTopologyEndpoints
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
-import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
-import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
+import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
@@ -77,6 +68,8 @@ import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -194,26 +187,18 @@ public class MiruManageMain {
                 throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
             }
 
-            MiruWALInitializer.MiruWAL miruWAL = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                .getTenantRoutingProvider()
+                .getConnections("miru-writer", "main")); // TODO expose to conf
 
-            MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
-
-            MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
-            MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
-            MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(miruWAL.getActivityLookupTable());
-
-            MiruPartitionIdProvider partitionIdProvider = new MiruRCVSPartitionIdProvider(0,
-                miruWAL.getWriterPartitionRegistry(),
-                miruWAL.getActivitySipWAL());
+            MiruWALClient miruWALClient = new MiruWALClientInitializer().initialize("", miruWriterClient, mapper, 10_000);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
                 clusterRegistry,
-                activityWALReader,
-                readTrackingWALReader,
-                activityLookupTable,
-                partitionIdProvider);
+                miruWALClient);
 
             MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
             //TODO expose to config TimeUnit.MINUTES.toMillis(10)
@@ -246,10 +231,8 @@ public class MiruManageMain {
                     new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, readerRequestHelpers),
                     new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)));
 
-            MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry, activityLookupTable,
+            MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry, miruWALClient,
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
-
-            MiruWALDirector walDirector = new MiruWALDirector(activityLookupTable, activityWALReader, activityWALWriter, partitionIdProvider);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -261,7 +244,7 @@ public class MiruManageMain {
             deployable.addEndpoints(MiruManageEndpoints.class);
             deployable.addInjectables(MiruManageService.class, miruManageService);
             deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
-            deployable.addInjectables(MiruWALDirector.class, walDirector);
+            deployable.addInjectables(MiruWALClient.class, miruWALClient);
 
             for (MiruManagePlugin plugin : plugins) {
                 miruManageService.registerPlugin(plugin);

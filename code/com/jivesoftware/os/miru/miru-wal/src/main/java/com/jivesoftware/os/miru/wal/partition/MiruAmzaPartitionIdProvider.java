@@ -24,6 +24,7 @@ import com.jivesoftware.os.amza.shared.TableName;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -37,12 +38,14 @@ public class MiruAmzaPartitionIdProvider implements MiruPartitionIdProvider {
     private final AmzaTable latestPartitions;
     private final AmzaTable cursors;
     private final int capacity;
+    private final MiruActivityWALReader walReader;
 
-    public MiruAmzaPartitionIdProvider(AmzaService amzaService, int capacity) throws Exception {
+    public MiruAmzaPartitionIdProvider(AmzaService amzaService, int capacity, MiruActivityWALReader walReader) throws Exception {
         this.amzaService = amzaService;
         this.latestPartitions = amzaService.getTable(new TableName("master", "latestPartitions", null, null));
         this.cursors = amzaService.getTable(new TableName("master", "cursors", null, null));
         this.capacity = capacity;
+        this.walReader = walReader;
     }
 
     private byte[] key(MiruTenantId tenantId, int writerId) {
@@ -58,19 +61,23 @@ public class MiruAmzaPartitionIdProvider implements MiruPartitionIdProvider {
         RowIndexKey key = new RowIndexKey(key(tenantId, writerId));
         byte[] rawPartitonId = latestPartitions.get(key);
         if (rawPartitonId == null) {
-            return setCursor(key, tenantId, writerId, 0, 0);
+            MiruPartitionCursor cursorForWriterId = walReader.getCursorForWriterId(tenantId, writerId, capacity);
+            return setCursor(tenantId, writerId, cursorForWriterId);
         } else {
             int[] rawPartitonIdAndIndex = FilerIO.bytesInts(rawPartitonId);
             return new MiruPartitionCursor(MiruPartitionId.of(rawPartitonIdAndIndex[0]), new AtomicInteger(rawPartitonIdAndIndex[1]), capacity);
         }
     }
 
-    private MiruPartitionCursor setCursor(RowIndexKey latestPartitionKey, MiruTenantId tenantId,
-        int writerId, int rawPartitionId, int rawIndex) throws Exception {
-        latestPartitions.set(latestPartitionKey, FilerIO.intBytes(rawPartitionId));
-        RowIndexKey cursorKey = new RowIndexKey(key(tenantId, writerId, MiruPartitionId.of(rawPartitionId)));
-        cursors.set(cursorKey, FilerIO.intBytes(rawIndex));
-        return new MiruPartitionCursor(MiruPartitionId.of(rawPartitionId), new AtomicInteger(rawIndex), capacity);
+    private MiruPartitionCursor setCursor(MiruTenantId tenantId, int writerId, MiruPartitionCursor cursor) throws Exception {
+        //RowIndexKey latestPartitionKey, MiruTenantId tenantId,
+        //int writerId, int rawPartitionId, int rawIndex) throws Exception {
+
+        RowIndexKey latestPartitionKey = new RowIndexKey(key(tenantId, writerId));
+        latestPartitions.set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId()));
+        RowIndexKey cursorKey = new RowIndexKey(key(tenantId, writerId, cursor.getPartitionId()));
+        cursors.set(cursorKey, FilerIO.intBytes(cursor.last()));
+        return cursor;
     }
 
     private byte[] key(MiruTenantId tenantId, int writerId, MiruPartitionId partitionId) {
@@ -86,9 +93,9 @@ public class MiruAmzaPartitionIdProvider implements MiruPartitionIdProvider {
     public MiruPartitionCursor nextCursor(MiruTenantId tenantId, MiruPartitionCursor lastCursor, int writerId) throws Exception {
         MiruPartitionCursor currentCursor = getCursor(tenantId, writerId);
         if (currentCursor.getPartitionId().equals(lastCursor.getPartitionId())) {
-            RowIndexKey latestPartitionKey = new RowIndexKey(key(tenantId, writerId));
             MiruPartitionId next = lastCursor.getPartitionId().next();
-            return setCursor(latestPartitionKey, tenantId, writerId, next.getId(), 0);
+            MiruPartitionCursor nextCursor = new MiruPartitionCursor(next, new AtomicInteger(0), capacity);
+            return setCursor(tenantId, writerId, nextCursor);
         } else {
             throw new RuntimeException("last cursor:" + lastCursor + " should be equals to current cursor:" + currentCursor);
         }
@@ -107,8 +114,8 @@ public class MiruAmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
     @Override
     public void setLargestPartitionIdForWriter(MiruTenantId tenantId, MiruPartitionId partition, int writerId) throws Exception {
-        RowIndexKey latestPartitionKey = new RowIndexKey(key(tenantId, writerId));
-        setCursor(latestPartitionKey, tenantId, writerId, partition.getId(), 0);
+        MiruPartitionCursor cursor = new MiruPartitionCursor(partition, new AtomicInteger(0), capacity);
+        setCursor(tenantId, writerId, cursor);
     }
 
     @Override
@@ -145,6 +152,5 @@ public class MiruAmzaPartitionIdProvider implements MiruPartitionIdProvider {
         }
         return raw;
     }
-
 
 }

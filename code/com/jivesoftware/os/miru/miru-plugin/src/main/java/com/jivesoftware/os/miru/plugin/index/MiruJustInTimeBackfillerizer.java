@@ -10,19 +10,22 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruReadTracker;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader.StreamReadTrackingSipWAL;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader.StreamReadTrackingWAL;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,16 +35,34 @@ public class MiruJustInTimeBackfillerizer {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    // TODO - this should probably live in the context
+    private final Map<MiruTenantPartitionAndStreamId, Long> userSipTimestamp = new ConcurrentHashMap<>();
+
     private final MiruHost localHost;
+    private final MiruWALClient walClient;
     private final Optional<String> readStreamIdsPropName;
     private final ExecutorService backfillExecutor;
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     private final MiruReadTracker readTracker = new MiruReadTracker(aggregateUtil);
 
-    public MiruJustInTimeBackfillerizer(MiruHost localHost, Optional<String> readStreamIdsPropName, ExecutorService backfillExecutor) {
+    public MiruJustInTimeBackfillerizer(MiruHost localHost,
+        MiruWALClient walClient,
+        Optional<String> readStreamIdsPropName,
+        ExecutorService backfillExecutor) {
+
         this.localHost = localHost;
+        this.walClient = walClient;
         this.readStreamIdsPropName = readStreamIdsPropName;
         this.backfillExecutor = backfillExecutor;
+    }
+
+    void setSipTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId, long sipTimestamp) {
+        userSipTimestamp.put(new MiruTenantPartitionAndStreamId(tenantId, partitionId, streamId), sipTimestamp);
+    }
+
+    long getSipTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId) {
+        Long sipTimestamp = userSipTimestamp.get(new MiruTenantPartitionAndStreamId(tenantId, partitionId, streamId));
+        return sipTimestamp != null ? sipTimestamp : 0;
     }
 
     public <BM> void backfill(final MiruBitmaps<BM> bitmaps,
@@ -144,17 +165,18 @@ public class MiruJustInTimeBackfillerizer {
         final AtomicLong newSipTimestamp = new AtomicLong(0);
 
         // First find the oldest eventId from our sip WAL
-        long afterTimestamp = requestContext.getReadTrackingWALReader().getSipTimestamp(tenantId, partitionId, streamId);
-        requestContext.getReadTrackingWALReader().streamSip(tenantId, streamId, afterTimestamp, new StreamReadTrackingSipWAL() {
-            @Override
-            public boolean stream(long eventId, long timestamp) throws Exception {
-                long min = Math.min(minimumEventId.get(), eventId);
+        long afterTimestamp = getSipTimestamp(tenantId, partitionId, streamId);
+        // TODO this should really be computed on the server side.
+        MiruWALClient.StreamBatch<MiruReadSipEntry, MiruWALClient.SipReadCursor> sipRead = walClient.sipRead(tenantId,
+            streamId, new MiruWALClient.SipReadCursor(afterTimestamp, 0), 1000);
+        while (!sipRead.batch.isEmpty()) {
+            for (MiruReadSipEntry entry : sipRead.batch) {
+                long min = Math.min(minimumEventId.get(), entry.eventId);
                 minimumEventId.set(min);
-                newSipTimestamp.set(timestamp);
-
-                return true;
+                newSipTimestamp.set(entry.timestamp);
             }
-        });
+            sipRead = walClient.sipRead(tenantId, streamId, sipRead.cursor, 1000);
+        }
 
         // Take either the oldest backfilled time or the oldest readtracking sip time
         minimumEventId.set(Math.min(minimumEventId.get(), oldestBackfilledEventId));
@@ -165,29 +187,69 @@ public class MiruJustInTimeBackfillerizer {
         }
 
         // Take the oldest eventId from the sip WAL, grab all read/unread events from that time and apply them
-        requestContext.getReadTrackingWALReader().stream(tenantId, streamId, minimumEventId.get(), new StreamReadTrackingWAL() {
-            @Override
-            public boolean stream(long eventId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                MiruReadEvent readEvent = partitionedActivity.readEvent.get();
-                MiruStreamId streamId = readEvent.streamId;
+        MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetReadCursor> got = walClient.getRead(tenantId,
+            streamId, new MiruWALClient.GetReadCursor(minimumEventId.get()), 1000);
+        while (!got.batch.isEmpty()) {
+            for (MiruWALEntry e : got.batch) {
+                MiruReadEvent readEvent = e.activity.readEvent.get();
                 MiruFilter filter = readEvent.filter;
 
-                if (partitionedActivity.type == MiruPartitionedActivity.Type.READ) {
+                if (e.activity.type == MiruPartitionedActivity.Type.READ) {
                     readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time);
-                } else if (partitionedActivity.type == MiruPartitionedActivity.Type.UNREAD) {
+                } else if (e.activity.type == MiruPartitionedActivity.Type.UNREAD) {
                     readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time);
-                } else if (partitionedActivity.type == MiruPartitionedActivity.Type.MARK_ALL_READ) {
+                } else if (e.activity.type == MiruPartitionedActivity.Type.MARK_ALL_READ) {
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time);
                 }
-
-                return true;
             }
-        });
+            got = walClient.getRead(tenantId, streamId, got.cursor, 1000);
+        }
 
         // Update stream sip time if we used the read tracking sip WAL
         if (newSipTimestamp.get() != 0) {
-            requestContext.getReadTrackingWALReader().setSipTimestamp(tenantId, partitionId, streamId, newSipTimestamp.get());
+            setSipTimestamp(tenantId, partitionId, streamId, newSipTimestamp.get());
         }
 
+    }
+
+    private class MiruTenantPartitionAndStreamId {
+
+        private final MiruTenantId tenantId;
+        private final MiruPartitionId partitionId;
+        private final MiruStreamId streamId;
+
+        private MiruTenantPartitionAndStreamId(MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId) {
+            this.tenantId = tenantId;
+            this.partitionId = partitionId;
+            this.streamId = streamId;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            MiruTenantPartitionAndStreamId that = (MiruTenantPartitionAndStreamId) o;
+
+            if (partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null) {
+                return false;
+            }
+            if (streamId != null ? !streamId.equals(that.streamId) : that.streamId != null) {
+                return false;
+            }
+            return !(tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = tenantId != null ? tenantId.hashCode() : 0;
+            result = 31 * result + (partitionId != null ? partitionId.hashCode() : 0);
+            result = 31 * result + (streamId != null ? streamId.hashCode() : 0);
+            return result;
+        }
     }
 }

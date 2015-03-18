@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
@@ -41,14 +42,14 @@ public class MiruManageEndpoints {
 
     private final MiruManageService miruManageService;
     private final MiruRebalanceDirector rebalanceDirector;
-    private final MiruWALDirector walDirector;
+    private final MiruWALClient miruWALClient;
 
     public MiruManageEndpoints(@Context MiruManageService miruManageService,
         @Context MiruRebalanceDirector rebalanceDirector,
-        @Context MiruWALDirector walDirector) {
+        @Context MiruWALClient miruWALClient) {
         this.miruManageService = miruManageService;
         this.rebalanceDirector = rebalanceDirector;
-        this.walDirector = walDirector;
+        this.miruWALClient = miruWALClient;
     }
 
     @GET
@@ -120,96 +121,6 @@ public class MiruManageEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response getTenantsForTenant(@PathParam("tenantId") String tenantId) {
         String rendered = miruManageService.renderTenantsWithFocus(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/lookup")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getLookup() {
-        String rendered = miruManageService.renderLookup();
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/lookup/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getActivityWALForTenant(
-        @PathParam("tenantId") String tenantId,
-        @QueryParam("afterTimestamp") Long afterTimestamp,
-        @QueryParam("limit") Integer limit) {
-        String rendered = miruManageService.renderLookupWithFocus(
-            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-            Optional.fromNullable(afterTimestamp),
-            Optional.fromNullable(limit));
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/wal/activity")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getActivityWALForTenant() {
-        String rendered = miruManageService.renderActivityWAL();
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/wal/activity/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getActivityWALForTenant(@PathParam("tenantId") String tenantId) {
-        String rendered = miruManageService.renderActivityWALWithTenant(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/wal/activity/{tenantId}/{partitionId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getActivityWALForTenantPartition(
-        @PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") int partitionId,
-        @QueryParam("sip") Boolean sip,
-        @QueryParam("afterTimestamp") Long afterTimestamp,
-        @QueryParam("limit") Integer limit) {
-        String rendered = miruManageService.renderActivityWALWithFocus(
-            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-            MiruPartitionId.of(partitionId),
-            Optional.fromNullable(sip),
-            Optional.fromNullable(afterTimestamp),
-            Optional.fromNullable(limit));
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/wal/read")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getReadWALForTenant() {
-        String rendered = miruManageService.renderReadWAL();
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/wal/read/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getReadWALForTenant(@PathParam("tenantId") String tenantId) {
-        String rendered = miruManageService.renderReadWALWithTenant(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/wal/read/{tenantId}/{streamId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getReadWALForTenantPartition(
-        @PathParam("tenantId") String tenantId,
-        @PathParam("streamId") String streamId,
-        @QueryParam("sip") Boolean sip,
-        @QueryParam("afterTimestamp") Long afterTimestamp,
-        @QueryParam("limit") Integer limit) {
-        String rendered = miruManageService.renderReadWALWithFocus(
-            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-            streamId,
-            Optional.fromNullable(sip),
-            Optional.fromNullable(afterTimestamp),
-            Optional.fromNullable(limit));
         return Response.ok(rendered).build();
     }
 
@@ -304,36 +215,6 @@ public class MiruManageEndpoints {
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("DELETE /hosts/{}/{}", new Object[] { logicalName, port }, t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
-    @POST
-    @Path("/wal/repair")
-    @Produces(MediaType.TEXT_HTML)
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response repairWAL() {
-        try {
-            walDirector.repairActivityWAL();
-            return Response.ok("success").build();
-        } catch (Throwable t) {
-            LOG.error("POST /wal/repair", t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
-    @POST
-    @Path("/wal/sanitize/{tenantId}/{partitionId}")
-    @Produces(MediaType.TEXT_HTML)
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response sanitizeWAL(@PathParam("tenantId") @DefaultValue("") String tenantId,
-        @PathParam("partitionId") @DefaultValue("-1") int partitionId) {
-        try {
-            walDirector.sanitizeActivityWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
-            walDirector.sanitizeActivitySipWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
-            return Response.ok("success").build();
-        } catch (Throwable t) {
-            LOG.error("POST /wal/sanitize/" + tenantId + "/" + partitionId, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

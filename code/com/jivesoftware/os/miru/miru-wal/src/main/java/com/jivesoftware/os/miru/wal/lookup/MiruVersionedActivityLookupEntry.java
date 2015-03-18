@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.wal.lookup;
 
+import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
+
 /**
  *
  */

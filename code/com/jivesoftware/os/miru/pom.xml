@@ -17,7 +17,6 @@
         <module>miru-api</module>
         <module>miru-reader</module>
         <module>miru-logappender</module>
-        <module>miru-client</module>
         <module>miru-cluster-client</module>
         <module>miru-cluster</module>
         <module>miru-wal</module>
@@ -41,5 +40,6 @@
         <module>miru-sea-anomaly-plugins</module>
         <module>miru-sea-anomaly-plugins-test</module>
         <module>miru-metric-sampler</module>
+        <module>miru-wal-client</module>
   </modules>
 </project>

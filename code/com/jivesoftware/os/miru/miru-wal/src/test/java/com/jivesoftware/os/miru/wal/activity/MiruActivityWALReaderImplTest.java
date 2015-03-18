@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
+import com.jivesoftware.os.miru.api.wal.Sip;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
@@ -44,13 +45,14 @@ public class MiruActivityWALReaderImplTest {
         }
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
-        activityWALReader.stream(tenantId, partitionId, startingTimestamp, batchSize, 10_000, new MiruActivityWALReader.StreamMiruActivityWAL() {
-            @Override
-            public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                timestamps.add(collisionId);
-                return true;
-            }
-        });
+        activityWALReader.stream(tenantId, partitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(),
+            startingTimestamp, batchSize, new MiruActivityWALReader.StreamMiruActivityWAL() {
+                @Override
+                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
+                    timestamps.add(collisionId);
+                    return true;
+                }
+            });
 
         assertEquals(timestamps.size(), totalActivities);
         assertEquals(timestamps.get(0).longValue(), startingTimestamp);
@@ -89,7 +91,8 @@ public class MiruActivityWALReaderImplTest {
         }
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
-        activityWALReader.streamSip(tenantId, partitionId, MiruActivityWALReader.Sip.INITIAL, batchSize, 10_000,
+        activityWALReader.streamSip(tenantId, partitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(),
+            Sip.INITIAL, batchSize,
             new MiruActivityWALReader.StreamMiruActivityWAL() {
                 @Override
                 public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
@@ -135,7 +138,7 @@ public class MiruActivityWALReaderImplTest {
         }
 
         final AtomicLong expectedTimestamp = new AtomicLong(startingTimestamp);
-        activityWALReader.streamSip(tenantId, partitionId, MiruActivityWALReader.Sip.INITIAL, batchSize, 10_000,
+        activityWALReader.streamSip(tenantId, partitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(), Sip.INITIAL, batchSize,
             new MiruActivityWALReader.StreamMiruActivityWAL() {
                 @Override
                 public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {

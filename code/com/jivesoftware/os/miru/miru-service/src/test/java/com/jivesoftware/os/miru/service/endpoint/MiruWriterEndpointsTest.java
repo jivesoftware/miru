@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.service.endpoint;
 
 import com.google.common.collect.ImmutableList;
-import com.jivesoftware.os.miru.api.MiruWriter;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.service.MiruService;
 import java.util.List;
 import javax.ws.rs.core.Response;
 import org.testng.annotations.BeforeMethod;
@@ -18,14 +18,14 @@ import static org.testng.Assert.assertNotNull;
 
 public class MiruWriterEndpointsTest {
 
-    private MiruWriter miruWriter;
+    private MiruService service;
 
     private MiruWriterEndpoints miruWriterEndpoints;
 
     @BeforeMethod
     public void setUp() {
-        this.miruWriter = mock(MiruWriter.class);
-        this.miruWriterEndpoints = new MiruWriterEndpoints(miruWriter);
+        this.service = mock(MiruService.class);
+        this.miruWriterEndpoints = new MiruWriterEndpoints(service);
     }
 
     @Test
@@ -43,7 +43,7 @@ public class MiruWriterEndpointsTest {
 
         assertNotNull(response);
         assertEquals(response.getStatus(), 200);
-        verify(miruWriter, times(1)).writeToIndex(activities);
+        verify(service, times(1)).writeToIndex(activities);
     }
 
     @Test
@@ -52,16 +52,16 @@ public class MiruWriterEndpointsTest {
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
-        verify(miruWriter, times(0)).writeToIndex(anyListOf(MiruPartitionedActivity.class));
+        verify(service, times(0)).writeToIndex(anyListOf(MiruPartitionedActivity.class));
     }
 
     @Test
     public void testAddActivitiesWithException() throws Exception {
-        doThrow(new RuntimeException("Fake Error!")).when(miruWriter).writeToIndex(anyListOf(MiruPartitionedActivity.class));
+        doThrow(new RuntimeException("Fake Error!")).when(service).writeToIndex(anyListOf(MiruPartitionedActivity.class));
         Response response = miruWriterEndpoints.addActivities(ImmutableList.<MiruPartitionedActivity>of());
 
         assertNotNull(response);
         assertEquals(response.getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
-        verify(miruWriter, times(1)).writeToIndex(anyListOf(MiruPartitionedActivity.class));
+        verify(service, times(1)).writeToIndex(anyListOf(MiruPartitionedActivity.class));
     }
 }

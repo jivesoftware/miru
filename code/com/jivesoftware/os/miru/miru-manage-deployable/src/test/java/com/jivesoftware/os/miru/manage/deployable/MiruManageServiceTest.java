@@ -8,30 +8,21 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
+import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupEntry;
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
-import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
-import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
+import org.mockito.Mockito;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -83,23 +74,21 @@ public class MiruManageServiceTest {
             numberOfReplicas,
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1));
-        MiruWAL miruWAL = new MiruWALInitializer().initialize("test", rowColumnValueStoreInitializer, mapper);
-        miruWAL.getActivityLookupTable().add(MiruVoidByte.INSTANCE, tenantId, -1L, new MiruActivityLookupEntry(-1, -1, -1, false), null, null);
-        miruWAL.getWriterPartitionRegistry().add(MiruVoidByte.INSTANCE, tenantId, 1, MiruPartitionId.of(0), null, null);
-
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(miruWAL.getActivityWAL(), miruWAL.getActivitySipWAL());
-        MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(miruWAL.getReadTrackingWAL(), miruWAL.getReadTrackingSipWAL());
-        MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(miruWAL.getActivityLookupTable());
-
-        MiruPartitionIdProvider partitionIdProvider = new MiruRCVSPartitionIdProvider(0,
-            miruWAL.getWriterPartitionRegistry(),
-            miruWAL.getActivitySipWAL());
 
         clusterRegistry.registerSchema(tenantId, miruSchema);
 
+        MiruWALClient miruWALClient = Mockito.mock(MiruWALClient.class);
+        Mockito.when(miruWALClient.getAllTenantIds()).thenReturn(Arrays.asList(tenantId));
+        Mockito.when(miruWALClient.getLargestPartitionIdAcrossAllWriters(Mockito.<MiruTenantId>any())).thenReturn(partitionId);
+
+        Mockito.when(miruWALClient.getPartitionStatus(Mockito.<MiruTenantId>any(), Mockito.anyList()))
+            .thenReturn(Arrays.asList(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0))));
+
+
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        miruManageService = new MiruManageInitializer().initialize(renderer, clusterRegistry, activityWALReader, readTrackingWALReader,
-            activityLookupTable, partitionIdProvider);
+        miruManageService = new MiruManageInitializer().initialize(renderer,
+            clusterRegistry,
+            miruWALClient);
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
 
@@ -146,13 +135,6 @@ public class MiruManageServiceTest {
         String rendered = miruManageService.renderSchemaWithLookup(lookupJSON);
         System.out.println(rendered);
         assertTrue(rendered.contains("<td>" + tenantId.toString() + "</td>"));
-    }
-
-    @Test
-    public void testRenderActivityWALWithTenant() throws Exception {
-        String rendered = miruManageService.renderActivityWALWithTenant(tenantId);
-        assertTrue(rendered.contains(tenantId.toString()));
-        assertTrue(rendered.contains("/miru/manage/wal/activity/" + tenantId + "/" + partitionId + "#focus"));
     }
 
 }

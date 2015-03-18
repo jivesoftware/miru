@@ -35,7 +35,6 @@ import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,7 +47,6 @@ public class IndexTestUtil {
     public static TxCogs cogs = new TxCogs(256, 64, null, null, null);
 
     private static MiruContextFactory factory(int numberOfChunkStores) {
-        MiruReadTrackingWALReaderImpl readTrackingWALReader = null; // TODO FActor out!
 
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(1024);
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(1024);
@@ -85,7 +83,6 @@ public class IndexTestUtil {
             schemaProvider,
             termComposer,
             activityInternExtern,
-            readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
             .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
             .put(MiruBackingStorage.disk, onDiskChunkAllocator)

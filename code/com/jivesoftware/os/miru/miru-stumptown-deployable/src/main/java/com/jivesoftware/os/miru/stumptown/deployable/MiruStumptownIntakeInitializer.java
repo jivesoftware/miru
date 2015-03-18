@@ -16,6 +16,7 @@
 package com.jivesoftware.os.miru.stumptown.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import org.merlin.config.Config;
@@ -28,7 +29,7 @@ public class MiruStumptownIntakeInitializer {
 
     public interface MiruStumptownIntakeConfig extends Config {
 
-        @StringDefault("/miru/writer/client/ingress")
+        @StringDefault(MiruWriterEndpointConstants.INGRESS_PREFIX + MiruWriterEndpointConstants.ADD)
         public String getMiruIngressEndpoint();
 
     }

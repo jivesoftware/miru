@@ -15,6 +15,7 @@
  */
 package com.jivesoftware.os.miru.stumptown.deployable;
 
+import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import org.merlin.config.Config;
@@ -27,7 +28,7 @@ import org.merlin.config.defaults.StringDefault;
  */
 public interface MiruStumptownServiceConfig extends Config {
 
-    @StringDefault("/miru/writer/client/ingress")
+    @StringDefault(MiruWriterEndpointConstants.INGRESS_PREFIX + MiruWriterEndpointConstants.ADD)
     public String getMiruIngressEndpoint();
 
     @StringDefault("unspecifiedHost:0")

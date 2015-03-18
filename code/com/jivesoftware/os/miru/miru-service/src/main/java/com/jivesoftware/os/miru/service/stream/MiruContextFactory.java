@@ -62,7 +62,6 @@ import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
@@ -85,7 +84,6 @@ public class MiruContextFactory {
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
-    private final MiruReadTrackingWALReader readTrackingWALReader;
     private final Map<MiruBackingStorage, MiruChunkAllocator> allocators;
     private final MiruResourceLocator diskResourceLocator;
     private final MiruBackingStorage defaultStorage;
@@ -100,7 +98,6 @@ public class MiruContextFactory {
         MiruSchemaProvider schemaProvider,
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
-        MiruReadTrackingWALReader readTrackingWALReader,
         Map<MiruBackingStorage, MiruChunkAllocator> allocators,
         MiruResourceLocator diskResourceLocator,
         MiruBackingStorage defaultStorage,
@@ -115,7 +112,6 @@ public class MiruContextFactory {
         this.schemaProvider = schemaProvider;
         this.termComposer = termComposer;
         this.activityInternExtern = activityInternExtern;
-        this.readTrackingWALReader = readTrackingWALReader;
         this.allocators = allocators;
         this.diskResourceLocator = diskResourceLocator;
         this.defaultStorage = defaultStorage;
@@ -303,7 +299,6 @@ public class MiruContextFactory {
             removalIndex,
             unreadTrackingIndex,
             inboxIndex,
-            readTrackingWALReader,
             activityInternExtern,
             streamLocks,
             chunkStores);

@@ -18,20 +18,21 @@ package com.jivesoftware.os.miru.writer.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfig;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
+import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
-import com.jivesoftware.os.miru.client.MiruClient;
-import com.jivesoftware.os.miru.client.MiruClientConfig;
-import com.jivesoftware.os.miru.client.MiruClientInitializer;
-import com.jivesoftware.os.miru.client.endpoints.MiruClientEndpoints;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
@@ -39,14 +40,39 @@ import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
+import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
+import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
+import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
+import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
+import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
+import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
+import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
+import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
+import com.jivesoftware.os.miru.wal.readtracking.MiruWriteToReadTrackingAndSipWAL;
+import com.jivesoftware.os.miru.writer.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
+import com.jivesoftware.os.miru.writer.deployable.base.MiruLiveIngressActivitySenderProvider;
+import com.jivesoftware.os.miru.writer.deployable.base.MiruWarmActivitySenderProvider;
+import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruIngressEndpoints;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
+import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
+import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.merlin.config.Config;
 
 public class MiruWriterMain {
@@ -77,6 +103,10 @@ public class MiruWriterMain {
                     throw new UnsupportedOperationException("Not supported yet.");
                 }
             });
+
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
+                new HasUI.UI("Miru-Writer", "main", "/miru/writer"))));
+
             deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
@@ -118,7 +148,6 @@ public class MiruWriterMain {
 
             MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
 
-
             TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-manage", // TODO expose to conf
                 "main");
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
@@ -134,14 +163,74 @@ public class MiruWriterMain {
 
             MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
-            MiruClient miruClient = new MiruClientInitializer().initialize(clientConfig,
+            ExecutorService sendActivitiesToHostsThreadPool = Executors.newFixedThreadPool(clientConfig.getSendActivitiesThreadPoolSize());
+
+            Collection<HttpClientConfiguration> configurations = Lists.newArrayList();
+            HttpClientConfig baseConfig = HttpClientConfig.newBuilder() // TODO refactor so this is passed in.
+                .setSocketTimeoutInMillis(clientConfig.getSocketTimeoutInMillis())
+                .setMaxConnections(clientConfig.getMaxConnections())
+                .build();
+            configurations.add(baseConfig);
+            HttpClientFactory httpClientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configurations);
+
+            MiruActivitySenderProvider activitySenderProvider;
+            if (clientConfig.getLiveIngress()) {
+                activitySenderProvider = new MiruLiveIngressActivitySenderProvider(httpClientFactory, new ObjectMapper());
+            } else {
+                activitySenderProvider = new MiruWarmActivitySenderProvider(httpClientFactory, new ObjectMapper());
+            }
+
+            MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
+            MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
+            MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+            MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+            MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(wal.getActivityLookupTable());
+
+            MiruPartitionIdProvider miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(clientConfig.getTotalCapacity(),
+                wal.getWriterPartitionRegistry(),
+                activityWALReader);
+
+            MiruPartitioner miruPartitioner = new MiruPartitioner(instanceConfig.getInstanceName(),
+                miruPartitionIdProvider,
+                activityWALWriter,
+                activityWALReader,
+                readTrackingWALWriter,
+                activityLookupTable,
+                clientConfig.getPartitionMaximumAgeInMillis());
+
+            MiruActivityIngress activityIngress = new MiruActivityIngress(sendActivitiesToHostsThreadPool,
                 clusterClient,
                 replicaSetDirector,
-                wal,
-                instanceConfig.getInstanceName());
+                activitySenderProvider,
+                miruPartitioner,
+                clientConfig.getTopologyCacheSize(),
+                clientConfig.getTopologyCacheExpiresInMillis()
+            );
 
-            deployable.addEndpoints(MiruClientEndpoints.class);
-            deployable.addInjectables(MiruClient.class, miruClient);
+            MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
+            MiruWALDirector miruWALDirector = new MiruWALDirector(activityLookupTable,
+                activityWALReader,
+                activityWALWriter,
+                miruPartitionIdProvider,
+                readTrackingWALReader);
+
+            File staticResourceDir = new File(System.getProperty("user.dir"));
+            System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
+            Resource sourceTree = new Resource(staticResourceDir)
+                //.addResourcePath("../../../../../src/main/resources") // fluff?
+                .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setContext("/static");
+
+            MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
+
+            MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer().initialize(renderer, miruWALDirector);
+
+            deployable.addEndpoints(MiruWriterEndpoints.class);
+            deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);
+            deployable.addInjectables(MiruWALDirector.class, miruWALDirector);
+
+            deployable.addEndpoints(MiruIngressEndpoints.class);
+            deployable.addInjectables(MiruActivityIngress.class, activityIngress);
             deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 
             deployable.buildServer().start();

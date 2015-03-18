@@ -52,11 +52,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-wal</artifactId>
-            <version>0.382-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
             <version>0.382-SNAPSHOT</version>
         </dependency>
@@ -149,6 +144,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
+            <version>0.382-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-wal</artifactId>
             <version>0.382-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>

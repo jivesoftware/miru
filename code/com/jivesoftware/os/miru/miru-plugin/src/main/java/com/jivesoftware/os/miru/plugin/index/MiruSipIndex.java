@@ -6,7 +6,7 @@
 
 package com.jivesoftware.os.miru.plugin.index;
 
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
+import com.jivesoftware.os.miru.api.wal.Sip;
 import java.io.IOException;
 
 /**

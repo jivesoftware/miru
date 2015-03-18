@@ -8,7 +8,6 @@ import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruWriter;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -31,7 +30,6 @@ import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
-import com.jivesoftware.os.miru.service.writer.MiruWriterImpl;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCounts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsEndpoints;
@@ -76,10 +74,9 @@ public class InMemoryEndpointsTest {
 
         MiruService miruService = miruProvider.getMiru(tenantId);
 
-        MiruWriter miruWriter = new MiruWriterImpl(miruService);
         this.aggregateCountsEndpoints = new AggregateCountsEndpoints(
             new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider)));
-        this.miruWriterEndpoints = new MiruWriterEndpoints(miruWriter);
+        this.miruWriterEndpoints = new MiruWriterEndpoints(miruService);
     }
 
     @Test(enabled = true, description = "Disabled until we can figure out a  better solution for bootstrapping instead of sleeping.")

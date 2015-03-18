@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
+import com.jivesoftware.os.miru.api.wal.Sip;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 

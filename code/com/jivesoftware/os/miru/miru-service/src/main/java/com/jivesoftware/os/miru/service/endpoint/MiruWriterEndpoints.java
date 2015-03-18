@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.service.endpoint;
 
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
-import com.jivesoftware.os.miru.api.MiruWriter;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -14,19 +14,19 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import static com.jivesoftware.os.miru.api.MiruWriter.ADD_ACTIVITIES;
-import static com.jivesoftware.os.miru.api.MiruWriter.WRITER_SERVICE_ENDPOINT_PREFIX;
+import static com.jivesoftware.os.miru.api.MiruReaderEndpointConstants.ADD_ACTIVITIES;
+import static com.jivesoftware.os.miru.api.MiruReaderEndpointConstants.WRITER_SERVICE_ENDPOINT_PREFIX;
 
 @Path(WRITER_SERVICE_ENDPOINT_PREFIX)
 public class MiruWriterEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruWriter writer;
+    private final MiruService service;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruWriterEndpoints(@Context MiruWriter writer) {
-        this.writer = writer;
+    public MiruWriterEndpoints(@Context MiruService service) {
+        this.service = service;
     }
 
     @POST
@@ -42,7 +42,7 @@ public class MiruWriterEndpoints {
         }
 
         try {
-            writer.writeToIndex(activities);
+            service.writeToIndex(activities);
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
             log.error("Failed to add activities.", e);

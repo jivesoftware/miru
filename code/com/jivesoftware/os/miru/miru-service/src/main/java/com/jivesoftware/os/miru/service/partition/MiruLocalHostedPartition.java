@@ -17,6 +17,10 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
+import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
+import com.jivesoftware.os.miru.api.wal.Sip;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
@@ -27,13 +31,12 @@ import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALStatus;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -58,7 +61,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
     private final MiruBitmaps<BM> bitmaps;
     private final MiruPartitionCoord coord;
     private final MiruContextFactory contextFactory;
-    private final MiruActivityWALReader activityWALReader;
+    private final MiruWALClient walClient;
     private final MiruPartitionHeartbeatHandler heartbeatHandler;
     private final MiruRebuildDirector rebuildDirector;
     private final AtomicBoolean removed = new AtomicBoolean(false);
@@ -110,7 +113,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
         MiruContextFactory contextFactory,
-        MiruActivityWALReader activityWALReader,
+        MiruWALClient walClient,
         MiruPartitionHeartbeatHandler heartbeatHandler,
         MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBootstrapExecutor,
@@ -132,7 +135,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         this.bitmaps = bitmaps;
         this.coord = coord;
         this.contextFactory = contextFactory;
-        this.activityWALReader = activityWALReader;
+        this.walClient = walClient;
         this.heartbeatHandler = heartbeatHandler;
         this.rebuildDirector = rebuildDirector;
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
@@ -481,7 +484,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
-                    MiruActivityWALStatus status = activityWALReader.getStatus(coord.tenantId, coord.partitionId);
+                    List<MiruActivityWALStatus> partitionStatus = walClient.getPartitionStatus(coord.tenantId, Collections.singletonList(coord.partitionId));
+                    MiruActivityWALStatus status = partitionStatus.get(0);
                     Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, status.count);
                     if (token.isPresent()) {
                         try {
@@ -533,45 +537,30 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                 @Override
                 public void run() {
                     try {
-                        final AtomicReference<List<MiruPartitionedActivity>> batchRef = new AtomicReference<List<MiruPartitionedActivity>>(
-                            Lists.<MiruPartitionedActivity>newArrayListWithCapacity(partitionRebuildBatchSize));
-                        activityWALReader.stream(coord.tenantId,
+
+                        MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetActivityCursor> activity = walClient.getActivity(coord.tenantId,
                             coord.partitionId,
-                            accessor.getRebuildTimestamp(),
-                            partitionRebuildBatchSize,
-                            timings.partitionRebuildFailureSleepMillis,
-                            new MiruActivityWALReader.StreamMiruActivityWAL() {
-                                private List<MiruPartitionedActivity> batch = batchRef.get();
+                            new MiruWALClient.GetActivityCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), accessor.getRebuildTimestamp()),
+                            partitionRebuildBatchSize);
 
-                                @Override
-                                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                                    batch.add(partitionedActivity);
-                                    if (batch.size() == partitionRebuildBatchSize) {
-                                        log.debug("Delivering batch of size {} for {}", partitionRebuildBatchSize, coord);
-                                        boolean success = tryQueuePut(rebuilding, queue, batch);
-                                        if (success) {
-                                            batch = Lists.newArrayListWithCapacity(partitionRebuildBatchSize);
-                                            batchRef.set(batch);
-                                        }
-                                    }
-
-                                    // stop if the rebuild has died, or the accessor has changed
-                                    return rebuilding.get() && accessorRef.get() == accessor;
-                                }
+                        while (rebuilding.get() && accessorRef.get() == accessor && !activity.batch.isEmpty()) {
+                            List<MiruPartitionedActivity> bs = new ArrayList<>(activity.batch.size());
+                            for (MiruWALEntry batch : activity.batch) {
+                                bs.add(batch.activity);
                             }
-                        );
+                            tryQueuePut(rebuilding, queue, bs);
 
-                        List<MiruPartitionedActivity> batch = batchRef.get();
-                        if (rebuilding.get() && !batch.isEmpty()) {
-                            log.debug("Delivering batch of size {} for {}", batch.size(), coord);
-                            tryQueuePut(rebuilding, queue, batch);
+                            activity = walClient.getActivity(coord.tenantId,
+                                coord.partitionId,
+                                activity.cursor,
+                                partitionRebuildBatchSize);
                         }
 
                         // signals end of rebuild
                         log.debug("Signaling end of rebuild for {}", coord);
                         endOfWAL.set(true);
                     } catch (Exception x) {
-                        log.error("Failure while rebuilding {}", new Object[] { coord }, x);
+                        log.error("Failure while rebuilding {}", new Object[]{coord}, x);
                     } finally {
                         rebuilding.set(false);
                     }
@@ -633,7 +622,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     log.inc("rebuild>partition>" + coord.partitionId, count, coord.tenantId.toString());
                 }
             } catch (Exception e) {
-                log.error("Failure during rebuild index for {}", new Object[] { coord }, e);
+                log.error("Failure during rebuild index for {}", new Object[]{coord}, e);
                 failure = e;
             }
 
@@ -707,42 +696,41 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
             final MiruSipTracker sipTracker = new MiruSipTracker(maxSipReplaySize, maxSipClockSkew, accessor.seenLastSip.get());
 
-            final AtomicReference<Sip> sip = new AtomicReference<>(accessor.getSip());
+            AtomicReference<Sip> sip = new AtomicReference<>(accessor.getSip());
             final List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList();
-            activityWALReader.streamSip(coord.tenantId,
-                coord.partitionId,
-                sip.get(),
-                partitionSipBatchSize,
-                timings.partitionRebuildFailureSleepMillis,
-                new MiruActivityWALReader.StreamMiruActivityWAL() {
-                    @Override
-                    public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                        if (Thread.interrupted()) {
-                            throw new InterruptedException("Interrupted while streaming sip");
-                        }
 
-                        long version = partitionedActivity.activity.isPresent() ? partitionedActivity.activity.get().version : 0;
-                        TimeAndVersion timeAndVersion = new TimeAndVersion(partitionedActivity.timestamp, version);
+            MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.SipActivityCursor> sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId,
+                new MiruWALClient.SipActivityCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), sip.get().clockTimestamp, sip.get().activityTimestamp),
+                partitionSipBatchSize);
 
-                        if (partitionedActivity.type.isBoundaryType() || !sipTracker.wasSeenLastSip(timeAndVersion)) {
-                            partitionedActivities.add(partitionedActivity);
-                        }
-                        sipTracker.addSeenThisSip(timeAndVersion);
+            while (accessorRef.get() == accessor && !sippedActivity.batch.isEmpty()) {
+                if (Thread.interrupted()) {
+                    throw new InterruptedException("Interrupted while streaming sip");
+                }
 
-                        if (!partitionedActivity.type.isBoundaryType()) {
-                            sipTracker.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
-                        }
+                for (MiruWALEntry e : sippedActivity.batch) {
+                    long version = e.activity.activity.isPresent() ? e.activity.activity.get().version : 0; // Smells!
+                    TimeAndVersion timeAndVersion = new TimeAndVersion(e.activity.timestamp, version);
 
-                        if (partitionedActivities.size() > partitionSipBatchSize) {
-                            deliver(partitionedActivities, accessor, sipTracker, sip);
-                            partitionedActivities.clear();
-                        }
+                    if (e.activity.type.isBoundaryType() || !sipTracker.wasSeenLastSip(timeAndVersion)) {
+                        partitionedActivities.add(e.activity);
+                    }
+                    sipTracker.addSeenThisSip(timeAndVersion);
 
-                        // stop if the accessor has changed
-                        return accessorRef.get() == accessor;
+                    if (!e.activity.type.isBoundaryType()) {
+                        sipTracker.put(e.activity.clockTimestamp, e.activity.timestamp);
+                    }
+
+                    if (partitionedActivities.size() > partitionSipBatchSize) {
+                        deliver(partitionedActivities, accessor, sipTracker, sip);
+                        partitionedActivities.clear();
                     }
                 }
-            );
+
+                sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId,
+                    sippedActivity.cursor,
+                    partitionSipBatchSize);
+            }
 
             deliver(partitionedActivities, accessor, sipTracker, sip);
 

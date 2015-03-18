@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 
 /**
  * Composes the building blocks of a MiruContext together for convenience.
@@ -35,7 +34,6 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     public final MiruRemovalIndex<BM> removalIndex;
     public final MiruUnreadTrackingIndex<BM> unreadTrackingIndex;
     public final MiruInboxIndex<BM> inboxIndex;
-    public final MiruReadTrackingWALReader readTrackingWALReader;
     public final MiruActivityInternExtern activityInternExtern;
     public final StripingLocksProvider<MiruStreamId> streamLocks;
     public final ChunkStore[] chunkStores;
@@ -50,7 +48,6 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         MiruRemovalIndex<BM> removalIndex,
         MiruUnreadTrackingIndex<BM> unreadTrackingIndex,
         MiruInboxIndex<BM> inboxIndex,
-        MiruReadTrackingWALReader readTrackingWALReader,
         MiruActivityInternExtern activityInternExtern,
         StripingLocksProvider<MiruStreamId> streamLocks,
         ChunkStore[] chunkStores) {
@@ -64,7 +61,6 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         this.removalIndex = removalIndex;
         this.unreadTrackingIndex = unreadTrackingIndex;
         this.inboxIndex = inboxIndex;
-        this.readTrackingWALReader = readTrackingWALReader;
         this.activityInternExtern = activityInternExtern;
         this.streamLocks = streamLocks;
         this.chunkStores = chunkStores;
@@ -118,11 +114,6 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     @Override
     public MiruInboxIndex<BM> getInboxIndex() {
         return inboxIndex;
-    }
-
-    @Override
-    public MiruReadTrackingWALReader getReadTrackingWALReader() {
-        return readTrackingWALReader;
     }
 
     @Override

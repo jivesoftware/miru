@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.wal.lookup;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import java.util.List;
 
 /**

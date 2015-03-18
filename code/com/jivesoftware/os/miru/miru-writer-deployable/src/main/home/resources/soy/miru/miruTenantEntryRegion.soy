@@ -1,0 +1,126 @@
+{namespace soy.miru.section}
+
+/**
+ * Tenant section
+ *
+ * @param tenant
+ * @param config
+ * @param? configNumberOfReplicas
+ * @param? configTopologyIsStaleAfterMillis
+ * @param partitions
+ */
+{template .tenantEntryRegion}
+    <a name="focus"></a>
+
+    {if $config}
+        <div class="panel panel-default">
+            <div class="panel-heading">Configuration for {$tenant}</div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Number of replicas</th>
+                            <th>Topology is stale after millis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{$configNumberOfReplicas != '-1' ? $configNumberOfReplicas : 'unset'}</td>
+                            <td>{$configTopologyIsStaleAfterMillis != '-1' ? $configTopologyIsStaleAfterMillis : 'unset'}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {/if}
+
+    <div class="panel panel-default">
+        <div class="panel-heading">Topology for {$tenant}</div>
+        <div class="panel-body">
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Storage</th>
+                        <th>Idle</th>
+                        <th>Logical name</th>
+                        <th>Port</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {foreach $p in $partitions}
+                        <tr>
+                            <td colspan="6" style="background-color: #eee; font-size:90%;">
+                                Partition {$p.partitionId} (size: {$p.activityCount}) {if $p.begins != $p.ends}({$p.begins} / {$p.ends}){/if}
+                            </td>
+                        </tr>
+                        {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
+                            {param type: 'online' /}
+                            {param partitions: $p.online /}
+                        {/call}
+                        {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
+                            {param type: 'rebuilding' /}
+                            {param partitions: $p.rebuilding /}
+                        {/call}
+                        {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
+                            {param type: 'bootstrap' /}
+                            {param partitions: $p.bootstrap /}
+                        {/call}
+                        {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
+                            {param type: 'offline' /}
+                            {param partitions: $p.offline /}
+                        {/call}
+                    {ifempty}
+                        <tr>
+                            <td colspan="6">There are no registered partitions for this tenant</td>
+                        </tr>
+                    {/foreach}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{/template}
+
+/**
+ * Render partition list
+ *
+ * @param tenantId
+ * @param partitionId
+ * @param type
+ * @param partitions
+ */
+{template .tenantEntryPartitions}
+    {foreach $partition in $partitions}
+        <tr>
+            <td style="text-transform:uppercase;">{$type}</td>
+            <td>{$partition.backingStorage}</td>
+            <td>{$partition.idle}</td>
+            <td>
+                <a href="/miru/manage/hosts/{$partition.host.logicalName|escapeUri}/{$partition.host.port}#focus">
+                    {$partition.host.logicalName}
+                </a>
+            </td>
+            <td>{$partition.host.port}</td>
+            <td>
+                {if $type == 'offline'}
+                    <input type="button" value="Warm" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
+                {/if}
+                {if $type == 'bootstrap'}
+                    <input type="button" value="Prioritize" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
+                {/if}
+                {if $type == 'online'}
+                    <input type="button" value="Rebuild" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
+                {/if}
+            </td>
+        </tr>
+    {/foreach}
+{/template}

@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 
 /**
  * @author jonathan
@@ -38,8 +37,6 @@ public interface MiruRequestContext<BM> {
     MiruUnreadTrackingIndex<BM> getUnreadTrackingIndex();
 
     MiruInboxIndex<BM> getInboxIndex();
-
-    MiruReadTrackingWALReader getReadTrackingWALReader();
 
     StripingLocksProvider<MiruStreamId> getStreamLocks();
 }

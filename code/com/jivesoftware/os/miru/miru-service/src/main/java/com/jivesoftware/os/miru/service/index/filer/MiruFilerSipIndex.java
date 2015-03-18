@@ -3,9 +3,9 @@ package com.jivesoftware.os.miru.service.index.filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.ChunkTransaction;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
+import com.jivesoftware.os.miru.api.wal.Sip;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 

@@ -12,7 +12,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  *
@@ -46,9 +45,8 @@ public class MiruHostsRegion implements MiruPageRegion<Optional<MiruHost>> {
         try {
             LinkedHashSet<HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
             data.put("hosts", Collections2.transform(hostHeartbeats, new Function<HostHeartbeat, String>() {
-                @Nullable
                 @Override
-                public String apply(@Nullable HostHeartbeat input) {
+                public String apply(HostHeartbeat input) {
                     return input != null ? hostEntryRegion.render(input) : null;
                 }
             }));

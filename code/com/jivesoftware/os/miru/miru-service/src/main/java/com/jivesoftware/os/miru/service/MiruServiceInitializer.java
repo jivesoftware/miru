@@ -24,6 +24,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -47,11 +48,6 @@ import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer.MiruWAL;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
@@ -73,7 +69,7 @@ public class MiruServiceInitializer {
         MiruClusterClient clusterClient,
         MiruHost miruHost,
         MiruSchemaProvider schemaProvider,
-        MiruWAL wal,
+        MiruWALClient walClient,
         HttpClientFactory httpClientFactory,
         MiruResourceLocator resourceLocator,
         MiruTermComposer termComposer,
@@ -114,8 +110,6 @@ public class MiruServiceInitializer {
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
             config.getLongTailSolverWindowSize(),
             config.getLongTailSolverPercentile());
-
-        MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
         ByteBufferFactory byteBufferFactory;
         if (config.getUseOffHeapBuffers()) {
@@ -159,7 +153,6 @@ public class MiruServiceInitializer {
             schemaProvider,
             termComposer,
             internExtern,
-            readTrackingWALReader,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
                 .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
                 .put(MiruBackingStorage.disk, onDiskChunkAllocator)
@@ -174,7 +167,6 @@ public class MiruServiceInitializer {
             authzStripingLocksProvider
         );
 
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());
         ObjectMapper objectMapper = new ObjectMapper();
@@ -203,7 +195,7 @@ public class MiruServiceInitializer {
         MiruMergeChits miruMergeChits = new MiruMergeChits(config.getMergeChitCount(), config.getMergeMaxOverage());
         MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(config,
             streamFactory,
-            activityWALReader,
+            walClient,
             heartbeatHandler,
             rebuildDirector,
             scheduledBootstrapExecutor,

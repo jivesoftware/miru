@@ -4,11 +4,9 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
@@ -21,8 +19,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
 
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
-    private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
-        activitySipWAL;
+    private final MiruActivityWALReader activityWALReader;
 
     private final ConcurrentHashMap<TenantPartitionWriterKey, AtomicInteger> cursors = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<TenantWriterKey, MiruPartitionId> tenantWriterLargestPartition = new ConcurrentHashMap<>();
@@ -33,9 +30,9 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
 
     public MiruRCVSPartitionIdProvider(int totalCapacity,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry,
-        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
+        MiruActivityWALReader activityWALReader) {
         this.writerPartitionRegistry = writerPartitionRegistry;
-        this.activitySipWAL = activitySipWAL;
+        this.activityWALReader = activityWALReader;
         this.perClientCapacity = totalCapacity;
     }
 
@@ -63,6 +60,17 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
     public int getLatestIndex(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
         AtomicInteger index = getIndex(tenantId, partitionId, writerId);
         return index.get();
+    }
+
+    private AtomicInteger getIndex(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
+        TenantPartitionWriterKey key = new TenantPartitionWriterKey(tenantId, partitionId, writerId);
+        AtomicInteger index = cursors.get(key);
+        if (index == null) {
+            MiruPartitionCursor cursorForWriterId = activityWALReader.getCursorForWriterId(tenantId, writerId, perClientCapacity);
+            cursors.putIfAbsent(key, new AtomicInteger(cursorForWriterId.last()));
+            index = cursors.get(key);
+        }
+        return index;
     }
 
     @Override
@@ -103,20 +111,6 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
         });
     }
 
-    private AtomicInteger getIndex(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
-        TenantPartitionWriterKey key = new TenantPartitionWriterKey(tenantId, partitionId, writerId);
-        AtomicInteger index = cursors.get(key);
-        if (index == null) {
-            MiruPartitionedActivity begin = activitySipWAL.get(tenantId,
-                new MiruActivityWALRow(partitionId.getId()),
-                new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId, Long.MAX_VALUE),
-                null, null);
-            int lastIndex = (begin != null) ? begin.index : -1;
-            cursors.putIfAbsent(key, new AtomicInteger(lastIndex));
-            index = cursors.get(key);
-        }
-        return index;
-    }
 
     private MiruPartitionId getTenantWriterLargestPartition(MiruTenantId tenantId, int writerId) throws Exception {
         TenantWriterKey tenantWriterKey = new TenantWriterKey(tenantId, writerId);

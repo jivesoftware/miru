@@ -1,13 +1,10 @@
 package com.jivesoftware.os.miru.wal.readtracking;
 
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 
 public interface MiruReadTrackingWALReader {
-
-    long getSipTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId);
 
     public static interface StreamReadTrackingWAL {
 
@@ -23,7 +20,5 @@ public interface MiruReadTrackingWALReader {
 
     void streamSip(MiruTenantId tenantId, MiruStreamId streamId, long sipTimestamp, StreamReadTrackingSipWAL streamReadTrackingSipWAL)
         throws Exception;
-
-    public void setSipTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId, long sipTimestamp);
 
 }

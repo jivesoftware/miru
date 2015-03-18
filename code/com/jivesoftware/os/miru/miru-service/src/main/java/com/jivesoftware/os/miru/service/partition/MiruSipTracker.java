@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader.Sip;
+import com.jivesoftware.os.miru.api.wal.Sip;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 

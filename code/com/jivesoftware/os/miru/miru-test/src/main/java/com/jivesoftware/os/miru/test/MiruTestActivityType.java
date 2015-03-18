@@ -9,7 +9,6 @@ import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import java.util.Collection;
 import java.util.List;
-import javax.annotation.Nullable;
 
 /**
  *
@@ -203,9 +202,8 @@ public enum MiruTestActivityType {
     }
 
     private static Function<Id, String> ID_TO_STRING_FORM = new Function<Id, String>() {
-        @Nullable
         @Override
-        public String apply(@Nullable Id input) {
+        public String apply(Id input) {
             return input != null ? input.toStringForm() : null;
         }
     };

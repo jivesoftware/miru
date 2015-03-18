@@ -15,6 +15,7 @@
  */
 package com.jivesoftware.os.miru.sea.anomaly.deployable;
 
+import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.StringDefault;
 
@@ -24,7 +25,7 @@ import org.merlin.config.defaults.StringDefault;
  */
 public interface MiruSeaAnomalyServiceConfig extends Config {
 
-    @StringDefault("/miru/writer/client/ingress")
+    @StringDefault(MiruWriterEndpointConstants.INGRESS_PREFIX + MiruWriterEndpointConstants.ADD)
     public String getMiruIngressEndpoint();
 
     @StringDefault("unspecifiedHost:0")
