@@ -59,6 +59,7 @@ import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruLiveIngressActivitySenderProvider;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruWarmActivitySenderProvider;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruIngressEndpoints;
+import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruWALEndpoints;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
@@ -228,6 +229,8 @@ public class MiruWriterMain {
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);
             deployable.addInjectables(MiruWALDirector.class, miruWALDirector);
+
+            deployable.addEndpoints(MiruWALEndpoints.class);
 
             deployable.addEndpoints(MiruIngressEndpoints.class);
             deployable.addInjectables(MiruActivityIngress.class, activityIngress);
