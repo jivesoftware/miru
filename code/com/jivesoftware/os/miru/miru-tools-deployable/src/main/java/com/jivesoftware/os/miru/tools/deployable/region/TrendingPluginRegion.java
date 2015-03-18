@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.tools.deployable.region;
 
-import com.jivesoftware.os.miru.tools.deployable.analytics.PNGWaveforms;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
@@ -34,6 +33,7 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.tools.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.tools.deployable.analytics.MinMaxDouble;
+import com.jivesoftware.os.miru.tools.deployable.analytics.PNGWaveforms;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
@@ -140,7 +140,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                         100),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                                new Class[]{TrendingAnswer.class},
+                                new Class[] { TrendingAnswer.class },
                                 null);
                             response = trendingResponse;
                             if (response != null && response.answer != null) {
@@ -149,7 +149,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                 log.warn("Empty trending response from {}, trying another", requestHelper);
                             }
                         } catch (Exception e) {
-                            log.warn("Failed trending request to {}, trying another", new Object[]{requestHelper}, e);
+                            log.warn("Failed trending request to {}, trying another", new Object[] { requestHelper }, e);
                         }
                     }
                 }
@@ -179,9 +179,9 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                 "name", input.distinctValue,
                                 "rank", String.valueOf(input.rank),
                                 "waveform", "data:image/png;base64," + new PNGWaveforms()
-                                .hitsToBase64PNGWaveform(600, 128, 10,
-                                    ImmutableMap.of(input.distinctValue, new AnalyticsAnswer.Waveform(input.waveform)),
-                                    Optional.of(mmd)));
+                                    .hitsToBase64PNGWaveform(600, 128, 10,
+                                        ImmutableMap.of(input.distinctValue, new AnalyticsAnswer.Waveform(input.waveform)),
+                                        Optional.of(mmd)));
                         }
                     }));
                     ObjectMapper mapper = new ObjectMapper();

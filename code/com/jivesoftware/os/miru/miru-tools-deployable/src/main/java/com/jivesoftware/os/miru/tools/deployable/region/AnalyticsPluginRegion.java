@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.tools.deployable.region;
 
-import com.jivesoftware.os.miru.tools.deployable.analytics.PNGWaveforms;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
@@ -31,6 +30,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.tools.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.tools.deployable.analytics.MinMaxDouble;
+import com.jivesoftware.os.miru.tools.deployable.analytics.PNGWaveforms;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;

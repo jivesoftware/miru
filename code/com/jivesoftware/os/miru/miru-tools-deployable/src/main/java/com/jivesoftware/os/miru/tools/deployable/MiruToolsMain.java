@@ -131,7 +131,7 @@ public class MiruToolsMain {
 
             MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(renderer);
 
-            
+
             ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
 
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
@@ -169,7 +169,7 @@ public class MiruToolsMain {
 
             deployable.addEndpoints(MiruToolsEndpoints.class);
             deployable.addInjectables(MiruToolsService.class, miruToolsService);
-            
+
             for (MiruToolsPlugin plugin : plugins) {
                 miruToolsService.registerPlugin(plugin);
                 deployable.addEndpoints(plugin.endpointsClass);

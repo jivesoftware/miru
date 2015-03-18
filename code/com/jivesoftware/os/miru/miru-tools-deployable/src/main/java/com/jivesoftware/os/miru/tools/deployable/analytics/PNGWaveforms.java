@@ -4,8 +4,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
-import com.jivesoftware.os.miru.tools.deployable.analytics.MinMaxDouble;
-import com.jivesoftware.os.miru.tools.deployable.analytics.PaintWaveform;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -21,7 +19,6 @@ import javax.imageio.ImageIO;
 import org.apache.commons.net.util.Base64;
 
 /**
- *
  * @author jonathan.colt
  */
 public class PNGWaveforms {
