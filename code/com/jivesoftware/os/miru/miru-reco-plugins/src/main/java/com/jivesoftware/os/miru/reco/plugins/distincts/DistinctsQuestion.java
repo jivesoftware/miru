@@ -1,13 +1,10 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -16,12 +13,12 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
 /**
  *
  */
-public class DistinctsQuestion implements Question<DistinctsAnswer, DistinctsReport> {
+public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnswer, DistinctsReport> {
+
+    private static final DistinctsRemotePartition REMOTE = new DistinctsRemotePartition();
 
     private final Distincts distincts;
     private final MiruRequest<DistinctsQuery> request;
-    private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
-    private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public DistinctsQuestion(Distincts distincts,
         MiruRequest<DistinctsQuery> request) {
@@ -39,9 +36,13 @@ public class DistinctsQuestion implements Question<DistinctsAnswer, DistinctsRep
     }
 
     @Override
-    public MiruPartitionResponse<DistinctsAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctsReport> report)
-        throws Exception {
-        return new DistinctsRemotePartitionReader(requestHelper).gatherDistincts(partitionId, request, report);
+    public MiruRemotePartition<DistinctsQuery, DistinctsAnswer, DistinctsReport> getRemotePartition() {
+        return REMOTE;
+    }
+
+    @Override
+    public MiruRequest<DistinctsQuery> getRequest() {
+        return request;
     }
 
     @Override

@@ -79,9 +79,9 @@ public class MiruService implements Miru {
     }
 
     @Override
-    public <A, P> MiruResponse<A> askAndMerge(
+    public <Q, A, P> MiruResponse<A> askAndMerge(
         MiruTenantId tenantId,
-        final MiruSolvableFactory<A, P> solvableFactory,
+        final MiruSolvableFactory<Q, A, P> solvableFactory,
         MiruAnswerEvaluator<A> evaluator,
         MiruAnswerMerger<A> merger,
         A defaultValue,
@@ -175,10 +175,10 @@ public class MiruService implements Miru {
     }
 
     @Override
-    public <A, P> MiruPartitionResponse<A> askImmediate(
+    public <Q, A, P> MiruPartitionResponse<A> askImmediate(
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        MiruSolvableFactory<A, P> factory,
+        MiruSolvableFactory<Q, A, P> factory,
         Optional<P> report,
         A defaultValue,
         MiruSolutionLogLevel logLevel)

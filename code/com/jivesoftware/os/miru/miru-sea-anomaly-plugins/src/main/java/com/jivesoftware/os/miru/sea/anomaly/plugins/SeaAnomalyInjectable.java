@@ -50,7 +50,7 @@ public class SeaAnomalyInjectable {
     }
 
     public MiruPartitionResponse<SeaAnomalyAnswer> score(MiruPartitionId partitionId,
-        MiruRequestAndReport<SeaAnomalyQuery, StumptownReport> requestAndReport) throws MiruQueryServiceException {
+        MiruRequestAndReport<SeaAnomalyQuery, SeaAnomalyReport> requestAndReport) throws MiruQueryServiceException {
         try {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);

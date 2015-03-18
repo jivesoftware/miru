@@ -60,7 +60,7 @@ public class SeaAnomalyEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response scoreStumptowning(@PathParam("partitionId") int id, MiruRequestAndReport<SeaAnomalyQuery, StumptownReport> requestAndReport) {
+    public Response scoreStumptowning(@PathParam("partitionId") int id, MiruRequestAndReport<SeaAnomalyQuery, SeaAnomalyReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
             MiruPartitionResponse<SeaAnomalyAnswer> result = injectable.score(partitionId, requestAndReport);

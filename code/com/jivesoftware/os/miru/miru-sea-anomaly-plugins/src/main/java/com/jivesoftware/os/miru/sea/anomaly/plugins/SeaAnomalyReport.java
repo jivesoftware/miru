@@ -6,10 +6,10 @@ import java.io.Serializable;
 /**
  * Requires mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
  */
-public class StumptownReport implements Serializable {
+public class SeaAnomalyReport implements Serializable {
 
     @JsonCreator
-    public StumptownReport() {
+    public SeaAnomalyReport() {
     }
 
     @Override

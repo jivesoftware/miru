@@ -2,8 +2,6 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -11,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -24,9 +23,10 @@ import java.util.List;
 /**
  *
  */
-public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
+public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+    private static final RecoRemotePartition REMOTE = new RecoRemotePartition();
 
     private final CollaborativeFiltering collaborativeFiltering;
     private final MiruRequest<RecoQuery> request;
@@ -105,8 +105,13 @@ public class RecoQuestion implements Question<RecoAnswer, RecoReport> {
     }
 
     @Override
-    public MiruPartitionResponse<RecoAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<RecoReport> report) throws Exception {
-        return new RecoRemotePartitionReader(requestHelper).collaborativeFilteringRecommendations(partitionId, request, report);
+    public MiruRemotePartition<RecoQuery, RecoAnswer, RecoReport> getRemotePartition() {
+        return REMOTE;
+    }
+
+    @Override
+    public MiruRequest<RecoQuery> getRequest() {
+        return request;
     }
 
     @Override

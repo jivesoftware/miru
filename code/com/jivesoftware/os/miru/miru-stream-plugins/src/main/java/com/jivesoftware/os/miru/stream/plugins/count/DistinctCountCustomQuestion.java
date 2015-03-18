@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
@@ -11,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -25,18 +24,19 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class CountCustomQuestion implements Question<DistinctCountAnswer, DistinctCountReport> {
+public class DistinctCountCustomQuestion implements Question<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+    private static final DistinctCountCustomRemotePartition REMOTE = new DistinctCountCustomRemotePartition();
 
-    private final NumberOfDistincts numberOfDistincts;
+    private final DistinctCount distinctCount;
     private final MiruRequest<DistinctCountQuery> request;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
-    public CountCustomQuestion(NumberOfDistincts numberOfDistincts,
+    public DistinctCountCustomQuestion(DistinctCount distinctCount,
         MiruRequest<DistinctCountQuery> request) {
-        this.numberOfDistincts = numberOfDistincts;
+        this.distinctCount = distinctCount;
         this.request = request;
     }
 
@@ -83,13 +83,17 @@ public class CountCustomQuestion implements Question<DistinctCountAnswer, Distin
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return new MiruPartitionResponse<>(numberOfDistincts.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());
+        return new MiruPartitionResponse<>(distinctCount.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());
     }
 
     @Override
-    public MiruPartitionResponse<DistinctCountAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<DistinctCountReport> report)
-        throws Exception {
-        return new DistinctCountRemotePartitionReader(requestHelper).countCustomStream(partitionId, request, report);
+    public MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> getRemotePartition() {
+        return REMOTE;
+    }
+
+    @Override
+    public MiruRequest<DistinctCountQuery> getRequest() {
+        return request;
     }
 
     @Override

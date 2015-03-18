@@ -34,10 +34,10 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.stream.plugins.count.DistinctCount;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountAnswer;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountInjectable;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountQuery;
-import com.jivesoftware.os.miru.stream.plugins.count.NumberOfDistincts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCounts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
@@ -105,7 +105,7 @@ public class MiruStreamServiceNGTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
         this.service = miruProvider.getMiru(tenant1);
         this.aggregateCountsInjectable = new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider));
-        this.distinctCountInjectable = new DistinctCountInjectable(miruProvider, new NumberOfDistincts());
+        this.distinctCountInjectable = new DistinctCountInjectable(miruProvider, new DistinctCount());
     }
 
     @Test(enabled = false, description = "This test is disabled because it is very slow")

@@ -3,8 +3,6 @@ package com.jivesoftware.os.miru.analytics.plugins.analytics;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -13,6 +11,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -27,7 +26,9 @@ import java.util.Map;
 /**
  *
  */
-public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsReport> {
+public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> {
+
+    private static final AnalyticsRemotePartition REMOTE = new AnalyticsRemotePartition();
 
     private final Analytics analytics;
     private final MiruRequest<AnalyticsQuery> request;
@@ -153,9 +154,13 @@ public class AnalyticsQuestion implements Question<AnalyticsAnswer, AnalyticsRep
     }
 
     @Override
-    public MiruPartitionResponse<AnalyticsAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<AnalyticsReport> report)
-        throws Exception {
-        return new AnalyticsRemotePartitionReader(requestHelper).scoreAnalyticing(partitionId, request, report);
+    public MiruRemotePartition<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> getRemotePartition() {
+        return REMOTE;
+    }
+
+    @Override
+    public MiruRequest<AnalyticsQuery> getRequest() {
+        return request;
     }
 
     @Override

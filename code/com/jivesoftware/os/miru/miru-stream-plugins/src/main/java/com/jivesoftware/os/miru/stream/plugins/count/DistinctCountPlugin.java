@@ -19,10 +19,10 @@ public class DistinctCountPlugin implements MiruPlugin<DistinctCountEndpoints, D
 
     @Override
     public Collection<MiruEndpointInjectable<DistinctCountInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
-        NumberOfDistincts numberOfDistincts = new NumberOfDistincts();
+        DistinctCount distinctCount = new DistinctCount();
         return Collections.singletonList(new MiruEndpointInjectable<>(
                 DistinctCountInjectable.class,
-                new DistinctCountInjectable(miruProvider, numberOfDistincts)
+                new DistinctCountInjectable(miruProvider, distinctCount)
         ));
     }
 }

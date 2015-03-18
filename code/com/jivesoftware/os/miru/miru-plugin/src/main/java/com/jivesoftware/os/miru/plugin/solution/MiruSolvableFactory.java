@@ -1,23 +1,25 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.concurrent.Callable;
 
 /**
+ * @param <Q> query type
  * @param <A> answer type
  * @param <P> report type
  */
-public class MiruSolvableFactory<A, P> {
+public class MiruSolvableFactory<Q, A, P> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final String queryKey;
-    private final Question<A, P> question;
+    private final Question<Q, A, P> question;
 
-    public MiruSolvableFactory(String queryKey, Question<A, P> question) {
+    public MiruSolvableFactory(String queryKey, Question<Q, A, P> question) {
         this.queryKey = queryKey;
         this.question = question;
     }
@@ -30,8 +32,13 @@ public class MiruSolvableFactory<A, P> {
                     if (handle.isLocal()) {
                         return question.askLocal(handle, report);
                     } else {
-                        return question.askRemote(handle.getRequestHelper(), handle.getCoord().partitionId, report);
+                        MiruRemotePartitionReader<Q, A, P> remotePartitionReader = new MiruRemotePartitionReader<>(question.getRemotePartition(),
+                            handle.getRequestHelper());
+                        return remotePartitionReader.read(handle.getCoord().partitionId, question.getRequest(), report);
                     }
+                } catch (MiruPartitionUnavailableException e) {
+                    LOG.info("Partition unavailable on {}: {}", replica.getCoord(), e.getMessage());
+                    throw e;
                 } catch (Throwable t) {
                     LOG.info("Solvable encountered a problem", t);
                     throw t;
@@ -41,7 +48,7 @@ public class MiruSolvableFactory<A, P> {
         return new MiruSolvable<>(replica.getCoord(), callable);
     }
 
-    public Question<A, P> getQuestion() {
+    public Question<Q, A, P> getQuestion() {
         return question;
     }
 

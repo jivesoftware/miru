@@ -15,18 +15,18 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
  */
 public interface Miru {
 
-    <R, P> MiruResponse<R> askAndMerge(
-        MiruTenantId tenantId, MiruSolvableFactory<R, P> solvableFactory,
-        MiruAnswerEvaluator<R> evaluator,
-        MiruAnswerMerger<R> merger,
-        R defaultValue,
+    <Q, A, P> MiruResponse<A> askAndMerge(
+        MiruTenantId tenantId, MiruSolvableFactory<Q, A, P> solvableFactory,
+        MiruAnswerEvaluator<A> evaluator,
+        MiruAnswerMerger<A> merger,
+        A defaultValue,
         MiruSolutionLogLevel logLevel) throws Exception;
 
-    <R, P> MiruPartitionResponse<R> askImmediate(
+    <Q, A, P> MiruPartitionResponse<A> askImmediate(
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        MiruSolvableFactory<R, P> factory, Optional<P> report,
-        R defaultValue,
+        MiruSolvableFactory<Q, A, P> factory, Optional<P> report,
+        A defaultValue,
         MiruSolutionLogLevel logLevel) throws Exception;
 
 }

@@ -23,7 +23,7 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  *
  */
-public class NumberOfDistincts {
+public class DistinctCount {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 

@@ -5,8 +5,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.KeyRange;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -23,6 +21,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -40,7 +39,9 @@ import java.util.Map.Entry;
 /**
  *
  */
-public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownReport> {
+public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> {
+
+    private static final SeaAnomalyRemotePartition REMOTE = new SeaAnomalyRemotePartition();
 
     private final SeaAnomaly seaAnomaly;
     private final MiruRequest<SeaAnomalyQuery> request;
@@ -54,7 +55,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
     }
 
     @Override
-    public <BM> MiruPartitionResponse<SeaAnomalyAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<StumptownReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<SeaAnomalyAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<SeaAnomalyReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
@@ -253,16 +254,20 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyAnswer, StumptownR
     }
 
     @Override
-    public MiruPartitionResponse<SeaAnomalyAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<StumptownReport> report)
-        throws Exception {
-        return new SeaAnomalyRemotePartitionReader(requestHelper).scoreStumptowning(partitionId, request, report);
+    public MiruRemotePartition<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> getRemotePartition() {
+        return REMOTE;
     }
 
     @Override
-    public Optional<StumptownReport> createReport(Optional<SeaAnomalyAnswer> answer) {
-        Optional<StumptownReport> report = Optional.absent();
+    public MiruRequest<SeaAnomalyQuery> getRequest() {
+        return request;
+    }
+
+    @Override
+    public Optional<SeaAnomalyReport> createReport(Optional<SeaAnomalyAnswer> answer) {
+        Optional<SeaAnomalyReport> report = Optional.absent();
         if (answer.isPresent()) {
-            report = Optional.of(new StumptownReport());
+            report = Optional.of(new SeaAnomalyReport());
         }
         return report;
     }

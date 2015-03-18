@@ -3,9 +3,7 @@ package com.jivesoftware.os.miru.stumptown.plugins;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -14,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -29,7 +28,9 @@ import java.util.Map;
 /**
  *
  */
-public class StumptownQuestion implements Question<StumptownAnswer, StumptownReport> {
+public class StumptownQuestion implements Question<StumptownQuery, StumptownAnswer, StumptownReport> {
+
+    private static final StumptownRemotePartition REMOTE = new StumptownRemotePartition();
 
     private final Stumptown stumptown;
     private final MiruRequest<StumptownQuery> request;
@@ -155,9 +156,13 @@ public class StumptownQuestion implements Question<StumptownAnswer, StumptownRep
     }
 
     @Override
-    public MiruPartitionResponse<StumptownAnswer> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<StumptownReport> report)
-        throws Exception {
-        return new StumptownRemotePartitionReader(requestHelper).scoreStumptowning(partitionId, request, report);
+    public MiruRemotePartition<StumptownQuery, StumptownAnswer, StumptownReport> getRemotePartition() {
+        return REMOTE;
+    }
+
+    @Override
+    public MiruRequest<StumptownQuery> getRequest() {
+        return request;
     }
 
     @Override

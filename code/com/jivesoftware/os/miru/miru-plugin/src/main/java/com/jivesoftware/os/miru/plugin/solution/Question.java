@@ -1,19 +1,20 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 
 /**
+ * @param <Q> query type
  * @param <A> answer type
  * @param <P> report type
  * @author jonathan
  */
-public interface Question<A, P> {
+public interface Question<Q, A, P> {
 
     <BM> MiruPartitionResponse<A> askLocal(MiruRequestHandle<BM> queryHandle, Optional<P> report) throws Exception;
 
-    MiruPartitionResponse<A> askRemote(RequestHelper requestHelper, MiruPartitionId partitionId, Optional<P> report) throws Exception;
+    MiruRemotePartition<Q, A, P> getRemotePartition();
 
     Optional<P> createReport(Optional<A> answer);
+
+    MiruRequest<Q> getRequest();
 }

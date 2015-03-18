@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
@@ -11,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -25,16 +24,17 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class FilterCustomQuestion implements Question<AggregateCountsAnswer, AggregateCountsReport> {
+public class AggregateCountsCustomQuestion implements Question<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+    private static final AggregateCountsCustomRemotePartition REMOTE = new AggregateCountsCustomRemotePartition();
 
     private final AggregateCounts aggregateCounts;
     private final MiruRequest<AggregateCountsQuery> request;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
-    public FilterCustomQuestion(AggregateCounts aggregateCounts, MiruRequest<AggregateCountsQuery> request) {
+    public AggregateCountsCustomQuestion(AggregateCounts aggregateCounts, MiruRequest<AggregateCountsQuery> request) {
         this.aggregateCounts = aggregateCounts;
         this.request = request;
     }
@@ -85,11 +85,13 @@ public class FilterCustomQuestion implements Question<AggregateCountsAnswer, Agg
     }
 
     @Override
-    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(RequestHelper requestHelper,
-        MiruPartitionId partitionId,
-        Optional<AggregateCountsReport> report)
-        throws Exception {
-        return new AggregateCountsRemotePartitionReader(requestHelper).filterCustomStream(partitionId, request, report);
+    public MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> getRemotePartition() {
+        return REMOTE;
+    }
+
+    @Override
+    public MiruRequest<AggregateCountsQuery> getRequest() {
+        return request;
     }
 
     @Override

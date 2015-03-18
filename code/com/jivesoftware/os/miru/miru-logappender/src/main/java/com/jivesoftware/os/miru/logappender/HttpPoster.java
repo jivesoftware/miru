@@ -94,10 +94,12 @@ public class HttpPoster implements MiruLogSender {
             post(toJson);
         } catch (SocketException x) {
             destroy();
+            throw x;
         } catch (Exception x) {
             System.err.println("Failed to log append sizeInBytes:" + toJson.length() + " to http://" + host + ":" + port + "" + path + " ");
             x.printStackTrace();
             destroy();
+            throw x;
         }
     }
 

@@ -1,0 +1,40 @@
+package com.jivesoftware.os.miru.stumptown.plugins;
+
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
+import com.jivesoftware.os.mlogger.core.EndPointMetrics;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+
+import static com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants.CUSTOM_QUERY_ENDPOINT;
+import static com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants.STUMPTOWN_PREFIX;
+
+/**
+ *
+ */
+public class StumptownRemotePartition implements MiruRemotePartition<StumptownQuery, StumptownAnswer, StumptownReport> {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+    private static final EndPointMetrics endPointMetrics = new EndPointMetrics("process", LOG);
+
+    @Override
+    public String getEndpoint(MiruPartitionId partitionId) {
+        return STUMPTOWN_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId();
+    }
+
+    @Override
+    public Class<StumptownAnswer> getAnswerClass() {
+        return StumptownAnswer.class;
+    }
+
+    @Override
+    public StumptownAnswer getEmptyResults() {
+        return StumptownAnswer.EMPTY_RESULTS;
+    }
+
+    @Override
+    public EndPointMetrics getEndpointMetrics() {
+        return endPointMetrics;
+    }
+
+}
