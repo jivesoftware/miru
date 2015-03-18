@@ -11,7 +11,6 @@ import com.jivesoftware.os.amza.service.discovery.AmzaDiscovery;
 import com.jivesoftware.os.amza.service.storage.replication.SendFailureListener;
 import com.jivesoftware.os.amza.service.storage.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.shared.AmzaInstance;
-import com.jivesoftware.os.amza.shared.Flusher;
 import com.jivesoftware.os.amza.shared.MemoryRowsIndex;
 import com.jivesoftware.os.amza.shared.RingHost;
 import com.jivesoftware.os.amza.shared.RowChanges;
@@ -28,7 +27,6 @@ import com.jivesoftware.os.amza.shared.UpdatesTaker;
 import com.jivesoftware.os.amza.storage.RowTable;
 import com.jivesoftware.os.amza.storage.binary.BinaryRowMarshaller;
 import com.jivesoftware.os.amza.storage.binary.BinaryRowsTx;
-import com.jivesoftware.os.amza.storage.filer.Filer;
 import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesSender;
 import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesTaker;
 import com.jivesoftware.os.amza.transport.http.replication.endpoints.AmzaReplicationRestEndpoints;
@@ -49,7 +47,6 @@ import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
 /**
- *
  * @author jonathan.colt
  */
 public class AmzaClusterRegistryInitializer {
@@ -111,12 +108,7 @@ public class AmzaClusterRegistryInitializer {
             @Override
             public RowsIndex createRowsIndex(TableName tableName) throws Exception {
                 NavigableMap<RowIndexKey, RowIndexValue> navigableMap = new ConcurrentSkipListMap<>();
-                return new MemoryRowsIndex(navigableMap, new Flusher() {
-
-                    @Override
-                    public void flush() {
-                    }
-                });
+                return new MemoryRowsIndex(navigableMap);
             }
         };
 
@@ -129,13 +121,12 @@ public class AmzaClusterRegistryInitializer {
                 directory.mkdirs();
                 File file = new File(directory, tableName.getTableName() + ".kvt");
 
-                Filer filer = new Filer(file.getAbsolutePath(), "rw");
                 BinaryRowMarshaller rowMarshaller = new BinaryRowMarshaller();
 
                 return new RowTable(tableName,
                     orderIdProvider,
                     rowMarshaller,
-                    new BinaryRowsTx(file, rowMarshaller, tableIndexProvider));
+                    new BinaryRowsTx(file, rowMarshaller, tableIndexProvider, 100)); //TODO configure back-repair (per table?)
             }
         };
 
