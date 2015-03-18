@@ -8,6 +8,12 @@
         </file>
     </files>
     <fileSets>
+        <fileSet>
+            <outputDirectory>${project.name}</outputDirectory>
+            <directory>${project.basedir}/src/main/home</directory>
+            <filtered>false</filtered>
+            <fileMode>755</fileMode>
+        </fileSet>
 
     </fileSets>
     <dependencySets>

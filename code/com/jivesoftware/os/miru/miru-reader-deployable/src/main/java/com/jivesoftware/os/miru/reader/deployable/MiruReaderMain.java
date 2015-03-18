@@ -204,7 +204,6 @@ public class MiruReaderMain {
             final MiruService miruService = miruServiceLifecyle.getService();
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
-            deployable.addInjectables(MiruService.class, miruService);
             deployable.addEndpoints(MiruReaderEndpoints.class);
             deployable.addInjectables(MiruService.class, miruService);
 
