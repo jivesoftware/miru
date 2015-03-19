@@ -702,7 +702,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                 new MiruWALClient.SipActivityCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), sip.get().clockTimestamp, sip.get().activityTimestamp),
                 partitionSipBatchSize);
 
-            while (accessorRef.get() == accessor && !sippedActivity.batch.isEmpty()) {
+            while (accessorRef.get() == accessor && sippedActivity != null && !sippedActivity.batch.isEmpty()) {
                 if (Thread.interrupted()) {
                     throw new InterruptedException("Interrupted while streaming sip");
                 }
