@@ -183,7 +183,23 @@ public class MiruWALDirector implements MiruWALClient {
                 }
             });
 
-        return new StreamBatch<>(batch, new SipActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue(), lastSipId.longValue() + 1));
+        SipActivityCursor nextCursor;
+        if (batch.size() < batchSize) {
+            nextCursor = null;
+        } else if (lastSipId.longValue() == Long.MAX_VALUE) {
+            if (lastCollisionId.longValue() == Long.MAX_VALUE) {
+                if (sortOrder.byteValue() == Byte.MAX_VALUE) {
+                    nextCursor = null;
+                } else {
+                    nextCursor = new SipActivityCursor((byte) (sortOrder.byteValue() + 1), Long.MIN_VALUE, Long.MIN_VALUE);
+                }
+            } else {
+                nextCursor = new SipActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue() + 1, Long.MIN_VALUE);
+            }
+        } else {
+            nextCursor = new SipActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue(), lastSipId.longValue() + 1);
+        }
+        return new StreamBatch<>(batch, nextCursor);
     }
 
     @Override
@@ -208,7 +224,19 @@ public class MiruWALDirector implements MiruWALClient {
                 }
             });
 
-        return new StreamBatch<>(batch, new GetActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue() + 1));
+        GetActivityCursor nextCursor;
+        if (batch.size() < batchSize) {
+            nextCursor = null;
+        } else if (lastCollisionId.longValue() == Long.MAX_VALUE) {
+            if (sortOrder.byteValue() == Byte.MAX_VALUE) {
+                nextCursor = null;
+            } else {
+                nextCursor = new GetActivityCursor((byte) (sortOrder.byteValue() + 1), Long.MIN_VALUE);
+            }
+        } else {
+            nextCursor = new GetActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue() + 1);
+        }
+        return new StreamBatch<>(batch, nextCursor);
     }
 
     @Override
@@ -231,7 +259,19 @@ public class MiruWALDirector implements MiruWALClient {
             }
         });
 
-        return new StreamBatch<>(batch, new SipReadCursor(lastEventId.longValue(), lastSipId.longValue() + 1));
+        SipReadCursor nextCursor;
+        if (batch.size() < batchSize) {
+            nextCursor = null;
+        } else if (lastSipId.longValue() == Long.MAX_VALUE) {
+            if (lastEventId.longValue() == Long.MAX_VALUE) {
+                nextCursor = null;
+            } else {
+                nextCursor = new SipReadCursor(lastEventId.longValue() + 1, Long.MIN_VALUE);
+            }
+        } else {
+            nextCursor = new SipReadCursor(lastEventId.longValue(), lastSipId.longValue() + 1);
+        }
+        return new StreamBatch<>(batch, nextCursor);
     }
 
     @Override
@@ -253,7 +293,13 @@ public class MiruWALDirector implements MiruWALClient {
             }
         });
 
-        return new StreamBatch<>(batch, new GetReadCursor(lastEventId.longValue() + 1));
+        GetReadCursor nextCursor;
+        if (batch.size() < batchSize || lastEventId.longValue() == Long.MAX_VALUE) {
+            nextCursor = null;
+        } else {
+            nextCursor = new GetReadCursor(lastEventId.longValue() + 1);
+        }
+        return new StreamBatch<>(batch, nextCursor);
     }
 
 }

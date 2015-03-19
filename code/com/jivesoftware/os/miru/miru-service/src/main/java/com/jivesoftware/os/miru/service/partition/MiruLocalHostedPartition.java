@@ -427,10 +427,10 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     log.warn("Tenant is active but schema not available for {}", coord.tenantId);
                     log.debug("Tenant is active but schema not available", sue);
                 } catch (Throwable t) {
-                    log.error("CheckActive encountered a problem for {}", new Object[]{coord}, t);
+                    log.error("CheckActive encountered a problem for {}", new Object[] { coord }, t);
                 }
             } catch (Throwable t) {
-                log.error("Bootstrap encountered a problem for {}", new Object[]{coord}, t);
+                log.error("Bootstrap encountered a problem for {}", new Object[] { coord }, t);
             }
         }
 
@@ -505,7 +505,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                                         }
                                     }
                                 } catch (Throwable t) {
-                                    log.error("Rebuild encountered a problem for {}", new Object[]{coord}, t);
+                                    log.error("Rebuild encountered a problem for {}", new Object[] { coord }, t);
                                 }
                             }
                         } catch (MiruPartitionUnavailableException e) {
@@ -520,7 +520,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     }
                 }
             } catch (Throwable t) {
-                log.error("RebuildIndex encountered a problem for {}", new Object[]{coord}, t);
+                log.error("RebuildIndex encountered a problem for {}", new Object[] { coord }, t);
             }
         }
 
@@ -543,24 +543,23 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             new MiruWALClient.GetActivityCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), accessor.getRebuildTimestamp()),
                             partitionRebuildBatchSize);
 
-                        while (rebuilding.get() && accessorRef.get() == accessor && !activity.batch.isEmpty()) {
+                        while (rebuilding.get() && accessorRef.get() == accessor && activity != null && !activity.batch.isEmpty()) {
                             List<MiruPartitionedActivity> bs = new ArrayList<>(activity.batch.size());
                             for (MiruWALEntry batch : activity.batch) {
                                 bs.add(batch.activity);
                             }
                             tryQueuePut(rebuilding, queue, bs);
 
-                            activity = walClient.getActivity(coord.tenantId,
-                                coord.partitionId,
-                                activity.cursor,
-                                partitionRebuildBatchSize);
+                            activity = (activity.cursor != null)
+                                ? walClient.getActivity(coord.tenantId, coord.partitionId, activity.cursor, partitionRebuildBatchSize)
+                                : null;
                         }
 
                         // signals end of rebuild
                         log.debug("Signaling end of rebuild for {}", coord);
                         endOfWAL.set(true);
                     } catch (Exception x) {
-                        log.error("Failure while rebuilding {}", new Object[]{coord}, x);
+                        log.error("Failure while rebuilding {}", new Object[] { coord }, x);
                     } finally {
                         rebuilding.set(false);
                     }
@@ -622,7 +621,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     log.inc("rebuild>partition>" + coord.partitionId, count, coord.tenantId.toString());
                 }
             } catch (Exception e) {
-                log.error("Failure during rebuild index for {}", new Object[]{coord}, e);
+                log.error("Failure during rebuild index for {}", new Object[] { coord }, e);
                 failure = e;
             }
 
@@ -675,7 +674,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             updateStorage(accessor, MiruBackingStorage.disk, false);
                         }
                     } catch (Throwable t) {
-                        log.error("Migrate encountered a problem for {}", new Object[]{coord}, t);
+                        log.error("Migrate encountered a problem for {}", new Object[] { coord }, t);
                     }
                     try {
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
@@ -684,11 +683,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             accessor.refundChits(mergeChits);
                         }
                     } catch (Throwable t) {
-                        log.error("Sip encountered a problem for {}", new Object[]{coord}, t);
+                        log.error("Sip encountered a problem for {}", new Object[] { coord }, t);
                     }
                 }
             } catch (Throwable t) {
-                log.error("SipMigrateIndex encountered a problem for {}", new Object[]{coord}, t);
+                log.error("SipMigrateIndex encountered a problem for {}", new Object[] { coord }, t);
             }
         }
 
@@ -727,9 +726,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     }
                 }
 
-                sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId,
-                    sippedActivity.cursor,
-                    partitionSipBatchSize);
+                sippedActivity = (sippedActivity.cursor != null)
+                    ? walClient.sipActivity(coord.tenantId, coord.partitionId, sippedActivity.cursor, partitionSipBatchSize)
+                    : null;
             }
 
             deliver(partitionedActivities, accessor, sipTracker, sip);

@@ -100,7 +100,7 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                                     return new WALBean(input.collisionId, Optional.of(input.activity), input.version);
                                 }
                             });
-                            lastTimestamp.set(sipped.cursor.collisionId);
+                            lastTimestamp.set(sipped.cursor != null ? sipped.cursor.collisionId : Long.MAX_VALUE);
 
                         } else {
                             MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetActivityCursor> gopped = miruWALDirector.getActivity(tenantId,
@@ -114,7 +114,7 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                                     return new WALBean(input.collisionId, Optional.of(input.activity), input.version);
                                 }
                             });
-                            lastTimestamp.set(gopped.cursor.collisionId);
+                            lastTimestamp.set(gopped.cursor != null ? gopped.cursor.collisionId : Long.MAX_VALUE);
 
                         }
                     } catch (Exception e) {

@@ -77,7 +77,7 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
                                 return new WALBean(input.timestamp, Optional.<MiruPartitionedActivity>absent(), input.eventId);
                             }
                         });
-                        lastTimestamp.set(sipped.cursor.sipId);
+                        lastTimestamp.set(sipped.cursor != null ? sipped.cursor.sipId : Long.MAX_VALUE);
 
                     } else {
                         MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetReadCursor> read = miruWALDirector.getRead(miruTenantId, miruStreamId,
@@ -90,7 +90,7 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
                                 return new WALBean(input.collisionId, Optional.of(input.activity), input.version);
                             }
                         });
-                        lastTimestamp.set(read.cursor.eventId);
+                        lastTimestamp.set(read.cursor != null ? read.cursor.eventId : Long.MAX_VALUE);
                     }
                 } catch (Exception e) {
                     log.error("Failed to read read-tracking WAL", e);

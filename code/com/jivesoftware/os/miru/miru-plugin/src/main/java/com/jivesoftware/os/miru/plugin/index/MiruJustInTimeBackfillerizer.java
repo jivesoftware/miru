@@ -169,13 +169,13 @@ public class MiruJustInTimeBackfillerizer {
         // TODO this should really be computed on the server side.
         MiruWALClient.StreamBatch<MiruReadSipEntry, MiruWALClient.SipReadCursor> sipRead = walClient.sipRead(tenantId,
             streamId, new MiruWALClient.SipReadCursor(afterTimestamp, 0), 1000);
-        while (!sipRead.batch.isEmpty()) {
+        while (sipRead != null && !sipRead.batch.isEmpty()) {
             for (MiruReadSipEntry entry : sipRead.batch) {
                 long min = Math.min(minimumEventId.get(), entry.eventId);
                 minimumEventId.set(min);
                 newSipTimestamp.set(entry.timestamp);
             }
-            sipRead = walClient.sipRead(tenantId, streamId, sipRead.cursor, 1000);
+            sipRead = (sipRead.cursor != null) ? walClient.sipRead(tenantId, streamId, sipRead.cursor, 1000) : null;
         }
 
         // Take either the oldest backfilled time or the oldest readtracking sip time
@@ -189,7 +189,7 @@ public class MiruJustInTimeBackfillerizer {
         // Take the oldest eventId from the sip WAL, grab all read/unread events from that time and apply them
         MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetReadCursor> got = walClient.getRead(tenantId,
             streamId, new MiruWALClient.GetReadCursor(minimumEventId.get()), 1000);
-        while (!got.batch.isEmpty()) {
+        while (got != null && !got.batch.isEmpty()) {
             for (MiruWALEntry e : got.batch) {
                 MiruReadEvent readEvent = e.activity.readEvent.get();
                 MiruFilter filter = readEvent.filter;
@@ -202,7 +202,7 @@ public class MiruJustInTimeBackfillerizer {
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time);
                 }
             }
-            got = walClient.getRead(tenantId, streamId, got.cursor, 1000);
+            got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, 1000) : null;
         }
 
         // Update stream sip time if we used the read tracking sip WAL
