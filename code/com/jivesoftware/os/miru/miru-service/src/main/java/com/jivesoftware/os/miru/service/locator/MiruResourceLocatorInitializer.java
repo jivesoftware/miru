@@ -46,17 +46,20 @@ public class MiruResourceLocatorInitializer {
 
     public MiruResourceLocator initialize(final MiruServiceConfig config) throws IOException {
 
-        final File[] residentDiskPaths = pathToFile(config.getDiskResourceLocatorPaths().split(","));
+        File[] residentDiskPaths = pathToFile(config.getDiskResourceLocatorPaths().split(","));
         for (File residentDiskPath : residentDiskPaths) {
             FileUtils.forceMkdir(residentDiskPath);
         }
+        final File[] checkThese = new File[residentDiskPaths.length + 1];
+        System.arraycopy(residentDiskPaths, 0, checkThese, 0, residentDiskPaths.length);
+        checkThese[checkThese.length - 1] = new File(System.getProperty("user.dir"));
 
         HealthFactory.scheduleHealthChecker(ResidentResourceDiskCheck.class,
             new HealthFactory.HealthCheckerConstructor<Counter, ResidentResourceDiskCheck>() {
 
                 @Override
                 public HealthChecker<Counter> construct(ResidentResourceDiskCheck config) {
-                    return new DiskFreeHealthChecker(config, residentDiskPaths);
+                    return new DiskFreeHealthChecker(config, checkThese);
                 }
             });
 

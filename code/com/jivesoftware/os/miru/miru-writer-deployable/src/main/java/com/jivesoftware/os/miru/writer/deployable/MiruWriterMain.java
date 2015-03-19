@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -48,6 +49,9 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
+import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProviderInitializer;
+import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProviderInitializer.AmzaPartitionIdProviderConfig;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
@@ -58,6 +62,7 @@ import com.jivesoftware.os.miru.writer.deployable.MiruSoyRendererInitializer.Mir
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruLiveIngressActivitySenderProvider;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruWarmActivitySenderProvider;
+import com.jivesoftware.os.miru.writer.deployable.endpoints.IngressEndpointStats;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruIngressEndpoints;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruWALEndpoints;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
@@ -187,9 +192,25 @@ public class MiruWriterMain {
             MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
             MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(wal.getActivityLookupTable());
 
-            MiruPartitionIdProvider miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(clientConfig.getTotalCapacity(),
-                wal.getWriterPartitionRegistry(),
-                activityWALReader);
+            MiruPartitionIdProvider miruPartitionIdProvider;
+            if (clientConfig.getPartitionIdProviderType().equals("rcvs")) {
+                miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(clientConfig.getTotalCapacity(),
+                    wal.getWriterPartitionRegistry(),
+                    activityWALReader);
+            } else if (clientConfig.getPartitionIdProviderType().equals("amza")) {
+                AmzaPartitionIdProviderConfig amzaPartitionIdProviderConfig = deployable.config(AmzaPartitionIdProviderConfig.class);
+                AmzaService amzaService = new AmzaPartitionIdProviderInitializer().initialize(deployable,
+                    instanceConfig.getInstanceName(),
+                    instanceConfig.getHost(),
+                    instanceConfig.getMainPort(),
+                    "amza-partition-ids-" + instanceConfig.getClusterName(),
+                    amzaPartitionIdProviderConfig);
+                miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
+                    clientConfig.getTotalCapacity(),
+                    activityWALReader);
+            } else {
+                throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
+            }
 
             MiruPartitioner miruPartitioner = new MiruPartitioner(instanceConfig.getInstanceName(),
                 miruPartitionIdProvider,
@@ -224,7 +245,8 @@ public class MiruWriterMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer().initialize(renderer, miruWALDirector);
+            IngressEndpointStats ingressEndpointStats = new IngressEndpointStats();
+            MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer().initialize(renderer, miruWALDirector, ingressEndpointStats);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);
@@ -234,6 +256,7 @@ public class MiruWriterMain {
 
             deployable.addEndpoints(MiruIngressEndpoints.class);
             deployable.addInjectables(MiruActivityIngress.class, activityIngress);
+            deployable.addInjectables(IngressEndpointStats.class, ingressEndpointStats);
             deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 
             deployable.addResource(sourceTree);

@@ -32,16 +32,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author jonathan.colt
  */
-public class MiruAmzaPartitionIdProvider implements MiruPartitionIdProvider {
+public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
-    private final AmzaService amzaService;
     private final AmzaTable latestPartitions;
     private final AmzaTable cursors;
     private final int capacity;
     private final MiruActivityWALReader walReader;
 
-    public MiruAmzaPartitionIdProvider(AmzaService amzaService, int capacity, MiruActivityWALReader walReader) throws Exception {
-        this.amzaService = amzaService;
+    public AmzaPartitionIdProvider(AmzaService amzaService, int capacity, MiruActivityWALReader walReader) throws Exception {
         this.latestPartitions = amzaService.getTable(new TableName("master", "latestPartitions", null, null));
         this.cursors = amzaService.getTable(new TableName("master", "cursors", null, null));
         this.capacity = capacity;

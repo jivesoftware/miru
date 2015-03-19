@@ -49,9 +49,12 @@ public class MiruIngressEndpoints {
 
     private final MiruActivityIngress activityIngress;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
+    private final IngressEndpointStats endpointStats;
 
-    public MiruIngressEndpoints(@Context MiruActivityIngress activityIngress) {
+    public MiruIngressEndpoints(@Context MiruActivityIngress activityIngress,
+        @Context IngressEndpointStats endpointStats) {
         this.activityIngress = activityIngress;
+        this.endpointStats = endpointStats;
     }
 
     static interface IngressHealth extends TimerHealthCheckConfig {
@@ -78,6 +81,7 @@ public class MiruIngressEndpoints {
         try {
             ingressHealthTimer.startTimer();
             activityIngress.sendActivity(activities, false);
+            endpointStats.ingressed(activities);
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
             log.error("Failed to add activities.", e);
