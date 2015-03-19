@@ -77,6 +77,14 @@
             <artifactId>http-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>queue-guaranteed-delivery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>queue-processor</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-api</artifactId>
         </dependency>

@@ -309,7 +309,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
     @Override
     public void warm() throws Exception {
-        MiruPartitionAccessor<BM> accessor = accessorRef.get();
         heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
 
         log.inc("warm", 1);

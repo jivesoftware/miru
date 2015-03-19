@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import org.merlin.config.Config;
+import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.StringDefault;
 
 /**
@@ -31,6 +32,12 @@ public class MiruStumptownIntakeInitializer {
 
         @StringDefault(MiruWriterEndpointConstants.INGRESS_PREFIX + MiruWriterEndpointConstants.ADD)
         public String getMiruIngressEndpoint();
+
+        @StringDefault("var/queues")
+        String getPathToQueues();
+
+        @IntDefault(1_000)
+        int getMaxDrainSize();
 
     }
 

@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.sea.anomaly.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.queue.guaranteed.delivery.DeliveryCallback;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -32,6 +33,7 @@ import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
+import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSeaAnomalyIntakeInitializer.MiruSeaAnomalyIntakeConfig;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.SeaAnomalyQueryPluginEndpoints;
@@ -41,6 +43,8 @@ import com.jivesoftware.os.miru.sea.anomaly.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyQueryPluginRegion;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyStatusPluginRegion;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyTrendsPluginRegion;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
@@ -54,6 +58,8 @@ import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruSeaAnomalyMain {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static void main(String[] args) throws Exception {
         new MiruSeaAnomalyMain().run(args);
@@ -117,11 +123,31 @@ public class MiruSeaAnomalyMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize("", miruManageClient, mapper);
             SeaAnomalySchemaService seaAnomalySchemaService = new SeaAnomalySchemaService(clusterClient);
 
-            MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,
+            final MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,
                 seaAnomalySchemaService,
                 logMill,
                 mapper,
                 miruWriteClient);
+
+            DeliveryCallback deliveryCallback = new JacksonSerializedDeliveryCallback<AnomalyMetric>(intakeConfig.getMaxDrainSize(),
+                mapper,
+                AnomalyMetric.class,
+                true,
+                null) {
+                @Override
+                void deliverSerialized(List<AnomalyMetric> serialized) {
+                    try {
+                        inTakeService.ingressEvents(serialized);
+                        LOG.inc("ingress>delivered");
+                    } catch (Exception x) {
+                        LOG.error("Encountered the following while draining seaAnomalyQueue.", x);
+                        throw new RuntimeException(x);
+                    }
+                }
+            };
+
+            IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
+                intakeConfig.getPathToQueues(), 24, 4, deliveryCallback);
 
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
@@ -159,7 +185,8 @@ public class MiruSeaAnomalyMain {
                 .setContext("/static");
 
             deployable.addEndpoints(MiruSeaAnomalyIntakeEndpoints.class);
-            deployable.addInjectables(MiruSeaAnomalyIntakeService.class, inTakeService);
+            deployable.addInjectables(IngressGuaranteedDeliveryQueueProvider.class, ingressGuaranteedDeliveryQueueProvider);
+            deployable.addInjectables(ObjectMapper.class, mapper);
 
             deployable.addEndpoints(MiruQuerySeaAnomalyEndpoints.class);
             deployable.addInjectables(MiruSeaAnomalyService.class, queryService);

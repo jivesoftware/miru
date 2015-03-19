@@ -88,8 +88,8 @@ public class MiruStumptownIntakeService {
             activities.add(activity);
             timedLogEvents.add(new MiruStumptownPayloads.TimeAndPayload<>(activity.time, logEvent));
         }
-        ingress(activities);
         record(timedLogEvents);
+        ingress(activities);
         log.inc("ingressed", timedLogEvents.size());
         log.info("Ingressed " + timedLogEvents.size());
     }

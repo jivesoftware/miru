@@ -135,6 +135,16 @@
                 <version>${filer-version}</version>
             </dependency>
             <dependency>
+                <groupId>com.jivesoftware.os.filer</groupId>
+                <artifactId>queue-guaranteed-delivery</artifactId>
+                <version>${filer-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.filer</groupId>
+                <artifactId>queue-processor</artifactId>
+                <version>${filer-version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.jivesoftware.os.jive.utils</groupId>
                 <artifactId>id</artifactId>
                 <version>${jive-utils-version}</version>

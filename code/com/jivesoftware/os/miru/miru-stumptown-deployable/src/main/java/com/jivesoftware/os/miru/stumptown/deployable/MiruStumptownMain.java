@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.stumptown.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.queue.guaranteed.delivery.DeliveryCallback;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -30,6 +31,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownIntakeInitializer.MiruStumptownIntakeConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownQueryPluginEndpoints;
@@ -41,6 +43,8 @@ import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPlugi
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsIntializer;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
@@ -56,6 +60,8 @@ import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruStumptownMain {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static void main(String[] args) throws Exception {
         new MiruStumptownMain().run(args);
@@ -129,12 +135,32 @@ public class MiruStumptownMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize("", miruManageClient, mapper);
             StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(clusterClient);
 
-            MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(intakeConfig,
+            final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(intakeConfig,
                 stumptownSchemaService,
                 logMill,
                 mapper,
                 miruWriteClient,
                 payloads);
+
+            DeliveryCallback deliveryCallback = new JacksonSerializedDeliveryCallback<MiruLogEvent>(intakeConfig.getMaxDrainSize(),
+                mapper,
+                MiruLogEvent.class,
+                true,
+                null) {
+                @Override
+                void deliverSerialized(List<MiruLogEvent> serialized) {
+                    try {
+                        inTakeService.ingressLogEvents(serialized);
+                        LOG.inc("ingress>delivered");
+                    } catch (Exception x) {
+                        LOG.error("Encountered the following while draining stumptownQueue.", x);
+                        throw new RuntimeException(x);
+                    }
+                }
+            };
+
+            IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
+                intakeConfig.getPathToQueues(), 24, 4, deliveryCallback);
 
             new MiruStumptownInternalLogAppender("unknownDatacenter",
                 instanceConfig.getClusterName(),
@@ -180,7 +206,8 @@ public class MiruStumptownMain {
                 .setContext("/static");
 
             deployable.addEndpoints(MiruStumptownIntakeEndpoints.class);
-            deployable.addInjectables(MiruStumptownIntakeService.class, inTakeService);
+            deployable.addInjectables(IngressGuaranteedDeliveryQueueProvider.class, ingressGuaranteedDeliveryQueueProvider);
+            deployable.addInjectables(ObjectMapper.class, mapper);
 
             deployable.addEndpoints(MiruQueryStumptownEndpoints.class);
             deployable.addInjectables(MiruStumptownService.class, queryService);
