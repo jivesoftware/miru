@@ -66,9 +66,11 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
         TenantPartitionWriterKey key = new TenantPartitionWriterKey(tenantId, partitionId, writerId);
         AtomicInteger index = cursors.get(key);
         if (index == null) {
-            MiruPartitionCursor cursorForWriterId = activityWALReader.getCursorForWriterId(tenantId, writerId, perClientCapacity);
-            cursors.putIfAbsent(key, new AtomicInteger(cursorForWriterId.last()));
-            index = cursors.get(key);
+            MiruPartitionCursor cursorForWriterId = activityWALReader.getPartitionCursorForWriterId(tenantId, partitionId, writerId, perClientCapacity);
+            AtomicInteger existing = cursors.putIfAbsent(key, new AtomicInteger(cursorForWriterId.last()));
+            if (existing != null) {
+                index = existing;
+            }
         }
         return index;
     }
@@ -123,10 +125,13 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
                 tenantWriterLargestPartitionId = largestTenantWriterPartitionId;
             }
 
-            tenantWriterLargestPartition.putIfAbsent(tenantWriterKey, tenantWriterLargestPartitionId);
+            MiruPartitionId existing = tenantWriterLargestPartition.putIfAbsent(tenantWriterKey, tenantWriterLargestPartitionId);
+            if (existing != null) {
+                tenantWriterLargestPartitionId = existing;
+            }
         }
 
-        return tenantWriterLargestPartition.get(tenantWriterKey);
+        return tenantWriterLargestPartitionId;
     }
 
     private static class TenantPartitionWriterKey {

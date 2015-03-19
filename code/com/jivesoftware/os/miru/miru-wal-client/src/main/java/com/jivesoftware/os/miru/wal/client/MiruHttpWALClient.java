@@ -148,7 +148,7 @@ public class MiruHttpWALClient implements MiruWALClient {
                     public StreamBatch<MiruWALEntry, GetActivityCursor> call(TenantAwareHttpClient<String> client) throws HttpClientException {
                         HttpResponse response = client.postJson(routingTenantId,
                             "/miru/wal/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor);
-                        return responseMapper.extractResultFromResponse(response, StreamBatch.class, new Class[]{MiruWALEntry.class, SipActivityCursor.class},
+                        return responseMapper.extractResultFromResponse(response, StreamBatch.class, new Class[]{MiruWALEntry.class, GetActivityCursor.class},
                             null);
                     }
                 });

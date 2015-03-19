@@ -65,15 +65,15 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                     public ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> callback(
                         ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v) throws Exception {
 
-                            if (v != null) {
-                                cvats.add(v);
-                            }
-                            if (cvats.size() < batchSize) {
-                                return v;
-                            } else {
-                                return null;
-                            }
+                        if (v != null) {
+                            cvats.add(v);
                         }
+                        if (cvats.size() < batchSize) {
+                            return v;
+                        } else {
+                            return null;
+                        }
+                    }
                 });
 
             if (cvats.size() < batchSize) {
@@ -117,15 +117,15 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                     public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback(
                         ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v) throws Exception {
 
-                            if (v != null) {
-                                cvats.add(v);
-                            }
-                            if (cvats.size() < batchSize) {
-                                return v;
-                            } else {
-                                return null;
-                            }
+                        if (v != null) {
+                            cvats.add(v);
                         }
+                        if (cvats.size() < batchSize) {
+                            return v;
+                        } else {
+                            return null;
+                        }
+                    }
                 });
 
             if (cvats.size() < batchSize) {
@@ -267,5 +267,20 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
                 new AtomicInteger(largestPartitionId.index),
                 desiredPartitionCapacity);
         }
+    }
+
+    @Override
+    public MiruPartitionCursor getPartitionCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId, int desiredPartitionCapacity)
+        throws Exception {
+        LOG.inc("getPartitionCursorForWriterId");
+        LOG.inc("getPartitionCursorForWriterId>" + partitionId + '>' + writerId, tenantId.toString());
+        MiruPartitionedActivity got = activitySipWAL.get(tenantId,
+            new MiruActivityWALRow(partitionId.getId()),
+            new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId, Long.MAX_VALUE),
+            null, null);
+        int index = (got != null) ? got.index : 0;
+        return new MiruPartitionCursor(partitionId,
+            new AtomicInteger(index),
+            desiredPartitionCapacity);
     }
 }

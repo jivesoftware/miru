@@ -36,6 +36,9 @@ public interface MiruActivityWALReader {
 
     MiruPartitionCursor getCursorForWriterId(MiruTenantId tenantId, int writerId, int desiredPartitionCapacity) throws Exception;
 
+    MiruPartitionCursor getPartitionCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId, int desiredPartitionCapacity)
+        throws Exception;
+
     MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     long countSip(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
