@@ -39,6 +39,11 @@ public class MiruStumptownIntakeInitializer {
         @IntDefault(1_000)
         int getMaxDrainSize();
 
+        @IntDefault(1)
+        int getNumberOfQueues();
+
+        @IntDefault(24)
+        int getNumberOfThreadsPerQueue();
     }
 
     MiruStumptownIntakeService initialize(MiruStumptownIntakeConfig config,

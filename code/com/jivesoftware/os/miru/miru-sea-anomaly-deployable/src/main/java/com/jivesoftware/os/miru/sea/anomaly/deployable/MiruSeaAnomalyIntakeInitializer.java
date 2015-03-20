@@ -38,6 +38,11 @@ public class MiruSeaAnomalyIntakeInitializer {
         @IntDefault(1_000)
         int getMaxDrainSize();
 
+        @IntDefault(1)
+        int getNumberOfQueues();
+
+        @IntDefault(24)
+        int getNumberOfThreadsPerQueue();
     }
 
     MiruSeaAnomalyIntakeService initialize(MiruSeaAnomalyIntakeConfig config,

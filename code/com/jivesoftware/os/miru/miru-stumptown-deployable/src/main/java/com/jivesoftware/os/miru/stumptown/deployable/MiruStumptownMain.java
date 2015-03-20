@@ -160,7 +160,7 @@ public class MiruStumptownMain {
             };
 
             IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
-                intakeConfig.getPathToQueues(), 24, 4, deliveryCallback);
+                intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);
 
             new MiruStumptownInternalLogAppender("unknownDatacenter",
                 instanceConfig.getClusterName(),
