@@ -54,6 +54,9 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(true)
     boolean getPartitionWakeOnIndex();
 
+    @LongDefault(100_000)
+    long getPartitionRebuildIfBehindByCount();
+
     @IntDefault(10_000)
     int getPartitionRebuildBatchSize();
 
@@ -68,9 +71,6 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(-1)
     long getMergeMaxOverage();
 
-    @LongDefault(10_000)
-    long getPartitionRebuildFailureSleepMillis();
-
     @LongDefault(5_000)
     long getPartitionBootstrapIntervalInMillis();
 
@@ -82,9 +82,6 @@ public interface MiruServiceConfig extends Config {
 
     @LongDefault(30_000)
     long getPartitionBanUnregisteredSchemaMillis();
-
-    @LongDefault(600_000)
-    long getPartitionReleaseContextCacheAfterMillis();
 
     @LongDefault(3_000)
     long getPartitionMigrationWaitInMillis();

@@ -76,6 +76,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM> indexer;
     private final boolean partitionWakeOnIndex;
+    private final long partitionRebuildIfBehindByCount;
     private final int partitionRebuildBatchSize;
     private final int partitionSipBatchSize;
     private final MiruMergeChits mergeChits;
@@ -126,6 +127,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer,
         boolean partitionWakeOnIndex,
+        long partitionRebuildIfBehindByCount,
         int partitionRebuildBatchSize,
         int partitionSipBatchSize,
         MiruMergeChits mergeChits,
@@ -147,6 +149,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
         this.partitionWakeOnIndex = partitionWakeOnIndex;
+        this.partitionRebuildIfBehindByCount = partitionRebuildIfBehindByCount;
         this.partitionRebuildBatchSize = partitionRebuildBatchSize;
         this.partitionSipBatchSize = partitionSipBatchSize;
         this.mergeChits = mergeChits;
@@ -668,6 +671,18 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                 MiruPartitionAccessor<BM> accessor = accessorRef.get();
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.online) {
+                    if (firstSip.get()) {
+                        List<MiruActivityWALStatus> partitionStatus = walClient.getPartitionStatus(coord.tenantId,
+                            Collections.singletonList(coord.partitionId));
+                        long currentCount = accessor.context.isPresent() ? accessor.context.get().activityIndex.lastId() : 0;
+                        long behindByCount = partitionStatus.get(0).count - currentCount;
+                        if (behindByCount > partitionRebuildIfBehindByCount) {
+                            log.info("Forcing rebuild because partition is behind by {} for {}", behindByCount, coord);
+                            updateStorage(accessor, MiruBackingStorage.memory, false);
+                            return;
+                        }
+                    }
+
                     try {
                         if (accessor.canAutoMigrate()) {
                             updateStorage(accessor, MiruBackingStorage.disk, false);
@@ -780,27 +795,21 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
     public static final class Timings {
 
-        private final long partitionRebuildFailureSleepMillis;
         private final long partitionBootstrapIntervalInMillis;
         private final long partitionRebuildIntervalInMillis;
         private final long partitionSipMigrateIntervalInMillis;
         private final long partitionBanUnregisteredSchemaMillis;
-        private final long partitionReleaseContextCacheAfterMillis;
         private final long partitionMigrationWaitInMillis;
 
-        public Timings(long partitionRebuildFailureSleepMillis,
-            long partitionBootstrapIntervalInMillis,
+        public Timings(long partitionBootstrapIntervalInMillis,
             long partitionRebuildIntervalInMillis,
             long partitionSipMigrateIntervalInMillis,
             long partitionBanUnregisteredSchemaMillis,
-            long partitionReleaseContextCacheAfterMillis,
             long partitionMigrationWaitInMillis) {
-            this.partitionRebuildFailureSleepMillis = partitionRebuildFailureSleepMillis;
             this.partitionBootstrapIntervalInMillis = partitionBootstrapIntervalInMillis;
             this.partitionRebuildIntervalInMillis = partitionRebuildIntervalInMillis;
             this.partitionSipMigrateIntervalInMillis = partitionSipMigrateIntervalInMillis;
             this.partitionBanUnregisteredSchemaMillis = partitionBanUnregisteredSchemaMillis;
-            this.partitionReleaseContextCacheAfterMillis = partitionReleaseContextCacheAfterMillis;
             this.partitionMigrationWaitInMillis = partitionMigrationWaitInMillis;
         }
     }

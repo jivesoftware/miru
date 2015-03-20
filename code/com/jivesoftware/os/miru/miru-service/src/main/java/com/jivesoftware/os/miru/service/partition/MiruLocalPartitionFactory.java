@@ -89,16 +89,15 @@ public class MiruLocalPartitionFactory {
                 new MiruIndexLatest<BM>(),
                 new MiruIndexPairedLatest<BM>()),
             config.getPartitionWakeOnIndex(),
+            config.getPartitionRebuildIfBehindByCount(),
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),
             mergeChits,
             new MiruLocalHostedPartition.Timings(
-                config.getPartitionRebuildFailureSleepMillis(),
                 config.getPartitionBootstrapIntervalInMillis(),
                 config.getPartitionRebuildIntervalInMillis(),
                 config.getPartitionSipMigrateIntervalInMillis(),
                 config.getPartitionBanUnregisteredSchemaMillis(),
-                config.getPartitionReleaseContextCacheAfterMillis(),
                 config.getPartitionMigrationWaitInMillis()));
     }
 
