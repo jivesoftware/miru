@@ -1,18 +1,3 @@
-/*
- * Copyright 2015 jonathan.colt.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.jivesoftware.os.miru.wal.partition;
 
 import com.jivesoftware.os.amza.service.AmzaService;
@@ -62,15 +47,13 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             MiruPartitionCursor cursorForWriterId = walReader.getCursorForWriterId(tenantId, writerId, capacity);
             return setCursor(tenantId, writerId, cursorForWriterId);
         } else {
-            int[] rawPartitonIdAndIndex = FilerIO.bytesInts(rawPartitonId);
-            return new MiruPartitionCursor(MiruPartitionId.of(rawPartitonIdAndIndex[0]), new AtomicInteger(rawPartitonIdAndIndex[1]), capacity);
+            MiruPartitionId partitionId = MiruPartitionId.of(FilerIO.bytesInt(rawPartitonId));
+            int latestIndex = getLatestIndex(tenantId, partitionId, writerId);
+            return new MiruPartitionCursor(partitionId, new AtomicInteger(latestIndex), capacity);
         }
     }
 
     private MiruPartitionCursor setCursor(MiruTenantId tenantId, int writerId, MiruPartitionCursor cursor) throws Exception {
-        //RowIndexKey latestPartitionKey, MiruTenantId tenantId,
-        //int writerId, int rawPartitionId, int rawIndex) throws Exception {
-
         RowIndexKey latestPartitionKey = new RowIndexKey(key(tenantId, writerId));
         latestPartitions.set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId()));
         RowIndexKey cursorKey = new RowIndexKey(key(tenantId, writerId, cursor.getPartitionId()));
@@ -104,7 +87,8 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         RowIndexKey cursorKey = new RowIndexKey(key(tenantId, writerId, partitionId));
         byte[] got = cursors.get(cursorKey);
         if (got == null) {
-            return -1;
+            cursors.set(cursorKey, FilerIO.intBytes(0));
+            return 0;
         } else {
             return FilerIO.bytesInt(got);
         }

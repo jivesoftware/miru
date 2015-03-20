@@ -1,21 +1,7 @@
-/*
- * Copyright 2015 jonathan.colt.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.jivesoftware.os.miru.sea.anomaly.deployable;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -23,7 +9,6 @@ import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
@@ -46,12 +31,12 @@ public class SampleTrawl {
     MiruActivity trawl(MiruTenantId tenantId, AnomalyMetric metric) {
 
         ServiceId serviceId = new ServiceId(
-            firstNonNull(metric.datacenter, "unknown"),
-            firstNonNull(metric.cluster, "unknown"),
-            firstNonNull(metric.host, "unknown"),
-            firstNonNull(metric.service, "unknown"),
-            firstNonNull(metric.instance, "unknown"),
-            firstNonNull(metric.version, "unknown"));
+            firstNonNull(Strings.emptyToNull(metric.datacenter), "unknown"),
+            firstNonNull(Strings.emptyToNull(metric.cluster), "unknown"),
+            firstNonNull(Strings.emptyToNull(metric.host), "unknown"),
+            firstNonNull(Strings.emptyToNull(metric.service), "unknown"),
+            firstNonNull(Strings.emptyToNull(metric.instance), "unknown"),
+            firstNonNull(Strings.emptyToNull(metric.version), "unknown"));
 
         AtomicLong levelCount = trawled.get(serviceId, "ingressed");
         if (levelCount == null) {
@@ -70,20 +55,30 @@ public class SampleTrawl {
         }
 
         return new MiruActivity.Builder(tenantId, idProvider.nextId(), new String[0], 0)
-            .putFieldValue("datacenter", firstNonNull(metric.datacenter, "unknown"))
-            .putFieldValue("cluster", firstNonNull(metric.cluster, "unknown"))
-            .putFieldValue("host", firstNonNull(metric.host, "unknown"))
-            .putFieldValue("service", firstNonNull(metric.service, "unknown"))
-            .putFieldValue("instance", firstNonNull(metric.instance, "unknown"))
-            .putFieldValue("version", firstNonNull(metric.version, "unknown"))
-            .putFieldValue("sampler", metric.sampler)
-            .putFieldValue("metric", metricName)
+            .putFieldValue("datacenter", firstNonNull(Strings.emptyToNull(metric.datacenter), "unknown"))
+            .putFieldValue("cluster", firstNonNull(Strings.emptyToNull(metric.cluster), "unknown"))
+            .putFieldValue("host", firstNonNull(Strings.emptyToNull(metric.host), "unknown"))
+            .putFieldValue("service", firstNonNull(Strings.emptyToNull(metric.service), "unknown"))
+            .putFieldValue("instance", firstNonNull(Strings.emptyToNull(metric.instance), "unknown"))
+            .putFieldValue("version", firstNonNull(Strings.emptyToNull(metric.version), "unknown"))
+            .putFieldValue("sampler", firstNonNull(Strings.emptyToNull(metric.sampler), "unknown"))
+            .putFieldValue("metric", firstNonNull(Strings.emptyToNull(metricName), "unknown"))
             .putAllFieldValues("bits", bits)
-            .putAllFieldValues("tags", Arrays.asList(metric.path))
-            .putFieldValue("type", metric.type)
-            .putFieldValue("tenant", firstNonNull(metric.tenant, "unknown"))
-            .putFieldValue("timestamp", firstNonNull(metric.timestamp, "unknown"))
+            .putAllFieldValues("tags", sanitize(metric.path))
+            .putFieldValue("type", firstNonNull(Strings.emptyToNull(metric.type), "unknown"))
+            .putFieldValue("tenant", firstNonNull(Strings.emptyToNull(metric.tenant), "unknown"))
+            .putFieldValue("timestamp", firstNonNull(Strings.emptyToNull(metric.timestamp), "unknown"))
             .build();
+    }
+
+    List<String> sanitize(String[] path) {
+        List<String> sanitized = new ArrayList<>();
+        for (String p : path) {
+            if (!Strings.isNullOrEmpty(p)) {
+                sanitized.add(p);
+            }
+        }
+        return sanitized;
     }
 
     public static void main(String[] args) {

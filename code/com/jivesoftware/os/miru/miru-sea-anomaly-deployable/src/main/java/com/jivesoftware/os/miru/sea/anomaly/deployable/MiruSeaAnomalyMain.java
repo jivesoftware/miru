@@ -105,7 +105,7 @@ public class MiruSeaAnomalyMain {
 
             serviceStartupHealthCheck.info("building request helpers...", null);
 
-            SampleTrawl logMill = new SampleTrawl(orderIdProvider);
+            SampleTrawl sampleTrawl = new SampleTrawl(orderIdProvider);
 
             MiruSeaAnomalyIntakeConfig intakeConfig = deployable.config(MiruSeaAnomalyIntakeConfig.class);
 
@@ -125,7 +125,7 @@ public class MiruSeaAnomalyMain {
 
             final MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,
                 seaAnomalySchemaService,
-                logMill,
+                sampleTrawl,
                 mapper,
                 miruWriteClient);
 
@@ -170,7 +170,7 @@ public class MiruSeaAnomalyMain {
             List<MiruManagePlugin> plugins = Lists.newArrayList(
                 new MiruManagePlugin("eye-open", "Status", "/seaAnomaly/status",
                     SeaAnomalyStatusPluginEndpoints.class,
-                    new SeaAnomalyStatusPluginRegion("soy.sea.anomaly.page.seaAnomalyStatusPluginRegion", renderer, logMill)),
+                    new SeaAnomalyStatusPluginRegion("soy.sea.anomaly.page.seaAnomalyStatusPluginRegion", renderer, sampleTrawl)),
                 new MiruManagePlugin("stats", "Trends", "/seaAnomaly/trends",
                     SeaAnomalyTrendsPluginEndpoints.class,
                     new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, readerRequestHelpers)),

@@ -188,7 +188,6 @@ public class MiruReaderMain {
                 .getConnections("miru-manage", "main"));  // TODO expose to conf
 
             // TODO add fall back to config
-            //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize("", miruManageClient, mapper);
 
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
@@ -259,6 +258,7 @@ public class MiruReaderMain {
             }
 
             deployable.addEndpoints(MiruReaderConfigEndpoints.class);
+            deployable.addResource(sourceTree);
 
             deployable.buildServer().start();
             serviceStartupHealthCheck.success();

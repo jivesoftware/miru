@@ -70,9 +70,9 @@ public class MiruActivityInternExtern {
                     activity.time,
                     internAuthz(activity.authz),
                     activity.version)
-                    .putFieldsValues(internFields(activity.fieldsValues, schema))
-                    .putPropsValues(internProps(activity.propsValues, schema))
-                    .build(),
+                .putFieldsValues(internFields(activity.fieldsValues, schema))
+                .putPropsValues(internProps(activity.propsValues, schema))
+                .build(),
                 activiyAndId.id));
         }
     }
@@ -96,8 +96,8 @@ public class MiruActivityInternExtern {
                 List<String> fieldValues = fields.get(fieldName);
                 for (int i = 0; i < fieldValues.size(); i++) {
                     String fieldValue = fieldValues.get(i);
-                    if (fieldValue.length() > MAX_TERM_LENGTH) {
-                        log.warn("Ignored long term {} > {}", fieldValue.length(), MAX_TERM_LENGTH);
+                    if (fieldValue.length() > MAX_TERM_LENGTH || fieldValue.length() == 0) {
+                        log.warn("Ignored term {} because it is equals to zero or greater than {}.", fieldValue.length(), MAX_TERM_LENGTH);
                         // heavy-handed copy for removal from list, but the original list may be immutable, and this should be a rare occurrence
                         List<String> snip = Lists.newArrayListWithCapacity(fieldValues.size() - 1);
                         snip.addAll(fieldValues.subList(0, i));

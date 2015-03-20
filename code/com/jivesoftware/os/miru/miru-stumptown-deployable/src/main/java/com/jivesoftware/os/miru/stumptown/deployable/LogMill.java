@@ -15,6 +15,7 @@
  */
 package com.jivesoftware.os.miru.stumptown.deployable;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
@@ -23,6 +24,7 @@ import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -43,12 +45,12 @@ public class LogMill {
 
     MiruActivity mill(MiruTenantId tenantId, MiruLogEvent logEvent) {
         ServiceId serviceId = new ServiceId(
-            firstNonNull(logEvent.datacenter, "unknown"),
-            firstNonNull(logEvent.cluster, "unknown"),
-            firstNonNull(logEvent.host, "unknown"),
-            firstNonNull(logEvent.service, "unknown"),
-            firstNonNull(logEvent.instance, "unknown"),
-            firstNonNull(logEvent.version, "unknown"));
+            firstNonNull(Strings.emptyToNull(logEvent.datacenter), "unknown"),
+            firstNonNull(Strings.emptyToNull(logEvent.cluster), "unknown"),
+            firstNonNull(Strings.emptyToNull(logEvent.host), "unknown"),
+            firstNonNull(Strings.emptyToNull(logEvent.service), "unknown"),
+            firstNonNull(Strings.emptyToNull(logEvent.instance), "unknown"),
+            firstNonNull(Strings.emptyToNull(logEvent.version), "unknown"));
 
         AtomicLong levelCount = levelCounts.get(serviceId, logEvent.level);
         if (levelCount == null) {
@@ -58,20 +60,20 @@ public class LogMill {
         levelCount.incrementAndGet();
 
         return new MiruActivity.Builder(tenantId, idProvider.nextId(), new String[0], 0)
-            .putFieldValue("datacenter", firstNonNull(logEvent.datacenter, "unknown"))
-            .putFieldValue("cluster", firstNonNull(logEvent.cluster, "unknown"))
-            .putFieldValue("host", firstNonNull(logEvent.host, "unknown"))
-            .putFieldValue("service", firstNonNull(logEvent.service, "unknown"))
-            .putFieldValue("instance", firstNonNull(logEvent.instance, "unknown"))
-            .putFieldValue("version", firstNonNull(logEvent.version, "unknown"))
-            .putFieldValue("level", firstNonNull(logEvent.level, "unknown"))
-            .putFieldValue("thread", firstNonNull(logEvent.threadName, "unknown"))
-            .putFieldValue("methodName", firstNonNull(logEvent.methodName, "unknown"))
-            .putFieldValue("lineNumber", firstNonNull(logEvent.lineNumber, "unknown"))
-            .putFieldValue("logger", firstNonNull(logEvent.loggerName, "unknown"))
+            .putFieldValue("datacenter", firstNonNull(Strings.emptyToNull(logEvent.datacenter), "unknown"))
+            .putFieldValue("cluster", firstNonNull(Strings.emptyToNull(logEvent.cluster), "unknown"))
+            .putFieldValue("host", firstNonNull(Strings.emptyToNull(logEvent.host), "unknown"))
+            .putFieldValue("service", firstNonNull(Strings.emptyToNull(logEvent.service), "unknown"))
+            .putFieldValue("instance", firstNonNull(Strings.emptyToNull(logEvent.instance), "unknown"))
+            .putFieldValue("version", firstNonNull(Strings.emptyToNull(logEvent.version), "unknown"))
+            .putFieldValue("level", firstNonNull(Strings.emptyToNull(logEvent.level), "unknown"))
+            .putFieldValue("thread", firstNonNull(Strings.emptyToNull(logEvent.threadName), "unknown"))
+            .putFieldValue("methodName", firstNonNull(Strings.emptyToNull(logEvent.methodName), "unknown"))
+            .putFieldValue("lineNumber", firstNonNull(Strings.emptyToNull(logEvent.lineNumber), "unknown"))
+            .putFieldValue("logger", firstNonNull(Strings.emptyToNull(logEvent.loggerName), "unknown"))
             .putAllFieldValues("message", tokenize(logEvent.message))
-            .putFieldValue("timestamp", firstNonNull(logEvent.timestamp, "unknown"))
-            .putFieldValue("exceptionClass", firstNonNull(logEvent.exceptionClass, "unknown"))
+            .putFieldValue("timestamp", firstNonNull(Strings.emptyToNull(logEvent.timestamp), "unknown"))
+            .putFieldValue("exceptionClass", firstNonNull(Strings.emptyToNull(logEvent.exceptionClass), "unknown"))
             .putAllFieldValues("thrownStackTrace", tokenizeStackTrace(logEvent.thrownStackTrace))
             .build();
     }
@@ -90,6 +92,13 @@ public class LogMill {
         if (raw == null) {
             return Collections.emptySet();
         }
-        return Sets.newHashSet(raw.toLowerCase().split("\\s+"));
+        String[] split = raw.toLowerCase().split("\\s+");
+        HashSet<String> set = Sets.newHashSet();
+        for (String s : split) {
+            if (!Strings.isNullOrEmpty(s)) {
+                set.add(s);
+            }
+        }
+        return set;
     }
 }
