@@ -5,7 +5,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.writer.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.IngressEndpointStats;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +43,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
         data.put("ingressedTotal", grandTotal);
         data.put("ingressedStatus", rows);
 
-        return renderer.render(template, Collections.<String, Object>emptyMap());
+        return renderer.render(template, data);
     }
 
     @Override
