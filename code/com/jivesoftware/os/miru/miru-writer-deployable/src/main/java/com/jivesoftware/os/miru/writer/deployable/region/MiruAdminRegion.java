@@ -5,9 +5,12 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.writer.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.IngressEndpointStats;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -33,7 +36,19 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
         List<Map<String, String>> rows = new ArrayList<>();
         long grandTotal = 0;
         Map<MiruTenantId, AtomicLong> ingressedMap = endpointStats.ingressedMap();
-        for (Map.Entry<MiruTenantId, AtomicLong> e : ingressedMap.entrySet()) {
+        List<Entry<MiruTenantId, AtomicLong>> sortedEntries = new ArrayList<>(ingressedMap.entrySet());
+
+        Collections.sort(sortedEntries,
+            new Comparator<Entry<MiruTenantId, AtomicLong>>() {
+
+                @Override
+                public int compare(Entry<MiruTenantId, AtomicLong> o1, Entry<MiruTenantId, AtomicLong> o2) {
+                    return Long.compare(o2.getValue().longValue(), o1.getValue().longValue());
+                }
+            }
+        );
+        
+        for (Map.Entry<MiruTenantId, AtomicLong> e : sortedEntries) {
             Map<String, String> status = new HashMap<>();
             status.put("tenantId", e.getKey().toString());
             status.put("ingressed", String.valueOf(e.getValue().get()));
