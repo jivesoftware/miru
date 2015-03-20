@@ -122,11 +122,15 @@ public class MiruPartitionAccessor<BM> {
     Optional<MiruContext<BM>> close() throws InterruptedException {
         semaphore.acquire(PERMITS);
         try {
-            closed.set(true);
-            return context;
+            return closeImmediate();
         } finally {
             semaphore.release(PERMITS);
         }
+    }
+
+    private Optional<MiruContext<BM>> closeImmediate() {
+        closed.set(true);
+        return context;
     }
 
     boolean canHotDeploy() {
@@ -524,13 +528,13 @@ public class MiruPartitionAccessor<BM> {
 
     MiruMigrationHandle<BM> getMigrationHandle(long millis) {
         try {
-            semaphore.tryAcquire(millis, TimeUnit.MILLISECONDS);
+            semaphore.tryAcquire(PERMITS, millis, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             throw new MiruPartitionUnavailableException(e);
         }
 
         if (closed.get()) {
-            semaphore.release();
+            semaphore.release(PERMITS);
             throw new MiruPartitionUnavailableException("Partition is closed");
         }
 
@@ -547,6 +551,12 @@ public class MiruPartitionAccessor<BM> {
             @Override
             public Optional<MiruContext<BM>> getContext() {
                 return context;
+            }
+
+            @Override
+            public Optional<MiruContext<BM>> closeContext() {
+                // we have all the semaphores so we can close immediately
+                return MiruPartitionAccessor.this.closeImmediate();
             }
 
             @Override
@@ -571,7 +581,7 @@ public class MiruPartitionAccessor<BM> {
 
             @Override
             public void close() throws Exception {
-                semaphore.release();
+                semaphore.release(PERMITS);
             }
         };
     }

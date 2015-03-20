@@ -47,7 +47,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
                 }
             }
         );
-        
+
         for (Map.Entry<MiruTenantId, AtomicLong> e : sortedEntries) {
             Map<String, String> status = new HashMap<>();
             status.put("tenantId", e.getKey().toString());

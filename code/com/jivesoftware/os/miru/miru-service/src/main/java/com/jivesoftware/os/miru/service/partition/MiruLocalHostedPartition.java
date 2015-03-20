@@ -368,7 +368,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            Optional<MiruContext<BM>> closed = accessor.close();
+                            Optional<MiruContext<BM>> closed = handle.closeContext();
                             if (closed.isPresent()) {
                                 contextFactory.close(closed.get(), existingStorage);
                             }
