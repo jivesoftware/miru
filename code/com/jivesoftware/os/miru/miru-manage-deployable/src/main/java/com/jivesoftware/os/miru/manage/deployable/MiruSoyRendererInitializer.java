@@ -12,7 +12,7 @@ import org.merlin.config.defaults.StringDefault;
  */
 public class MiruSoyRendererInitializer {
 
-    interface MiruSoyRendererConfig extends Config {
+    public interface MiruSoyRendererConfig extends Config {
 
         @StringDefault("resources/static")
         String getPathToStaticResources();

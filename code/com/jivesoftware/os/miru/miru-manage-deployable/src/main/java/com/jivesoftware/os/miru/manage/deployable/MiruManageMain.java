@@ -18,7 +18,6 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
@@ -45,18 +44,10 @@ import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.manage.deployable.region.AggregateCountsPluginRegion;
-import com.jivesoftware.os.miru.manage.deployable.region.AnalyticsPluginRegion;
-import com.jivesoftware.os.miru.manage.deployable.region.DistinctsPluginRegion;
-import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
-import com.jivesoftware.os.miru.manage.deployable.region.MiruRegion;
-import com.jivesoftware.os.miru.manage.deployable.region.RealwaveFramePluginRegion;
-import com.jivesoftware.os.miru.manage.deployable.region.RealwavePluginRegion;
-import com.jivesoftware.os.miru.manage.deployable.region.RecoPluginEndpoints;
-import com.jivesoftware.os.miru.manage.deployable.region.RecoPluginRegion;
-import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginEndpoints;
-import com.jivesoftware.os.miru.manage.deployable.region.TrendingPluginRegion;
+import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
+import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceInitializer;
 import com.jivesoftware.os.miru.manage.deployable.topology.MiruTopologyEndpoints;
+import com.jivesoftware.os.miru.manage.deployable.topology.TopologyEndpointStats;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
@@ -72,7 +63,6 @@ import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClien
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.io.File;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
@@ -196,40 +186,16 @@ public class MiruManageMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
+            TopologyEndpointStats stats = new TopologyEndpointStats();
+
             MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
                 clusterRegistry,
-                miruWALClient);
+                miruWALClient,
+                stats);
 
             MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
             //TODO expose to config TimeUnit.MINUTES.toMillis(10)
             ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
-
-            List<MiruManagePlugin> plugins = Lists.newArrayList(
-                new MiruManagePlugin("Distincts",
-                    "/miru/manage/distincts",
-                    DistinctsPluginEndpoints.class,
-                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
-                new MiruManagePlugin("Analytics",
-                    "/miru/manage/analytics",
-                    AnalyticsPluginEndpoints.class,
-                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
-                new MiruManagePlugin("Trending",
-                    "/miru/manage/trending",
-                    TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)),
-                new MiruManagePlugin("Reco",
-                    "/miru/manage/reco",
-                    RecoPluginEndpoints.class,
-                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)),
-                new MiruManagePlugin("Aggregate Counts",
-                    "/miru/manage/aggregate",
-                    AggregateCountsPluginEndpoints.class,
-                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, readerRequestHelpers)),
-                new MiruManagePlugin("Realwave",
-                    "/miru/manage/realwave",
-                    RealwavePluginEndpoints.class,
-                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, readerRequestHelpers),
-                    new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)));
 
             MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry, miruWALClient,
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
@@ -245,17 +211,8 @@ public class MiruManageMain {
             deployable.addInjectables(MiruManageService.class, miruManageService);
             deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
             deployable.addInjectables(MiruWALClient.class, miruWALClient);
-
-            for (MiruManagePlugin plugin : plugins) {
-                miruManageService.registerPlugin(plugin);
-                deployable.addEndpoints(plugin.endpointsClass);
-                deployable.addInjectables(plugin.region.getClass(), plugin.region);
-                for (MiruRegion<?> otherRegion : plugin.otherRegions) {
-                    deployable.addInjectables(otherRegion.getClass(), otherRegion);
-                }
-            }
-
             deployable.addEndpoints(MiruTopologyEndpoints.class);
+            deployable.addInjectables(TopologyEndpointStats.class, stats);
             deployable.addInjectables(MiruRegistryClusterClient.class, new MiruRegistryClusterClient(clusterRegistry));
 
             deployable.addResource(sourceTree);

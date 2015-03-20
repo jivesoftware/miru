@@ -11,18 +11,20 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruHostsRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
+import com.jivesoftware.os.miru.manage.deployable.topology.TopologyEndpointStats;
 
 public class MiruManageInitializer {
 
     public MiruManageService initialize(MiruSoyRenderer renderer,
         MiruClusterRegistry clusterRegistry,
-        MiruWALClient miruWALClient)
+        MiruWALClient miruWALClient,
+        TopologyEndpointStats stats)
         throws Exception {
 
         return new MiruManageService(
             renderer,
             new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer),
-            new MiruAdminRegion("soy.miru.page.adminRegion", renderer),
+            new MiruAdminRegion("soy.miru.page.adminRegion", renderer, stats),
             new MiruHostsRegion("soy.miru.page.hostsRegion", renderer, clusterRegistry,
                 new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer),
                 new MiruHostFocusRegion("soy.miru.section.hostFocusRegion", renderer, clusterRegistry)),

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.manage.deployable;
+package com.jivesoftware.os.miru.manage.deployable.balancer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -15,7 +15,12 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer;
+import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
+import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.miru.manage.deployable.topology.TopologyEndpointStats;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.util.Arrays;
@@ -84,11 +89,13 @@ public class MiruManageServiceTest {
         Mockito.when(miruWALClient.getPartitionStatus(Mockito.<MiruTenantId>any(), Mockito.anyList()))
             .thenReturn(Arrays.asList(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0))));
 
-
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
+        TopologyEndpointStats stats = new TopologyEndpointStats();
+
         miruManageService = new MiruManageInitializer().initialize(renderer,
             clusterRegistry,
-            miruWALClient);
+            miruWALClient,
+            stats);
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
 

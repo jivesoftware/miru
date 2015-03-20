@@ -28,9 +28,12 @@ public class MiruTopologyEndpoints {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruRegistryClusterClient registry;
+    private final TopologyEndpointStats stats;
 
-    public MiruTopologyEndpoints(@Context MiruRegistryClusterClient registry) {
+    public MiruTopologyEndpoints(@Context MiruRegistryClusterClient registry,
+        @Context TopologyEndpointStats stats) {
         this.registry = registry;
+        this.stats = stats;
     }
 
     @GET
@@ -39,7 +42,9 @@ public class MiruTopologyEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRouting(@PathParam("tenantId") String tenantId) {
         try {
-            return ResponseHelper.INSTANCE.jsonResponse(registry.routingTopology(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.routingTopology(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            stats.called("/routing/" + tenantId);
+            return r;
         } catch (Exception x) {
             String msg = "Failed to getRouting for " + tenantId;
             LOG.error(msg, x);
@@ -56,7 +61,9 @@ public class MiruTopologyEndpoints {
         MiruHeartbeatRequest request) {
         try {
             MiruHost miruHost = new MiruHost(host, port);
-            return ResponseHelper.INSTANCE.jsonResponse(registry.thumpthump(miruHost, request));
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.thumpthump(miruHost, request));
+            stats.called("/thumpthump/" + host + "/" + port);
+            return r;
         } catch (Exception x) {
             String msg = "Failed to thumpthump for " + host + ":" + port;
             LOG.error(msg, x);
@@ -70,7 +77,9 @@ public class MiruTopologyEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllHosts() {
         try {
-            return ResponseHelper.INSTANCE.jsonResponse(registry.allhosts());
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.allhosts());
+            stats.called("/allHosts");
+            return r;
         } catch (Exception x) {
             String msg = "Failed to getAllHosts";
             LOG.error(msg, x);
@@ -84,7 +93,9 @@ public class MiruTopologyEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getTenantConfig(@PathParam("tenantId") String tenantId) {
         try {
-            return ResponseHelper.INSTANCE.jsonResponse(registry.tenantConfig(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.tenantConfig(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            stats.called("/tenantConfig/" + tenantId);
+            return r;
         } catch (Exception x) {
             String msg = "Failed to getTenantConfig for " + tenantId;
             LOG.error(msg, x);
@@ -106,7 +117,9 @@ public class MiruTopologyEndpoints {
             MiruPartitionId miruPartitionId = MiruPartitionId.of(partitionId);
             MiruHost miruHost = new MiruHost(host, port);
             registry.elect(miruHost, miruTenantId, miruPartitionId, electionId);
-            return ResponseHelper.INSTANCE.jsonResponse("");
+            Response r = ResponseHelper.INSTANCE.jsonResponse("");
+            stats.called("/elect/" + host + "/" + port + "/" + tenantId + "/" + partitionId + "/" + electionId);
+            return r;
         } catch (Exception x) {
             String msg = "Failed to addToReplicaRegistry for " + tenantId;
             LOG.error(msg, x);
@@ -123,6 +136,7 @@ public class MiruTopologyEndpoints {
         try {
             registry.removeReplica(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
                 MiruPartitionId.of(partitionId));
+            stats.called("/remove/replica/" + tenantId + "/" + partitionId);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
             String msg = "Failed to addToReplicaRegistry for " + tenantId;
@@ -137,7 +151,9 @@ public class MiruTopologyEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPartitionsForTenant(@PathParam("tenantId") String tenantId) {
         try {
-            return ResponseHelper.INSTANCE.jsonResponse(registry.partitions(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.partitions(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            stats.called("/partitions/" + tenantId);
+            return r;
         } catch (Exception x) {
             String msg = "Failed to getPartitionsForTenant for " + tenantId;
             LOG.error(msg, x);
@@ -152,8 +168,10 @@ public class MiruTopologyEndpoints {
     public Response getReplicaSets(@PathParam("tenantId") String tenantId, @PathParam("partitionId") int partitionId) {
         try {
             MiruPartitionId miruPartitionId = MiruPartitionId.of(partitionId);
-            return ResponseHelper.INSTANCE.jsonResponse(registry.replicas(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.replicas(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
                 miruPartitionId));
+            stats.called("/replicas/" + tenantId + "/" + partitionId);
+            return r;
         } catch (Exception x) {
             String msg = "Failed to getReplicaSets for " + tenantId + "/" + partitionId;
             LOG.error(msg, x);
@@ -170,6 +188,7 @@ public class MiruTopologyEndpoints {
         try {
             MiruHost miruHost = new MiruHost(host, port);
             registry.remove(miruHost);
+            stats.called("/remove/" + host + "/" + port);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
             String msg = "Failed to removeHost for " + host + ":" + port;
@@ -191,6 +210,7 @@ public class MiruTopologyEndpoints {
             MiruPartitionId miruPartitionId = MiruPartitionId.of(partitionId);
             MiruHost miruHost = new MiruHost(host, port);
             registry.remove(miruHost, miruTenantId, miruPartitionId);
+            stats.called("/remove/" + host + "/" + port + "/" + tenantId + "/" + partitionId);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
             String msg = "Failed to removeTopology for " + host + ":" + port + " " + tenantId + " " + partitionId;
@@ -205,7 +225,9 @@ public class MiruTopologyEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSchema(@PathParam("tenantId") String tenantId) {
         try {
-            return ResponseHelper.INSTANCE.jsonResponse(registry.getSchema(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.getSchema(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            stats.called("/get/schema/" + tenantId);
+            return r;
         } catch (Exception x) {
             String msg = "Failed to getSchema for " + tenantId;
             LOG.error(msg, x);
@@ -220,6 +242,7 @@ public class MiruTopologyEndpoints {
     public Response registerSchema(@PathParam("tenantId") String tenantId, MiruSchema schema) {
         try {
             registry.registerSchema(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)), schema);
+            stats.called("register/schema/" + tenantId);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
             String msg = "Failed to getSchema for " + tenantId;

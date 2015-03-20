@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.manage.deployable;
+package com.jivesoftware.os.miru.manage.deployable.balancer;
 
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;

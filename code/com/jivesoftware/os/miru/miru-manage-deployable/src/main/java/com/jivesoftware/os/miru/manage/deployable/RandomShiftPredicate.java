@@ -4,6 +4,7 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
+import com.jivesoftware.os.miru.manage.deployable.balancer.ShiftPredicate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;

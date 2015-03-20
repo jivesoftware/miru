@@ -1,9 +1,32 @@
 {namespace soy.miru.page}
 
 /**
- * Admin page
+ * @param? calledTotal
+ * @param? calledStatus
  */
 {template .adminRegion}
-    <h1>Welcome</h1>
-    <p>Miru Admin is Jive's internally-facing interface for gaining visibility into and controlling Miru clusters.</p>
+    {if $calledStatus}
+        <div class="panel panel-default">
+            <div class="panel-heading">Called:{$calledTotal}</div>
+                <div class="panel-body">
+                    <table class="table table-condensed">
+                        <thead>
+                            <tr>
+                                <th>Called</th>
+                                <th>Context</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {foreach $status in $calledStatus}
+                                <tr>
+                                    <td>{$status.called}</td>
+                                    <td>{$status.context}</td>
+                                </tr>
+                            {/foreach}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {/if}
 {/template}

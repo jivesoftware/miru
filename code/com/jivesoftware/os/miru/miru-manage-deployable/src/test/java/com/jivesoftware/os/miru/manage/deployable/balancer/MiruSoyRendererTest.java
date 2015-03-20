@@ -1,9 +1,11 @@
-package com.jivesoftware.os.miru.manage.deployable;
+package com.jivesoftware.os.miru.manage.deployable.balancer;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.template.soy.SoyFileSet;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.manage.deployable.SoyDataUtils;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.manage.deployable;
+package com.jivesoftware.os.miru.manage.deployable.balancer;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
