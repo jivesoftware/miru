@@ -44,7 +44,7 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import junit.framework.Assert;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -57,7 +57,7 @@ public class MiruSeaAnomalyNGTest {
         .setFieldDefinitions(new MiruFieldDefinition[]{
             new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(2, "bits", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.NONE),})
+            new MiruFieldDefinition(2, "bits", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.NONE)})
         .build();
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
