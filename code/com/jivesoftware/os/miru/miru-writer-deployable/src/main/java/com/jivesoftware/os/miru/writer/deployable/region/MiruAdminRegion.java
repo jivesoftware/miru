@@ -40,7 +40,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
             rows.add(status);
             grandTotal += e.getValue().get();
         }
-        data.put("ingressedTotal", grandTotal);
+        data.put("ingressedTotal", String.valueOf(grandTotal));
         data.put("ingressedStatus", rows);
 
         return renderer.render(template, data);
