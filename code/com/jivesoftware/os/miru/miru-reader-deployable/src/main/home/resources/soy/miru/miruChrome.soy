@@ -4,7 +4,6 @@
  * @param title
  * @param header
  * @param region
- * @param version
  * @param plugins
  */
 {template .chromeRegion}
@@ -35,9 +34,6 @@
                 </div>
             </div>
         </div>
-        {call .footer}
-            {param version: $version /}
-        {/call}
 	</body>
 </html>
 {/template}
@@ -77,8 +73,8 @@
 {template .headerRegion}
 	<div class="navbar navbar-default" role="navigation">
 	    <div class="navbar-header">
-            <a class="navbar-brand" href="/miru/manage">
-                <img src="/static/img/icon.png" alt="Fun with bits" width="100" height="50"><img>Manage
+            <a class="navbar-brand" href="/">
+                <img src="/static/img/icon.png" alt="Fun with bits" width="100" height="50"><img>Reader
             </a>
 	    </div>
 	</div>
@@ -89,27 +85,9 @@
  */
 {template .nav}
     <div style="margin-bottom:20px;">
-        <a class="list-group-item" href="/miru/manage/hosts">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            Hosts
-        </a>
-        <a class="list-group-item" href="/miru/manage/balancer">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            Balancer
-        </a>
-        <a class="list-group-item" href="/miru/manage/schema">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            Schema
-        </a>
-        <a class="list-group-item" href="/miru/manage/tenants">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            Tenants
-        </a>
-    </div>
-    <div style="margin-bottom:20px;">
         {foreach $plugin in $plugins}
             <a class="list-group-item" href="{$plugin.path}">
-                <span class="glyphicon glyphicon-bookmark"></span>{sp}
+                <span class="glyphicon glyphicon-{$plugin.glyphicon}"></span>{sp}
                 {$plugin.name}
             </a>
         {/foreach}
@@ -124,15 +102,3 @@
     //<link rel="icon" type="image/png" href="/static/img/favicon.png">
 {/template}
 
-/**
- *
- */
-{template .footer}
-    <div class="container">
-        <div class="row">
-            <div class="col-md-8">
-                <a href="https://github.com/jivesoftware/miru" style="text-shadow: 2px 2px #333;">Miru on GitHub</a>
-            </div>
-        </div>
-	</div>
-{/template}

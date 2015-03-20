@@ -165,5 +165,13 @@
             <artifactId>miru-wal-client</artifactId>
             <version>0.398-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.template</groupId>
+            <artifactId>soy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
     </dependencies>
 </project>

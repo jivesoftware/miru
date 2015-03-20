@@ -54,6 +54,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.reader.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
@@ -66,10 +67,12 @@ import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
+import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -114,7 +117,8 @@ public class MiruReaderMain {
                 });
 
             deployable.buildStatusReporter(null).start();
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
+                new HasUI.UI("Miru-Reader", "main", "/"))));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new DirectBufferHealthChecker(deployable.config(DirectBufferHealthChecker.DirectBufferHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
@@ -202,6 +206,20 @@ public class MiruReaderMain {
 
             miruServiceLifecyle.start();
             final MiruService miruService = miruServiceLifecyle.getService();
+
+            MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
+
+            File staticResourceDir = new File(System.getProperty("user.dir"));
+            System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
+            Resource sourceTree = new Resource(staticResourceDir)
+                .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setContext("/static");
+
+            MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
+            MiruReaderUIService uiService = new MiruReaderUIInitializer().initialize(renderer);
+
+            deployable.addEndpoints(MiruReaderUIEndpoints.class);
+            deployable.addInjectables(MiruReaderUIService.class, uiService);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addEndpoints(MiruReaderEndpoints.class);
