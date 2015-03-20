@@ -63,8 +63,8 @@ public class MiruPartitioner {
             if (currentPartitionId.compareTo(largestPartitionIdAcrossAllWriters) < 0) {
                 List<MiruPartitionedActivity> partitionedActivities = new ArrayList<>();
                 for (MiruPartitionId partitionId = currentPartitionId;
-                    partitionId.compareTo(largestPartitionIdAcrossAllWriters) < 0;
-                    partitionId = partitionId.next()) {
+                     partitionId.compareTo(largestPartitionIdAcrossAllWriters) < 0;
+                     partitionId = partitionId.next()) {
 
                     int latestIndex = partitionIdProvider.getLatestIndex(tenantId, partitionId, writerId);
                     partitionedActivities.add(partitionedActivityFactory.begin(writerId, partitionId, tenantId, latestIndex));
@@ -97,31 +97,38 @@ public class MiruPartitioner {
     public List<MiruPartitionedActivity> writeActivities(MiruTenantId tenantId, List<MiruActivity> activities, boolean recoverFromRemoval)
         throws Exception {
 
-        synchronized (locks.lock(tenantId)) {
+        MiruPartitionId currentPartition;
+        List<MiruPartitionedActivity> partitionedActivities;
+        boolean partitionRolloverOccurred = false;
 
+        synchronized (locks.lock(tenantId)) {
             MiruPartitionCursor partitionCursor = partitionIdProvider.getCursor(tenantId, writerId);
 
             Set<MiruPartitionId> begins = new HashSet<>();
             Set<MiruPartitionId> ends = new HashSet<>();
 
             PartitionedLists partitionedLists = partition(tenantId, activities, partitionCursor, recoverFromRemoval);
-            List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(partitionedLists.activities);
 
-            MiruPartitionId currentPartition = partitionCursor.getPartitionId();
+            currentPartition = partitionCursor.getPartitionId();
 
             // by always writing a "begin" we ensure the writer's index is always written to the WAL (used to reset the cursor on restart)
             begins.add(currentPartition);
 
-            for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
+            for (MiruPartitionedActivity partitionedActivity : partitionedLists.activities) {
                 int comparison = currentPartition.compareTo(partitionedActivity.partitionId);
                 if (comparison < 0) {
                     ends.add(currentPartition);
+                    partitionRolloverOccurred = true;
                     currentPartition = partitionedActivity.partitionId;
                     begins.add(currentPartition);
                 } else if (comparison > 0) {
                     throw new RuntimeException("Should be impossible!");
                 }
             }
+
+            int capacity = partitionedLists.activities.size() + partitionedLists.repairs.size() + begins.size() + ends.size();
+            partitionedActivities = Lists.newArrayListWithCapacity(capacity);
+            partitionedActivities.addAll(partitionedLists.activities);
 
             for (MiruPartitionId partition : begins) {
                 int latestIndex = partitionIdProvider.getLatestIndex(tenantId, partition, writerId);
@@ -133,11 +140,11 @@ public class MiruPartitioner {
             }
 
             partitionedActivities.addAll(partitionedLists.repairs);
-
-            flush(tenantId, currentPartition, !ends.isEmpty(), partitionedActivities);
-
-            return partitionedActivities;
         }
+
+        flush(tenantId, currentPartition, partitionRolloverOccurred, partitionedActivities);
+
+        return partitionedActivities;
     }
 
     public void removeActivities(MiruTenantId tenantId, List<MiruActivity> activities) throws Exception {
@@ -219,7 +226,9 @@ public class MiruPartitioner {
         }
 
         if (partitionRolloverOccurred) {
-            partitionIdProvider.setLargestPartitionIdForWriter(tenantId, currentPartition, writerId);
+            synchronized (locks.lock(tenantId)) {
+                partitionIdProvider.setLargestPartitionIdForWriter(tenantId, currentPartition, writerId);
+            }
         }
     }
 

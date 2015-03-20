@@ -1,13 +1,12 @@
 package com.jivesoftware.os.miru.stumptown.deployable;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import com.google.common.base.Objects;
 import com.jivesoftware.os.filer.queue.guaranteed.delivery.GuaranteedDeliveryService;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collections;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -41,20 +40,10 @@ public class MiruStumptownIntakeEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response intake(List<MiruLogEvent> logEvents) throws Exception {
         try {
-            if (!logEvents.isEmpty()) {
-                // as an optimization, key off the first service in the events, since the entire batch likely originates from this service
-                String key = logEvents.get(0).service;
-                GuaranteedDeliveryService guaranteedDeliveryService = deliveryQueueProvider.getGuaranteedDeliveryServices(key);
-                guaranteedDeliveryService.add(Lists.transform(logEvents, new Function<MiruLogEvent, byte[]>() {
-                    @Override
-                    public byte[] apply(MiruLogEvent input) {
-                        try {
-                            return mapper.writeValueAsBytes(input);
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }));
+            for (MiruLogEvent logEvent : logEvents) {
+                int hash = Objects.hashCode(logEvent.host, logEvent.service, logEvent.instance, logEvent.threadName);
+                GuaranteedDeliveryService guaranteedDeliveryService = deliveryQueueProvider.getGuaranteedDeliveryServices(hash);
+                guaranteedDeliveryService.add(Collections.singletonList(mapper.writeValueAsBytes(logEvent)));
             }
             return Response.ok().build();
         } catch (Throwable t) {

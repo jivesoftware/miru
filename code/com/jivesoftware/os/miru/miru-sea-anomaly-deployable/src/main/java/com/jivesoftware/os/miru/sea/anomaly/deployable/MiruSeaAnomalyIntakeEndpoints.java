@@ -1,13 +1,12 @@
 package com.jivesoftware.os.miru.sea.anomaly.deployable;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import com.google.common.base.Objects;
 import com.jivesoftware.os.filer.queue.guaranteed.delivery.GuaranteedDeliveryService;
 import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collections;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -41,20 +40,10 @@ public class MiruSeaAnomalyIntakeEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response intake(List<AnomalyMetric> events) throws Exception {
         try {
-            if (!events.isEmpty()) {
-                // as an optimization, key off the first service in the events, since the entire batch likely originates from this service
-                String key = events.get(0).service;
-                GuaranteedDeliveryService guaranteedDeliveryService = deliveryQueueProvider.getGuaranteedDeliveryServices(key);
-                guaranteedDeliveryService.add(Lists.transform(events, new Function<AnomalyMetric, byte[]>() {
-                    @Override
-                    public byte[] apply(AnomalyMetric input) {
-                        try {
-                            return mapper.writeValueAsBytes(input);
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }));
+            for (AnomalyMetric event : events) {
+                int hash = Objects.hashCode(event.host, event.service, event.instance, event.sampler);
+                GuaranteedDeliveryService guaranteedDeliveryService = deliveryQueueProvider.getGuaranteedDeliveryServices(hash);
+                guaranteedDeliveryService.add(Collections.singletonList(mapper.writeValueAsBytes(event)));
             }
             return Response.ok().build();
         } catch (Throwable t) {

@@ -136,8 +136,8 @@ public class IngressGuaranteedDeliveryQueueProvider {
 
     }
 
-    public GuaranteedDeliveryService getGuaranteedDeliveryServices(String key) {
-        return guaranteedDeliveryServices[Math.abs(key.hashCode()) % guaranteedDeliveryServices.length];
+    public GuaranteedDeliveryService getGuaranteedDeliveryServices(int hash) {
+        return guaranteedDeliveryServices[Math.abs(hash) % guaranteedDeliveryServices.length];
     }
 
 }

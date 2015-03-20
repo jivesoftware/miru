@@ -76,14 +76,18 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
     }
 
     @Override
-    public void setLargestPartitionIdForWriter(MiruTenantId tenantId, MiruPartitionId partition, int writerId) throws Exception {
-        // Invalid caches
-        TenantWriterKey tenantWriterKey = new TenantWriterKey(tenantId, writerId);
-        tenantWriterLargestPartition.remove(tenantWriterKey);
-        tenantLargestPartition.invalidate(tenantId);
+    public void setLargestPartitionIdForWriter(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
+        MiruPartitionId largestPartitionId = getTenantWriterLargestPartition(tenantId, writerId);
 
-        Timestamper timestamper = new ConstantTimestamper(partition.getId());
-        writerPartitionRegistry.add(MiruVoidByte.INSTANCE, tenantId, writerId, partition, null, timestamper);
+        if (partitionId.compareTo(largestPartitionId) > 0) {
+            // Invalidate caches
+            TenantWriterKey tenantWriterKey = new TenantWriterKey(tenantId, writerId);
+            tenantWriterLargestPartition.remove(tenantWriterKey);
+            tenantLargestPartition.invalidate(tenantId);
+
+            Timestamper timestamper = new ConstantTimestamper(partitionId.getId());
+            writerPartitionRegistry.add(MiruVoidByte.INSTANCE, tenantId, writerId, partitionId, null, timestamper);
+        }
     }
 
     @Override
