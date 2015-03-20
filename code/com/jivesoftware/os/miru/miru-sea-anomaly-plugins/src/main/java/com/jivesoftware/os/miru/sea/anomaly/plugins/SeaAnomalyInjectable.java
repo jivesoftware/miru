@@ -23,11 +23,11 @@ public class SeaAnomalyInjectable {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruProvider<? extends Miru> miruProvider;
-    private final SeaAnomaly trending;
+    private final SeaAnomaly seaAnomaly;
 
-    public SeaAnomalyInjectable(MiruProvider<? extends Miru> miruProvider, SeaAnomaly trending) {
+    public SeaAnomalyInjectable(MiruProvider<? extends Miru> miruProvider, SeaAnomaly seaAnomaly) {
         this.miruProvider = miruProvider;
-        this.trending = trending;
+        this.seaAnomaly = seaAnomaly;
     }
 
     public MiruResponse<SeaAnomalyAnswer> score(MiruRequest<SeaAnomalyQuery> request) throws MiruQueryServiceException {
@@ -36,7 +36,7 @@ public class SeaAnomalyInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("scoreStumptown", new SeaAnomalyQuestion(trending, request)),
+                new MiruSolvableFactory<>("scoreStumptown", new SeaAnomalyQuestion(seaAnomaly, request)),
                 new SeaAnomalyAnswerEvaluator(),
                 new SeaAnomalyAnswerMerger(),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
@@ -58,7 +58,7 @@ public class SeaAnomalyInjectable {
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("scoreTrending", new SeaAnomalyQuestion(trending, requestAndReport.request)),
+                new MiruSolvableFactory<>("scoreTrending", new SeaAnomalyQuestion(seaAnomaly, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

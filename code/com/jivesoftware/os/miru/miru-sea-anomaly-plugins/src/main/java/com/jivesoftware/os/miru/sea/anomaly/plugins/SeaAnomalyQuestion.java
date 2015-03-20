@@ -128,7 +128,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
         int[] indexes = new int[request.query.divideTimeRangeIntoNSegments + 1];
         for (int i = 0; i < indexes.length; i++) {
-            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime)); // handle negative "theoretical insertion" index
+            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime + 1)); // handle negative "theoretical insertion" index
             currentTime += segmentDuration;
         }
 

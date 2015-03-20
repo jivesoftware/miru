@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.sea.anomaly.plugins;
 
+import com.google.common.math.LongMath;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer.Waveform;
@@ -55,15 +56,15 @@ public class SeaAnomaly {
     }
 
     /*
-    1,2,3,4,1 avg = avg 4.3, max 4, min 1
+     1,2,3,4,1 avg = avg 4.3, max 4, min 1
 
-    00010 - b2 (card 1)
-    01100 - b1 (card 2)
-    10101 - b0 (card 3)
-    -----
-    12341   avg (1+2+3+4+1)/5 max 4, min 1 (cardinality 5)
-    */
-     public <BM> Waveform metricingMin(MiruBitmaps<BM> bitmaps,
+     00010 - b2 (card 1)
+     01100 - b1 (card 2)
+     10101 - b0 (card 3)
+     -----
+     12341   avg (1+2+3+4+1)/5 max 4, min 1 (cardinality 5)
+     */
+    public <BM> Waveform metricingMin(MiruBitmaps<BM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -95,11 +96,18 @@ public class SeaAnomaly {
                 long multiplier = (1L << i);
                 for (int j = 0; j < waveform.length; j++) {
                     if (cardinalities[j] > 0) {
-                        waveform[j] += cardinalities[j] * multiplier;
+                        long add = cardinalities[j] * multiplier;
+                        try {
+                            waveform[j] = LongMath.checkedAdd(waveform[j], add);
+                        } catch (Exception x) {
+                            waveform[j] = Long.MAX_VALUE;
+                            log.inc("overflows");
+                        }
                     }
                 }
             }
         }
         return waveform;
+
     }
 }

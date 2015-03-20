@@ -32,7 +32,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-analytics-plugins</artifactId>
+            <artifactId>miru-sea-anomaly-plugins</artifactId>
             <version>0.395-SNAPSHOT</version>
         </dependency>
         <dependency>
