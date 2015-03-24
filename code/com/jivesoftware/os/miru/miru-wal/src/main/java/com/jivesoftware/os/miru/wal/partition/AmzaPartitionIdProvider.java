@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.wal.partition;
 
+import com.jivesoftware.os.amza.service.AmzaRegion;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.service.AmzaTable;
-import com.jivesoftware.os.amza.shared.RowIndexKey;
-import com.jivesoftware.os.amza.shared.RowIndexValue;
-import com.jivesoftware.os.amza.shared.RowScan;
-import com.jivesoftware.os.amza.shared.TableName;
+import com.jivesoftware.os.amza.shared.RegionName;
+import com.jivesoftware.os.amza.shared.WALKey;
+import com.jivesoftware.os.amza.shared.WALScan;
+import com.jivesoftware.os.amza.shared.WALValue;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -14,19 +14,18 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- *
  * @author jonathan.colt
  */
 public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
-    private final AmzaTable latestPartitions;
-    private final AmzaTable cursors;
+    private final AmzaRegion latestPartitions;
+    private final AmzaRegion cursors;
     private final int capacity;
     private final MiruActivityWALReader walReader;
 
     public AmzaPartitionIdProvider(AmzaService amzaService, int capacity, MiruActivityWALReader walReader) throws Exception {
-        this.latestPartitions = amzaService.getTable(new TableName("master", "latestPartitions", null, null));
-        this.cursors = amzaService.getTable(new TableName("master", "cursors", null, null));
+        this.latestPartitions = amzaService.getRegion(new RegionName("master", "latestPartitions", null, null));
+        this.cursors = amzaService.getRegion(new RegionName("master", "cursors", null, null));
         this.capacity = capacity;
         this.walReader = walReader;
     }
@@ -41,7 +40,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
     @Override
     public MiruPartitionCursor getCursor(MiruTenantId tenantId, int writerId) throws Exception {
-        RowIndexKey key = new RowIndexKey(key(tenantId, writerId));
+        WALKey key = new WALKey(key(tenantId, writerId));
         byte[] rawPartitonId = latestPartitions.get(key);
         if (rawPartitonId == null) {
             MiruPartitionCursor cursorForWriterId = walReader.getCursorForWriterId(tenantId, writerId, capacity);
@@ -54,9 +53,9 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     }
 
     private MiruPartitionCursor setCursor(MiruTenantId tenantId, int writerId, MiruPartitionCursor cursor) throws Exception {
-        RowIndexKey latestPartitionKey = new RowIndexKey(key(tenantId, writerId));
+        WALKey latestPartitionKey = new WALKey(key(tenantId, writerId));
         latestPartitions.set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId()));
-        RowIndexKey cursorKey = new RowIndexKey(key(tenantId, writerId, cursor.getPartitionId()));
+        WALKey cursorKey = new WALKey(key(tenantId, writerId, cursor.getPartitionId()));
         cursors.set(cursorKey, FilerIO.intBytes(cursor.last()));
         return cursor;
     }
@@ -84,7 +83,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
     @Override
     public int getLatestIndex(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
-        RowIndexKey cursorKey = new RowIndexKey(key(tenantId, writerId, partitionId));
+        WALKey cursorKey = new WALKey(key(tenantId, writerId, partitionId));
         byte[] got = cursors.get(cursorKey);
         if (got == null) {
             cursors.set(cursorKey, FilerIO.intBytes(0));
@@ -104,11 +103,11 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     public MiruPartitionId getLargestPartitionIdAcrossAllWriters(MiruTenantId tenantId) throws Exception {
         byte[] rawTenantBytes = tenantId.getBytes();
         final AtomicInteger largestPartitionId = new AtomicInteger(0);
-        latestPartitions.rangeScan(new RowIndexKey(rawTenantBytes), new RowIndexKey(prefixUpperExclusive(rawTenantBytes)), new RowScan<Exception>() {
+        latestPartitions.rangeScan(new WALKey(rawTenantBytes), new WALKey(prefixUpperExclusive(rawTenantBytes)), new WALScan<Exception>() {
 
             @Override
-            public boolean row(long l, RowIndexKey rik, RowIndexValue riv) throws Exception {
-                int partitionId = FilerIO.bytesInt(riv.getValue());
+            public boolean row(long l, WALKey key, WALValue value) throws Exception {
+                int partitionId = FilerIO.bytesInt(value.getValue());
                 if (largestPartitionId.get() < partitionId) {
                     largestPartitionId.set(partitionId);
                 }
