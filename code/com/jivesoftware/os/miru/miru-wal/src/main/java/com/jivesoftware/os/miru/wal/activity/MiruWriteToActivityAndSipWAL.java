@@ -15,6 +15,7 @@ import java.util.List;
 
 /** @author jonathan */
 public class MiruWriteToActivityAndSipWAL implements MiruActivityWALWriter {
+
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruActivityWALWriter activitySipWALWriter;
 

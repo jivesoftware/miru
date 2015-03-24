@@ -135,9 +135,11 @@ public class MiruPluginTestBootstrap {
 
         boolean useAmza = true;
         if (useAmza) {
-            File amzaDir = Files.createTempDir();
+            File amzaDataDir = Files.createTempDir();
+            File amzaIndexDir = Files.createTempDir();
             AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(AmzaClusterRegistryConfig.class);
-            acrc.setWorkingDirectory(amzaDir.getAbsolutePath());
+            acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
+            acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
             acrc.setReplicationFactor(0);
             acrc.setTakeFromFactor(0);
             Deployable deployable = new Deployable(new String[0]);

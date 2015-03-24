@@ -171,7 +171,7 @@ public class MiruSeaAnomalyNGTest {
                 if (Integer.MAX_VALUE - answer > value) {
                     answer += value;
                 } else {
-                    System.out.println("Overflow");
+                    //System.out.println("Overflow");
                     answer = Integer.MAX_VALUE;
                 }
             }
@@ -190,7 +190,7 @@ public class MiruSeaAnomalyNGTest {
                     }
                 }
             }
-            System.out.println(answer + " vs " + composed);
+            //System.out.println(answer + " vs " + composed);
             Assert.assertEquals(answer, composed);
         }
 

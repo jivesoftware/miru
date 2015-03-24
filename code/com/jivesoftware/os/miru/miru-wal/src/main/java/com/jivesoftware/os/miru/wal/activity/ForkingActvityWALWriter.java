@@ -1,18 +1,3 @@
-/*
- * Copyright 2015 jonathan.colt.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.jivesoftware.os.miru.wal.activity;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -40,19 +25,19 @@ public class ForkingActvityWALWriter implements MiruActivityWALWriter {
     @Override
     public void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         if (secondaryWAL != null) {
-            LOG.startTimer("forking>seconday");
+            LOG.startTimer("forking>secondary");
             try {
                 while (true) {
                     try {
                         secondaryWAL.write(tenantId, partitionedActivities);
                         break;
                     } catch (Exception x) {
-                        LOG.warn("Failed to write:{} activities for tenant:{} to seconday WAL.", new Object[]{partitionedActivities.size(), tenantId}, x);
+                        LOG.warn("Failed to write:{} activities for tenant:{} to secondary WAL.", new Object[]{partitionedActivities.size(), tenantId}, x);
                         Thread.sleep(10_000);
                     }
                 }
             } finally {
-                LOG.stopTimer("forking>seconday");
+                LOG.stopTimer("forking>secondary");
             }
 
             LOG.startTimer("forking>primary");

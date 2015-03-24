@@ -103,7 +103,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     public MiruPartitionId getLargestPartitionIdAcrossAllWriters(MiruTenantId tenantId) throws Exception {
         byte[] rawTenantBytes = tenantId.getBytes();
         final AtomicInteger largestPartitionId = new AtomicInteger(0);
-        latestPartitions.rangeScan(new WALKey(rawTenantBytes), new WALKey(prefixUpperExclusive(rawTenantBytes)), new WALScan<Exception>() {
+        latestPartitions.rangeScan(new WALKey(rawTenantBytes), new WALKey(prefixUpperExclusive(rawTenantBytes)), new WALScan() {
 
             @Override
             public boolean row(long l, WALKey key, WALValue value) throws Exception {

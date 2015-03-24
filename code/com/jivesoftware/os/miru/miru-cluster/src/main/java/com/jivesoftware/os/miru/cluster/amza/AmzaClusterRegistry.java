@@ -100,7 +100,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
     @Override
     public LinkedHashSet<HostHeartbeat> getAllHosts() throws Exception {
         final LinkedHashSet<HostHeartbeat> heartbeats = new LinkedHashSet<>();
-        hosts.scan(new WALScan<Exception>() {
+        hosts.scan(new WALScan() {
 
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
@@ -229,7 +229,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
         final long acceptableTimestampId = amzaService.getTimestamp(sinceTimestamp, TimeUnit.MINUTES.toMillis(1));
 
         AmzaRegion topology = amzaService.getRegion(new RegionName("master", "host-" + host.toStringForm() + "-topology-updates", null, null));
-        topology.scan(new WALScan<Exception>() {
+        topology.scan(new WALScan() {
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
                 if (value.getTimestampId() > acceptableTimestampId) {
@@ -283,7 +283,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
     private Set<MiruTenantId> getTenantsForHostAsSet(MiruHost host) throws Exception {
         final Set<MiruTenantId> tenants = new HashSet<>();
         AmzaRegion topology = amzaService.getRegion(new RegionName("master", "host-" + host.toStringForm() + "-partition-registry", null, null));
-        topology.scan(new WALScan<Exception>() {
+        topology.scan(new WALScan() {
 
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
@@ -297,7 +297,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
 
     @Override
     public void removeTenantPartionReplicaSet(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
-        hosts.scan(new WALScan<Exception>() {
+        hosts.scan(new WALScan() {
 
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
@@ -343,14 +343,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
         final WALKey from = new WALKey(tenantId.getBytes());
         final WALKey to = new WALKey(prefixUpperExclusive(tenantId.getBytes()));
         final ConcurrentSkipListMap<Integer, MinMaxPriorityQueue<HostAndTimestamp>> partitionIdToLatest = new ConcurrentSkipListMap<>();
-        hosts.scan(new WALScan<Exception>() {
+        hosts.scan(new WALScan() {
 
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
                 if (!value.getTombstoned()) { // paranoid
                     final MiruHost host = hostMarshaller.fromBytes(key.getKey());
                     AmzaRegion topologyReg = amzaService.getRegion(new RegionName("master", "host-" + host.toStringForm() + "-partition-registry", null, null));
-                    topologyReg.rangeScan(from, to, new WALScan<Exception>() {
+                    topologyReg.rangeScan(from, to, new WALScan() {
 
                         @Override
                         public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
