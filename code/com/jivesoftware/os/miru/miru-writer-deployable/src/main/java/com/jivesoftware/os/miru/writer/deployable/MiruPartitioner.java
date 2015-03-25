@@ -103,15 +103,14 @@ public class MiruPartitioner {
 
         synchronized (locks.lock(tenantId)) {
             MiruPartitionCursor partitionCursor = partitionIdProvider.getCursor(tenantId, writerId);
-
-            Set<MiruPartitionId> begins = new HashSet<>();
-            Set<MiruPartitionId> ends = new HashSet<>();
-
             PartitionedLists partitionedLists = partition(tenantId, activities, partitionCursor, recoverFromRemoval);
+            partitionIdProvider.saveCursor(tenantId, partitionCursor, writerId);
 
             currentPartition = partitionCursor.getPartitionId();
 
             // by always writing a "begin" we ensure the writer's index is always written to the WAL (used to reset the cursor on restart)
+            Set<MiruPartitionId> begins = new HashSet<>();
+            Set<MiruPartitionId> ends = new HashSet<>();
             begins.add(currentPartition);
 
             for (MiruPartitionedActivity partitionedActivity : partitionedLists.activities) {

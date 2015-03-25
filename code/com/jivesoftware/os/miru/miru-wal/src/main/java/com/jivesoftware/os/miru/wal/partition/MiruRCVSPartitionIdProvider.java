@@ -62,6 +62,11 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
         return index.get();
     }
 
+    @Override
+    public void saveCursor(MiruTenantId tenantId, MiruPartitionCursor partitionCursor, int writerId) {
+        cursors.put(new TenantPartitionWriterKey(tenantId, partitionCursor.getPartitionId(), writerId), new AtomicInteger(partitionCursor.last()));
+    }
+
     private AtomicInteger getIndex(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
         TenantPartitionWriterKey key = new TenantPartitionWriterKey(tenantId, partitionId, writerId);
         AtomicInteger index = cursors.get(key);

@@ -52,6 +52,12 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         }
     }
 
+    @Override
+    public void saveCursor(MiruTenantId tenantId, MiruPartitionCursor cursor, int writerId) throws Exception {
+        WALKey cursorKey = new WALKey(key(tenantId, writerId, cursor.getPartitionId()));
+        cursors.set(cursorKey, FilerIO.intBytes(cursor.last()));
+    }
+
     private MiruPartitionCursor setCursor(MiruTenantId tenantId, int writerId, MiruPartitionCursor cursor) throws Exception {
         WALKey latestPartitionKey = new WALKey(key(tenantId, writerId));
         latestPartitions.set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId()));

@@ -14,6 +14,8 @@ public interface MiruPartitionIdProvider {
 
     MiruPartitionCursor nextCursor(MiruTenantId tenantId, MiruPartitionCursor lastCursor, int writerId) throws Exception;
 
+    void saveCursor(MiruTenantId tenantId, MiruPartitionCursor partitionCursor, int writerId) throws Exception;
+
     int getLatestIndex(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception;
 
     void setLargestPartitionIdForWriter(MiruTenantId tenantId, MiruPartitionId partition, int writerId) throws Exception;
