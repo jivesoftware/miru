@@ -19,17 +19,13 @@ import com.jivesoftware.os.amza.shared.RowsChanged;
 import com.jivesoftware.os.amza.shared.UpdatesSender;
 import com.jivesoftware.os.amza.shared.UpdatesTaker;
 import com.jivesoftware.os.amza.shared.WALIndexProvider;
-import com.jivesoftware.os.amza.storage.FstMarshaller;
 import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesSender;
 import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesTaker;
 import com.jivesoftware.os.amza.transport.http.replication.endpoints.AmzaReplicationRestEndpoints;
-import com.jivesoftware.os.amza.transport.tcp.replication.serialization.MessagePayload;
-import com.jivesoftware.os.amza.transport.tcp.replication.serialization.MessagePayloadSerializer;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.upena.main.Deployable;
-import de.ruedigermoeller.serialization.FSTConfiguration;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
@@ -97,9 +93,6 @@ public class AmzaPartitionIdProviderInitializer {
 
         final WALIndexProvider walIndexProvider = new MapdbWALIndexProvider(config.getIndexDirectories().split(","));
 
-        FstMarshaller marshaller = new FstMarshaller(FSTConfiguration.getDefaultConfiguration());
-        marshaller.registerSerializer(MessagePayload.class, new MessagePayloadSerializer());
-
         UpdatesSender changeSetSender = new HttpUpdatesSender();
         UpdatesTaker tableTaker = new HttpUpdatesTaker();
 
@@ -117,7 +110,6 @@ public class AmzaPartitionIdProviderInitializer {
             new AmzaStats(),
             ringHost,
             orderIdProvider,
-            new com.jivesoftware.os.amza.storage.FstMarshaller(FSTConfiguration.getDefaultConfiguration()),
             walIndexProvider,
             changeSetSender,
             tableTaker,

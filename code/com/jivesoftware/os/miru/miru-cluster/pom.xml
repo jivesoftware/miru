@@ -105,10 +105,6 @@
             <artifactId>upena-main</artifactId>
         </dependency>
         <dependency>
-            <groupId>de.ruedigermoeller</groupId>
-            <artifactId>fst</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster-client</artifactId>
             <version>0.401-SNAPSHOT</version>
