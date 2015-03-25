@@ -5,7 +5,6 @@ import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
@@ -13,8 +12,10 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -24,7 +25,10 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -37,7 +41,6 @@ public class MiruAggregateUtil {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public <BM> void stream(MiruBitmaps<BM> bitmaps,
-        MiruTenantId tenantId,
         MiruRequestContext<BM> requestContext,
         BM answer,
         Optional<BM> counter,
@@ -72,7 +75,7 @@ public class MiruAggregateUtil {
                 break;
             }
 
-            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(tenantId, lastSetBit, streamFieldId);
+            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, streamFieldId);
             if (traceEnabled) {
                 LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
             }
@@ -125,6 +128,55 @@ public class MiruAggregateUtil {
         }
         terms.callback(null); // EOS
         LOG.debug("stream: bytesTraversed={}", bytesTraversed.longValue());
+    }
+
+    public <BM> void gather(MiruBitmaps<BM> bitmaps,
+        MiruRequestContext<BM> requestContext,
+        BM answer,
+        int pivotFieldId,
+        int batchSize,
+        Collection<MiruTermId> result) throws Exception {
+
+        MiruActivityIndex activityIndex = requestContext.getActivityIndex();
+        MiruFieldIndex<BM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+
+        Set<MiruTermId> distincts = new HashSet<>();
+        int[] ids = new int[batchSize];
+        while (!bitmaps.isEmpty(answer)) {
+            MiruIntIterator intIterator = bitmaps.intIterator(answer);
+            int added = 0;
+            Arrays.fill(ids, -1);
+            while (intIterator.hasNext() && added < batchSize) {
+                ids[added] = intIterator.next();
+                added++;
+            }
+
+            int[] actualIds = new int[added];
+            System.arraycopy(ids, 0, actualIds, 0, added);
+            BM seen = bitmaps.createWithBits(actualIds);
+
+            List<BM> andNots = new ArrayList<>();
+            andNots.add(seen);
+            List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId);
+            for (MiruTermId[] termIds : all) {
+                if (termIds != null && termIds.length > 0) {
+                    for (MiruTermId termId : termIds) {
+                        if (distincts.add(termId)) {
+                            result.add(termId);
+                            MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
+                            Optional<BM> gotIndex = invertedIndex.getIndex();
+                            if (gotIndex.isPresent()) {
+                                andNots.add(gotIndex.get());
+                            }
+                        }
+                    }
+                }
+            }
+
+            BM reduced = bitmaps.create();
+            bitmaps.andNot(reduced, answer, andNots);
+            answer = reduced;
+        }
     }
 
     public <BM> void filter(MiruBitmaps<BM> bitmaps,

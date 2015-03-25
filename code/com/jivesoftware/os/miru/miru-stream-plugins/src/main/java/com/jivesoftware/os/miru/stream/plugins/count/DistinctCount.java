@@ -74,7 +74,7 @@ public class DistinctCount {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(request.tenantId, lastSetBit, fieldId);
+                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, fieldId);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers

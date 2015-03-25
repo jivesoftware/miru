@@ -85,10 +85,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-storage</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
             <artifactId>amza-mapdb-storage</artifactId>
         </dependency>
         <dependency>

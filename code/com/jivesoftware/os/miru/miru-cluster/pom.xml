@@ -94,10 +94,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-storage</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
             <artifactId>amza-transport</artifactId>
         </dependency>
         <dependency>

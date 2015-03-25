@@ -1,9 +1,12 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
-import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -15,10 +18,10 @@ import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
-import com.jivesoftware.os.miru.plugin.solution.MiruTermCount;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -80,26 +83,34 @@ public class Distincts {
             BM result = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), request.query.constraintsFilter,
                 solutionLog, result, requestContext.getActivityIndex().lastId(), -1);
-            aggregateUtil.stream(bitmaps, request.tenantId, requestContext, result, Optional.<BM>absent(), fieldId, request.query.gatherDistinctsForField,
-                new CallbackStream<MiruTermCount>() {
+
+            Set<MiruTermId> termIds = Sets.newHashSet();
+            //TODO expose batch size to query?
+            aggregateUtil.gather(bitmaps, requestContext, result, fieldId, 100, termIds);
+
+            if (prefixesAsBytes.length > 0) {
+                termIds = Sets.filter(termIds, new Predicate<MiruTermId>() {
                     @Override
-                    public MiruTermCount callback(MiruTermCount termCount) throws Exception {
-                        if (termCount != null) {
-                            if (prefixesAsBytes.length == 0) {
-                                results.add(termComposer.decompose(fieldDefinition, termCount.termId));
-                            } else {
-                                byte[] termBytes = termCount.termId.getBytes();
-                                for (byte[] prefixAsBytes : prefixesAsBytes) {
-                                    if (arrayStartsWith(termBytes, prefixAsBytes)) {
-                                        results.add(termComposer.decompose(fieldDefinition, termCount.termId));
-                                        break;
-                                    }
+                    public boolean apply(MiruTermId input) {
+                        if (input != null) {
+                            byte[] termBytes = input.getBytes();
+                            for (byte[] prefixAsBytes : prefixesAsBytes) {
+                                if (arrayStartsWith(termBytes, prefixAsBytes)) {
+                                    return true;
                                 }
                             }
                         }
-                        return termCount;
+                        return false;
                     }
                 });
+            }
+
+            results.addAll(Collections2.transform(termIds, new Function<MiruTermId, String>() {
+                @Override
+                public String apply(MiruTermId input) {
+                    return termComposer.decompose(fieldDefinition, input);
+                }
+            }));
         }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();

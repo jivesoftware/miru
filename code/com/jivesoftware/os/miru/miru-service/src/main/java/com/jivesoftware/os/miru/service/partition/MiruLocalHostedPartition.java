@@ -533,6 +533,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                         log.debug("Skipped rebuild because count={} available={}", status.count, rebuildDirector.available());
                     }
                 }
+            } catch (MiruSchemaUnvailableException e) {
+                log.warn("Skipped rebuild because schema is unavailable for {}", coord);
             } catch (Throwable t) {
                 log.error("RebuildIndex encountered a problem for {}", new Object[] { coord }, t);
             }

@@ -66,7 +66,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruTermId[] get(MiruTenantId tenantId, int index, final int fieldId) {
+    public MiruTermId[] get(int index, final int fieldId) {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
@@ -89,7 +89,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public List<MiruTermId[]> getAll(MiruTenantId tenantId, int[] indexes, final int fieldId) {
+    public List<MiruTermId[]> getAll(int[] indexes, final int fieldId) {
         if (indexes.length == 0) {
             return Collections.emptyList();
         }

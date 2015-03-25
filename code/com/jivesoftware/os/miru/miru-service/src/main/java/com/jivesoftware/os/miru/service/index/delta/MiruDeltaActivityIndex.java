@@ -40,17 +40,17 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId) {
+    public MiruTermId[] get(int index, int fieldId) {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return activityAndId.activity.fieldsValues[fieldId];
         } else {
-            return backingIndex.get(tenantId, index, fieldId);
+            return backingIndex.get(index, fieldId);
         }
     }
 
     @Override
-    public List<MiruTermId[]> getAll(MiruTenantId tenantId, int[] indexes, int fieldId) {
+    public List<MiruTermId[]> getAll(int[] indexes, int fieldId) {
         List<MiruTermId[]> allTermIds = Lists.newArrayList();
         boolean missed = false;
         for (int i = 0; i < indexes.length; i++) {
@@ -65,7 +65,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
             }
         }
         if (missed) {
-            allTermIds.addAll(backingIndex.getAll(tenantId, indexes, fieldId));
+            allTermIds.addAll(backingIndex.getAll(indexes, fieldId));
         }
         return allTermIds;
     }

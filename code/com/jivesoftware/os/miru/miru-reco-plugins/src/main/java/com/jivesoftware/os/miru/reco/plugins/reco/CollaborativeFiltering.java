@@ -7,17 +7,13 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -30,7 +26,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -71,6 +66,9 @@ public class CollaborativeFiltering {
 
         log.debug("Get collaborative filtering for allMyActivity={} okActivity={} query={}", allMyActivity, okActivity, request);
 
+        //TODO expose to query?
+        int gatherBatchSize = 100;
+
         int fieldId1 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName1);
         int fieldId2 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName2);
         int fieldId3 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName3);
@@ -81,13 +79,11 @@ public class CollaborativeFiltering {
         bitmaps.and(myOkActivity, Arrays.asList(allMyActivity, okActivity));
 
         MiruFieldIndex<BM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        MiruActivityIndex activityIndex = requestContext.getActivityIndex();
-        MiruTenantId tenantId = request.tenantId;
 
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
 
-        gatherDistincts(bitmaps, myOkActivity, primaryFieldIndex, activityIndex, tenantId, fieldId1, distinctParents);
+        aggregateUtil.gather(bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, distinctParents);
 
 //        int[] indexes = bitmaps.indexes(myOkActivity);
 //        List<MiruTermId[]> allFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, indexes, fieldId1);
@@ -132,7 +128,7 @@ public class CollaborativeFiltering {
         final MinMaxPriorityQueue<MiruTermCount> contributorHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
             .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
             .create();
-        aggregateUtil.stream(bitmaps, request.tenantId, requestContext, otherOkField1Activity, Optional.<BM>absent(), fieldId2,
+        aggregateUtil.stream(bitmaps, requestContext, otherOkField1Activity, Optional.<BM>absent(), fieldId2,
             request.query.aggregateFieldName2, new CallbackStream<MiruTermCount>() {
                 @Override
                 public MiruTermCount callback(MiruTermCount miruTermCount) throws Exception {
@@ -158,7 +154,7 @@ public class CollaborativeFiltering {
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);
             }
 
-            gatherDistincts(bitmaps, remove, primaryFieldIndex, activityIndex, tenantId, fieldId3, distinctParents);
+            aggregateUtil.gather(bitmaps, requestContext, remove, fieldId3, gatherBatchSize, distinctParents);
 
 //            int[] removeIndexes = bitmaps.indexes(remove);
 //            List<MiruTermId[]> removeFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, removeIndexes, fieldId3);
@@ -180,7 +176,7 @@ public class CollaborativeFiltering {
                 bitmaps.and(contributorOkActivity, Arrays.asList(okActivity, contributorAllActivity));
 
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
-                gatherDistincts(bitmaps, contributorOkActivity, primaryFieldIndex, activityIndex, tenantId, fieldId3, distinctContributorParents);
+                aggregateUtil.gather(bitmaps, requestContext, contributorOkActivity, fieldId3, gatherBatchSize, distinctContributorParents);
 
 //                int[] contributorIndexes = bitmaps.indexes(contributorOkActivity);
 //                List<MiruTermId[]> contributorFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, contributorIndexes, fieldId3);
@@ -204,105 +200,6 @@ public class CollaborativeFiltering {
 
         return composeAnswer(requestContext, fieldDefinition3, scoredHeap);
     }
-
-    private <BM> BM gatherDistincts(MiruBitmaps<BM> bitmaps,
-        BM answer,
-        MiruFieldIndex<BM> primaryFieldIndex,
-        MiruActivityIndex activityIndex,
-        MiruTenantId tenantId,
-        int field,
-        Set<MiruTermId> result) throws Exception {
-
-        Set<MiruTermId> distincts = new HashSet<>();
-        int batching = 100; // TODO expose to query?
-        int[] ids = new int[batching];
-        while (!bitmaps.isEmpty(answer)) {
-
-            MiruIntIterator intIterator = bitmaps.intIterator(answer);
-            int added = 0;
-            Arrays.fill(ids, -1);
-            while (intIterator.hasNext() && added < batching) {
-                ids[added] = intIterator.next();
-                added++;
-            }
-
-            int[] actualIds = new int[added];
-            System.arraycopy(ids, 0, actualIds, 0, added);
-            BM seen = bitmaps.createWithBits(actualIds);
-
-            List<BM> andNots = new ArrayList<>();
-            andNots.add(seen);
-            List<MiruTermId[]> all = activityIndex.getAll(tenantId, actualIds, field);
-            for (MiruTermId[] termIds : all) {
-                if (termIds != null && termIds.length > 0) {
-                    for (MiruTermId termId : termIds) {
-                        if (distincts.add(termId)) {
-                            result.add(termId);
-                            MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(field, termId);
-                            Optional<BM> gotIndex = invertedIndex.getIndex();
-                            if (gotIndex.isPresent()) {
-                                andNots.add(gotIndex.get());
-                            }
-                        }
-                    }
-                }
-            }
-
-            BM myReducedOkActivity = bitmaps.create();
-            bitmaps.andNot(myReducedOkActivity, answer, andNots);
-            answer = myReducedOkActivity;
-        }
-        return answer;
-    }
-    /*
-     private <BM> BM gatherDistincts(MiruBitmaps<BM> bitmaps,
-     BM answer,
-     MiruFieldIndex<BM> primaryFieldIndex,
-     MiruActivityIndex activityIndex,
-     MiruTenantId tenantId,
-     int field,
-     Set<MiruTermId> result) throws Exception {
-
-     Set<MiruTermId> distincts = new HashSet<>();
-
-     int batching = 10; // TODO expose to query?
-     int[] ids = new int[batching];
-     while (!bitmaps.isEmpty(answer)) {
-     MiruIntIterator intIterator = bitmaps.intIterator(answer);
-     int added = 0;
-     Arrays.fill(ids, -1);
-     while (intIterator.hasNext() && added < batching) {
-     ids[added] = intIterator.next();
-     added++;
-     }
-     List<BM> andNots = new ArrayList();
-     List<MiruTermId[]> all = activityIndex.getAll(tenantId, ids, field);
-     for (MiruTermId[] termIds : all) {
-     if (termIds != null && termIds.length > 0) {
-     for (MiruTermId termId : termIds) {
-     if (distincts.add(termId)) {
-     result.add(termId);
-     MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(field, termId);
-     Optional<BM> gotIndex = invertedIndex.getIndex();
-     if (gotIndex.isPresent()) {
-     andNots.add(gotIndex.get());
-     }
-     }
-     }
-     }
-     }
-     if (andNots.isEmpty()) {
-     BM myReducedOkActivity = bitmaps.create();
-     bitmaps.andNot(myReducedOkActivity, answer, andNots);
-     andNots.clear();
-     answer = myReducedOkActivity;
-     } else {
-     throw new RuntimeException("Pooh screwed.");
-     }
-     }
-     return answer;
-     }
-     */
 
     private <BM> RecoAnswer composeAnswer(MiruRequestContext<BM> requestContext,
         MiruFieldDefinition fieldDefinition,

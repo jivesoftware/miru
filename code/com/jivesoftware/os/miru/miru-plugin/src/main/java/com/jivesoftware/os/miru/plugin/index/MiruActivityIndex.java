@@ -26,22 +26,20 @@ public interface MiruActivityIndex {
     /**
      * Get the terms from the given field for the activity at the requested index.
      *
-     * @param tenantId the tenant
      * @param index the activity index
      * @param fieldId the field
      * @return the terms
      */
-    MiruTermId[] get(MiruTenantId tenantId, int index, int fieldId);
+    MiruTermId[] get(int index, int fieldId);
 
     /**
      * Get the terms from the given field for each activity index.
      *
-     * @param tenantId the tenant
      * @param indexes the activity indexes
      * @param fieldId the field
      * @return the terms
      */
-    List<MiruTermId[]> getAll(MiruTenantId tenantId, int[] indexes, int fieldId);
+    List<MiruTermId[]> getAll(int[] indexes, int fieldId);
 
     /**
      * Returns the index of the last activity.
