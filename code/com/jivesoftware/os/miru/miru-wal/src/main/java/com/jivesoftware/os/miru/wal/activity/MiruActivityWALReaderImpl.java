@@ -234,21 +234,21 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
     }
 
     @Override
-    public MiruPartitionCursor getCursorForWriterId(MiruTenantId tenantId, int writerId, int desiredPartitionCapacity) throws Exception {
+    public MiruPartitionCursor getCursorForWriterId(MiruTenantId tenantId, final int writerId, int desiredPartitionCapacity) throws Exception {
         LOG.inc("getCursorForWriterId");
         LOG.inc("getCursorForWriterId>" + writerId, tenantId.toString());
         int partitionId = 0;
         int largestRunOfGaps = 10; // TODO expose to config?
-        MiruPartitionedActivity largestPartitionId = null;
+        MiruPartitionedActivity latestBoundaryActivity = null;
         int gaps = 0;
         while (true) {
-            MiruPartitionedActivity got = activitySipWAL.get(tenantId,
+            MiruPartitionedActivity got = activityWAL.get(tenantId,
                 new MiruActivityWALRow(partitionId),
-                new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId, Long.MAX_VALUE),
+                new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId),
                 null, null);
             if (got != null) {
                 gaps = 0;
-                largestPartitionId = got;
+                latestBoundaryActivity = got;
             } else {
                 gaps++;
                 if (gaps > largestRunOfGaps) {
@@ -258,13 +258,13 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
             partitionId++;
         }
 
-        if (largestPartitionId == null) {
+        if (latestBoundaryActivity == null) {
             return new MiruPartitionCursor(MiruPartitionId.of(0),
                 new AtomicInteger(0),
                 desiredPartitionCapacity);
         } else {
-            return new MiruPartitionCursor(MiruPartitionId.of(largestPartitionId.getPartitionId()),
-                new AtomicInteger(largestPartitionId.index),
+            return new MiruPartitionCursor(MiruPartitionId.of(latestBoundaryActivity.getPartitionId()),
+                new AtomicInteger(latestBoundaryActivity.index),
                 desiredPartitionCapacity);
         }
     }
@@ -274,9 +274,9 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
         throws Exception {
         LOG.inc("getPartitionCursorForWriterId");
         LOG.inc("getPartitionCursorForWriterId>" + partitionId + '>' + writerId, tenantId.toString());
-        MiruPartitionedActivity got = activitySipWAL.get(tenantId,
+        MiruPartitionedActivity got = activityWAL.get(tenantId,
             new MiruActivityWALRow(partitionId.getId()),
-            new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId, Long.MAX_VALUE),
+            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId),
             null, null);
         int index = (got != null) ? got.index : 0;
         return new MiruPartitionCursor(partitionId,
