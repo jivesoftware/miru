@@ -380,6 +380,18 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             contextFactory.close(toContext, destinationStorage);
                             contextFactory.markStorage(coord, existingStorage);
                         }
+                    } else if (existingStorage == MiruBackingStorage.memory && destinationStorage == MiruBackingStorage.memory) {
+                        MiruContext<BM> fromContext = optionalFromContext.get();
+                        MiruContext<BM> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
+                        MiruPartitionAccessor<BM> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
+                            Optional.of(MiruPartitionState.bootstrap));
+                        if (migrated != null) {
+                            contextFactory.close(fromContext, existingStorage);
+                            updated = true;
+                        } else {
+                            log.warn("Partition at {} failed to replace with {}, attempting to rewind", coord, destinationStorage);
+                            contextFactory.close(toContext, destinationStorage);
+                        }
                     } else {
                         log.warn("Partition at {} ignored unsupported storage migration {} to {}", coord, existingStorage, destinationStorage);
                     }
@@ -671,16 +683,24 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                 MiruPartitionAccessor<BM> accessor = accessorRef.get();
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.online) {
-                    if (firstSip.get()) {
+                    boolean forceRebuild = false;
+                    if (!accessor.context.isPresent()) {
+                        log.info("Forcing rebuild because context is missing for {}", coord);
+                        forceRebuild = true;
+                    } else if (firstSip.get()) {
                         List<MiruActivityWALStatus> partitionStatus = walClient.getPartitionStatus(coord.tenantId,
                             Collections.singletonList(coord.partitionId));
                         long currentCount = accessor.context.isPresent() ? accessor.context.get().activityIndex.lastId() : 0;
                         long behindByCount = partitionStatus.get(0).count - currentCount;
                         if (behindByCount > partitionRebuildIfBehindByCount) {
                             log.info("Forcing rebuild because partition is behind by {} for {}", behindByCount, coord);
-                            updateStorage(accessor, MiruBackingStorage.memory, false);
-                            return;
+                            forceRebuild = true;
                         }
+                    }
+
+                    if (forceRebuild) {
+                        updateStorage(accessor, MiruBackingStorage.memory, true);
+                        return;
                     }
 
                     try {

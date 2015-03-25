@@ -131,7 +131,7 @@ public class MiruPluginTestBootstrap {
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
 
-        MiruClusterRegistry clusterRegistry = null;
+        MiruClusterRegistry clusterRegistry;
 
         boolean useAmza = true;
         if (useAmza) {

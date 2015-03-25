@@ -92,6 +92,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -413,6 +414,36 @@ public class MiruLocalHostedPartitionTest {
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
         assertEquals(localHostedPartition.getStorage(), defaultStorage);
+    }
+
+    @Test
+    public void testSchemaRegisteredLate() throws Exception {
+        when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
+            walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
+            indexer, false, 100_000, 100, 100, new MiruMergeChits(100_000, 10_000), timings);
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
+        assertEquals(localHostedPartition.getStorage(), defaultStorage);
+
+        setActive(true);
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // stays bootstrap
+        waitForRef(sipMigrateIndexRunnable).run(); // stays bootstrap
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
+        assertEquals(localHostedPartition.getStorage(), defaultStorage);
+
+        reset(schemaProvider);
+        when(schemaProvider.getSchema(any(MiruTenantId.class))).thenReturn(schema);
+
+        waitForRef(bootstrapRunnable).run(); // stays bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding, online memory
+        waitForRef(sipMigrateIndexRunnable).run(); // enters online disk
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
     private MiruLocalHostedPartition<EWAHCompressedBitmap> getEwahCompressedBitmapMiruLocalHostedPartition(boolean wakeOnIndex) throws Exception {
