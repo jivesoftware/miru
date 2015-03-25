@@ -24,6 +24,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -42,8 +43,8 @@ public class MiruActivityIngress {
     private final MiruActivitySenderProvider activitySenderProvider;
     private final MiruPartitioner miruPartitioner;
 
+    private final Map<MiruTenantId, Boolean> latestAlignmentCache;
     private final Cache<TenantAndPartitionKey, MiruReplicaHosts> replicaCache;
-    private final Cache<MiruTenantId, Boolean> latestAlignmentCache;
 
     public MiruActivityIngress(
         ExecutorService sendActivitiesToHostsThreadPool,
@@ -51,6 +52,7 @@ public class MiruActivityIngress {
         MiruReplicaSetDirector replicaSetDirector,
         MiruActivitySenderProvider activitySenderProvider,
         MiruPartitioner miruPartitioner,
+        Map<MiruTenantId, Boolean> latestAlignmentCache,
         int cacheSize,
         long cacheExpiresAfterNMillis) {
         this.sendActivitiesToHostsThreadPool = sendActivitiesToHostsThreadPool;
@@ -58,13 +60,10 @@ public class MiruActivityIngress {
         this.replicaSetDirector = replicaSetDirector;
         this.activitySenderProvider = activitySenderProvider;
         this.miruPartitioner = miruPartitioner;
+        this.latestAlignmentCache = latestAlignmentCache;
         this.replicaCache = CacheBuilder.newBuilder() //TODO config
             .maximumSize(cacheSize)
             .expireAfterWrite(cacheExpiresAfterNMillis, TimeUnit.MILLISECONDS)
-            .build();
-        this.latestAlignmentCache = CacheBuilder.newBuilder() // TODO config
-            .maximumSize(cacheSize)
-            .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
     }
 
@@ -223,16 +222,18 @@ public class MiruActivityIngress {
     }
 
     private void checkForWriterAlignmentIfNecessary(MiruTenantId tenantId) {
-        // Limit how often we check for alignment per tenant
-        if (latestAlignmentCache.getIfPresent(tenantId) == null) {
+        // the cache limits how often we check for alignment per tenant
+        if (latestAlignmentCache.containsKey(tenantId)) {
             try {
                 latestAlignmentCache.put(tenantId, true);
                 miruPartitioner.checkForAlignmentWithOtherWriters(tenantId);
-                LOG.inc("alignWriters>aligned");
+                LOG.inc("alignWriters>aligned", tenantId.toString());
             } catch (Throwable t) {
-                LOG.error("Unable to check for alignement with other writers", t);
-                LOG.inc("alignWriters>failed");
+                LOG.error("Unable to check for alignment with other writers", t);
+                LOG.inc("alignWriters>failed", tenantId.toString());
             }
+        } else {
+            LOG.inc("alignWriters>skipped", tenantId.toString());
         }
     }
 

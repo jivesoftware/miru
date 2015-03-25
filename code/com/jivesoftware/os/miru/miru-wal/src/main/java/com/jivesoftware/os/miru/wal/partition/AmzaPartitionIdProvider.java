@@ -18,14 +18,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
+    public static final RegionName LATEST_PARTITIONS_REGION_NAME = new RegionName("master", "latestPartitions", null, null);
+    public static final RegionName CURSORS_REGION_NAME = new RegionName("master", "cursors", null, null);
+
     private final AmzaRegion latestPartitions;
     private final AmzaRegion cursors;
     private final int capacity;
     private final MiruActivityWALReader walReader;
 
     public AmzaPartitionIdProvider(AmzaService amzaService, int capacity, MiruActivityWALReader walReader) throws Exception {
-        this.latestPartitions = amzaService.getRegion(new RegionName("master", "latestPartitions", null, null));
-        this.cursors = amzaService.getRegion(new RegionName("master", "cursors", null, null));
+        this.latestPartitions = amzaService.getRegion(LATEST_PARTITIONS_REGION_NAME);
+        this.cursors = amzaService.getRegion(CURSORS_REGION_NAME);
         this.capacity = capacity;
         this.walReader = walReader;
     }
@@ -36,6 +39,15 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         bb.put(rawTenantBytes);
         bb.putInt(writerId);
         return bb.array();
+    }
+
+    //TODO replace this and key() with a marshaller
+    public static MiruTenantId extractTenantForLatestPartition(WALKey key) {
+        byte[] keyBytes = key.getKey();
+        int length = keyBytes.length - 4;
+        byte[] tenantBytes = new byte[length];
+        System.arraycopy(keyBytes, 0, tenantBytes, 0, length);
+        return new MiruTenantId(tenantBytes);
     }
 
     @Override

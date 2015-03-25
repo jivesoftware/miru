@@ -15,7 +15,6 @@ import com.jivesoftware.os.amza.service.stats.AmzaStats;
 import com.jivesoftware.os.amza.shared.AmzaInstance;
 import com.jivesoftware.os.amza.shared.RingHost;
 import com.jivesoftware.os.amza.shared.RowChanges;
-import com.jivesoftware.os.amza.shared.RowsChanged;
 import com.jivesoftware.os.amza.shared.UpdatesSender;
 import com.jivesoftware.os.amza.shared.UpdatesTaker;
 import com.jivesoftware.os.amza.shared.WALIndexProvider;
@@ -78,7 +77,8 @@ public class AmzaPartitionIdProviderInitializer {
         String hostName,
         int port,
         String clusterName,
-        AmzaPartitionIdProviderConfig config) throws Exception {
+        AmzaPartitionIdProviderConfig config,
+        RowChanges allRowChanges) throws Exception {
 
         String multicastGroup = System.getProperty("amza.discovery.group", "225.4.5.7");
         int multicastPort = Integer.parseInt(System.getProperty("amza.discovery.port", "1225")); //TODO expose to config
@@ -115,11 +115,7 @@ public class AmzaPartitionIdProviderInitializer {
             tableTaker,
             Optional.<SendFailureListener>absent(),
             Optional.<TakeFailureListener>absent(),
-            new RowChanges() {
-                @Override
-                public void changes(RowsChanged changes) throws Exception {
-                }
-            });
+            allRowChanges);
 
         amzaService.start();
 
