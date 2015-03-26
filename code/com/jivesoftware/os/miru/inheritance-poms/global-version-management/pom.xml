@@ -15,7 +15,7 @@
         <rcvs-version>0.12</rcvs-version>
         <filer-version>0.67</filer-version>
         <upena-version>0.63</upena-version>
-        <amza-version>0.26</amza-version>
+        <amza-version>0.27</amza-version>
     </properties>
     <dependencyManagement>
         <dependencies>

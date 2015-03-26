@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.amza.mapdb.MapdbWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.discovery.AmzaDiscovery;
 import com.jivesoftware.os.amza.service.replication.SendFailureListener;
@@ -33,16 +32,16 @@ import org.merlin.config.defaults.StringDefault;
 /**
  * @author jonathan.colt
  */
-public class AmzaPartitionIdProviderInitializer {
+public class AmzaServiceInitializer {
 
-    public static interface AmzaPartitionIdProviderConfig extends Config {
+    public static interface AmzaServiceConfig extends Config {
 
-        @StringDefault("./var/amza/partitionIds/data/")
+        @StringDefault("./var/amza/wal/data/")
         public String getWorkingDirectories();
 
         public void setWorkingDirectories(String dir);
 
-        @StringDefault("./var/amza/partitionIds/index/")
+        @StringDefault("./var/amza/wal/index/")
         public String getIndexDirectories();
 
         @IntDefault(1)
@@ -77,7 +76,7 @@ public class AmzaPartitionIdProviderInitializer {
         String hostName,
         int port,
         String clusterName,
-        AmzaPartitionIdProviderConfig config,
+        AmzaServiceConfig config,
         RowChanges allRowChanges) throws Exception {
 
         String multicastGroup = System.getProperty("amza.discovery.group", "225.4.5.7");
@@ -96,7 +95,8 @@ public class AmzaPartitionIdProviderInitializer {
         UpdatesSender changeSetSender = new HttpUpdatesSender();
         UpdatesTaker tableTaker = new HttpUpdatesTaker();
 
-        final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
+        final com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig amzaServiceConfig =
+            new com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
         amzaServiceConfig.replicationFactor = config.getReplicationFactor();
         amzaServiceConfig.takeFromFactor = config.getTakeFromFactor();

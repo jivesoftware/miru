@@ -10,9 +10,9 @@ import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALWriter;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
@@ -32,7 +32,6 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertTrue;
 
 /**
- *
  * @author jonathan.colt
  */
 public class MiruWriterUIServiceNGTest {
@@ -58,8 +57,8 @@ public class MiruWriterUIServiceNGTest {
         wal.getActivityLookupTable().add(MiruVoidByte.INSTANCE, tenantId, -1L, new MiruActivityLookupEntry(-1, -1, -1, false), null, null);
         wal.getWriterPartitionRegistry().add(MiruVoidByte.INSTANCE, tenantId, 1, MiruPartitionId.of(0), null, null);
 
-        MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALWriter activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
         MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(wal.getActivityLookupTable());

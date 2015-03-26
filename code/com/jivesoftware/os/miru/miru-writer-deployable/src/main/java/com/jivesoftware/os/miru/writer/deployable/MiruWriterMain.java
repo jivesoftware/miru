@@ -49,15 +49,17 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import com.jivesoftware.os.miru.wal.activity.ForkingActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReaderImpl;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.MiruWriteToActivityAndSipWAL;
+import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALWriter;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
 import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProviderInitializer;
-import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProviderInitializer.AmzaPartitionIdProviderConfig;
+import com.jivesoftware.os.miru.wal.partition.AmzaServiceInitializer;
+import com.jivesoftware.os.miru.wal.partition.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
@@ -194,32 +196,30 @@ public class MiruWriterMain {
                 activitySenderProvider = new MiruWarmActivitySenderProvider(httpClientFactory, new ObjectMapper());
             }
 
-            MiruActivityWALWriter activityWALWriter = new MiruWriteToActivityAndSipWAL(wal.getActivityWAL(), wal.getActivitySipWAL());
-            MiruActivityWALReader activityWALReader = new MiruActivityWALReaderImpl(wal.getActivityWAL(), wal.getActivitySipWAL());
-            MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-            MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-            MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(wal.getActivityLookupTable());
-
             final Map<MiruTenantId, Boolean> latestAlignmentCache;
-            MiruPartitionIdProvider miruPartitionIdProvider;
             if (clientConfig.getPartitionIdProviderType().equals("rcvs")) {
-                miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(clientConfig.getTotalCapacity(),
-                    wal.getWriterPartitionRegistry(),
-                    activityWALReader);
                 latestAlignmentCache = CacheBuilder.newBuilder() // TODO config
                     .maximumSize(clientConfig.getTopologyCacheSize())
                     .expireAfterWrite(1, TimeUnit.MINUTES)
                     .<MiruTenantId, Boolean>build()
                     .asMap();
             } else if (clientConfig.getPartitionIdProviderType().equals("amza")) {
-                AmzaPartitionIdProviderConfig amzaPartitionIdProviderConfig = deployable.config(AmzaPartitionIdProviderConfig.class);
                 latestAlignmentCache = Maps.newConcurrentMap();
-                AmzaService amzaService = new AmzaPartitionIdProviderInitializer().initialize(deployable,
+            } else {
+                throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
+            }
+
+            AmzaService amzaService = null;
+            if (clientConfig.getPartitionIdProviderType().equals("amza") ||
+                clientConfig.getActivityWALType().equals("amza") ||
+                clientConfig.getActivityWALType().equals("fork")) {
+                AmzaServiceConfig amzaServiceConfig = deployable.config(AmzaServiceConfig.class);
+                amzaService = new AmzaServiceInitializer().initialize(deployable,
                     instanceConfig.getInstanceName(),
                     instanceConfig.getHost(),
                     instanceConfig.getMainPort(),
-                    "amza-partition-ids-" + instanceConfig.getClusterName(),
-                    amzaPartitionIdProviderConfig,
+                    "miru-wal-" + instanceConfig.getClusterName(),
+                    amzaServiceConfig,
                     new RowChanges() {
                         @Override
                         public void changes(RowsChanged changes) throws Exception {
@@ -231,6 +231,32 @@ public class MiruWriterMain {
                             }
                         }
                     });
+            }
+
+            MiruActivityWALWriter activityWALWriter;
+            if (clientConfig.getActivityWALType().equals("rcvs")) {
+                activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+            } else if (clientConfig.getActivityWALType().equals("amza")) {
+                activityWALWriter = new AmzaActivityWALWriter(amzaService, mapper);
+            } else if (clientConfig.getActivityWALType().equals("fork")) {
+                MiruRCVSActivityWALWriter rcvsWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+                AmzaActivityWALWriter amzaWriter = new AmzaActivityWALWriter(amzaService, mapper);
+                activityWALWriter = new ForkingActivityWALWriter(rcvsWriter, amzaWriter);
+            } else {
+                throw new IllegalStateException("Invalid activity WAL type: " + clientConfig.getActivityWALType());
+            }
+
+            MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
+            MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+            MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+            MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(wal.getActivityLookupTable());
+
+            MiruPartitionIdProvider miruPartitionIdProvider;
+            if (clientConfig.getPartitionIdProviderType().equals("rcvs")) {
+                miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(clientConfig.getTotalCapacity(),
+                    wal.getWriterPartitionRegistry(),
+                    activityWALReader);
+            } else if (clientConfig.getPartitionIdProviderType().equals("amza")) {
                 miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
                     clientConfig.getTotalCapacity(),
                     activityWALReader);

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.wal.activity;
+package com.jivesoftware.os.miru.wal.activity.rcvs;
 
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
@@ -7,9 +7,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.Sip;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
+import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionCursor;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -21,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /** @author jonathan */
-public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
+public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -29,7 +27,7 @@ public class MiruActivityWALReaderImpl implements MiruActivityWALReader {
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activitySipWAL;
 
-    public MiruActivityWALReaderImpl(
+    public MiruRCVSActivityWALReader(
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL
     ) {

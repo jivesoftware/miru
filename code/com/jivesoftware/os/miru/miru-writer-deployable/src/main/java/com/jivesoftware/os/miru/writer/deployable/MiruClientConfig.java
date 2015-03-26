@@ -35,4 +35,7 @@ public interface MiruClientConfig extends Config {
 
     @StringDefault("rcvs")
     String getPartitionIdProviderType(); // rcvs or amza
+
+    @StringDefault("rcvs")
+    String getActivityWALType(); // rcvs or amza or fork
 }
