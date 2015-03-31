@@ -98,7 +98,11 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
     private MiruPartitionCursor setCursor(MiruTenantId tenantId, int writerId, MiruPartitionCursor cursor) throws Exception {
         WALKey latestPartitionKey = new WALKey(key(tenantId, writerId));
-        createRegionIfAbsent(LATEST_PARTITIONS_REGION_NAME).set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId()));
+        AmzaRegion latestPartitions = createRegionIfAbsent(LATEST_PARTITIONS_REGION_NAME);
+        byte[] latestPartitionBytes = latestPartitions.get(latestPartitionKey);
+        if (latestPartitionBytes == null || FilerIO.bytesInt(latestPartitionBytes) < cursor.getPartitionId().getId()) {
+            latestPartitions.set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId()));
+        }
         WALKey cursorKey = new WALKey(key(tenantId, writerId, cursor.getPartitionId()));
         createRegionIfAbsent(CURSORS_REGION_NAME).set(cursorKey, FilerIO.intBytes(cursor.last()));
         return cursor;

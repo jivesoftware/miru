@@ -223,7 +223,7 @@ public class MiruActivityIngress {
 
     private void checkForWriterAlignmentIfNecessary(MiruTenantId tenantId) {
         // the cache limits how often we check for alignment per tenant
-        if (latestAlignmentCache.containsKey(tenantId)) {
+        if (!latestAlignmentCache.containsKey(tenantId)) {
             try {
                 latestAlignmentCache.put(tenantId, true);
                 miruPartitioner.checkForAlignmentWithOtherWriters(tenantId);
