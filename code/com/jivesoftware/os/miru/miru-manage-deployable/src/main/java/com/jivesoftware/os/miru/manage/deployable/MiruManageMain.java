@@ -101,8 +101,10 @@ public class MiruManageMain {
                     throw new UnsupportedOperationException("Not supported yet.");
                 }
             });
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
-                new HasUI.UI("Miru-Manage", "main", "/miru/manage"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
+                new HasUI.UI("manage", "manage", "/manage/ui"),
+                new HasUI.UI("Miru-Manage", "main", "/miru/manage"),
+                new HasUI.UI("Miru-Manage-Amza", "main", "/amza"))));
             deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);

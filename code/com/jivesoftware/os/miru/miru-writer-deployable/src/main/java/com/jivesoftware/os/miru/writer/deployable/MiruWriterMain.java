@@ -122,8 +122,10 @@ public class MiruWriterMain {
                 }
             });
 
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
-                new HasUI.UI("Miru-Writer", "main", "/miru/writer"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
+                new HasUI.UI("manage", "manage", "/manage/ui"),
+                new HasUI.UI("Miru-Writer", "main", "/miru/writer"),
+                new HasUI.UI("Miru-Writer-Amza", "main", "/amza"))));
 
             deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));

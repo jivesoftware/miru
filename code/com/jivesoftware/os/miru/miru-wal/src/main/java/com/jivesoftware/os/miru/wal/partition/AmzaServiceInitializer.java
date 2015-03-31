@@ -13,6 +13,8 @@ import com.jivesoftware.os.amza.service.replication.SendFailureListener;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.storage.RegionPropertyMarshaller;
 import com.jivesoftware.os.amza.shared.AmzaInstance;
+import com.jivesoftware.os.amza.shared.AmzaRing;
+import com.jivesoftware.os.amza.shared.HighwaterMarks;
 import com.jivesoftware.os.amza.shared.RegionProperties;
 import com.jivesoftware.os.amza.shared.RingHost;
 import com.jivesoftware.os.amza.shared.RowChanges;
@@ -157,7 +159,9 @@ public class AmzaServiceInitializer {
         });
 
         deployable.addEndpoints(AmzaReplicationRestEndpoints.class);
+        deployable.addInjectables(AmzaRing.class, amzaService.getAmzaRing());
         deployable.addInjectables(AmzaInstance.class, amzaService);
+        deployable.addInjectables(HighwaterMarks.class, amzaService.getHighwaterMarks());
 
         Resource staticResource = new Resource(null)
             .addClasspathResource("resources/static/amza")
