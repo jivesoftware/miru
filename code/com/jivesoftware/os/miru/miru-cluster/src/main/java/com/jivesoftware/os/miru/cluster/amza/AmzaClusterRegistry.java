@@ -94,7 +94,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
         this.defaultTopologyIsStaleAfterMillis = defaultTopologyIsStaleAfterMillis;
         this.defaultTopologyIsIdleAfterMillis = defaultTopologyIsIdleAfterMillis;
         this.amzaStorageDescriptor = new WALStorageDescriptor(
-            new PrimaryIndexDescriptor("mapdb", Long.MAX_VALUE, false, null),
+            new PrimaryIndexDescriptor("mapdb", 0, false, null),
             null, 1000, 1000); //TODO config
     }
 

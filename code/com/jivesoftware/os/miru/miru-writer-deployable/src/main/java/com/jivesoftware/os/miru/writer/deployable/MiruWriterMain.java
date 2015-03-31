@@ -241,12 +241,12 @@ public class MiruWriterMain {
             if (clientConfig.getActivityWALType().equals("rcvs")) {
                 activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
             } else if (clientConfig.getActivityWALType().equals("amza")) {
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", Long.MAX_VALUE, false, null),
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", 0, false, null),
                     null, 1000, 1000);
                 activityWALWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper);
             } else if (clientConfig.getActivityWALType().equals("fork")) {
                 MiruRCVSActivityWALWriter rcvsWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", Long.MAX_VALUE, false, null),
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", 0, false, null),
                     null, 1000, 1000);
                 AmzaActivityWALWriter amzaWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper);
                 activityWALWriter = new ForkingActivityWALWriter(rcvsWriter, amzaWriter);
@@ -265,7 +265,7 @@ public class MiruWriterMain {
                     wal.getWriterPartitionRegistry(),
                     activityWALReader);
             } else if (clientConfig.getPartitionIdProviderType().equals("amza")) {
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", Long.MAX_VALUE, false, null),
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", 0, false, null),
                     null, 1000, 1000);
                 miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
                     storageDescriptor,
