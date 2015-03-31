@@ -80,8 +80,16 @@
             <artifactId>amza-shared</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-ui</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>ordered-id</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>server-http-jetty-jersey</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>

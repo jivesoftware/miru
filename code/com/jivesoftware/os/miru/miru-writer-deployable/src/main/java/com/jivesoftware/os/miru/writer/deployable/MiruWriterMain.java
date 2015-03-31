@@ -22,9 +22,11 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.RowChanges;
 import com.jivesoftware.os.amza.shared.RowsChanged;
 import com.jivesoftware.os.amza.shared.WALKey;
+import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -237,10 +239,14 @@ public class MiruWriterMain {
             if (clientConfig.getActivityWALType().equals("rcvs")) {
                 activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
             } else if (clientConfig.getActivityWALType().equals("amza")) {
-                activityWALWriter = new AmzaActivityWALWriter(amzaService, mapper);
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", Long.MAX_VALUE, false, null),
+                    null, 1000, 1000);
+                activityWALWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper);
             } else if (clientConfig.getActivityWALType().equals("fork")) {
                 MiruRCVSActivityWALWriter rcvsWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-                AmzaActivityWALWriter amzaWriter = new AmzaActivityWALWriter(amzaService, mapper);
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", Long.MAX_VALUE, false, null),
+                    null, 1000, 1000);
+                AmzaActivityWALWriter amzaWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper);
                 activityWALWriter = new ForkingActivityWALWriter(rcvsWriter, amzaWriter);
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + clientConfig.getActivityWALType());
@@ -257,7 +263,10 @@ public class MiruWriterMain {
                     wal.getWriterPartitionRegistry(),
                     activityWALReader);
             } else if (clientConfig.getPartitionIdProviderType().equals("amza")) {
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", Long.MAX_VALUE, false, null),
+                    null, 1000, 1000);
                 miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
+                    storageDescriptor,
                     clientConfig.getTotalCapacity(),
                     activityWALReader);
             } else {
