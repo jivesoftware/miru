@@ -174,7 +174,9 @@ public class MiruManageMain {
                     new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                     registryConfig.getDefaultNumberOfReplicas(),
                     registryConfig.getDefaultTopologyIsStaleAfterMillis(),
-                    registryConfig.getDefaultTopologyIsIdleAfterMillis());
+                    registryConfig.getDefaultTopologyIsIdleAfterMillis(),
+                    amzaClusterRegistryConfig.getReplicationFactor(),
+                    amzaClusterRegistryConfig.getTakeFromFactor());
             } else {
                 throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
             }

@@ -18,8 +18,8 @@ import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.RegionName;
 import com.jivesoftware.os.amza.shared.RegionProperties;
 import com.jivesoftware.os.amza.shared.RingHost;
+import com.jivesoftware.os.amza.shared.Scan;
 import com.jivesoftware.os.amza.shared.WALKey;
-import com.jivesoftware.os.amza.shared.WALScan;
 import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
 import com.jivesoftware.os.amza.shared.WALValue;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -79,6 +79,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
     private final int defaultNumberOfReplicas;
     private final long defaultTopologyIsStaleAfterMillis;
     private final long defaultTopologyIsIdleAfterMillis;
+    private final int replicationFactor;
+    private final int takeFromFactor;
     private final WALStorageDescriptor amzaStorageDescriptor;
 
     private final AtomicBoolean ringInitialized = new AtomicBoolean(false);
@@ -87,14 +89,18 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
         TypeMarshaller<MiruSchema> schemaMarshaller,
         int defaultNumberOfReplicas,
         long defaultTopologyIsStaleAfterMillis,
-        long defaultTopologyIsIdleAfterMillis) throws Exception {
+        long defaultTopologyIsIdleAfterMillis,
+        int replicationFactor,
+        int takeFromFactor) throws Exception {
         this.amzaService = amzaService;
         this.schemaMarshaller = schemaMarshaller;
         this.defaultNumberOfReplicas = defaultNumberOfReplicas;
         this.defaultTopologyIsStaleAfterMillis = defaultTopologyIsStaleAfterMillis;
         this.defaultTopologyIsIdleAfterMillis = defaultTopologyIsIdleAfterMillis;
+        this.replicationFactor = replicationFactor;
+        this.takeFromFactor = takeFromFactor;
         this.amzaStorageDescriptor = new WALStorageDescriptor(
-            new PrimaryIndexDescriptor("mapdb", 0, false, null),
+            new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
             null, 1000, 1000); //TODO config
     }
 
@@ -107,7 +113,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
     @Override
     public LinkedHashSet<HostHeartbeat> getAllHosts() throws Exception {
         final LinkedHashSet<HostHeartbeat> heartbeats = new LinkedHashSet<>();
-        createRegionIfAbsent("hosts").scan(new WALScan() {
+        createRegionIfAbsent("hosts").scan(new Scan<WALValue>() {
 
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
@@ -163,7 +169,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
         }
 
         return amzaService.createRegionIfAbsent(new RegionName(false, AMZA_RING_NAME, regionName),
-            new RegionProperties(amzaStorageDescriptor, 1, 1, false) //TODO config?
+            new RegionProperties(amzaStorageDescriptor, replicationFactor, takeFromFactor, false)
         );
     }
 
@@ -250,7 +256,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
         final long acceptableTimestampId = amzaService.getTimestamp(sinceTimestamp, TimeUnit.MINUTES.toMillis(1));
 
         AmzaRegion topology = createRegionIfAbsent("host-" + host.toStringForm() + "-topology-updates");
-        topology.scan(new WALScan() {
+        topology.scan(new Scan<WALValue>() {
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
                 if (value.getTimestampId() > acceptableTimestampId) {
@@ -304,7 +310,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
     private Set<MiruTenantId> getTenantsForHostAsSet(MiruHost host) throws Exception {
         final Set<MiruTenantId> tenants = new HashSet<>();
         AmzaRegion topology = createRegionIfAbsent("host-" + host.toStringForm() + "-partition-registry");
-        topology.scan(new WALScan() {
+        topology.scan(new Scan<WALValue>() {
 
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
@@ -318,7 +324,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
 
     @Override
     public void removeTenantPartionReplicaSet(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
-        createRegionIfAbsent("hosts").scan(new WALScan() {
+        createRegionIfAbsent("hosts").scan(new Scan<WALValue>() {
 
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
@@ -364,14 +370,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
         final WALKey from = new WALKey(tenantId.getBytes());
         final WALKey to = new WALKey(prefixUpperExclusive(tenantId.getBytes()));
         final ConcurrentSkipListMap<Integer, MinMaxPriorityQueue<HostAndTimestamp>> partitionIdToLatest = new ConcurrentSkipListMap<>();
-        createRegionIfAbsent("hosts").scan(new WALScan() {
+        createRegionIfAbsent("hosts").scan(new Scan<WALValue>() {
 
             @Override
             public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {
                 if (!value.getTombstoned()) { // paranoid
                     final MiruHost host = hostMarshaller.fromBytes(key.getKey());
                     AmzaRegion topologyReg = createRegionIfAbsent("host-" + host.toStringForm() + "-partition-registry");
-                    topologyReg.rangeScan(from, to, new WALScan() {
+                    topologyReg.rangeScan(from, to, new Scan<WALValue>() {
 
                         @Override
                         public boolean row(long transactionId, WALKey key, WALValue value) throws Exception {

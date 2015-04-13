@@ -214,10 +214,10 @@ public class MiruWriterMain {
             }
 
             AmzaService amzaService = null;
+            AmzaServiceConfig amzaServiceConfig = deployable.config(AmzaServiceConfig.class);
             if (clientConfig.getPartitionIdProviderType().equals("amza") ||
                 clientConfig.getActivityWALType().equals("amza") ||
                 clientConfig.getActivityWALType().equals("fork")) {
-                AmzaServiceConfig amzaServiceConfig = deployable.config(AmzaServiceConfig.class);
                 amzaService = new AmzaServiceInitializer().initialize(deployable,
                     instanceConfig.getInstanceName(),
                     instanceConfig.getHost(),
@@ -241,14 +241,16 @@ public class MiruWriterMain {
             if (clientConfig.getActivityWALType().equals("rcvs")) {
                 activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
             } else if (clientConfig.getActivityWALType().equals("amza")) {
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", 0, false, null),
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                     null, 1000, 1000);
-                activityWALWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper);
+                activityWALWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper,
+                    amzaServiceConfig.getReplicationFactor(), amzaServiceConfig.getTakeFromFactor());
             } else if (clientConfig.getActivityWALType().equals("fork")) {
                 MiruRCVSActivityWALWriter rcvsWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", 0, false, null),
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                     null, 1000, 1000);
-                AmzaActivityWALWriter amzaWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper);
+                AmzaActivityWALWriter amzaWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper,
+                    amzaServiceConfig.getReplicationFactor(), amzaServiceConfig.getTakeFromFactor());
                 activityWALWriter = new ForkingActivityWALWriter(rcvsWriter, amzaWriter);
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + clientConfig.getActivityWALType());

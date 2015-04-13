@@ -94,7 +94,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-mapdb-storage</artifactId>
+            <artifactId>amza-berkeleydb-storage</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.filer</groupId>

@@ -140,15 +140,15 @@ public class MiruPluginTestBootstrap {
             AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(AmzaClusterRegistryConfig.class);
             acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
             acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
-            acrc.setReplicationFactor(0);
-            acrc.setTakeFromFactor(0);
             Deployable deployable = new Deployable(new String[0]);
             AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
             clusterRegistry = new AmzaClusterRegistry(amzaService,
                 new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                 3,
                 TimeUnit.HOURS.toMillis(1),
-                TimeUnit.HOURS.toMillis(1));
+                TimeUnit.HOURS.toMillis(1),
+                0,
+                0);
         } else {
             clusterRegistry = new MiruRCVSClusterRegistry(
                 new CurrentTimestamper(),

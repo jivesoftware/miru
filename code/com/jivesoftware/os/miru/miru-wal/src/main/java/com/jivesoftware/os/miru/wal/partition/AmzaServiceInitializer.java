@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
-import com.jivesoftware.os.amza.mapdb.MapdbWALIndexProvider;
+import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
@@ -40,41 +40,60 @@ import org.merlin.config.defaults.StringDefault;
  */
 public class AmzaServiceInitializer {
 
-    public static interface AmzaServiceConfig extends Config {
+    public interface AmzaServiceConfig extends Config {
 
         @StringDefault("./var/amza/wal/data/")
-        public String getWorkingDirectories();
+        String getWorkingDirectories();
 
-        public void setWorkingDirectories(String dir);
+        void setWorkingDirectories(String dir);
 
         @StringDefault("./var/amza/wal/index/")
-        public String getIndexDirectories();
-
-        @IntDefault(1)
-        public int getReplicationFactor();
-
-        public void setReplicationFactor(int factor);
-
-        @IntDefault(1)
-        public int getTakeFromFactor();
-
-        public void setTakeFromFactor(int factor);
+        String getIndexDirectories();
 
         @IntDefault(1000)
-        public int getResendReplicasIntervalInMillis();
-
-        @IntDefault(1000)
-        public int getApplyReplicasIntervalInMillis();
-
-        @IntDefault(1000)
-        public int getTakeFromNeighborsIntervalInMillis();
+        int getApplyReplicasIntervalInMillis();
 
         @LongDefault(60_000)
-        public long getCheckIfCompactionIsNeededIntervalInMillis();
+        long getCheckIfCompactionIsNeededIntervalInMillis();
+
+        @IntDefault(60_000)
+        int getDeltaStripeCompactionIntervalInMillis();
+
+        @IntDefault(1000)
+        int getResendReplicasIntervalInMillis();
+
+        @IntDefault(1000)
+        int getTakeFromNeighborsIntervalInMillis();
 
         @LongDefault(1 * 24 * 60 * 60 * 1000L)
-        public long getCompactTombstoneIfOlderThanNMillis();
+        long getCompactTombstoneIfOlderThanNMillis();
 
+        @IntDefault(100)
+        int getCorruptionParanoiaFactor();
+
+        @IntDefault(1_000_000)
+        int getMaxUpdatesBeforeDeltaStripeCompaction();
+
+        @IntDefault(1)
+        int getNumberOfApplierThreads();
+
+        @IntDefault(1)
+        int getNumberOfCompactorThreads();
+
+        @IntDefault(24)
+        int getNumberOfReplicatorThreads();
+
+        @IntDefault(8)
+        int getNumberOfResendThreads();
+
+        @IntDefault(24)
+        int getNumberOfTakerThreads();
+
+        @IntDefault(1)
+        int getReplicationFactor();
+
+        @IntDefault(1)
+        int getTakeFromFactor();
     }
 
     public AmzaService initialize(final Deployable deployable,
@@ -97,7 +116,8 @@ public class AmzaServiceInitializer {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
         WALIndexProviderRegistry indexProviderRegistry = new WALIndexProviderRegistry();
-        indexProviderRegistry.register("mapdb", new MapdbWALIndexProvider(config.getIndexDirectories().split(",")));
+        String[] walIndexDirs = config.getIndexDirectories().split(",");
+        indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
         UpdatesSender changeSetSender = new HttpUpdatesSender(amzaStats);
@@ -106,11 +126,20 @@ public class AmzaServiceInitializer {
         final com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig amzaServiceConfig =
             new com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
-        amzaServiceConfig.resendReplicasIntervalInMillis = config.getResendReplicasIntervalInMillis();
         amzaServiceConfig.applyReplicasIntervalInMillis = config.getApplyReplicasIntervalInMillis();
-        amzaServiceConfig.takeFromNeighborsIntervalInMillis = config.getTakeFromNeighborsIntervalInMillis();
         amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis = config.getCheckIfCompactionIsNeededIntervalInMillis();
+        amzaServiceConfig.deltaStripeCompactionIntervalInMillis = config.getDeltaStripeCompactionIntervalInMillis();
+        amzaServiceConfig.resendReplicasIntervalInMillis = config.getResendReplicasIntervalInMillis();
+        amzaServiceConfig.takeFromNeighborsIntervalInMillis = config.getTakeFromNeighborsIntervalInMillis();
         amzaServiceConfig.compactTombstoneIfOlderThanNMillis = config.getCompactTombstoneIfOlderThanNMillis();
+        amzaServiceConfig.corruptionParanoiaFactor = config.getCorruptionParanoiaFactor();
+        amzaServiceConfig.maxUpdatesBeforeDeltaStripeCompaction = config.getMaxUpdatesBeforeDeltaStripeCompaction();
+        amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
+        amzaServiceConfig.numberOfApplierThreads = config.getNumberOfApplierThreads();
+        amzaServiceConfig.numberOfCompactorThreads = config.getNumberOfCompactorThreads();
+        amzaServiceConfig.numberOfReplicatorThreads = config.getNumberOfReplicatorThreads();
+        amzaServiceConfig.numberOfResendThreads = config.getNumberOfResendThreads();
+        amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
 
         RegionPropertyMarshaller regionPropertyMarshaller = new RegionPropertyMarshaller() {
 
