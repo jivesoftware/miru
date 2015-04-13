@@ -267,7 +267,7 @@ public class MiruWriterMain {
                     wal.getWriterPartitionRegistry(),
                     activityWALReader);
             } else if (clientConfig.getPartitionIdProviderType().equals("amza")) {
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("mapdb", 0, false, null),
+                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                     null, 1000, 1000);
                 miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
                     storageDescriptor,
