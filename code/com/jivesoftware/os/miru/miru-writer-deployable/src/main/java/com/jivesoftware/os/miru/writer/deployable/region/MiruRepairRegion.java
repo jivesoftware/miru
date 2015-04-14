@@ -104,6 +104,6 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<MiruTenantId>> 
 
     @Override
     public String getTitle() {
-        return "Activity WAL";
+        return "Repair";
     }
 }

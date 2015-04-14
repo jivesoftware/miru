@@ -332,12 +332,12 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                 if (accessorRef.get() == accessor && handle.canMigrateTo(destinationStorage)) {
                     Optional<MiruContext<BM>> optionalFromContext = handle.getContext();
                     MiruBackingStorage existingStorage = accessor.info.storage;
-                    if (!optionalFromContext.isPresent()) {
-                        log.warn("Partition at {} ignored request to migrate from empty context", coord);
-
-                    } else if (existingStorage == destinationStorage && !force) {
+                    if (existingStorage == destinationStorage && !force) {
                         log.warn("Partition at {} ignored request to migrate to same storage {}", coord, destinationStorage);
                     } else if (existingStorage == MiruBackingStorage.memory && destinationStorage == MiruBackingStorage.disk) {
+                        if (!optionalFromContext.isPresent()) {
+                            log.warn("Partition at {} ignored request to migrate from {} to {} for empty context", coord, existingStorage, destinationStorage);
+                        }
                         MiruContext<BM> fromContext = optionalFromContext.get();
                         contextFactory.cleanDisk(coord);
 
@@ -381,12 +381,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             contextFactory.markStorage(coord, existingStorage);
                         }
                     } else if (existingStorage == MiruBackingStorage.memory && destinationStorage == MiruBackingStorage.memory) {
-                        MiruContext<BM> fromContext = optionalFromContext.get();
                         MiruContext<BM> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
                         MiruPartitionAccessor<BM> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
                             Optional.of(MiruPartitionState.bootstrap));
                         if (migrated != null) {
-                            contextFactory.close(fromContext, existingStorage);
+                            if (optionalFromContext.isPresent()) {
+                                contextFactory.close(optionalFromContext.get(), existingStorage);
+                            }
                             updated = true;
                         } else {
                             log.warn("Partition at {} failed to replace with {}, attempting to rewind", coord, destinationStorage);
