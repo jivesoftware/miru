@@ -153,7 +153,7 @@ public class MiruWriterEndpoints {
     }
 
     @GET
-    @Path("/repair/activity")
+    @Path("/repair")
     @Produces(MediaType.TEXT_HTML)
     public Response getRepair() {
         String rendered = writerUIService.renderRepair();
@@ -161,7 +161,7 @@ public class MiruWriterEndpoints {
     }
 
     @GET
-    @Path("/repair/activity/{tenantId}")
+    @Path("/repair/{tenantId}")
     @Produces(MediaType.TEXT_HTML)
     public Response getRepairForTenant(@PathParam("tenantId") String tenantId) {
         String rendered = writerUIService.renderRepairWithTenant(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));

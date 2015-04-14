@@ -3,7 +3,10 @@ package com.jivesoftware.os.miru.writer.deployable.region;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 import com.jivesoftware.os.miru.api.MiruPartition;
@@ -13,7 +16,11 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.writer.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -46,30 +53,39 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<MiruTenantId>> 
         }
 
         try {
-            final Table<String, String, String> badPartitions = HashBasedTable.create();
+            final ListMultimap<MiruTenantId, MiruPartitionId> allPartitions = ArrayListMultimap.create();
+            final AtomicLong count = new AtomicLong(0);
             activityWALReader.allPartitions(new MiruActivityWALReader.PartitionsStream() {
-                MiruTenantId currentTenantId = null;
-                MiruPartitionId lastPartitionId = null;
-
                 @Override
                 public boolean stream(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
                     if (tenantId != null && partitionId != null) {
-                        if (currentTenantId == null || !currentTenantId.equals(tenantId)) {
-                            currentTenantId = tenantId;
-                            lastPartitionId = null;
+                        allPartitions.put(tenantId, partitionId);
+                        long got = count.incrementAndGet();
+                        if (got % 1_000 == 0) {
+                            log.info("Repair has scanned {} partitions", got);
                         }
-
-                        if (lastPartitionId != null && (partitionId.getId() - lastPartitionId.getId()) > maxAllowedGap) {
-                            badPartitions.put(tenantId.toString(), partitionId.toString(),
-                                "Followed gap of " + (partitionId.getId() - lastPartitionId.getId()));
-                        } else if (partitionId.getId() < 0) {
-                            badPartitions.put(tenantId.toString(), partitionId.toString(), "Negative");
-                        }
-                        lastPartitionId = partitionId;
                     }
                     return true;
                 }
             });
+
+            final Table<String, String, String> badPartitions = HashBasedTable.create();
+            for (Map.Entry<MiruTenantId, Collection<MiruPartitionId>> entry : allPartitions.asMap().entrySet()) {
+                MiruTenantId tenantId = entry.getKey();
+                List<MiruPartitionId> partitionIds = Lists.newArrayList(entry.getValue());
+                Collections.sort(partitionIds);
+
+                MiruPartitionId lastPartitionId = null;
+                for (MiruPartitionId partitionId : partitionIds) {
+                    if (lastPartitionId != null && (partitionId.getId() - lastPartitionId.getId()) > maxAllowedGap) {
+                        badPartitions.put(tenantId.toString(), partitionId.toString(),
+                            "Followed gap of " + (partitionId.getId() - lastPartitionId.getId()));
+                    } else if (partitionId.getId() < 0) {
+                        badPartitions.put(tenantId.toString(), partitionId.toString(), "Negative");
+                    }
+                    lastPartitionId = partitionId;
+                }
+            }
 
             data.put("badPartitions", badPartitions.rowMap());
         } catch (Exception e) {
