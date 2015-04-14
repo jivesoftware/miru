@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.wal.activity;
 
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -23,15 +24,15 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
 
     @Override
     public void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        LOG.startTimer("forking>primary");
+        LOG.startTimer("forking>write>primary");
         try {
             primaryWAL.write(tenantId, partitionedActivities);
         } finally {
-            LOG.startTimer("forking>primary");
+            LOG.startTimer("forking>write>primary");
         }
 
         if (secondaryWAL != null) {
-            LOG.startTimer("forking>secondary");
+            LOG.startTimer("forking>write>secondary");
             try {
                 while (true) {
                     try {
@@ -43,9 +44,28 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
                     }
                 }
             } finally {
-                LOG.stopTimer("forking>secondary");
+                LOG.stopTimer("forking>write>secondary");
             }
         }
     }
 
+    @Override
+    public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        LOG.startTimer("forking>removePartition>primary");
+        try {
+            primaryWAL.removePartition(tenantId, partitionId);
+        } finally {
+            LOG.startTimer("forking>removePartition>primary");
+        }
+
+        if (secondaryWAL != null) {
+            LOG.startTimer("forking>removePartition>secondary");
+            try {
+                secondaryWAL.removePartition(tenantId, partitionId);
+                //TODO spin?
+            } finally {
+                LOG.stopTimer("forking>removePartition>secondary");
+            }
+        }
+    }
 }

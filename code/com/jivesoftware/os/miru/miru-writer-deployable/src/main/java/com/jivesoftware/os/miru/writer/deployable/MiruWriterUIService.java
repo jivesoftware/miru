@@ -25,6 +25,7 @@ public class MiruWriterUIService {
     private final MiruPageRegion<MiruLookupRegionInput> lookupRegion;
     private final MiruPageRegion<MiruActivityWALRegionInput> activityWALRegion;
     private final MiruPageRegion<MiruReadWALRegionInput> readWALRegion;
+    private final MiruPageRegion<Optional<MiruTenantId>> repairRegion;
 
     private final List<MiruManagePlugin> plugins = Lists.newCopyOnWriteArrayList();
 
@@ -34,13 +35,15 @@ public class MiruWriterUIService {
         MiruPageRegion<Void> adminRegion,
         MiruPageRegion<MiruLookupRegionInput> lookupRegion,
         MiruPageRegion<MiruActivityWALRegionInput> activityWALRegion,
-        MiruPageRegion<MiruReadWALRegionInput> readWALRegion) {
+        MiruPageRegion<MiruReadWALRegionInput> readWALRegion,
+        MiruPageRegion<Optional<MiruTenantId>> repairRegion) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.adminRegion = adminRegion;
         this.lookupRegion = lookupRegion;
         this.activityWALRegion = activityWALRegion;
         this.readWALRegion = readWALRegion;
+        this.repairRegion = repairRegion;
     }
 
     public void registerPlugin(MiruManagePlugin plugin) {
@@ -103,6 +106,14 @@ public class MiruWriterUIService {
         Optional<Long> afterTimestamp,
         Optional<Integer> limit) {
         return chrome(readWALRegion).render(new MiruReadWALRegionInput(Optional.of(tenantId), Optional.of(streamId), sip, afterTimestamp, limit));
+    }
+
+    public String renderRepair() {
+        return chrome(repairRegion).render(Optional.<MiruTenantId>absent());
+    }
+
+    public String renderRepairWithTenant(MiruTenantId tenantId) {
+        return chrome(repairRegion).render(Optional.of(tenantId));
     }
 
     public <I> String renderPlugin(MiruPageRegion<I> pluginRegion, I input) {

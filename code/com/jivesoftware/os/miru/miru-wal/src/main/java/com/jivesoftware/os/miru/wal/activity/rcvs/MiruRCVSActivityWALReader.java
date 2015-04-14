@@ -13,6 +13,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
+import com.jivesoftware.os.rcvs.api.TenantIdAndRow;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -280,5 +281,21 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
         return new MiruPartitionCursor(partitionId,
             new AtomicInteger(index),
             desiredPartitionCapacity);
+    }
+
+    @Override
+    public void allPartitions(final PartitionsStream stream) throws Exception {
+        activityWAL.getAllRowKeys(10_000, null, new CallbackStream<TenantIdAndRow<MiruTenantId, MiruActivityWALRow>>() {
+            @Override
+            public TenantIdAndRow<MiruTenantId, MiruActivityWALRow> callback(TenantIdAndRow<MiruTenantId, MiruActivityWALRow>
+                tenantIdAndRow) throws Exception {
+                if (tenantIdAndRow != null) {
+                    if (!stream.stream(tenantIdAndRow.getTenantId(), MiruPartitionId.of(tenantIdAndRow.getRow().getPartitionId()))) {
+                        return null;
+                    }
+                }
+                return tenantIdAndRow;
+            }
+        });
     }
 }

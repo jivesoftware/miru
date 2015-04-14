@@ -311,7 +311,8 @@ public class MiruWriterMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             IngressEndpointStats ingressEndpointStats = new IngressEndpointStats();
-            MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer().initialize(renderer, miruWALDirector, ingressEndpointStats);
+            MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer()
+                .initialize(renderer, miruWALDirector, activityWALReader, ingressEndpointStats);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);

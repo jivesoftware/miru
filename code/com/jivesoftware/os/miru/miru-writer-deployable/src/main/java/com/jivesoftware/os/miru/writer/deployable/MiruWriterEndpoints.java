@@ -137,23 +137,9 @@ public class MiruWriterEndpoints {
     }
 
     @POST
-    @Path("/wal/repair")
-    @Produces(MediaType.TEXT_HTML)
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response repairWAL() {
-        try {
-            miruWALDirector.repairActivityWAL();
-            return Response.ok("success").build();
-        } catch (Throwable t) {
-            LOG.error("POST /wal/repair", t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
-    @POST
     @Path("/wal/sanitize/{tenantId}/{partitionId}")
-    @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
     public Response sanitizeWAL(@PathParam("tenantId") @DefaultValue("") String tenantId,
         @PathParam("partitionId") @DefaultValue("-1") int partitionId) {
         try {
@@ -162,6 +148,51 @@ public class MiruWriterEndpoints {
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("POST /wal/sanitize/" + tenantId + "/" + partitionId, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/repair/activity")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getRepair() {
+        String rendered = writerUIService.renderRepair();
+        return Response.ok(rendered).build();
+    }
+
+    @GET
+    @Path("/repair/activity/{tenantId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getRepairForTenant(@PathParam("tenantId") String tenantId) {
+        String rendered = writerUIService.renderRepairWithTenant(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
+        return Response.ok(rendered).build();
+    }
+
+    @POST
+    @Path("/repair/repairBoundaries")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
+    public Response repairWAL() {
+        try {
+            miruWALDirector.repairBoundaries();
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /repair/repairBoundaries", t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @POST
+    @Path("/repair/removePartition/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
+    public Response removePartition(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        try {
+            miruWALDirector.removePartition(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /repair/removePartition/{}/{}", new Object[] { tenantId, partitionId }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

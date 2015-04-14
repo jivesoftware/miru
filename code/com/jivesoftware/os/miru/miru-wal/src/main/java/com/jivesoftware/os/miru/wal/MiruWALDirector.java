@@ -57,7 +57,7 @@ public class MiruWALDirector implements MiruWALClient {
         this.readTrackingWALReader = readTrackingWALReader;
     }
 
-    public void repairActivityWAL() throws Exception {
+    public void repairBoundaries() throws Exception {
         List<MiruTenantId> tenantIds = activityLookupTable.allTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             MiruPartitionId latestPartitionId = partitionIdProvider.getLargestPartitionIdAcrossAllWriters(tenantId);
@@ -81,6 +81,10 @@ public class MiruWALDirector implements MiruWALClient {
                 }
             }
         }
+    }
+
+    public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        activityWALWriter.removePartition(tenantId, partitionId);
     }
 
     private long packTimestamp(long millisIntoTheFuture) {

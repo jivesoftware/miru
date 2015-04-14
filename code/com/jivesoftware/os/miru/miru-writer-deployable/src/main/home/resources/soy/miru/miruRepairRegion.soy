@@ -1,0 +1,53 @@
+{namespace soy.miru.page}
+
+/**
+ * Repair page
+ *
+ * @param? badPartitions
+ */
+{template .repairRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Repair</div>
+        <div class="panel-body">
+            <table class="table table-condensed">
+                <tr>
+                    <td><input type="button" value="Repair Boundaries" onclick="miru.repair.repairBoundaries(this)" /></td>
+                    <td>Repair missing begin/end activities so that all partitions are properly closed</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    {if $badPartitions}
+        <div class="panel panel-default">
+            <div class="panel-heading">Bad Partitions</div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Tenant</th>
+                            <th>Partition</th>
+                            <th>Reason</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $tenantId in keys($badPartitions)}
+                            {foreach $partitionId in keys($badPartitions[$tenantId])}
+                                <tr>
+                                    <td>{$tenantId}</td>
+                                    <td>{$partitionId}</td>
+                                    <td>{$badPartitions[$tenantId][$partitionId]}</td>
+                                    <td><input type="button" value="Remove" onclick="miru.repair.removePartition(this, '{$tenantId}', '{$partitionId}')" /></td>
+                                </tr>
+                            {/foreach}
+                        {ifempty}
+                            <tr>
+                                <td colspan="4">No bad partitions found</td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {/if}
+{/template}

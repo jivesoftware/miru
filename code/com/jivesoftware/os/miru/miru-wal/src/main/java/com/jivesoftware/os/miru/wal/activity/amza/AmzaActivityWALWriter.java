@@ -160,6 +160,18 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         }
     }
 
+    @Override
+    public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        /*TODO
+        String ringName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
+        RegionName activityRegionName = new RegionName(false, ringName, "activityWAL-" + tenantId.toString() + "-" + partitionId.toString());
+        RegionName sipRegionName = new RegionName(false, ringName, "sipWAL-" + tenantId.toString() + "-" + partitionId.toString());
+        amzaService.destroyRegion(activityRegionName);
+        amzaService.destroyRegion(sipRegionName);
+        */
+        throw new UnsupportedOperationException("Doesn't work yet");
+    }
+
     private NavigableMap<WALKey, WALValue> buildMap(List<MiruPartitionedActivity> activities,
         Function<MiruPartitionedActivity, WALKey> walKeyFunction,
         Function<MiruPartitionedActivity, WALValue> walValueFunction)

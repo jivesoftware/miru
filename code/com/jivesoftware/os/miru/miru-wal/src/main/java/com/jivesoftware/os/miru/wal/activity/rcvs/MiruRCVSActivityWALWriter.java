@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
@@ -29,6 +30,12 @@ public class MiruRCVSActivityWALWriter implements MiruActivityWALWriter {
     public void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         writeActivity(tenantId, partitionedActivities);
         writeSip(tenantId, partitionedActivities);
+    }
+
+    @Override
+    public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        activityWAL.removeRow(tenantId, new MiruActivityWALRow(partitionId.getId()), null);
+        sipWAL.removeRow(tenantId, new MiruActivityWALRow(partitionId.getId()), null);
     }
 
     private void writeActivity(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {

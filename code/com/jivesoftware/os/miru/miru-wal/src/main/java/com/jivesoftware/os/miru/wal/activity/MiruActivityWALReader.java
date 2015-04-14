@@ -13,11 +13,6 @@ import java.util.Collection;
 /** @author jonathan */
 public interface MiruActivityWALReader {
 
-    interface StreamMiruActivityWAL {
-
-        boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception;
-    }
-
     void stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         byte sortOrder,
@@ -51,4 +46,15 @@ public interface MiruActivityWALReader {
 
     void deleteSip(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivitySipWALColumnKey> keys) throws Exception;
 
+    void allPartitions(PartitionsStream stream) throws Exception;
+
+    interface StreamMiruActivityWAL {
+
+        boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception;
+    }
+
+    interface PartitionsStream {
+
+        boolean stream(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+    }
 }

@@ -35,9 +35,9 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
     private final MiruSoyRenderer renderer;
     private final MiruWALDirector miruWALDirector;
 
-    public MiruActivityWALRegion(String template, MiruSoyRenderer renderer,
-        MiruWALDirector miruWALDirector
-    ) {
+    public MiruActivityWALRegion(String template,
+        MiruSoyRenderer renderer,
+        MiruWALDirector miruWALDirector) {
         this.template = template;
         this.renderer = renderer;
         this.miruWALDirector = miruWALDirector;

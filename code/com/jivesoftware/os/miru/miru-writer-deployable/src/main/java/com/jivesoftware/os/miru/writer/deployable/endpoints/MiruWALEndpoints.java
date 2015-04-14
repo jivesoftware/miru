@@ -46,14 +46,14 @@ public class MiruWALEndpoints {
     }
 
     @POST
-    @Path("/repair")
+    @Path("/repairBoundaries")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response repairActivityWAL() throws Exception {
+    public Response repairBoundaries() throws Exception {
         try {
-            walDirector.repairActivityWAL();
+            walDirector.repairBoundaries();
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
-            log.error("Failed calling repairActivityWAL()", x);
+            log.error("Failed calling repairBoundaries()", x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

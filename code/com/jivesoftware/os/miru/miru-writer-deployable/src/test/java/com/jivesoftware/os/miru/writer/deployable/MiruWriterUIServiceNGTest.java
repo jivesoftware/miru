@@ -71,7 +71,7 @@ public class MiruWriterUIServiceNGTest {
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         IngressEndpointStats ingressEndpointStats = new IngressEndpointStats();
-        service = new MiruWriterUIServiceInitializer().initialize(renderer, director, ingressEndpointStats);
+        service = new MiruWriterUIServiceInitializer().initialize(renderer, director, activityWALReader, ingressEndpointStats);
     }
 
     @Test
