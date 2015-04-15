@@ -33,6 +33,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import org.merlin.config.Config;
+import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -98,6 +99,9 @@ public class AmzaClusterRegistryInitializer {
 
         @IntDefault(1)
         int getTakeFromFactor();
+
+        @BooleanDefault(false)
+        boolean getHardFsync();
     }
 
     public AmzaService initialize(final Deployable deployable,
@@ -143,6 +147,7 @@ public class AmzaClusterRegistryInitializer {
         amzaServiceConfig.numberOfReplicatorThreads = config.getNumberOfReplicatorThreads();
         amzaServiceConfig.numberOfResendThreads = config.getNumberOfResendThreads();
         amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
+        amzaServiceConfig.hardFsync = config.getHardFsync();
 
         RegionPropertyMarshaller regionPropertyMarshaller = new RegionPropertyMarshaller() {
 
