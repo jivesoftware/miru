@@ -262,7 +262,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                                 logSenders[(int) (helperIndex.get() % logSenders.length)].send(events);
                                 break deliver;
                             } catch (Exception e) {
-                                System.err.println("Append failed for a logger");
+                                System.err.println("Append failed for a logger: " + e.getClass().getCanonicalName() + ": " + e.getMessage());
                                 helperIndex.incrementAndGet();
                             }
                         }

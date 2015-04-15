@@ -6,6 +6,7 @@ import com.jivesoftware.os.mlogger.core.CountersAndTimers;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.Timer;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -186,8 +187,11 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
                 sender[i].send(samples);
                 samples.clear();
                 return;
+            } catch (SocketException e) {
+                log.warn("Sampler:{} failed to send:{} samples: {}: {}", sender[i], samples.size(), e.getClass().getCanonicalName(), e.getMessage());
+                senderIndex.incrementAndGet();
             } catch (Exception e) {
-                log.warn("Sampler:" + sender[i] + " failed to send:" + samples.size() + " samples.", e);
+                log.warn("Sampler:{} failed to send:{} samples", new Object[] { sender[i], samples.size(), e.getMessage() }, e);
                 senderIndex.incrementAndGet();
             }
         }

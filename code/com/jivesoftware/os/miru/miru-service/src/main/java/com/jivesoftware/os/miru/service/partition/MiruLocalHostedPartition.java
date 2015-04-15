@@ -384,6 +384,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                         MiruContext<BM> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
                         MiruPartitionAccessor<BM> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
                             Optional.of(MiruPartitionState.bootstrap));
+
+                        migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
                             if (optionalFromContext.isPresent()) {
                                 contextFactory.close(optionalFromContext.get(), existingStorage);
@@ -518,6 +520,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                                         if (updated != null) {
                                             updated.merge(mergeChits, mergeExecutor);
                                         }
+                                    } else {
+                                        log.error("Rebuild did not finish for {} isAccessor={} hasContext={}",
+                                            coord, (rebuilding == accessorRef.get()), rebuilding.context.isPresent());
                                     }
                                 } catch (Throwable t) {
                                     log.error("Rebuild encountered a problem for {}", new Object[] { coord }, t);
@@ -542,6 +547,11 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         }
 
         private boolean rebuild(final MiruPartitionAccessor<BM> accessor) throws Exception {
+            if (!accessor.context.isPresent()) {
+                log.error("Attempted rebuild without a context for {}", coord);
+                return false;
+            }
+
             final ArrayBlockingQueue<List<MiruPartitionedActivity>> queue = new ArrayBlockingQueue<>(1);
             final AtomicLong rebuildTimestamp = new AtomicLong(accessor.getRebuildTimestamp());
             final AtomicReference<Sip> sip = new AtomicReference<>(accessor.getSip());
