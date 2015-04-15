@@ -41,7 +41,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
@@ -212,16 +211,8 @@ public class MiruPartitionAccessor<BM> {
                     for (Future<?> future : futures) {
                         future.get();
                     }
-                } catch (ExecutionException e) {
-                    Throwable t = e;
-                    while (t.getCause() != null) {
-                        if (t instanceof CorruptionException) {
-                            log.warn("Corruption detected for {}: {}", coord, t.getMessage());
-                            got.markCorrupt();
-                            break;
-                        }
-                        t = t.getCause();
-                    }
+                } catch (Exception e) {
+                    checkCorruption(got, e);
                     throw e;
                 }
 
@@ -251,14 +242,18 @@ public class MiruPartitionAccessor<BM> {
         ExecutorService mergeExecutor)
         throws Exception {
 
+        if (!context.isPresent()) {
+            return -1;
+        }
+        MiruContext<BM> got = context.get();
+
         int consumedCount = 0;
         semaphore.acquire();
         try {
-            if (closed.get() || !context.isPresent()) {
+            if (closed.get()) {
                 return -1;
             }
 
-            MiruContext<BM> got = context.get();
             synchronized (got.writeLock) {
                 MiruPartitionedActivity.Type batchType = null;
                 List<MiruPartitionedActivity> batch = Lists.newArrayList();
@@ -299,6 +294,9 @@ public class MiruPartitionAccessor<BM> {
                 log.set(ValueType.COUNT, "largestTimestamp>partition>" + coord.partitionId,
                     got.timeIndex.getLargestTimestamp(), coord.tenantId.toString());
             }
+        } catch (Exception e) {
+            checkCorruption(got, e);
+            throw e;
         } finally {
             semaphore.release();
         }
@@ -312,6 +310,18 @@ public class MiruPartitionAccessor<BM> {
         }
 
         return consumedCount;
+    }
+
+    private void checkCorruption(MiruContext<BM> got, Exception e) {
+        Throwable t = e;
+        while (t != null) {
+            if (t instanceof CorruptionException) {
+                log.warn("Corruption detected for {}: {}", coord, t.getMessage());
+                got.markCorrupt();
+                break;
+            }
+            t = t.getCause();
+        }
     }
 
     /**

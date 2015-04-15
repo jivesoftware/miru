@@ -180,9 +180,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
             MiruPartitionState openingState = coordInfo.state;
 
             Optional<MiruContext<BM>> optionalContext = Optional.absent();
-            if (openingState != MiruPartitionState.offline && openingState != MiruPartitionState.bootstrap && !accessor.context.isPresent()) {
-                MiruContext<BM> context = contextFactory.allocate(bitmaps, coord, accessor.info.storage);
-                optionalContext = Optional.of(context);
+            if (openingState != MiruPartitionState.offline && openingState != MiruPartitionState.bootstrap) {
+                if (accessor.context.isPresent()) {
+                    optionalContext = accessor.context;
+                } else {
+                    MiruContext<BM> context = contextFactory.allocate(bitmaps, coord, accessor.info.storage);
+                    optionalContext = Optional.of(context);
+                }
             }
             MiruPartitionAccessor<BM> opened = new MiruPartitionAccessor<>(bitmaps, coord, coordInfo.copyToState(openingState), optionalContext,
                 indexRepairs, indexer);
@@ -221,7 +225,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         close();
     }
 
-    private void close() throws Exception {
+    private boolean close() throws Exception {
         try {
             synchronized (factoryLock) {
                 MiruPartitionAccessor<BM> existing = accessorRef.get();
@@ -238,6 +242,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     }
                     existing.refundChits(mergeChits);
                     clearFutures();
+                    return true;
+                } else {
+                    return false;
                 }
             }
         } catch (InterruptedException e) {
@@ -509,20 +516,31 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             MiruPartitionAccessor<BM> rebuilding;
                             if (state == MiruPartitionState.bootstrap) {
                                 rebuilding = open(accessor, accessor.info.copyToState(MiruPartitionState.rebuilding));
+                                if (rebuilding.info.state != MiruPartitionState.rebuilding) {
+                                    log.warn("Failed to transition to rebuilding for {}", coord);
+                                    rebuilding = null;
+                                }
                             } else {
                                 rebuilding = accessor;
                             }
                             if (rebuilding != null) {
                                 try {
-                                    if (rebuild(rebuilding)) {
+                                    if (!rebuilding.context.isPresent()) {
+                                        log.error("Attempted rebuild without a context for {}", coord);
+                                    } else if (rebuilding.context.get().isCorrupt()) {
+                                        if (close()) {
+                                            log.warn("Stopped rebuild due to corruption for {}", coord);
+                                        } else {
+                                            log.error("Failed to stop rebuild after corruption for {}", coord);
+                                        }
+                                    } else if (rebuild(rebuilding)) {
                                         MiruPartitionAccessor<BM> online = rebuilding.copyToState(MiruPartitionState.online);
                                         MiruPartitionAccessor<BM> updated = updatePartition(rebuilding, online);
                                         if (updated != null) {
                                             updated.merge(mergeChits, mergeExecutor);
                                         }
                                     } else {
-                                        log.error("Rebuild did not finish for {} isAccessor={} hasContext={}",
-                                            coord, (rebuilding == accessorRef.get()), rebuilding.context.isPresent());
+                                        log.error("Rebuild did not finish for {} isAccessor={}", coord, (rebuilding == accessorRef.get()));
                                     }
                                 } catch (Throwable t) {
                                     log.error("Rebuild encountered a problem for {}", new Object[] { coord }, t);
@@ -547,11 +565,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         }
 
         private boolean rebuild(final MiruPartitionAccessor<BM> accessor) throws Exception {
-            if (!accessor.context.isPresent()) {
-                log.error("Attempted rebuild without a context for {}", coord);
-                return false;
-            }
-
             final ArrayBlockingQueue<List<MiruPartitionedActivity>> queue = new ArrayBlockingQueue<>(1);
             final AtomicLong rebuildTimestamp = new AtomicLong(accessor.getRebuildTimestamp());
             final AtomicReference<Sip> sip = new AtomicReference<>(accessor.getSip());
