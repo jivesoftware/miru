@@ -700,6 +700,9 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                     if (!accessor.context.isPresent()) {
                         log.info("Forcing rebuild because context is missing for {}", coord);
                         forceRebuild = true;
+                    } else if (accessor.context.get().isCorrupt()) {
+                        log.info("Forcing rebuild because context is corrupt for {}", coord);
+                        forceRebuild = true;
                     } else if (firstSip.get()) {
                         List<MiruActivityWALStatus> partitionStatus = walClient.getPartitionStatus(coord.tenantId,
                             Collections.singletonList(coord.partitionId));

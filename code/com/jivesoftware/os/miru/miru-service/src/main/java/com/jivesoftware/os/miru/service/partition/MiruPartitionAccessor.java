@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.CorruptionException;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -40,6 +41,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
@@ -206,8 +208,21 @@ public class MiruPartitionAccessor<BM> {
                 futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaActivityIndex) got.activityIndex)));
                 futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaSipIndex) got.sipIndex)));
 
-                for (Future<?> future : futures) {
-                    future.get();
+                try {
+                    for (Future<?> future : futures) {
+                        future.get();
+                    }
+                } catch (ExecutionException e) {
+                    Throwable t = e;
+                    while (t.getCause() != null) {
+                        if (t instanceof CorruptionException) {
+                            log.warn("Corruption detected for {}: {}", coord, t.getMessage());
+                            got.markCorrupt();
+                            break;
+                        }
+                        t = t.getCause();
+                    }
+                    throw e;
                 }
 
                 elapsed = System.currentTimeMillis() - start;
@@ -223,7 +238,7 @@ public class MiruPartitionAccessor<BM> {
         mergeChits.refundAll(coord);
     }
 
-    public static enum IndexStrategy {
+    public enum IndexStrategy {
 
         ingress, rebuild, sip;
     }

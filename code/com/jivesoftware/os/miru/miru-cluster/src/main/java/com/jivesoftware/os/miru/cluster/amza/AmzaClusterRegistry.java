@@ -2,7 +2,9 @@ package com.jivesoftware.os.miru.cluster.amza;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
@@ -11,7 +13,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.service.AmzaRegion;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
@@ -230,13 +231,25 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
 
         topology.set(keyToBytesMap.entrySet());
 
-        markTenantTopologyUpdated(Sets.newHashSet(Lists.transform(topologyUpdates, new Function<TopologyUpdate, MiruTenantId>() {
-            @Override
-            public MiruTenantId apply(TopologyUpdate input) {
-                return input.coord.tenantId;
-            }
-        })));
+        markTenantTopologyUpdated(FluentIterable.from(topologyUpdates)
+            .filter(hasUpdatedInfo)
+            .transform(extractUpdatedTenantId)
+            .toSet());
     }
+
+    private static final Predicate<TopologyUpdate> hasUpdatedInfo = new Predicate<TopologyUpdate>() {
+        @Override
+        public boolean apply(TopologyUpdate input) {
+            return input.optionalInfo.isPresent();
+        }
+    };
+
+    private static final Function<TopologyUpdate, MiruTenantId> extractUpdatedTenantId = new Function<TopologyUpdate, MiruTenantId>() {
+        @Override
+        public MiruTenantId apply(TopologyUpdate input) {
+            return input.coord.tenantId;
+        }
+    };
 
     private void markTenantTopologyUpdated(Set<MiruTenantId> tenantIds) throws Exception {
         Map<WALKey, byte[]> tenantUpdates = Maps.newHashMap();

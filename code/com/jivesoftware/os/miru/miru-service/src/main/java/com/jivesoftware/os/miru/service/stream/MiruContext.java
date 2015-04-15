@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Composes the building blocks of a MiruContext together for convenience.
@@ -38,6 +39,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     public final StripingLocksProvider<MiruStreamId> streamLocks;
     public final ChunkStore[] chunkStores;
     public final Object writeLock = new Object();
+    public final AtomicBoolean corrupt = new AtomicBoolean(false);
 
     public MiruContext(MiruSchema schema,
         MiruTermComposer termComposer,
@@ -121,4 +123,11 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         return streamLocks;
     }
 
+    public boolean isCorrupt() {
+        return corrupt.get();
+    }
+
+    public void markCorrupt() {
+        corrupt.set(true);
+    }
 }
