@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  *
  */
-public class MiruRepairRegion implements MiruPageRegion<Optional<MiruTenantId>> {
+public class MiruRepairRegion implements MiruPageRegion<Optional<String>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -46,39 +46,19 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<MiruTenantId>> 
     }
 
     @Override
-    public String render(Optional<MiruTenantId> optionalTenantId) {
+    public String render(Optional<String> optionalTenantId) {
         Map<String, Object> data = Maps.newHashMap();
 
-        if (optionalTenantId.isPresent()) {
-            MiruTenantId tenantId = optionalTenantId.get();
-            data.put("tenant", new String(tenantId.getBytes(), Charsets.UTF_8));
-        }
-
         try {
-            final ListMultimap<MiruTenantId, MiruPartitionId> allPartitions = ArrayListMultimap.create();
-            final AtomicLong count = new AtomicLong(0);
-            activityWALReader.allPartitions(new MiruActivityWALReader.PartitionsStream() {
-                @Override
-                public boolean stream(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-                    if (tenantId != null && partitionId != null) {
-                        allPartitions.put(tenantId, partitionId);
-                        long got = count.incrementAndGet();
-                        if (got % 1_000 == 0) {
-                            log.info("Repair has scanned {} partitions", got);
-                        }
-                    }
-                    return true;
-                }
-            });
-
-            Table<String, String, String> partitions;
             if (optionalTenantId.isPresent()) {
-                partitions = getTenantPartitions(optionalTenantId.get());
-            } else {
-                partitions = getBadPartitions(allPartitions);
+                String tenantId = optionalTenantId.get();
+                data.put("tenant", tenantId);
+                if (tenantId.equals("*")) {
+                    data.put("partitions", getBadPartitions().rowMap());
+                } else {
+                    data.put("partitions", getTenantPartitions(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8))).rowMap());
+                }
             }
-
-            data.put("partitions", partitions.rowMap());
         } catch (Exception e) {
             log.error("Failed to find bad partitions", e);
         }
@@ -97,7 +77,23 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<MiruTenantId>> 
         return tenantPartitions;
     }
 
-    private Table<String, String, String> getBadPartitions(ListMultimap<MiruTenantId, MiruPartitionId> allPartitions) {
+    private Table<String, String, String> getBadPartitions() throws Exception {
+        final ListMultimap<MiruTenantId, MiruPartitionId> allPartitions = ArrayListMultimap.create();
+        final AtomicLong count = new AtomicLong(0);
+        activityWALReader.allPartitions(new MiruActivityWALReader.PartitionsStream() {
+            @Override
+            public boolean stream(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+                if (tenantId != null && partitionId != null) {
+                    allPartitions.put(tenantId, partitionId);
+                    long got = count.incrementAndGet();
+                    if (got % 1_000 == 0) {
+                        log.info("Repair has scanned {} partitions", got);
+                    }
+                }
+                return true;
+            }
+        });
+
         final Table<String, String, String> badPartitions = TreeBasedTable.create(); // tree for order
         for (Map.Entry<MiruTenantId, Collection<MiruPartitionId>> entry : allPartitions.asMap().entrySet()) {
             MiruTenantId tenantId = entry.getKey();
