@@ -25,6 +25,6 @@ public class MiruWriterUIServiceInitializer {
             new MiruLookupRegion("soy.miru.page.lookupRegion", renderer, miruWALDirector),
             new MiruActivityWALRegion("soy.miru.page.activityWalRegion", renderer, miruWALDirector),
             new MiruReadWALRegion("soy.miru.page.readWalRegion", renderer, miruWALDirector),
-            new MiruRepairRegion("soy.miru.page.repairRegion", renderer, activityWALReader));
+            new MiruRepairRegion("soy.miru.page.repairRegion", renderer, activityWALReader, miruWALDirector));
     }
 }

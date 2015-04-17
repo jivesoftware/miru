@@ -3,7 +3,8 @@
 /**
  * Repair page
  *
- * @param? badPartitions
+ * @param? partitions
+ * @param? tenant
  */
 {template .repairRegion}
     <div class="panel panel-default">
@@ -17,9 +18,22 @@
             </table>
         </div>
     </div>
-    {if $badPartitions}
+    <div class="panel panel-default">
+        <div class="panel-heading">Tenant</div>
+        <div class="panel-body">
+            <label for="tenantPicker">Select Tenant</label>
+            <form id="tenantPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#tenantPicker" data-form-el="#tenantPickerForm"
+                data-jive-ui="jive/ui/typeahead/tenant_typeahead" method="post" name="tenantPickerForm" action="#"
+                onsubmit="location.href='/miru/writer/repair/'+document.getElementById('tenantPicker').value+'#focus'; return false">
+                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                    class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                    name="tenantId" id="tenantPicker" data-original-title="" title="">
+            </form>
+        </div>
+    </div>
+    {if $partitions}
         <div class="panel panel-default">
-            <div class="panel-heading">Bad Partitions</div>
+            <div class="panel-heading">{if $tenant}Partitions for {$tenant}{else}Partitions with problems{/if}</div>
             <div class="panel-body">
                 <table class="table table-condensed">
                     <thead>
@@ -31,18 +45,18 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {foreach $tenantId in keys($badPartitions)}
-                            {foreach $partitionId in keys($badPartitions[$tenantId])}
+                        {foreach $tenantId in keys($partitions)}
+                            {foreach $partitionId in keys($partitions[$tenantId])}
                                 <tr>
                                     <td>{$tenantId}</td>
                                     <td>{$partitionId}</td>
-                                    <td>{$badPartitions[$tenantId][$partitionId]}</td>
+                                    <td>{$partitions[$tenantId][$partitionId]}</td>
                                     <td><input type="button" value="Remove" onclick="miru.repair.removePartition(this, '{$tenantId}', '{$partitionId}')" /></td>
                                 </tr>
                             {/foreach}
                         {ifempty}
                             <tr>
-                                <td colspan="4">No bad partitions found</td>
+                                <td colspan="4">No partitions found</td>
                             </tr>
                         {/foreach}
                     </tbody>

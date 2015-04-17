@@ -1,17 +1,16 @@
 package com.jivesoftware.os.miru.writer.deployable.region;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
-import com.jivesoftware.os.miru.api.MiruPartition;
+import com.google.common.collect.TreeBasedTable;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.writer.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -34,13 +33,16 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<MiruTenantId>> 
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruActivityWALReader activityWALReader;
+    private final MiruWALDirector miruWALDirector;
 
     public MiruRepairRegion(String template,
         MiruSoyRenderer renderer,
-        MiruActivityWALReader activityWALReader) {
+        MiruActivityWALReader activityWALReader,
+        MiruWALDirector miruWALDirector) {
         this.template = template;
         this.renderer = renderer;
         this.activityWALReader = activityWALReader;
+        this.miruWALDirector = miruWALDirector;
     }
 
     @Override
@@ -69,25 +71,14 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<MiruTenantId>> 
                 }
             });
 
-            final Table<String, String, String> badPartitions = HashBasedTable.create();
-            for (Map.Entry<MiruTenantId, Collection<MiruPartitionId>> entry : allPartitions.asMap().entrySet()) {
-                MiruTenantId tenantId = entry.getKey();
-                List<MiruPartitionId> partitionIds = Lists.newArrayList(entry.getValue());
-                Collections.sort(partitionIds);
-
-                MiruPartitionId lastPartitionId = null;
-                for (MiruPartitionId partitionId : partitionIds) {
-                    if (lastPartitionId != null && (partitionId.getId() - lastPartitionId.getId()) > maxAllowedGap) {
-                        badPartitions.put(tenantId.toString(), partitionId.toString(),
-                            "Followed gap of " + (partitionId.getId() - lastPartitionId.getId()));
-                    } else if (partitionId.getId() < 0) {
-                        badPartitions.put(tenantId.toString(), partitionId.toString(), "Negative");
-                    }
-                    lastPartitionId = partitionId;
-                }
+            Table<String, String, String> partitions;
+            if (optionalTenantId.isPresent()) {
+                partitions = getTenantPartitions(optionalTenantId.get());
+            } else {
+                partitions = getBadPartitions(allPartitions);
             }
 
-            data.put("badPartitions", badPartitions.rowMap());
+            data.put("partitions", partitions.rowMap());
         } catch (Exception e) {
             log.error("Failed to find bad partitions", e);
         }
@@ -95,12 +86,37 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<MiruTenantId>> 
         return renderer.render(template, data);
     }
 
-    private final Function<MiruPartition, MiruPartitionId> partitionToId = new Function<MiruPartition, MiruPartitionId>() {
-        @Override
-        public MiruPartitionId apply(MiruPartition input) {
-            return input != null ? input.coord.partitionId : null;
+    private Table<String, String, String> getTenantPartitions(MiruTenantId tenantId) throws Exception {
+        final Table<String, String, String> tenantPartitions = TreeBasedTable.create(); // tree for order
+        MiruPartitionId latestPartitionId = miruWALDirector.getLargestPartitionIdAcrossAllWriters(tenantId);
+        if (latestPartitionId != null) {
+            for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
+                tenantPartitions.put(tenantId.toString(), latest.toString(), "");
+            }
         }
-    };
+        return tenantPartitions;
+    }
+
+    private Table<String, String, String> getBadPartitions(ListMultimap<MiruTenantId, MiruPartitionId> allPartitions) {
+        final Table<String, String, String> badPartitions = TreeBasedTable.create(); // tree for order
+        for (Map.Entry<MiruTenantId, Collection<MiruPartitionId>> entry : allPartitions.asMap().entrySet()) {
+            MiruTenantId tenantId = entry.getKey();
+            List<MiruPartitionId> partitionIds = Lists.newArrayList(entry.getValue());
+            Collections.sort(partitionIds);
+
+            MiruPartitionId lastPartitionId = null;
+            for (MiruPartitionId partitionId : partitionIds) {
+                if (lastPartitionId != null && (partitionId.getId() - lastPartitionId.getId()) > maxAllowedGap) {
+                    badPartitions.put(tenantId.toString(), partitionId.toString(),
+                        "Followed gap of " + (partitionId.getId() - lastPartitionId.getId()));
+                } else if (partitionId.getId() < 0) {
+                    badPartitions.put(tenantId.toString(), partitionId.toString(), "Negative");
+                }
+                lastPartitionId = partitionId;
+            }
+        }
+        return badPartitions;
+    }
 
     @Override
     public String getTitle() {
