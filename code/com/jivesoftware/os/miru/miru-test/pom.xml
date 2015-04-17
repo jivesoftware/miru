@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>shared-lib-build-management</artifactId>
-        <version>0.424-SNAPSHOT</version>
+        <version>0.424</version>
         <relativePath>../inheritance-poms/shared-lib-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-test</artifactId>
-    <version>0.424-SNAPSHOT</version>
+    <version>0.424</version>
 
     <properties>
         <module.type>executable</module.type>
@@ -43,22 +43,22 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.424-SNAPSHOT</version>
+            <version>0.424</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.424-SNAPSHOT</version>
+            <version>0.424</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-stream-plugins</artifactId>
-            <version>0.424-SNAPSHOT</version>
+            <version>0.424</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-reco-plugins</artifactId>
-            <version>0.424-SNAPSHOT</version>
+            <version>0.424</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
