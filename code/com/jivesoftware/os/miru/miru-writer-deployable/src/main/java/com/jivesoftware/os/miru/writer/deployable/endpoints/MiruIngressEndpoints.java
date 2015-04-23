@@ -20,6 +20,7 @@ import com.jivesoftware.os.jive.utils.health.api.HealthTimer;
 import com.jivesoftware.os.jive.utils.health.api.TimerHealthCheckConfig;
 import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
@@ -37,7 +38,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.merlin.config.defaults.StringDefault;
 
-
 /**
  * @author jonathan
  */
@@ -49,12 +49,12 @@ public class MiruIngressEndpoints {
 
     private final MiruActivityIngress activityIngress;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
-    private final IngressEndpointStats endpointStats;
+    private final MiruStats miruStats;
 
     public MiruIngressEndpoints(@Context MiruActivityIngress activityIngress,
-        @Context IngressEndpointStats endpointStats) {
+        @Context MiruStats miruStats) {
         this.activityIngress = activityIngress;
-        this.endpointStats = endpointStats;
+        this.miruStats = miruStats;
     }
 
     static interface IngressHealth extends TimerHealthCheckConfig {
@@ -81,7 +81,9 @@ public class MiruIngressEndpoints {
         try {
             ingressHealthTimer.startTimer();
             activityIngress.sendActivity(activities, false);
-            endpointStats.ingressed(activities);
+            for (MiruActivity activity : activities) {
+                miruStats.ingressed(activity.tenantId.toString(), 1);
+            }
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
             log.error("Failed to add activities.", e);
