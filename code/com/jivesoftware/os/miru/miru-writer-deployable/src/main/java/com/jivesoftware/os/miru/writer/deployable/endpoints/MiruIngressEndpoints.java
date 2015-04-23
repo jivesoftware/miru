@@ -82,7 +82,9 @@ public class MiruIngressEndpoints {
             ingressHealthTimer.startTimer();
             activityIngress.sendActivity(activities, false);
             for (MiruActivity activity : activities) {
-                miruStats.ingressed(activity.tenantId.toString(), 1);
+                if (activity != null && activity.tenantId != null) {
+                    miruStats.ingressed(activity.tenantId.toString(), 1);
+                }
             }
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
