@@ -39,6 +39,7 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
@@ -72,7 +73,6 @@ import com.jivesoftware.os.miru.writer.deployable.MiruSoyRendererInitializer.Mir
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruLiveIngressActivitySenderProvider;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruWarmActivitySenderProvider;
-import com.jivesoftware.os.miru.writer.deployable.endpoints.IngressEndpointStats;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruIngressEndpoints;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruWALEndpoints;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
@@ -175,7 +175,8 @@ public class MiruWriterMain {
 
             // TODO add fall back to config
             //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize("", miruManageClient, mapper);
+            MiruStats miruStats = new MiruStats();
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", miruManageClient, mapper);
 
             MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
@@ -215,9 +216,9 @@ public class MiruWriterMain {
 
             AmzaService amzaService = null;
             AmzaServiceConfig amzaServiceConfig = deployable.config(AmzaServiceConfig.class);
-            if (clientConfig.getPartitionIdProviderType().equals("amza") ||
-                clientConfig.getActivityWALType().equals("amza") ||
-                clientConfig.getActivityWALType().equals("fork")) {
+            if (clientConfig.getPartitionIdProviderType().equals("amza")
+                || clientConfig.getActivityWALType().equals("amza")
+                || clientConfig.getActivityWALType().equals("fork")) {
                 amzaService = new AmzaServiceInitializer().initialize(deployable,
                     instanceConfig.getInstanceName(),
                     instanceConfig.getHost(),
@@ -310,9 +311,8 @@ public class MiruWriterMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            IngressEndpointStats ingressEndpointStats = new IngressEndpointStats();
             MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer()
-                .initialize(renderer, miruWALDirector, activityWALReader, ingressEndpointStats);
+                .initialize(renderer, miruWALDirector, activityWALReader, miruStats);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);
@@ -322,7 +322,7 @@ public class MiruWriterMain {
 
             deployable.addEndpoints(MiruIngressEndpoints.class);
             deployable.addInjectables(MiruActivityIngress.class, activityIngress);
-            deployable.addInjectables(IngressEndpointStats.class, ingressEndpointStats);
+            deployable.addInjectables(MiruStats.class, miruStats);
             deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 
             deployable.addResource(sourceTree);

@@ -22,11 +22,11 @@ public class StumptownInjectable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider<? extends Miru> miruProvider;
+    private final MiruProvider<? extends Miru> provider;
     private final Stumptown trending;
 
-    public StumptownInjectable(MiruProvider<? extends Miru> miruProvider, Stumptown trending) {
-        this.miruProvider = miruProvider;
+    public StumptownInjectable(MiruProvider<? extends Miru> provider, Stumptown trending) {
+        this.provider = provider;
         this.trending = trending;
     }
 
@@ -34,9 +34,9 @@ public class StumptownInjectable {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("scoreStumptown", new StumptownQuestion(trending, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new StumptownQuestion(trending, request)),
                 new StumptownAnswerEvaluator(),
                 new StumptownAnswerMerger(request.query.desiredNumberOfResultsPerWaveform),
                 StumptownAnswer.EMPTY_RESULTS,
@@ -55,10 +55,10 @@ public class StumptownInjectable {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
             MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("scoreTrending", new StumptownQuestion(trending, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new StumptownQuestion(trending, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
                 StumptownAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

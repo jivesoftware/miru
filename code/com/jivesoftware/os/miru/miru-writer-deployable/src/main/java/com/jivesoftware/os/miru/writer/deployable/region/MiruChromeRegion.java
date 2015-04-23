@@ -41,13 +41,6 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
             }
         }));
         return renderer.render(template, data);
-
-        /*
-        // inject js page region module data
-        List<String> jsmodulesVal = Arrays.asList(JSProcessor.classToAMDPath(region.getClass()));
-
-        context.put("jsmodules").value(jsmodulesVal);
-        */
     }
 
 }

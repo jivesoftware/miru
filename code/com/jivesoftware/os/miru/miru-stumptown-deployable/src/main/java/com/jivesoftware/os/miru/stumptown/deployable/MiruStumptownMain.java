@@ -28,6 +28,7 @@ import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
@@ -132,7 +133,7 @@ public class MiruStumptownMain {
 
             // TODO add fall back to config
             //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize("", miruManageClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
             StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(clusterClient);
 
             final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(intakeConfig,
@@ -147,17 +148,17 @@ public class MiruStumptownMain {
                 MiruLogEvent.class,
                 true,
                 null) {
-                @Override
-                void deliverSerialized(List<MiruLogEvent> serialized) {
-                    try {
-                        inTakeService.ingressLogEvents(serialized);
-                        LOG.inc("ingress>delivered");
-                    } catch (Exception x) {
-                        LOG.error("Encountered the following while draining stumptownQueue.", x);
-                        throw new RuntimeException(x);
+                    @Override
+                    void deliverSerialized(List<MiruLogEvent> serialized) {
+                        try {
+                            inTakeService.ingressLogEvents(serialized);
+                            LOG.inc("ingress>delivered");
+                        } catch (Exception x) {
+                            LOG.error("Encountered the following while draining stumptownQueue.", x);
+                            throw new RuntimeException(x);
+                        }
                     }
-                }
-            };
+                };
 
             IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);

@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
@@ -57,6 +58,7 @@ public class MiruPartitionAccessor<BM> {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
     private static final int PERMITS = 64; //TODO config?
 
+    public final MiruStats miruStats;
     public final MiruBitmaps<BM> bitmaps;
     public final MiruPartitionCoord coord;
     public final MiruPartitionCoordInfo info;
@@ -76,7 +78,8 @@ public class MiruPartitionAccessor<BM> {
 
     private final AtomicLong timestampOfLastMerge;
 
-    private MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
+    private MiruPartitionAccessor(MiruStats miruStats,
+        MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
         Optional<MiruContext<BM>> context,
@@ -89,6 +92,8 @@ public class MiruPartitionAccessor<BM> {
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer,
         AtomicLong timestampOfLastMerge) {
+
+        this.miruStats = miruStats;
         this.bitmaps = bitmaps;
         this.coord = coord;
         this.info = info;
@@ -104,19 +109,20 @@ public class MiruPartitionAccessor<BM> {
         this.timestampOfLastMerge = timestampOfLastMerge;
     }
 
-    MiruPartitionAccessor(MiruBitmaps<BM> bitmaps,
+    MiruPartitionAccessor(MiruStats miruStats,
+        MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
         Optional<MiruContext<BM>> context,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer) {
-        this(bitmaps, coord, info, context, new AtomicLong(),
+        this(miruStats, bitmaps, coord, info, context, new AtomicLong(),
             Sets.<TimeAndVersion>newHashSet(), Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS, true), new AtomicBoolean(),
             indexRepairs, indexer, new AtomicLong(System.currentTimeMillis()));
     }
 
     MiruPartitionAccessor<BM> copyToState(MiruPartitionState toState) {
-        return new MiruPartitionAccessor<>(bitmaps, coord, info.copyToState(toState), context, rebuildTimestamp,
+        return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, info.copyToState(toState), context, rebuildTimestamp,
             seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
     }
 
@@ -280,6 +286,8 @@ public class MiruPartitionAccessor<BM> {
                         // This activity has been handled, so remove it from the backing list
                         partitionedActivities.remove();
                     }
+
+                    miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId(), 1);
                 }
 
                 consumedCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor);
@@ -601,7 +609,7 @@ public class MiruPartitionAccessor<BM> {
                 if (state.isPresent()) {
                     migratedInfo = migratedInfo.copyToState(state.get());
                 }
-                return new MiruPartitionAccessor<>(bitmaps, coord, migratedInfo, Optional.of(context), indexRepairs, indexer);
+                return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, migratedInfo, Optional.of(context), indexRepairs, indexer);
             }
 
             @Override

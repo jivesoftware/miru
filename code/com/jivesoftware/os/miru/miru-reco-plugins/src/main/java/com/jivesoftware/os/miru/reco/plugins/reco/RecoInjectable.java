@@ -33,14 +33,14 @@ public class RecoInjectable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider miruProvider;
+    private final MiruProvider provider;
     private final CollaborativeFiltering collaborativeFiltering;
     private final Distincts distincts;
 
-    public RecoInjectable(MiruProvider<? extends Miru> miruProvider,
+    public RecoInjectable(MiruProvider<? extends Miru> provider,
         CollaborativeFiltering collaborativeFiltering,
         Distincts distincts) {
-        this.miruProvider = miruProvider;
+        this.provider = provider;
         this.collaborativeFiltering = collaborativeFiltering;
         this.distincts = distincts;
     }
@@ -49,11 +49,11 @@ public class RecoInjectable {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             MiruFilter removeDistinctsFilter = MiruFilter.NO_FILTER;
             if (request.query.removeDistinctsQuery != null) {
                 MiruResponse<DistinctsAnswer> distinctsResponse = miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>("recoDistincts", new DistinctsQuestion(distincts, new MiruRequest<>(
+                    new MiruSolvableFactory<>(provider.getStats(), "recoDistincts", new DistinctsQuestion(distincts, new MiruRequest<>(
                         request.tenantId,
                         request.actorId,
                         request.authzExpression,
@@ -77,7 +77,7 @@ public class RecoInjectable {
             }
 
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
+                new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
                     request,
                     removeDistinctsFilter)),
                 new RecoAnswerEvaluator(request.query),
@@ -97,10 +97,10 @@ public class RecoInjectable {
         throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
+                new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
                     requestAndReport.request,
                     requestAndReport.report.removeDistinctsFilter)),
                 Optional.fromNullable(requestAndReport.report),

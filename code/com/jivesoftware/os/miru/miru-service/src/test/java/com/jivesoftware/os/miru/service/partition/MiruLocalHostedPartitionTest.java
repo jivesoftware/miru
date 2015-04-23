@@ -42,6 +42,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
@@ -399,7 +400,7 @@ public class MiruLocalHostedPartitionTest {
     @Test
     public void testSchemaNotRegistered_checkActive() throws Exception {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, coord, contextFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
             scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, false, 100_000, 100, 100, new MiruMergeChits(100_000, 10_000), timings);
@@ -419,7 +420,7 @@ public class MiruLocalHostedPartitionTest {
     @Test
     public void testSchemaRegisteredLate() throws Exception {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
+        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, coord, contextFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
             scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, false, 100_000, 100, 100, new MiruMergeChits(100_000, 10_000), timings);
@@ -447,7 +448,7 @@ public class MiruLocalHostedPartitionTest {
     }
 
     private MiruLocalHostedPartition<EWAHCompressedBitmap> getEwahCompressedBitmapMiruLocalHostedPartition(boolean wakeOnIndex) throws Exception {
-        return new MiruLocalHostedPartition<>(bitmaps, coord, contextFactory,
+        return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, coord, contextFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
             scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, wakeOnIndex, 100_000, 100, 100, new MiruMergeChits(100_000, 10_000), timings);

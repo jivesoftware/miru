@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -205,8 +206,9 @@ public class MiruPluginTestBootstrap {
             Interners.<MiruTenantId>newWeakInterner(),
             Interners.<String>newWeakInterner(),
             termComposer);
+        final MiruStats miruStats = new MiruStats();
 
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config, miruStats,
             clusterClient,
             miruHost,
             new SingleSchemaProvider(miruSchema),
@@ -248,6 +250,11 @@ public class MiruPluginTestBootstrap {
             @Override
             public MiruTermComposer getTermComposer() {
                 return termComposer;
+            }
+
+            @Override
+            public MiruStats getStats() {
+                return miruStats;
             }
         };
     }

@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -16,10 +17,12 @@ public class MiruSolvableFactory<Q, A, P> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final MiruStats miruStats;
     private final String queryKey;
     private final Question<Q, A, P> question;
 
-    public MiruSolvableFactory(String queryKey, Question<Q, A, P> question) {
+    public MiruSolvableFactory(MiruStats miruStats, String queryKey, Question<Q, A, P> question) {
+        this.miruStats = miruStats;
         this.queryKey = queryKey;
         this.question = question;
     }
@@ -30,11 +33,18 @@ public class MiruSolvableFactory<Q, A, P> {
             public MiruPartitionResponse<A> call() throws Exception {
                 try (MiruRequestHandle<BM> handle = replica.acquireQueryHandle()) {
                     if (handle.isLocal()) {
-                        return question.askLocal(handle, report);
+                        MiruPartitionResponse<A> response = question.askLocal(handle, report);
+                        miruStats.egressed(queryKey + ">local", 1);
+                        miruStats.egressed(queryKey + ">local>" + replica.getCoord().tenantId.toString() + ">" + replica.getCoord().partitionId.getId(), 1);
+                        return response;
                     } else {
                         MiruRemotePartitionReader<Q, A, P> remotePartitionReader = new MiruRemotePartitionReader<>(question.getRemotePartition(),
                             handle.getRequestHelper());
-                        return remotePartitionReader.read(handle.getCoord().partitionId, question.getRequest(), report);
+                        MiruPartitionResponse<A> response = remotePartitionReader.read(handle.getCoord().partitionId, question.getRequest(), report);
+                        miruStats.egressed(queryKey + ">remote", 1);
+                        miruStats.egressed(queryKey + ">remote>" + replica.getCoord().host.toStringForm(), 1);
+                        miruStats.egressed(queryKey + ">remote>" + replica.getCoord().tenantId.toString() + ">" + replica.getCoord().partitionId.getId(), 1);
+                        return response;
                     }
                 } catch (MiruPartitionUnavailableException e) {
                     LOG.info("Partition unavailable on {}: {}", replica.getCoord(), e.getMessage());

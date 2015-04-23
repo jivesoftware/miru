@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service;
 
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
@@ -66,6 +67,7 @@ public class MiruServiceInitializer {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
+        MiruStats miruStats,
         MiruClusterClient clusterClient,
         MiruHost miruHost,
         MiruSchemaProvider schemaProvider,
@@ -154,9 +156,9 @@ public class MiruServiceInitializer {
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
@@ -193,7 +195,8 @@ public class MiruServiceInitializer {
         };
 
         MiruMergeChits miruMergeChits = new MiruMergeChits(config.getMergeChitCount(), config.getMergeMaxOverage());
-        MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(config,
+        MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(miruStats,
+            config,
             streamFactory,
             walClient,
             heartbeatHandler,
