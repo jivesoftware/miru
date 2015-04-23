@@ -1,6 +1,16 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.mlogger.core.LoggerSummary;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -9,19 +19,156 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
+    private final MiruStats stats;
 
-    public MiruAdminRegion(String template, MiruSoyRenderer renderer) {
+    public MiruAdminRegion(String template, MiruSoyRenderer renderer, MiruStats stats) {
         this.template = template;
         this.renderer = renderer;
+        this.stats = stats;
     }
 
     @Override
     public String render(Void input) {
-        return renderer.render(template, Collections.<String, Object>emptyMap());
+
+        Map<String, Object> data = Maps.newHashMap();
+
+        data.put("errors", String.valueOf(LoggerSummary.INSTANCE.errors + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.errors));
+        data.put("recentErrors", recentLogs(LoggerSummary.INSTANCE.lastNErrors.get())
+            + "<br>" + recentLogs(LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.lastNErrors.get()));
+
+        data.put("warns", String.valueOf(LoggerSummary.INSTANCE.warns + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.warns));
+        data.put("recentWarns", recentLogs(LoggerSummary.INSTANCE.lastNWarns.get())
+            + "<br>" + recentLogs(LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.lastNWarns.get()));
+
+        data.put("infos", String.valueOf(LoggerSummary.INSTANCE.infos + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.infos));
+        data.put("recentInfos", recentLogs(LoggerSummary.INSTANCE.lastNInfos.get())
+            + "<br>" + recentLogs(LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.lastNInfos.get()));
+
+        ingressed(data);
+        egressed(data);
+
+        return renderer.render(template, data);
+    }
+
+    private String recentLogs(String[] recent) {
+        if (recent == null || recent.length == 0) {
+            return "";
+        }
+        for (int i = 0; i < recent.length; i++) {
+            if (recent[i] == null) {
+                recent[i] = "";
+            }
+        }
+
+        return Joiner.on("<br>").join(recent);
+
+    }
+
+    private void ingressed(Map<String, Object> data) {
+        List<Map<String, String>> rows = new ArrayList<>();
+        Map<String, MiruStats.Stat> map = stats.ingressedMap();
+        List<Map.Entry<String, MiruStats.Stat>> sortedEntries = new ArrayList<>(map.entrySet());
+
+        Collections.sort(sortedEntries,
+            new Comparator<Map.Entry<String, MiruStats.Stat>>() {
+
+                @Override
+                public int compare(Map.Entry<String, MiruStats.Stat> o1, Map.Entry<String, MiruStats.Stat> o2) {
+                    return Long.compare(o2.getValue().count.longValue(), o1.getValue().count.longValue());
+                }
+            }
+        );
+
+        long grandTotal = 0;
+        long mostRecentUpdateTimestamp = 0;
+        for (Map.Entry<String, MiruStats.Stat> e : sortedEntries) {
+            Map<String, String> status = new HashMap<>();
+            String key = e.getKey();
+            status.put("context", key);
+            MiruStats.Stat value = e.getValue();
+            status.put("count", String.valueOf(value.count.get()));
+            status.put("recency", humanReadableUptime(System.currentTimeMillis() - value.timestamp.get()));
+            rows.add(status);
+            if (value.timestamp.get() > mostRecentUpdateTimestamp) {
+                mostRecentUpdateTimestamp = value.timestamp.get();
+            }
+            grandTotal += value.count.get();
+        }
+
+        data.put("ingressedRecency", humanReadableUptime(mostRecentUpdateTimestamp));
+        data.put("ingressedTotal", String.valueOf(grandTotal));
+        data.put("ingressedStatus", rows);
+    }
+
+    private void egressed(Map<String, Object> data) {
+        List<Map<String, String>> rows = new ArrayList<>();
+        Map<String, MiruStats.Stat> map = stats.egressedMap();
+        List<Map.Entry<String, MiruStats.Stat>> sortedEntries = new ArrayList<>(map.entrySet());
+
+        Collections.sort(sortedEntries,
+            new Comparator<Map.Entry<String, MiruStats.Stat>>() {
+
+                @Override
+                public int compare(Map.Entry<String, MiruStats.Stat> o1, Map.Entry<String, MiruStats.Stat> o2) {
+                    return Long.compare(o2.getValue().count.longValue(), o1.getValue().count.longValue());
+                }
+            }
+        );
+
+        long grandTotal = 0;
+        long mostRecentUpdateTimestamp = 0;
+        for (Map.Entry<String, MiruStats.Stat> e : sortedEntries) {
+            Map<String, String> status = new HashMap<>();
+            String key = e.getKey();
+            status.put("context", key);
+            MiruStats.Stat value = e.getValue();
+            status.put("count", String.valueOf(value.count.get()));
+            status.put("recency", humanReadableUptime(System.currentTimeMillis() - value.timestamp.get()));
+            rows.add(status);
+            if (value.timestamp.get() > mostRecentUpdateTimestamp) {
+                mostRecentUpdateTimestamp = value.timestamp.get();
+            }
+            grandTotal += value.count.get();
+        }
+
+        data.put("egressedRecency", humanReadableUptime(mostRecentUpdateTimestamp));
+        data.put("egressedTotal", String.valueOf(grandTotal));
+        data.put("egressedStatus", rows);
     }
 
     @Override
     public String getTitle() {
         return "Status";
+    }
+
+    public static String humanReadableUptime(long millis) {
+        if (millis < 0) {
+            return String.valueOf(millis);
+        }
+
+        long hours = TimeUnit.MILLISECONDS.toHours(millis);
+        millis -= TimeUnit.HOURS.toMillis(hours);
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(millis);
+        millis -= TimeUnit.MINUTES.toMillis(minutes);
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+        millis -= TimeUnit.SECONDS.toMillis(seconds);
+
+        StringBuilder sb = new StringBuilder(64);
+        if (hours < 10) {
+            sb.append('0');
+        }
+        sb.append(hours);
+        sb.append(":");
+        if (minutes < 10) {
+            sb.append('0');
+        }
+        sb.append(minutes);
+        sb.append(":");
+        if (seconds < 10) {
+            sb.append('0');
+        }
+        sb.append(seconds);
+
+        return (sb.toString());
     }
 }

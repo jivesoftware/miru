@@ -23,11 +23,11 @@ public class DistinctsInjectable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider<? extends Miru> miruProvider;
+    private final MiruProvider<? extends Miru> provider;
     private final Distincts distincts;
 
-    public DistinctsInjectable(MiruProvider<? extends Miru> miruProvider, Distincts distincts) {
-        this.miruProvider = miruProvider;
+    public DistinctsInjectable(MiruProvider<? extends Miru> provider, Distincts distincts) {
+        this.provider = provider;
         this.distincts = distincts;
     }
 
@@ -35,9 +35,9 @@ public class DistinctsInjectable {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("gatherDistincts", new DistinctsQuestion(distincts, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts, request)),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(),
                 DistinctsAnswer.EMPTY_RESULTS,
@@ -57,10 +57,10 @@ public class DistinctsInjectable {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
             MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("gatherDistincts", new DistinctsQuestion(distincts, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
                 DistinctsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);

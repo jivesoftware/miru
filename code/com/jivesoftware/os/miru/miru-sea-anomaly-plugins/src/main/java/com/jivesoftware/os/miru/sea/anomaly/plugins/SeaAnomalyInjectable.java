@@ -22,11 +22,11 @@ public class SeaAnomalyInjectable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider<? extends Miru> miruProvider;
+    private final MiruProvider<? extends Miru> provider;
     private final SeaAnomaly seaAnomaly;
 
-    public SeaAnomalyInjectable(MiruProvider<? extends Miru> miruProvider, SeaAnomaly seaAnomaly) {
-        this.miruProvider = miruProvider;
+    public SeaAnomalyInjectable(MiruProvider<? extends Miru> provider, SeaAnomaly seaAnomaly) {
+        this.provider = provider;
         this.seaAnomaly = seaAnomaly;
     }
 
@@ -34,9 +34,9 @@ public class SeaAnomalyInjectable {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("scoreStumptown", new SeaAnomalyQuestion(seaAnomaly, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new SeaAnomalyQuestion(seaAnomaly, request)),
                 new SeaAnomalyAnswerEvaluator(),
                 new SeaAnomalyAnswerMerger(),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
@@ -55,10 +55,10 @@ public class SeaAnomalyInjectable {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
             MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("scoreTrending", new SeaAnomalyQuestion(seaAnomaly, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new SeaAnomalyQuestion(seaAnomaly, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

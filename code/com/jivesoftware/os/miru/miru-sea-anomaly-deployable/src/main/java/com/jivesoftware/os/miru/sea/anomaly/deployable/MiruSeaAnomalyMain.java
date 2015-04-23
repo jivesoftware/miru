@@ -28,6 +28,7 @@ import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
@@ -120,7 +121,7 @@ public class MiruSeaAnomalyMain {
 
             // TODO add fall back to config
             //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize("", miruManageClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
             SeaAnomalySchemaService seaAnomalySchemaService = new SeaAnomalySchemaService(clusterClient);
 
             final MiruSeaAnomalyIntakeService inTakeService = new MiruSeaAnomalyIntakeInitializer().initialize(intakeConfig,

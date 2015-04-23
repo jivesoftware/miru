@@ -47,14 +47,14 @@ public class TrendingInjectable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider<? extends Miru> miruProvider;
+    private final MiruProvider<? extends Miru> provider;
     private final Distincts distincts;
     private final Analytics analytics;
 
     public TrendingInjectable(MiruProvider<? extends Miru> miruProvider,
         Distincts distincts,
         Analytics analytics) {
-        this.miruProvider = miruProvider;
+        this.provider = miruProvider;
         this.distincts = distincts;
         this.analytics = analytics;
     }
@@ -76,7 +76,7 @@ public class TrendingInjectable {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
 
             MiruTimeRange combinedTimeRange = request.query.timeRange;
             int divideTimeRangeIntoNSegments = request.query.divideTimeRangeIntoNSegments;
@@ -116,7 +116,7 @@ public class TrendingInjectable {
             }
 
             MiruResponse<DistinctsAnswer> distinctsResponse = miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("trendingDistincts", new DistinctsQuestion(distincts, new MiruRequest<>(
+                new MiruSolvableFactory<>(provider.getStats(), "trendingDistincts", new DistinctsQuestion(distincts, new MiruRequest<>(
                     request.tenantId,
                     request.actorId,
                     request.authzExpression,
@@ -144,7 +144,7 @@ public class TrendingInjectable {
             }
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("trendingAnalytics", new AnalyticsQuestion(analytics, new MiruRequest<>(
+                new MiruSolvableFactory<>(provider.getStats(), "trendingAnalytics", new AnalyticsQuestion(analytics, new MiruRequest<>(
                     request.tenantId,
                     request.actorId,
                     request.authzExpression,

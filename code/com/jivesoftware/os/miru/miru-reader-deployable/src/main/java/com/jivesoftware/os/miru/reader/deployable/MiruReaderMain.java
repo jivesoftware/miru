@@ -32,6 +32,7 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -188,11 +189,12 @@ public class MiruReaderMain {
                 .getConnections("miru-manage", "main"));  // TODO expose to conf
 
             // TODO add fall back to config
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize("", miruManageClient, mapper);
+            final MiruStats miruStats = new MiruStats();
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", miruManageClient, mapper);
 
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
-
             MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
+                miruStats,
                 clusterClient,
                 miruHost,
                 miruSchemaProvider,
@@ -215,10 +217,11 @@ public class MiruReaderMain {
                 .setContext("/static");
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-            MiruReaderUIService uiService = new MiruReaderUIInitializer().initialize(renderer);
+            MiruReaderUIService uiService = new MiruReaderUIInitializer().initialize(renderer, miruStats);
 
             deployable.addEndpoints(MiruReaderUIEndpoints.class);
             deployable.addInjectables(MiruReaderUIService.class, uiService);
+            deployable.addInjectables(MiruStats.class, miruStats);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addEndpoints(MiruReaderEndpoints.class);
@@ -243,6 +246,11 @@ public class MiruReaderMain {
                 @Override
                 public MiruTermComposer getTermComposer() {
                     return termComposer;
+                }
+
+                @Override
+                public MiruStats getStats() {
+                    return miruStats;
                 }
             };
 

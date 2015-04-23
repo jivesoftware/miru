@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
@@ -22,6 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class MiruLocalPartitionFactory {
 
+    private final MiruStats miruStats;
     private final MiruServiceConfig config;
     private final MiruContextFactory miruContextFactory;
     private final MiruWALClient walClient;
@@ -37,7 +39,8 @@ public class MiruLocalPartitionFactory {
     private final MiruIndexRepairs indexRepairs;
     private final MiruMergeChits mergeChits;
 
-    public MiruLocalPartitionFactory(MiruServiceConfig config,
+    public MiruLocalPartitionFactory(MiruStats miruStats,
+        MiruServiceConfig config,
         MiruContextFactory miruContextFactory,
         MiruWALClient walClient,
         MiruPartitionHeartbeatHandler partitionEventHandler,
@@ -51,6 +54,8 @@ public class MiruLocalPartitionFactory {
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
         MiruMergeChits mergeChits) {
+
+        this.miruStats = miruStats;
         this.config = config;
         this.miruContextFactory = miruContextFactory;
         this.walClient = walClient;
@@ -68,7 +73,8 @@ public class MiruLocalPartitionFactory {
     }
 
     public <BM> MiruLocalHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return new MiruLocalHostedPartition<>(bitmaps,
+        return new MiruLocalHostedPartition<>(miruStats,
+            bitmaps,
             coord,
             miruContextFactory,
             walClient,

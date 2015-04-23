@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.writer.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
@@ -22,7 +23,6 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.MiruWriteToReadTrackingAndSipWAL;
 import com.jivesoftware.os.miru.writer.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.writer.deployable.endpoints.IngressEndpointStats;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.util.List;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -70,8 +70,7 @@ public class MiruWriterUIServiceNGTest {
             activityWALReader, activityWALWriter, miruPartitionIdProvider, readTrackingWALReader);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        IngressEndpointStats ingressEndpointStats = new IngressEndpointStats();
-        service = new MiruWriterUIServiceInitializer().initialize(renderer, director, activityWALReader, ingressEndpointStats);
+        service = new MiruWriterUIServiceInitializer().initialize(renderer, director, activityWALReader, new MiruStats());
     }
 
     @Test

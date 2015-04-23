@@ -19,20 +19,20 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
  */
 public class AggregateCountsInjectable {
 
-    private final MiruProvider<? extends Miru> miruProvider;
+    private final MiruProvider<? extends Miru> provider;
     private final AggregateCounts aggregateCounts;
 
-    public AggregateCountsInjectable(MiruProvider<? extends Miru> miruProvider, AggregateCounts aggregateCounts) {
-        this.miruProvider = miruProvider;
+    public AggregateCountsInjectable(MiruProvider<? extends Miru> provider, AggregateCounts aggregateCounts) {
+        this.provider = provider;
         this.aggregateCounts = aggregateCounts;
     }
 
     public MiruResponse<AggregateCountsAnswer> filterCustomStream(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("filterCustomStream", new AggregateCountsCustomQuestion(aggregateCounts, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "filterCustomStream", new AggregateCountsCustomQuestion(aggregateCounts, request)),
                 new AggregateCountsAnswerEvaluator(request.query),
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
@@ -48,10 +48,10 @@ public class AggregateCountsInjectable {
     public MiruResponse<AggregateCountsAnswer> filterInboxStreamAll(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("filterInboxStreamAll", new AggregateCountsInboxQuestion(aggregateCounts,
-                    miruProvider.getBackfillerizer(tenantId), request, false)),
+                new MiruSolvableFactory<>(provider.getStats(), "filterInboxStreamAll", new AggregateCountsInboxQuestion(aggregateCounts,
+                    provider.getBackfillerizer(tenantId), request, false)),
                 new AggregateCountsAnswerEvaluator(request.query),
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
@@ -67,10 +67,10 @@ public class AggregateCountsInjectable {
     public MiruResponse<AggregateCountsAnswer> filterInboxStreamUnread(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("filterInboxStreamUnread", new AggregateCountsInboxQuestion(aggregateCounts,
-                    miruProvider.getBackfillerizer(tenantId), request, true)),
+                new MiruSolvableFactory<>(provider.getStats(), "filterInboxStreamUnread", new AggregateCountsInboxQuestion(aggregateCounts,
+                    provider.getBackfillerizer(tenantId), request, true)),
                 new AggregateCountsAnswerEvaluator(request.query),
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
@@ -88,10 +88,10 @@ public class AggregateCountsInjectable {
         throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("filterCustomStream", new AggregateCountsCustomQuestion(aggregateCounts, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "filterCustomStream", new AggregateCountsCustomQuestion(aggregateCounts, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -108,11 +108,11 @@ public class AggregateCountsInjectable {
         throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("filterInboxStreamAll", new AggregateCountsInboxQuestion(aggregateCounts,
-                    miruProvider.getBackfillerizer(tenantId), requestAndReport.request, false)),
+                new MiruSolvableFactory<>(provider.getStats(), "filterInboxStreamAll", new AggregateCountsInboxQuestion(aggregateCounts,
+                    provider.getBackfillerizer(tenantId), requestAndReport.request, false)),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -129,11 +129,11 @@ public class AggregateCountsInjectable {
         throws MiruQueryServiceException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("filterInboxStreamUnread", new AggregateCountsInboxQuestion(aggregateCounts,
-                    miruProvider.getBackfillerizer(tenantId), requestAndReport.request, true)),
+                new MiruSolvableFactory<>(provider.getStats(), "filterInboxStreamUnread", new AggregateCountsInboxQuestion(aggregateCounts,
+                    provider.getBackfillerizer(tenantId), requestAndReport.request, true)),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);

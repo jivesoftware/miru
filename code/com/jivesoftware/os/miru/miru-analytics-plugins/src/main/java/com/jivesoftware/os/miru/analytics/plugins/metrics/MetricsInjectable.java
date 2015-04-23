@@ -22,21 +22,21 @@ public class MetricsInjectable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider<? extends Miru> miruProvider;
-    private final Metrics trending;
+    private final MiruProvider<? extends Miru> provider;
+    private final Metrics metrics;
 
     public MetricsInjectable(MiruProvider<? extends Miru> miruProvider, Metrics trending) {
-        this.miruProvider = miruProvider;
-        this.trending = trending;
+        this.provider = miruProvider;
+        this.metrics = trending;
     }
 
     public MiruResponse<MetricsAnswer> score(MiruRequest<MetricsQuery> request) throws MiruQueryServiceException {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>("score", new MetricsQuestion(trending, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "score", new MetricsQuestion(metrics, request)),
                 new MetricsAnswerEvaluator(),
                 new MetricsAnswerMerger(request.query.timeRange),
                 MetricsAnswer.EMPTY_RESULTS,
@@ -55,10 +55,10 @@ public class MetricsInjectable {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
             MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = miruProvider.getMiru(tenantId);
+            Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>("scoreTrending", new MetricsQuestion(trending, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new MetricsQuestion(metrics, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
                 MetricsAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);
