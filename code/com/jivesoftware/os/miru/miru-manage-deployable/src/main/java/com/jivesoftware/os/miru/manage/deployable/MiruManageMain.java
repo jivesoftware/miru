@@ -102,7 +102,9 @@ public class MiruManageMain {
                 }
             });
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
-                new HasUI.UI("manage", "manage", "/manage/ui"),
+                new HasUI.UI("Tail", "manage", "/manage/tail"),
+                new HasUI.UI("Thead Dump", "manage", "/manage/threadDump"),
+                new HasUI.UI("Health", "manage", "/manage/ui"),
                 new HasUI.UI("Miru-Manage", "main", "/miru/manage"),
                 new HasUI.UI("Miru-Manage-Amza", "main", "/amza"))));
             deployable.buildStatusReporter(null).start();
