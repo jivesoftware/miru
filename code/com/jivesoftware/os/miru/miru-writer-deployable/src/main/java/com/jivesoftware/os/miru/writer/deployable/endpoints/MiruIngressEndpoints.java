@@ -80,10 +80,12 @@ public class MiruIngressEndpoints {
 
         try {
             ingressHealthTimer.startTimer();
+            long start = System.currentTimeMillis();
             activityIngress.sendActivity(activities, false);
+            long latency = System.currentTimeMillis() - start;
             for (MiruActivity activity : activities) {
                 if (activity != null && activity.tenantId != null) {
-                    miruStats.ingressed(activity.tenantId.toString(), 1);
+                    miruStats.ingressed(activity.tenantId.toString(), 1, latency);
                 }
             }
             return responseHelper.jsonResponse("Success");
