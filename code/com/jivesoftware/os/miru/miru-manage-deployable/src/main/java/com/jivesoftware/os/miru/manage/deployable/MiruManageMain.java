@@ -27,6 +27,7 @@ import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
@@ -47,7 +48,6 @@ import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.Mir
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceInitializer;
 import com.jivesoftware.os.miru.manage.deployable.topology.MiruTopologyEndpoints;
-import com.jivesoftware.os.miru.manage.deployable.topology.TopologyEndpointStats;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
@@ -190,7 +190,7 @@ public class MiruManageMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            TopologyEndpointStats stats = new TopologyEndpointStats();
+            MiruStats stats = new MiruStats();
 
             MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
                 clusterRegistry,
@@ -216,7 +216,7 @@ public class MiruManageMain {
             deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
             deployable.addInjectables(MiruWALClient.class, miruWALClient);
             deployable.addEndpoints(MiruTopologyEndpoints.class);
-            deployable.addInjectables(TopologyEndpointStats.class, stats);
+            deployable.addInjectables(MiruStats.class, stats);
             deployable.addInjectables(MiruRegistryClusterClient.class, new MiruRegistryClusterClient(clusterRegistry));
 
             deployable.addResource(sourceTree);

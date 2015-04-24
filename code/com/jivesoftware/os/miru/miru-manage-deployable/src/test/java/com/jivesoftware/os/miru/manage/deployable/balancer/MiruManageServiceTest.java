@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -20,7 +21,6 @@ import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.manage.deployable.topology.TopologyEndpointStats;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.util.Arrays;
@@ -90,7 +90,7 @@ public class MiruManageServiceTest {
             .thenReturn(Arrays.asList(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0))));
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        TopologyEndpointStats stats = new TopologyEndpointStats();
+        MiruStats stats = new MiruStats();
 
         miruManageService = new MiruManageInitializer().initialize(renderer,
             clusterRegistry,

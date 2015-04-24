@@ -33,17 +33,23 @@ public class MiruSolvableFactory<Q, A, P> {
             public MiruPartitionResponse<A> call() throws Exception {
                 try (MiruRequestHandle<BM> handle = replica.acquireQueryHandle()) {
                     if (handle.isLocal()) {
+                        long start = System.currentTimeMillis();
                         MiruPartitionResponse<A> response = question.askLocal(handle, report);
-                        miruStats.egressed(queryKey + ">local", 1);
-                        miruStats.egressed(queryKey + ">local>" + replica.getCoord().tenantId.toString() + ">" + replica.getCoord().partitionId.getId(), 1);
+                        long latency = System.currentTimeMillis() - start;
+                        miruStats.egressed(queryKey + ">local", 1, latency);
+                        miruStats.egressed(queryKey + ">local>" + replica.getCoord().tenantId.toString() + ">" + replica.getCoord().partitionId.getId(), 1,
+                            latency);
                         return response;
                     } else {
+                        long start = System.currentTimeMillis();
                         MiruRemotePartitionReader<Q, A, P> remotePartitionReader = new MiruRemotePartitionReader<>(question.getRemotePartition(),
                             handle.getRequestHelper());
                         MiruPartitionResponse<A> response = remotePartitionReader.read(handle.getCoord().partitionId, question.getRequest(), report);
-                        miruStats.egressed(queryKey + ">remote", 1);
-                        miruStats.egressed(queryKey + ">remote>" + replica.getCoord().host.toStringForm(), 1);
-                        miruStats.egressed(queryKey + ">remote>" + replica.getCoord().tenantId.toString() + ">" + replica.getCoord().partitionId.getId(), 1);
+                        long latency = System.currentTimeMillis() - start;
+                        miruStats.egressed(queryKey + ">remote", 1, latency);
+                        miruStats.egressed(queryKey + ">remote>" + replica.getCoord().host.toStringForm(), 1, latency);
+                        miruStats.egressed(queryKey + ">remote>" + replica.getCoord().tenantId.toString() + ">" + replica.getCoord().partitionId.getId(), 1,
+                            latency);
                         return response;
                     }
                 } catch (MiruPartitionUnavailableException e) {

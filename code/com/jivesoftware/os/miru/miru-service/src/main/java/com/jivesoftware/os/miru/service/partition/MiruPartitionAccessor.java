@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -20,7 +21,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
-import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
@@ -287,7 +287,6 @@ public class MiruPartitionAccessor<BM> {
                         partitionedActivities.remove();
                     }
 
-                    miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId(), 1);
                 }
 
                 consumedCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor);
@@ -332,12 +331,6 @@ public class MiruPartitionAccessor<BM> {
         }
     }
 
-    /**
-     * <code>batchType</code> must be one of the following: null null null null null null null     {@link MiruPartitionedActivity.Type#BEGIN}
-     * {@link MiruPartitionedActivity.Type#ACTIVITY}
-     * {@link MiruPartitionedActivity.Type#REPAIR}
-     * {@link MiruPartitionedActivity.Type#REMOVE}
-     */
     private int consumeTypedBatch(MiruContext<BM> got,
         MiruPartitionedActivity.Type batchType,
         List<MiruPartitionedActivity> batch,
@@ -346,6 +339,7 @@ public class MiruPartitionAccessor<BM> {
 
         int count = 0;
         if (!batch.isEmpty()) {
+            long start = System.currentTimeMillis();
             if (batchType == MiruPartitionedActivity.Type.BEGIN) {
                 count = handleBoundaryType(batch);
             } else if (batchType == MiruPartitionedActivity.Type.ACTIVITY) {
@@ -357,7 +351,10 @@ public class MiruPartitionAccessor<BM> {
             } else {
                 log.warn("Attempt to index unsupported type {}", batchType);
             }
+            miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId(), batch.size(),
+                System.currentTimeMillis() - start);
             batch.clear();
+
         }
         return count;
     }

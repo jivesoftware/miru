@@ -10,9 +10,11 @@
  *
  * @param? ingressedTotal
  * @param? ingressedRecency
+ * @param? ingressedLatency
  * @param? ingressedStatus
  * @param? egressedTotal
  * @param? egressedRecency
+ * @param? egressedLatency
  * @param? egressedStatus
  */
 {template .adminRegion}
@@ -20,33 +22,52 @@
         <a href="#" rel="popover" id="popoverAnchor-errors" data-popover-content="#popover-errors" data-placement="bottom" class="btn btn-primary" title="errors">
                 <span class="glyphicon glyphicon-menu-down">Errors <span class="badge">{$errors}</span></a>
         <div id="popover-errors" class="hide">
-            <pre>{$recentErrors}</pre>
+            <table class="table table-striped">
+                {foreach $e in $recentErrors}
+                    <tr>
+                        <td>{$e}</td>
+                    </tr>
+                {/foreach}
+            </table>
         </div>
         
         <a href="#" rel="popover" id="popoverAnchor-warns" data-popover-content="#popover-warns" data-placement="bottom" class="btn btn-primary" title="warns">
                 <span class="glyphicon glyphicon-menu-down">Warns <span class="badge">{$warns}</span></a>
         <div id="popover-warns" class="hide">
-            <pre>{$recentWarns}</pre>
+            <table class="table table-striped">
+                {foreach $e in $recentWarns}
+                    <tr>
+                        <td>{$e}</td>
+                    </tr>
+                {/foreach}
+            </table>
         </div>
 
         <a href="#" rel="popover" id="popoverAnchor-infos" data-popover-content="#popover-infos" data-placement="bottom" class="btn btn-primary" title="infos">
                 <span class="glyphicon glyphicon-menu-down">Infos <span class="badge">{$infos}</span></a>
         <div id="popover-infos" class="hide">
-            <pre>{$recentInfos}</pre>
+            <table class="table table-striped">
+                {foreach $e in $recentInfos}
+                    <tr>
+                        <td>{$e}</td>
+                    </tr>
+                {/foreach}
+            </table>
         </div>
     </div>
     <table>
         <tr>
             <td valign="top">
                 <div class="panel panel-default">
-                    <div class="panel-heading">Ingressed:{$ingressedTotal}  Recency:{$ingressedRecency}</div>
+                    <div class="panel-heading">Ingressed:{$ingressedTotal}  Recency:{$ingressedRecency} Worst Latency:{$ingressedLatency}</div>
                         <div class="panel-body">
-                            <table class="table table-condensed">
+                            <table class="table table-striped">
                                 <thead>
                                     <tr>
                                         <th>Ingressed</th>
                                         <th>Context</th>
                                         <th>Recency</th>
+                                        <th>Latency</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -55,6 +76,7 @@
                                             <td>{$status.count}</td>
                                             <td>{$status.context}</td>
                                             <td>{$status.recency}</td>
+                                            <td>{$status.latency}</td>
                                         </tr>
                                     {/foreach}
                                 </tbody>
@@ -65,7 +87,7 @@
             </td>
             <td valign="top">
                 <div class="panel panel-default">
-                    <div class="panel-heading">Egressed:{$egressedTotal}  Recency:{$egressedRecency}</div>
+                    <div class="panel-heading">Egressed:{$egressedTotal}  Recency:{$egressedRecency}  Worst Latency:{$egressedLatency}</div>
                         <div class="panel-body">
                             <table class="table table-condensed">
                                 <thead>
@@ -73,6 +95,7 @@
                                         <th>Egressed</th>
                                         <th>Context</th>
                                         <th>Recency</th>
+                                        <th>Latency</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -81,6 +104,7 @@
                                             <td>{$status.count}</td>
                                             <td>{$status.context}</td>
                                             <td>{$status.recency}</td>
+                                            <td>{$status.latency}</td>
                                         </tr>
                                     {/foreach}
                                 </tbody>

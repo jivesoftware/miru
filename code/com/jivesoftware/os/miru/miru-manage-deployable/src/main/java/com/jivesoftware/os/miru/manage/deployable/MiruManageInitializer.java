@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruAdminRegion;
@@ -11,14 +12,13 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruHostsRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
-import com.jivesoftware.os.miru.manage.deployable.topology.TopologyEndpointStats;
 
 public class MiruManageInitializer {
 
     public MiruManageService initialize(MiruSoyRenderer renderer,
         MiruClusterRegistry clusterRegistry,
         MiruWALClient miruWALClient,
-        TopologyEndpointStats stats)
+        MiruStats stats)
         throws Exception {
 
         return new MiruManageService(

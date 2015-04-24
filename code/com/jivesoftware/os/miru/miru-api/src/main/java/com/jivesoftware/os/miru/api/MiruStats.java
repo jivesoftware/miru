@@ -18,7 +18,7 @@ public class MiruStats {
         return ingressedMap;
     }
 
-    public void ingressed(String tenantId, int count) {
+    public void ingressed(String tenantId, int count, long latency) {
         Stat got = ingressedMap.get(tenantId);
         if (got == null) {
             got = new Stat();
@@ -27,14 +27,14 @@ public class MiruStats {
                 got = had;
             }
         }
-        got.update(count);
+        got.update(count, latency);
     }
 
     public Map<String, Stat> egressedMap() {
         return egressedMap;
     }
 
-    public void egressed(String path, int count) {
+    public void egressed(String path, int count, long latency) {
         Stat got = egressedMap.get(path);
         if (got == null) {
             got = new Stat();
@@ -43,22 +43,25 @@ public class MiruStats {
                 got = had;
             }
         }
-        got.update(count);
+        got.update(count, latency);
     }
 
     public static class Stat {
 
         public final AtomicLong count;
         public final AtomicLong timestamp;
+        public final AtomicLong latency;
 
         Stat() {
             this.count = new AtomicLong();
             this.timestamp = new AtomicLong(System.currentTimeMillis());
+            this.latency = new AtomicLong();
         }
 
-        public void update(long amount) {
+        public void update(long amount, long latency) {
             count.addAndGet(amount);
             timestamp.set(System.currentTimeMillis());
+            this.latency.set(latency);
         }
 
     }
