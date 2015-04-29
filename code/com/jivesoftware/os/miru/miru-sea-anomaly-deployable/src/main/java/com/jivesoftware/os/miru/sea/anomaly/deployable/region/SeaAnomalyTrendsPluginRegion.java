@@ -98,35 +98,39 @@ public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnom
 
                 MiruResponse<TrendingAnswer> response = null;
                 MiruTenantId tenantId = SeaAnomalySchemaConstants.TENANT_ID;
-                for (RequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
-                    try {
-                        @SuppressWarnings("unchecked")
-                        MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(tenantId,
-                                MiruActorId.NOT_PROVIDED,
-                                MiruAuthzExpression.NOT_PROVIDED,
-                                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
-                                    new MiruTimeRange(fromTime, toTime),
-                                    null,
-                                    30,
-                                    constraintsFilter,
-                                    input.service != null ? "instance" : "service",
-                                    MiruFilter.NO_FILTER,
-                                    null,
-                                    100),
-                                MiruSolutionLogLevel.INFO),
-                            TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                            new Class[]{TrendingAnswer.class},
-                            null);
-                        response = trendingResponse;
-                        if (response != null && response.answer != null) {
-                            break;
-                        } else {
-                            log.warn("Empty trending response from {}, trying another", requestHelper);
+                try {
+                    for (RequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
+                        try {
+                            @SuppressWarnings("unchecked")
+                            MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
+                                new MiruRequest<>(tenantId,
+                                    MiruActorId.NOT_PROVIDED,
+                                    MiruAuthzExpression.NOT_PROVIDED,
+                                    new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
+                                        new MiruTimeRange(fromTime, toTime),
+                                        null,
+                                        30,
+                                        constraintsFilter,
+                                        input.service != null ? "instance" : "service",
+                                        MiruFilter.NO_FILTER,
+                                        null,
+                                        100),
+                                    MiruSolutionLogLevel.INFO),
+                                TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
+                                new Class[]{TrendingAnswer.class},
+                                null);
+                            response = trendingResponse;
+                            if (response != null && response.answer != null) {
+                                break;
+                            } else {
+                                log.warn("Empty trending response from {}, trying another", requestHelper);
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed trending request to {}, trying another", new Object[]{requestHelper}, e);
                         }
-                    } catch (Exception e) {
-                        log.warn("Failed trending request to {}, trying another", new Object[]{requestHelper}, e);
                     }
+                } catch (Exception x) {
+                    log.warn("Failed to get a valid request helper.", x);
                 }
 
                 if (response != null && response.answer != null) {

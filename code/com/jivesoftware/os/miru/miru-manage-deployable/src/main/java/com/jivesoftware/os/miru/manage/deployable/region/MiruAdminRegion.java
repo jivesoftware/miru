@@ -92,7 +92,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
             MiruStats.Stat value = e.getValue();
             status.put("count", String.valueOf(value.count.get()));
             status.put("recency", humanReadableUptime(System.currentTimeMillis() - value.timestamp.get()));
-            status.put("latency", humanReadableUptime(value.latency.get()));
+            status.put("latency", humanReadableLatency(value.latency.get()));
             rows.add(status);
             if (value.timestamp.get() > mostRecentUpdateTimestamp) {
                 mostRecentUpdateTimestamp = value.timestamp.get();
@@ -104,7 +104,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
         }
 
         data.put("ingressedRecency", mostRecentUpdateTimestamp == 0 ? "" : humanReadableUptime(System.currentTimeMillis() - mostRecentUpdateTimestamp));
-        data.put("ingressedLatency", humanReadableUptime(worstLatency));
+        data.put("ingressedLatency", humanReadableLatency(worstLatency));
         data.put("ingressedTotal", String.valueOf(grandTotal));
         data.put("ingressedStatus", rows);
     }
@@ -134,7 +134,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
             MiruStats.Stat value = e.getValue();
             status.put("count", String.valueOf(value.count.get()));
             status.put("recency", humanReadableUptime(System.currentTimeMillis() - value.timestamp.get()));
-            status.put("latency", humanReadableUptime(value.latency.get()));
+            status.put("latency", humanReadableLatency(value.latency.get()));
             rows.add(status);
             if (value.timestamp.get() > mostRecentUpdateTimestamp) {
                 mostRecentUpdateTimestamp = value.timestamp.get();
@@ -146,7 +146,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
         }
 
         data.put("egressedRecency", mostRecentUpdateTimestamp == 0 ? "" : humanReadableUptime(System.currentTimeMillis() - mostRecentUpdateTimestamp));
-        data.put("egressedLatency", humanReadableUptime(worstLatency));
+        data.put("egressedLatency", humanReadableLatency(worstLatency));
         data.put("egressedTotal", String.valueOf(grandTotal));
         data.put("egressedStatus", rows);
     }
@@ -154,6 +154,29 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
     @Override
     public String getTitle() {
         return "Status";
+    }
+
+    public static String humanReadableLatency(long millis) {
+        if (millis < 0) {
+            return String.valueOf(millis);
+        }
+
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+        millis -= TimeUnit.SECONDS.toMillis(seconds);
+
+        StringBuilder sb = new StringBuilder(64);
+        if (seconds < 10) {
+            sb.append('0');
+        }
+        sb.append(seconds);
+        if (millis < 100) {
+            sb.append('0');
+        }
+        if (millis < 10) {
+            sb.append('0');
+        }
+        sb.append(millis);
+        return (sb.toString());
     }
 
     public static String humanReadableUptime(long millis) {

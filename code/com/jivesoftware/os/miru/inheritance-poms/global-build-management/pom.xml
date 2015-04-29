@@ -17,6 +17,17 @@
 
     <build>
         <plugins>
+<!--            <plugin>
+                <groupId>io.takari.maven.plugins</groupId>
+                <artifactId>takari-lifecycle-plugin</artifactId>
+                <version>1.10.2</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <compilerId>jdt</compilerId>
+                </configuration>
+            </plugin>-->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>

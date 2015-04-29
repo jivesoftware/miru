@@ -109,15 +109,21 @@ public class MiruStumptownMain {
             ObjectMapper mapper = new ObjectMapper();
             mapper.registerModule(new GuavaModule());
 
-            RowColumnValueStoreProvider rowColumnValueStoreProvider = stumptownServiceConfig.getRowColumnValueStoreProviderClass()
-                .newInstance();
-            @SuppressWarnings("unchecked")
-            RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
 
-            //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
-            MiruStumptownPayloads payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(),
-                rowColumnValueStoreInitializer, mapper);
+
+            MiruStumptownPayloads payloads = null;
+            try {
+                RowColumnValueStoreProvider rowColumnValueStoreProvider = stumptownServiceConfig.getRowColumnValueStoreProviderClass()
+                    .newInstance();
+                @SuppressWarnings("unchecked")
+                RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+                    .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+
+                //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
+                payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
+            } catch(Exception x) {
+                serviceStartupHealthCheck.info("Failed to setup connection to RCVS.", x);
+            }
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 

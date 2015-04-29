@@ -48,9 +48,12 @@ public class ReaderRequestHelpers {
 
     public List<RequestHelper> get(Optional<MiruHost> excludingHost) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
-        for (HostHeartbeat heartbeat : clusterClient.allhosts()) {
-            if (heartbeat.heartbeat > (System.currentTimeMillis() - ignoreHostThatHaveNotHeartBeatedInMillis)) {
-                hosts.add(heartbeat.host);
+        List<HostHeartbeat> allhosts = clusterClient.allhosts();
+        if (allhosts != null) {
+            for (HostHeartbeat heartbeat : allhosts) {
+                if (heartbeat.heartbeat > (System.currentTimeMillis() - ignoreHostThatHaveNotHeartBeatedInMillis)) {
+                    hosts.add(heartbeat.host);
+                }
             }
         }
         if (excludingHost.isPresent()) {
