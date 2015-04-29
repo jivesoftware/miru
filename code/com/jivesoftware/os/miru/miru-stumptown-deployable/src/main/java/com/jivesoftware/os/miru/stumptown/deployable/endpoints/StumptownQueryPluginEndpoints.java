@@ -46,7 +46,7 @@ public class StumptownQueryPluginEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response query(
-        @QueryParam("cluster") @DefaultValue("dev") String cluster,
+        @QueryParam("cluster") @DefaultValue("") String cluster,
         @QueryParam("host") @DefaultValue("") String host,
         @QueryParam("service") @DefaultValue("") String service,
         @QueryParam("instance") @DefaultValue("") String instance,
