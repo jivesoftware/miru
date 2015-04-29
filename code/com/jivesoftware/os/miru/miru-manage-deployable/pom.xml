@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>upena-deployable-management</artifactId>
-        <version>0.433-SNAPSHOT</version>
+        <version>0.433</version>
         <relativePath>../inheritance-poms/upena-deployable-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-manage-deployable</artifactId>
-    <version>0.433-SNAPSHOT</version>
+    <version>0.433</version>
     <properties>
         <java.main>com.jivesoftware.os.miru.manage.deployable.MiruManageMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
@@ -95,17 +95,17 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.433-SNAPSHOT</version>
+            <version>0.433</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-logappender</artifactId>
-            <version>0.433-SNAPSHOT</version>
+            <version>0.433</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.433-SNAPSHOT</version>
+            <version>0.433</version>
             <type>jar</type>
         </dependency>
         <dependency>
@@ -116,7 +116,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-metric-sampler</artifactId>
-            <version>0.433-SNAPSHOT</version>
+            <version>0.433</version>
             <type>jar</type>
         </dependency>
         <dependency>
@@ -148,7 +148,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal-client</artifactId>
-            <version>0.433-SNAPSHOT</version>
+            <version>0.433</version>
         </dependency>
     </dependencies>
 </project>
