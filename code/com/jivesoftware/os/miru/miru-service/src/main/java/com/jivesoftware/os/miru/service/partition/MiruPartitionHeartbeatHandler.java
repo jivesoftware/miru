@@ -15,9 +15,9 @@ import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.topology.PartitionInfo;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -29,7 +29,7 @@ public class MiruPartitionHeartbeatHandler {
 
     private final AtomicReference<Map<MiruPartitionCoord, PartitionInfo>> heartbeats = new AtomicReference<>(
         (Map<MiruPartitionCoord, PartitionInfo>) new ConcurrentHashMap<MiruPartitionCoord, PartitionInfo>());
-    private final AtomicReference<Map<MiruPartitionCoord, MiruPartitionActive>> active = new AtomicReference<>();
+    private final ConcurrentMap<MiruPartitionCoord, MiruPartitionActive> active = Maps.newConcurrentMap();
 
     private final Object cursorLock = new Object();
     private final Map<String, NamedCursor> partitionActiveUpdatesSinceCursors = Maps.newHashMap();
@@ -79,12 +79,9 @@ public class MiruPartitionHeartbeatHandler {
     }
 
     public MiruPartitionActive getPartitionActive(MiruPartitionCoord coord) throws Exception {
-        Map<MiruPartitionCoord, MiruPartitionActive> got = active.get();
-        if (got != null) {
-            MiruPartitionActive partitionActive = got.get(coord);
-            if (partitionActive != null) {
-                return partitionActive;
-            }
+        MiruPartitionActive partitionActive = active.get(coord);
+        if (partitionActive != null) {
+            return partitionActive;
         }
         return new MiruPartitionActive(false, false);
     }
@@ -100,13 +97,11 @@ public class MiruPartitionHeartbeatHandler {
     }
 
     private void setActive(MiruHost host, Collection<MiruPartitionActiveUpdate> updates) {
-        Map<MiruPartitionCoord, MiruPartitionActive> coordActive = new HashMap<>(updates.size());
         for (MiruPartitionActiveUpdate update : updates) {
             MiruPartitionCoord coord = new MiruPartitionCoord(update.tenantId, MiruPartitionId.of(update.partitionId), host);
             MiruPartitionActive partitionActive = new MiruPartitionActive(update.active, update.idle);
-            coordActive.put(coord, partitionActive);
+            active.put(coord, partitionActive);
         }
-        active.set(coordActive);
     }
 
     /**
