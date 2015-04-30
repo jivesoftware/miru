@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.cluster;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Collections2;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -16,14 +16,17 @@ import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatRequest;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
-import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
+import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
+import com.jivesoftware.os.miru.api.topology.PartitionInfo;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -101,31 +104,34 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     @Override
     public MiruHeartbeatResponse thumpthump(final MiruHost miruHost, MiruHeartbeatRequest heartbeatRequest) throws Exception {
         clusterRegistry.sendHeartbeatForHost(miruHost);
-        clusterRegistry.updateTopologies(miruHost, Lists.transform(heartbeatRequest.active,
-            new Function<MiruHeartbeatRequest.Partition, MiruClusterRegistry.TopologyUpdate>() {
+        clusterRegistry.updateTopologies(miruHost, Collections2.transform(heartbeatRequest.active,
+            new Function<PartitionInfo, MiruClusterRegistry.TopologyUpdate>() {
                 @Override
-                public MiruClusterRegistry.TopologyUpdate apply(MiruHeartbeatRequest.Partition partition) {
-                    Optional<MiruPartitionCoordInfo> info = Optional.fromNullable(partition.info);
-                    Optional<Long> refreshTimestamp = (partition.activeTimestamp > -1) ? Optional.of(partition.activeTimestamp) : Optional.<Long>absent();
+                public MiruClusterRegistry.TopologyUpdate apply(PartitionInfo partitionInfo) {
+                    Optional<MiruPartitionCoordInfo> info = Optional.fromNullable(partitionInfo.info);
+                    Optional<Long> refreshTimestamp = (partitionInfo.activeTimestamp > -1) ? Optional.of(
+                        partitionInfo.activeTimestamp) : Optional.<Long>absent();
                     return new MiruClusterRegistry.TopologyUpdate(
-                        new MiruPartitionCoord(partition.tenantId, MiruPartitionId.of(partition.partitionId), miruHost),
+                        new MiruPartitionCoord(partitionInfo.tenantId, MiruPartitionId.of(partitionInfo.partitionId), miruHost),
                         info,
                         refreshTimestamp);
                 }
             }));
 
-        List<MiruHeartbeatResponse.Partition> partitions = new ArrayList<>();
+        /*List<MiruHeartbeatResponse.Partition> partitions = new ArrayList<>();
         for (MiruTenantId tenantId : clusterRegistry.getTenantsForHost(miruHost)) {
             for (MiruTopologyStatus status : clusterRegistry.getTopologyStatusForTenantHost(tenantId, miruHost)) {
                 MiruPartitionActive partitionActive = clusterRegistry.isPartitionActive(status.partition.coord);
                 partitions.add(new MiruHeartbeatResponse.Partition(tenantId,
                     status.partition.coord.partitionId.getId(), partitionActive.active, partitionActive.idle));
             }
-        }
+        }*/
 
-        List<MiruTenantTopologyUpdate> topologyHasChangedForTheseTenantIds = clusterRegistry.getTopologyUpdatesForHost(miruHost,
-            heartbeatRequest.topologyUpdatesSinceTimestamp);
-        return new MiruHeartbeatResponse(partitions, topologyHasChangedForTheseTenantIds);
+        NamedCursorsResult<Collection<MiruPartitionActiveUpdate>> partitionActiveHasChanged =
+            clusterRegistry.getPartitionActiveUpdatesForHost(miruHost, heartbeatRequest.partitionActiveUpdatesSinceCursors);
+        NamedCursorsResult<Collection<MiruTenantTopologyUpdate>> topologyHasChanged =
+            clusterRegistry.getTopologyUpdatesForHost(miruHost, heartbeatRequest.topologyUpdatesSinceCursors);
+        return new MiruHeartbeatResponse(partitionActiveHasChanged, topologyHasChanged);
     }
 
     @Override

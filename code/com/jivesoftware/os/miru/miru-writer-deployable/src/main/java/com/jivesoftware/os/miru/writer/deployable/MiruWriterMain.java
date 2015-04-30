@@ -231,7 +231,7 @@ public class MiruWriterMain {
                         @Override
                         public void changes(RowsChanged changes) throws Exception {
                             if (changes.getRegionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_REGION_NAME)) {
-                                for (WALKey key : changes.getApply().keySet()) {
+                                for (WALKey key : changes.getApply().columnKeySet()) {
                                     MiruTenantId tenantId = AmzaPartitionIdProvider.extractTenantForLatestPartition(key);
                                     latestAlignmentCache.remove(tenantId);
                                 }

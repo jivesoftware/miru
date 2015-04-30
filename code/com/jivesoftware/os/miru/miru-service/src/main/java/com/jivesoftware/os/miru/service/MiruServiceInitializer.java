@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service;
 
-import com.jivesoftware.os.miru.api.MiruStats;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
@@ -21,6 +20,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -156,9 +156,9 @@ public class MiruServiceInitializer {
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
@@ -221,6 +221,7 @@ public class MiruServiceInitializer {
             localPartitionFactory);
 
         MiruExpectedTenants expectedTenants = new MiruClusterExpectedTenants(
+            miruHost,
             tenantTopologyFactory,
             remotePartitionFactory,
             heartbeatHandler,

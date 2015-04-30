@@ -2,11 +2,11 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.hash.Hashing;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
-import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
@@ -72,10 +72,11 @@ public class MiruLocalPartitionFactory {
         this.mergeChits = mergeChits;
     }
 
-    public <BM> MiruLocalHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+    public <BM> MiruLocalHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, long expireAfterMillis) throws Exception {
         return new MiruLocalHostedPartition<>(miruStats,
             bitmaps,
             coord,
+            expireAfterMillis > 0 ? System.currentTimeMillis() + expireAfterMillis : -1,
             miruContextFactory,
             walClient,
             partitionEventHandler,

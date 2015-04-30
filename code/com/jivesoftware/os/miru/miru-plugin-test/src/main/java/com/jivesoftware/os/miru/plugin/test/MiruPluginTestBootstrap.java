@@ -223,7 +223,7 @@ public class MiruPluginTestBootstrap {
         final MiruService miruService = miruServiceLifecyle.getService();
 
         long t = System.currentTimeMillis();
-        int maxSecondsToComeOnline = 5 + partitionedActivities.size() / 1_000; // suppose 1K activities/sec
+        int maxSecondsToComeOnline = 10 + partitionedActivities.size() / 1_000; // suppose 1K activities/sec
         while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
             Thread.sleep(10);
             if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(maxSecondsToComeOnline)) {
