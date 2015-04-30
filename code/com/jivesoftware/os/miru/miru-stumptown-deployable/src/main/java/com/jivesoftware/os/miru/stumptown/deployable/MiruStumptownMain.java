@@ -110,7 +110,6 @@ public class MiruStumptownMain {
             mapper.registerModule(new GuavaModule());
 
 
-
             MiruStumptownPayloads payloads = null;
             try {
                 RowColumnValueStoreProvider rowColumnValueStoreProvider = stumptownServiceConfig.getRowColumnValueStoreProviderClass()
@@ -121,7 +120,7 @@ public class MiruStumptownMain {
 
                 //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
                 payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-            } catch(Exception x) {
+            } catch (Exception x) {
                 serviceStartupHealthCheck.info("Failed to setup connection to RCVS.", x);
             }
 
@@ -157,17 +156,17 @@ public class MiruStumptownMain {
                 MiruLogEvent.class,
                 true,
                 null) {
-                    @Override
-                    void deliverSerialized(List<MiruLogEvent> serialized) {
-                        try {
-                            inTakeService.ingressLogEvents(serialized);
-                            LOG.inc("ingress>delivered");
-                        } catch (Exception x) {
-                            LOG.error("Encountered the following while draining stumptownQueue.", x);
-                            throw new RuntimeException(x);
-                        }
+                @Override
+                void deliverSerialized(List<MiruLogEvent> serialized) {
+                    try {
+                        inTakeService.ingressLogEvents(serialized);
+                        LOG.inc("ingress>delivered");
+                    } catch (Exception x) {
+                        LOG.error("Encountered the following while draining stumptownQueue.", x);
+                        throw new RuntimeException(x);
                     }
-                };
+                }
+            };
 
             IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);

@@ -16,10 +16,13 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.service.AmzaRegion;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.service.storage.RegionProvider;
 import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.RegionName;
 import com.jivesoftware.os.amza.shared.RegionProperties;
 import com.jivesoftware.os.amza.shared.RingHost;
+import com.jivesoftware.os.amza.shared.RowChanges;
+import com.jivesoftware.os.amza.shared.RowsChanged;
 import com.jivesoftware.os.amza.shared.Scan;
 import com.jivesoftware.os.amza.shared.TakeCursors;
 import com.jivesoftware.os.amza.shared.WALKey;
@@ -71,7 +74,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * @author jonathan.colt
  */
-public class AmzaClusterRegistry implements MiruClusterRegistry {
+public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -154,6 +157,13 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
         return new TenantAndPartition(tenantBytes, bb.getInt());
     }
 
+    @Override
+    public void changes(RowsChanged rowsChanged) throws Exception {
+        if (rowsChanged.getRegionName().equals(RegionProvider.RING_INDEX)) {
+            ringInitialized.set(false);
+        }
+    }
+
     static class TenantAndPartition {
 
         public final byte[] tenantBytes;
@@ -193,8 +203,9 @@ public class AmzaClusterRegistry implements MiruClusterRegistry {
     private AmzaRegion createRegionIfAbsent(String regionName) throws Exception {
         if (!ringInitialized.get()) {
             List<RingHost> ring = amzaService.getAmzaRing().getRing(AMZA_RING_NAME);
-            if (ring.isEmpty()) {
-                amzaService.getAmzaRing().buildRandomSubRing(AMZA_RING_NAME, amzaService.getAmzaRing().getRing("system").size());
+            int desiredRingSize = amzaService.getAmzaRing().getRing("system").size();
+            if (ring.size() < desiredRingSize) {
+                amzaService.getAmzaRing().buildRandomSubRing(AMZA_RING_NAME, desiredRingSize);
             }
             ringInitialized.set(true);
         }
