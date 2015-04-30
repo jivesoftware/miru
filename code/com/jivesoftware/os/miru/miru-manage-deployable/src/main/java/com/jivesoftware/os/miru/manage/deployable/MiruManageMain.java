@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.service.storage.RegionProvider;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -172,13 +173,15 @@ public class MiruManageMain {
                     instanceConfig.getMainPort(),
                     "amza-topology-" + instanceConfig.getClusterName(),
                     amzaClusterRegistryConfig);
-                clusterRegistry = new AmzaClusterRegistry(amzaService,
+                AmzaClusterRegistry amzaClusterRegistry = new AmzaClusterRegistry(amzaService,
                     new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                     registryConfig.getDefaultNumberOfReplicas(),
                     registryConfig.getDefaultTopologyIsStaleAfterMillis(),
                     registryConfig.getDefaultTopologyIsIdleAfterMillis(),
                     amzaClusterRegistryConfig.getReplicationFactor(),
                     amzaClusterRegistryConfig.getTakeFromFactor());
+                amzaService.watch(RegionProvider.RING_INDEX, amzaClusterRegistry);
+                clusterRegistry = amzaClusterRegistry;
             } else {
                 throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
             }
