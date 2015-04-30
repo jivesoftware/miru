@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -9,14 +10,14 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatRequest;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
-import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
-import java.util.ArrayList;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
+import com.jivesoftware.os.miru.api.topology.NamedCursor;
+import com.jivesoftware.os.miru.api.topology.PartitionInfo;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -24,11 +25,15 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class MiruPartitionHeartbeatHandler {
 
-    private final AtomicReference<Map<MiruPartitionCoord, MiruHeartbeatRequest.Partition>> heartbeats = new AtomicReference<>(
-        (Map<MiruPartitionCoord, MiruHeartbeatRequest.Partition>) new ConcurrentHashMap<MiruPartitionCoord, MiruHeartbeatRequest.Partition>());
-    private final AtomicReference<Map<MiruPartitionCoord, MiruPartitionActive>> active = new AtomicReference<>();
     private final MiruClusterClient clusterClient;
-    private final AtomicLong topologyUpdatesSinceTimestamp = new AtomicLong(0);
+
+    private final AtomicReference<Map<MiruPartitionCoord, PartitionInfo>> heartbeats = new AtomicReference<>(
+        (Map<MiruPartitionCoord, PartitionInfo>) new ConcurrentHashMap<MiruPartitionCoord, PartitionInfo>());
+    private final AtomicReference<Map<MiruPartitionCoord, MiruPartitionActive>> active = new AtomicReference<>();
+
+    private final Object cursorLock = new Object();
+    private final Map<String, NamedCursor> partitionActiveUpdatesSinceCursors = Maps.newHashMap();
+    private final Map<String, NamedCursor> topologyUpdatesSinceCursors = Maps.newHashMap();
 
     public MiruPartitionHeartbeatHandler(MiruClusterClient clusterClient) {
         this.clusterClient = clusterClient;
@@ -39,18 +44,18 @@ public class MiruPartitionHeartbeatHandler {
         Optional<Long> refreshTimestamp)
         throws Exception {
 
-        Map<MiruPartitionCoord, MiruHeartbeatRequest.Partition> beats;
+        Map<MiruPartitionCoord, PartitionInfo> beats;
         do {
             beats = heartbeats.get();
-            MiruHeartbeatRequest.Partition got = beats.get(coord);
+            PartitionInfo got = beats.get(coord);
             if (got == null) {
-                got = new MiruHeartbeatRequest.Partition(coord.tenantId,
+                got = new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
                     refreshTimestamp.or(-1L),
                     info.orNull());
                 beats.put(coord, got);
             } else {
-                got = new MiruHeartbeatRequest.Partition(coord.tenantId,
+                got = new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
                     refreshTimestamp.or(got.activeTimestamp),
                     info.isPresent() ? info.get() : got.info);
@@ -61,15 +66,19 @@ public class MiruPartitionHeartbeatHandler {
     }
 
     public MiruHeartbeatResponse thumpthump(MiruHost host) throws Exception {
-        MiruHeartbeatResponse thumpthump = clusterClient.thumpthump(host, new MiruHeartbeatRequest(heartbeats(), topologyUpdatesSinceTimestamp.get()));
+        synchronized (cursorLock) {
+            MiruHeartbeatResponse thumpthump = clusterClient.thumpthump(host,
+                new MiruHeartbeatRequest(heartbeats(), partitionActiveUpdatesSinceCursors.values(), topologyUpdatesSinceCursors.values()));
 
-        setActive(host, thumpthump.active);
-        handleTopologyHasChanged(thumpthump.topologyHasChanged);
+            setActive(host, thumpthump.activeHasChanged.result);
+            handleCursors(partitionActiveUpdatesSinceCursors, thumpthump.activeHasChanged.cursors);
+            handleCursors(topologyUpdatesSinceCursors, thumpthump.topologyHasChanged.cursors);
 
-        return thumpthump;
+            return thumpthump;
+        }
     }
 
-    public MiruPartitionActive isCoordActive(MiruPartitionCoord coord) throws Exception {
+    public MiruPartitionActive getPartitionActive(MiruPartitionCoord coord) throws Exception {
         Map<MiruPartitionCoord, MiruPartitionActive> got = active.get();
         if (got != null) {
             MiruPartitionActive partitionActive = got.get(coord);
@@ -80,37 +89,34 @@ public class MiruPartitionHeartbeatHandler {
         return new MiruPartitionActive(false, false);
     }
 
-    private List<MiruHeartbeatRequest.Partition> heartbeats() {
-        Map<MiruPartitionCoord, MiruHeartbeatRequest.Partition> beats = heartbeats.get();
+    private Collection<PartitionInfo> heartbeats() {
+        Map<MiruPartitionCoord, PartitionInfo> beats = heartbeats.get();
         if (beats != null) {
-            heartbeats.compareAndSet(beats, new ConcurrentHashMap<MiruPartitionCoord, MiruHeartbeatRequest.Partition>());
-            return new ArrayList<>(beats.values());
+            heartbeats.compareAndSet(beats, new ConcurrentHashMap<MiruPartitionCoord, PartitionInfo>());
+            return beats.values();
         } else {
             return Collections.emptyList();
         }
     }
 
-    private void setActive(MiruHost host, List<MiruHeartbeatResponse.Partition> coords) {
-        Map<MiruPartitionCoord, MiruPartitionActive> coordsActives = new HashMap<>(coords.size());
-        for (MiruHeartbeatResponse.Partition coord : coords) {
-            MiruPartitionCoord miruPartitionCoord = new MiruPartitionCoord(coord.tenantId, MiruPartitionId.of(coord.partitionId), host);
-            MiruPartitionActive partitionActive = new MiruPartitionActive(coord.active, coord.idle);
-            coordsActives.put(miruPartitionCoord, partitionActive);
+    private void setActive(MiruHost host, Collection<MiruPartitionActiveUpdate> updates) {
+        Map<MiruPartitionCoord, MiruPartitionActive> coordActive = new HashMap<>(updates.size());
+        for (MiruPartitionActiveUpdate update : updates) {
+            MiruPartitionCoord coord = new MiruPartitionCoord(update.tenantId, MiruPartitionId.of(update.partitionId), host);
+            MiruPartitionActive partitionActive = new MiruPartitionActive(update.active, update.idle);
+            coordActive.put(coord, partitionActive);
         }
-        active.set(coordsActives);
+        active.set(coordActive);
     }
 
-    private void handleTopologyHasChanged(List<MiruTenantTopologyUpdate> topologyHasChanged) {
-        long sinceTimestamp = topologyUpdatesSinceTimestamp.get();
-        long updateTimestamp = sinceTimestamp;
-        for (MiruTenantTopologyUpdate update : topologyHasChanged) {
-            updateTimestamp = Math.max(updateTimestamp, update.timestamp);
-        }
-        while (updateTimestamp > sinceTimestamp) {
-            if (topologyUpdatesSinceTimestamp.compareAndSet(sinceTimestamp, updateTimestamp)) {
-                break;
-            } else {
-                sinceTimestamp = topologyUpdatesSinceTimestamp.get();
+    /**
+     * Must be holding cursor lock.
+     */
+    private void handleCursors(Map<String, NamedCursor> cursors, Collection<NamedCursor> updates) {
+        for (NamedCursor update : updates) {
+            NamedCursor existing = cursors.get(update.name);
+            if (existing == null || existing.id < update.id) {
+                cursors.put(update.name, update);
             }
         }
     }

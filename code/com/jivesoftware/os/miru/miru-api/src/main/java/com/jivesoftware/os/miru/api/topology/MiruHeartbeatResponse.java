@@ -1,40 +1,22 @@
 package com.jivesoftware.os.miru.api.topology;
 
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.util.List;
+import java.util.Collection;
 
 /**
- *
  * @author jonathan.colt
  */
 public class MiruHeartbeatResponse {
 
-    public List<Partition> active;
-    public List<MiruTenantTopologyUpdate> topologyHasChanged;
+    public NamedCursorsResult<Collection<MiruPartitionActiveUpdate>> activeHasChanged;
+    public NamedCursorsResult<Collection<MiruTenantTopologyUpdate>> topologyHasChanged;
 
     public MiruHeartbeatResponse() {
     }
 
-    public MiruHeartbeatResponse(List<Partition> active, List<MiruTenantTopologyUpdate> topologyHasChanged) {
-        this.active = active;
+    public MiruHeartbeatResponse(NamedCursorsResult<Collection<MiruPartitionActiveUpdate>> activeHasChanged,
+        NamedCursorsResult<Collection<MiruTenantTopologyUpdate>> topologyHasChanged) {
+        this.activeHasChanged = activeHasChanged;
         this.topologyHasChanged = topologyHasChanged;
     }
 
-    static public class Partition {
-
-        public MiruTenantId tenantId;
-        public int partitionId;
-        public boolean active;
-        public boolean idle;
-
-        public Partition() {
-        }
-
-        public Partition(MiruTenantId tenantId, int partitionId, boolean active, boolean idle) {
-            this.tenantId = tenantId;
-            this.partitionId = partitionId;
-            this.active = active;
-            this.idle = idle;
-        }
-    }
 }

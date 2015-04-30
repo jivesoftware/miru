@@ -91,7 +91,9 @@ public class AggregateCountsInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "filterCustomStream", new AggregateCountsCustomQuestion(aggregateCounts, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(),
+                    "filterCustomStream",
+                    new AggregateCountsCustomQuestion(aggregateCounts, requestAndReport.request)),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);

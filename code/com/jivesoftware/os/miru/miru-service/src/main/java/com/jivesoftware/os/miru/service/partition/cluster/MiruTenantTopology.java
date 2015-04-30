@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
@@ -12,6 +10,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
@@ -20,24 +19,25 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.TimeUnit;
 
 public class MiruTenantTopology<BM> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final long ensurePartitionsIntervalInMillis;
     private final MiruBitmaps<BM> bitmaps;
     private final MiruHost localHost;
     private final MiruTenantId tenantId;
     private final MiruLocalPartitionFactory localPartitionFactory;
-    private final ConcurrentSkipListMap<PartitionAndHost, MiruLocalHostedPartition<BM>> topology;
-    private final Cache<PartitionAndHost, Boolean> sticky;
+    private final ConcurrentSkipListMap<MiruPartitionId, MiruLocalHostedPartition<BM>> topology;
 
-    private final StripingLocksProvider<PartitionAndHost> topologyLock = new StripingLocksProvider<>(64);
+    private final StripingLocksProvider<MiruPartitionId> topologyLock = new StripingLocksProvider<>(64);
 
     public MiruTenantTopology(
         long ensurePartitionsIntervalInMillis,
@@ -45,14 +45,12 @@ public class MiruTenantTopology<BM> {
         MiruHost localHost,
         MiruTenantId tenantId,
         MiruLocalPartitionFactory localPartitionFactory) {
+        this.ensurePartitionsIntervalInMillis = ensurePartitionsIntervalInMillis;
         this.bitmaps = bitmaps;
         this.localHost = localHost;
         this.tenantId = tenantId;
         this.localPartitionFactory = localPartitionFactory;
         this.topology = new ConcurrentSkipListMap<>();
-        this.sticky = CacheBuilder.newBuilder()
-            .expireAfterWrite(ensurePartitionsIntervalInMillis * 2, TimeUnit.MILLISECONDS) // double the ensurePartitions interval
-            .build();
     }
 
     public MiruTenantId getTenantId() {
@@ -80,64 +78,47 @@ public class MiruTenantTopology<BM> {
     }
 
     public void warm() throws Exception {
-        MiruPartitionId latestPartitionId = MiruPartitionId.of(0);
-        for (PartitionAndHost partitionAndHost : topology.keySet()) {
-            if (partitionAndHost.partitionId.compareTo(latestPartitionId) > 0) {
-                latestPartitionId = partitionAndHost.partitionId;
-            }
-        }
-
-        for (MiruHostedPartition partition : topology.values()) {
-            if (partition.getPartitionId().equals(latestPartitionId)) {
-                partition.warm();
-            }
+        Map.Entry<MiruPartitionId, MiruLocalHostedPartition<BM>> lastEntry = topology.lastEntry();
+        if (lastEntry != null) {
+            lastEntry.getValue().warm();
         }
     }
 
-    public void warm(MiruPartitionCoord coord) throws Exception {
-        for (MiruHostedPartition partition : topology.values()) {
-            if (partition.getCoord().equals(coord)) {
-                partition.warm();
-                break;
-            }
+    public void warm(MiruPartitionId partitionId) throws Exception {
+        MiruLocalHostedPartition<BM> hostedPartition = topology.get(partitionId);
+        if (hostedPartition != null) {
+            hostedPartition.warm();
         }
     }
 
-    public boolean updateStorage(MiruPartitionCoord coord, MiruBackingStorage backingStorage) throws Exception {
-        Optional<MiruLocalHostedPartition<?>> partition = getPartition(coord);
+    public boolean updateStorage(MiruPartitionId partitionId, MiruBackingStorage backingStorage) throws Exception {
+        Optional<MiruLocalHostedPartition<?>> partition = getPartition(partitionId);
         return partition.isPresent() && partition.get().setStorage(backingStorage);
     }
 
-    public void setStorageForHost(MiruPartitionId partitionId, MiruBackingStorage storage, MiruHost host) throws Exception {
-        Optional<MiruLocalHostedPartition<?>> partition = getPartition(new MiruPartitionCoord(tenantId, partitionId, host));
+    public void setStorage(MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception {
+        Optional<MiruLocalHostedPartition<?>> partition = getPartition(partitionId);
         if (partition.isPresent()) {
             partition.get().setStorage(storage);
         }
     }
 
-    void checkForPartitionAlignment(MiruHost host, MiruTenantId tenant, List<MiruPartitionId> partitionIds) throws Exception {
-        Set<PartitionAndHost> expected = Sets.newHashSet();
-        for (MiruPartitionId miruPartitionId : partitionIds) {
-            expected.add(new PartitionAndHost(miruPartitionId, host));
+    void checkForPartitionAlignment(List<MiruPartitionActiveUpdate> activeUpdates) throws Exception {
+        List<MiruPartitionActiveUpdate> recentUpdatesFirst = Lists.newArrayList(activeUpdates);
+        Collections.sort(recentUpdatesFirst, RECENT_UPDATES_COMPARATOR);
+
+        for (MiruPartitionActiveUpdate activeUpdate : recentUpdatesFirst) {
+            if (activeUpdate.hosted) {
+                ensureTopology(MiruPartitionId.of(activeUpdate.partitionId), false);
+            } else {
+                removeTopology(MiruPartitionId.of(activeUpdate.partitionId));
+            }
         }
 
-        Set<PartitionAndHost> adding;
-        Set<PartitionAndHost> removing;
-        synchronized (topology) {
-            Set<PartitionAndHost> knownCoords = topology.keySet();
-            adding = Sets.difference(expected, knownCoords);
-            removing = Sets.difference(knownCoords, Sets.union(expected, sticky.asMap().keySet()));
-        }
-
-        List<PartitionAndHost> addingRecentFirst = Lists.newArrayList(adding);
-        Collections.sort(addingRecentFirst);
-        Collections.reverse(addingRecentFirst);
-        for (PartitionAndHost add : addingRecentFirst) {
-            ensureTopology(add);
-        }
-
-        for (PartitionAndHost remove : removing) {
-            removeTopology(remove);
+        for (MiruLocalHostedPartition<BM> hostedPartition : topology.values()) {
+            if (hostedPartition.isExpired()) {
+                removeTopology(hostedPartition.getPartitionId());
+            }
         }
     }
 
@@ -145,17 +126,19 @@ public class MiruTenantTopology<BM> {
         return Collections.unmodifiableCollection(topology.values());
     }
 
-    public Optional<MiruLocalHostedPartition<?>> getPartition(MiruPartitionCoord miruPartitionCoord) {
-        MiruLocalHostedPartition<BM> partition = topology.get(new PartitionAndHost(miruPartitionCoord.partitionId, miruPartitionCoord.host));
-        return Optional.<MiruLocalHostedPartition<?>>fromNullable(partition);
+    public Optional<MiruLocalHostedPartition<?>> getPartition(MiruPartitionId partitionId) {
+        return Optional.<MiruLocalHostedPartition<?>>fromNullable(topology.get(partitionId));
     }
 
     public void remove() {
+
         for (MiruHostedPartition partition : topology.values()) {
-            try {
-                partition.remove();
-            } catch (Exception x) {
-                LOG.error("Partition failed to remove. partition:" + partition, x);
+            synchronized (topologyLock.lock(partition.getPartitionId())) {
+                try {
+                    partition.remove();
+                } catch (Exception x) {
+                    LOG.error("Partition failed to remove. partition:" + partition, x);
+                }
             }
         }
         topology.clear();
@@ -174,36 +157,43 @@ public class MiruTenantTopology<BM> {
                 // only activity types can bootstrap
                 iter.remove();
             } else if (!ensured.contains(activity.partitionId)) {
-                PartitionAndHost partitionAndHost = new PartitionAndHost(activity.partitionId, localHost);
-
-                sticky.put(partitionAndHost, true);
-                ensureTopology(partitionAndHost);
+                ensureTopology(activity.partitionId, true);
                 ensured.add(activity.partitionId);
             }
         }
     }
 
-    private void ensureTopology(PartitionAndHost partitionAndHost) throws Exception {
-        synchronized (topologyLock.lock(partitionAndHost)) {
-            if (!topology.containsKey(partitionAndHost)) {
-                MiruLocalHostedPartition<BM> partition;
-                MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionAndHost.partitionId, partitionAndHost.host);
-                if (partitionAndHost.host.equals(localHost)) {
-                    partition = localPartitionFactory.create(bitmaps, coord);
-                    topology.put(partitionAndHost, partition);
+    private void ensureTopology(MiruPartitionId partitionId, boolean expires) throws Exception {
+        synchronized (topologyLock.lock(partitionId)) {
+            MiruLocalHostedPartition<BM> hostedPartition = topology.get(partitionId);
+            if (hostedPartition != null) {
+                if (!expires) {
+                    hostedPartition.cancelExpiration();
                 }
+            } else {
+                MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, localHost);
+                long expireAfterMillis = expires ? ensurePartitionsIntervalInMillis * 2 : -1;
+                MiruLocalHostedPartition<BM> partition = localPartitionFactory.create(bitmaps, coord, expireAfterMillis);
+                topology.put(partitionId, partition);
             }
         }
     }
 
-    private void removeTopology(PartitionAndHost partitionAndHost) throws Exception {
-        synchronized (topologyLock.lock(partitionAndHost)) {
-            MiruHostedPartition partition = topology.remove(partitionAndHost);
+    private void removeTopology(MiruPartitionId partitionId) throws Exception {
+        synchronized (topologyLock.lock(partitionId)) {
+            MiruHostedPartition partition = topology.remove(partitionId);
             if (partition != null) {
                 partition.remove();
             }
         }
     }
+
+    private static final Comparator<MiruPartitionActiveUpdate> RECENT_UPDATES_COMPARATOR = new Comparator<MiruPartitionActiveUpdate>() {
+        @Override
+        public int compare(MiruPartitionActiveUpdate u1, MiruPartitionActiveUpdate u2) {
+            return Integer.compare(u2.partitionId, u1.partitionId); // reversed for descending order
+        }
+    };
 
     @Override
     public String toString() {

@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
@@ -31,6 +32,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.doAnswer;
@@ -93,19 +95,29 @@ public class MiruTenantTopologyTest {
             }
         };
 
-        when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class))).thenAnswer(localAnswer);
+        when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class), anyLong())).thenAnswer(localAnswer);
 
-        tenantTopology.checkForPartitionAlignment(localhost, tenantId, Lists.newArrayList(p0));
+        tenantTopology.checkForPartitionAlignment(Lists.newArrayList(new MiruPartitionActiveUpdate(tenantId, p0.getId(), true, true, false)));
 
-        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)));
+        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)), anyLong());
         verifyNoMoreInteractions(localPartitionFactory);
 
-        tenantTopology.checkForPartitionAlignment(localhost, tenantId, Lists.newArrayList(p0, p1));
+        tenantTopology.checkForPartitionAlignment(Lists.newArrayList(
+            new MiruPartitionActiveUpdate(tenantId, p0.getId(), true, true, false),
+            new MiruPartitionActiveUpdate(tenantId, p1.getId(), true, true, false)));
 
-        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)));
+        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)), anyLong());
         verifyNoMoreInteractions(localPartitionFactory);
 
-        tenantTopology.checkForPartitionAlignment(localhost, tenantId, Lists.newArrayList());
+        tenantTopology.checkForPartitionAlignment(Lists.newArrayList(
+            new MiruPartitionActiveUpdate(tenantId, p0.getId(), false, true, false),
+            new MiruPartitionActiveUpdate(tenantId, p1.getId(), false, true, false)));
+
+        verifyNoMoreInteractions(localPartitionFactory);
+        verify(coordToPartition.get(new MiruPartitionCoord(tenantId, p0, localhost))).remove();
+        verify(coordToPartition.get(new MiruPartitionCoord(tenantId, p1, localhost))).remove();
+
+        tenantTopology.checkForPartitionAlignment(Lists.newArrayList());
 
         verifyNoMoreInteractions(localPartitionFactory);
         verify(coordToPartition.get(new MiruPartitionCoord(tenantId, p0, localhost))).remove();
@@ -141,16 +153,16 @@ public class MiruTenantTopologyTest {
                 return hostedPartition;
             }
         };
-        when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class))).thenAnswer(answer);
+        when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class), anyLong())).thenAnswer(answer);
 
         tenantTopology.index(Lists.newArrayList(
             factory.activity(0, p0, 0, new MiruActivity.Builder(tenantId, 0, new String[] { "authz" }, 1_111).build()),
             factory.activity(0, p1, 0, new MiruActivity.Builder(tenantId, 1, new String[] { "authz" }, 2_222).build()),
             factory.activity(0, p2, 0, new MiruActivity.Builder(tenantId, 2, new String[] { "authz" }, 3_333).build())));
 
-        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)));
-        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)));
-        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p2, localhost)));
+        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)), anyLong());
+        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)), anyLong());
+        verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p2, localhost)), anyLong());
         verifyNoMoreInteractions(localPartitionFactory);
         verifyZeroInteractions(remotePartitionFactory);
     }

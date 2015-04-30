@@ -12,8 +12,11 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
+import com.jivesoftware.os.miru.api.topology.NamedCursor;
+import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,9 +50,13 @@ public interface MiruClusterRegistry {
 
     Map<MiruPartitionId, MiruReplicaSet> getReplicaSets(MiruTenantId tenantId, Collection<MiruPartitionId> requiredPartitionId) throws Exception;
 
-    void updateTopologies(MiruHost host, List<TopologyUpdate> topologyUpdates) throws Exception;
+    void updateTopologies(MiruHost host, Collection<TopologyUpdate> topologyUpdates) throws Exception;
 
-    List<MiruTenantTopologyUpdate> getTopologyUpdatesForHost(MiruHost host, long sinceTimestamp) throws Exception;
+    NamedCursorsResult<Collection<MiruTenantTopologyUpdate>> getTopologyUpdatesForHost(MiruHost host,
+        Collection<NamedCursor> sinceCursors) throws Exception;
+
+    NamedCursorsResult<Collection<MiruPartitionActiveUpdate>> getPartitionActiveUpdatesForHost(MiruHost host,
+        Collection<NamedCursor> sinceCursors) throws Exception;
 
     MiruPartitionActive isPartitionActive(MiruPartitionCoord coord) throws Exception;
 

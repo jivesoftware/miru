@@ -57,7 +57,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     /** All reads read from here */
     @Override
     public Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception {
-        return expectedTenants.allQueryablePartitionsInOrder(host, tenantId, queryKey);
+        return expectedTenants.allQueryablePartitionsInOrder(tenantId, queryKey);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         if (topology == null) {
             return Optional.absent();
         }
-        Optional<MiruLocalHostedPartition<?>> partition = topology.getPartition(miruPartitionCoord);
+        Optional<MiruLocalHostedPartition<?>> partition = topology.getPartition(miruPartitionCoord.partitionId);
         return partition;
     }
 
@@ -84,7 +84,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     public void setStorage(MiruTenantId tenantId, MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception {
         MiruTenantTopology topology = expectedTenants.getLocalTopology(tenantId);
         if (topology != null) {
-            topology.setStorageForHost(partitionId, storage, host);
+            topology.setStorage(partitionId, storage);
         }
     }
 
@@ -105,7 +105,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception {
         MiruTenantTopology<?> topology = expectedTenants.getLocalTopology(tenantId);
         if (topology != null) {
-            Optional<MiruLocalHostedPartition<?>> partition = topology.getPartition(new MiruPartitionCoord(tenantId, partitionId, host));
+            Optional<MiruLocalHostedPartition<?>> partition = topology.getPartition(partitionId);
             if (partition.isPresent()) {
                 return info.state == partition.get().getState()
                     && (info.storage == MiruBackingStorage.unknown || info.storage == partition.get().getStorage());
@@ -123,7 +123,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     /** MiruService calls this on a periodic interval */
     public void heartbeat() {
         try {
-            expectedTenants.thumpthump(host);
+            expectedTenants.thumpthump();
         } catch (Throwable t) {
             LOG.error("Heartbeat encountered a problem", t);
         }

@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.api.topology;
 
-import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.util.List;
+import java.util.Collection;
 
 /**
  *
@@ -10,33 +8,19 @@ import java.util.List;
  */
 public class MiruHeartbeatRequest {
 
-    public List<Partition> active;
-    public long topologyUpdatesSinceTimestamp;
+    public Collection<PartitionInfo> active;
+    public Collection<NamedCursor> partitionActiveUpdatesSinceCursors;
+    public Collection<NamedCursor> topologyUpdatesSinceCursors;
 
     public MiruHeartbeatRequest() {
     }
 
-    public MiruHeartbeatRequest(List<Partition> active, long topologyUpdatesSinceTimestamp) {
+    public MiruHeartbeatRequest(Collection<PartitionInfo> active,
+        Collection<NamedCursor> partitionActiveUpdatesSinceCursors,
+        Collection<NamedCursor> topologyUpdatesSinceCursors) {
         this.active = active;
-        this.topologyUpdatesSinceTimestamp = topologyUpdatesSinceTimestamp;
+        this.partitionActiveUpdatesSinceCursors = partitionActiveUpdatesSinceCursors;
+        this.topologyUpdatesSinceCursors = topologyUpdatesSinceCursors;
     }
 
-    static public class Partition {
-
-        public MiruTenantId tenantId;
-        public int partitionId;
-        public long activeTimestamp; // -1 means unchanged
-        public MiruPartitionCoordInfo info;
-
-        public Partition() {
-        }
-
-        public Partition(MiruTenantId tenantId, int partitionId, long activeTimestamp, MiruPartitionCoordInfo info) {
-            this.tenantId = tenantId;
-            this.partitionId = partitionId;
-            this.activeTimestamp = activeTimestamp;
-            this.info = info;
-        }
-
-    }
 }

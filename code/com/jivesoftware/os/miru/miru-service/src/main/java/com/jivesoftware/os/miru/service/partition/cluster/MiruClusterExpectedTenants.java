@@ -10,7 +10,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -21,7 +20,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
-import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse.Partition;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
@@ -39,13 +38,10 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -54,9 +50,12 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruClusterClient clusterClient;
+    private final MiruHost localHost;
     private final MiruTenantTopologyFactory tenantTopologyFactory;
     private final MiruRemoteQueryablePartitionFactory remotePartitionFactory;
+    private final MiruPartitionHeartbeatHandler heartbeatHandler;
+    private final MiruHostedPartitionComparison partitionComparison;
+    private final MiruClusterClient clusterClient;
 
     private final ConcurrentMap<MiruTenantId, MiruTenantTopology<?>> localTopologies = Maps.newConcurrentMap();
     private final StripingLocksProvider<MiruTenantId> tenantLocks = new StripingLocksProvider<>(64);
@@ -67,14 +66,13 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         .maximumSize(10_000) //TODO configure
         .build();
 
-    private final MiruPartitionHeartbeatHandler heartbeatHandler;
-    private final MiruHostedPartitionComparison partitionComparison;
-
-    public MiruClusterExpectedTenants(MiruTenantTopologyFactory tenantTopologyFactory,
+    public MiruClusterExpectedTenants(MiruHost localHost,
+        MiruTenantTopologyFactory tenantTopologyFactory,
         MiruRemoteQueryablePartitionFactory remotePartitionFactory,
         MiruPartitionHeartbeatHandler heartbeatHandler,
         MiruHostedPartitionComparison partitionComparison,
         MiruClusterClient clusterClient) {
+        this.localHost = localHost;
 
         this.tenantTopologyFactory = tenantTopologyFactory;
         this.remotePartitionFactory = remotePartitionFactory;
@@ -84,8 +82,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     }
 
     @Override
-    public Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(final MiruHost localhost,
-        final MiruTenantId tenantId,
+    public Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(final MiruTenantId tenantId,
         String queryKey) throws Exception {
 
         MiruTenantRoutingTopology topology = routingTopologies.get(tenantId, new Callable<MiruTenantRoutingTopology>() {
@@ -98,7 +95,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 for (MiruTopologyResponse.Partition partition : topologyResponse.topology) {
                     MiruPartitionId partitionId = MiruPartitionId.of(partition.partitionId);
                     MiruRoutablePartition routablePartition = new MiruRoutablePartition(partition.host,
-                        partitionId, partition.host.equals(localhost),
+                        partitionId, partition.host.equals(localHost),
                         partition.state, partition.storage);
                     topology.put(new PartitionAndHost(partitionId, partition.host), routablePartition);
                 }
@@ -124,7 +121,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                                 if (localTopology == null) {
                                     return null;
                                 } else {
-                                    Optional<MiruLocalHostedPartition<?>> partition = localTopology.getPartition(key);
+                                    Optional<MiruLocalHostedPartition<?>> partition = localTopology.getPartition(input.partitionId);
                                     return partition.orNull();
                                 }
                             } else {
@@ -137,55 +134,34 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         });
     }
 
-    private final AtomicReference<Map<MiruTenantId, MiruTenantTopologyUpdate>> lastTopologyChanges =
-        new AtomicReference<Map<MiruTenantId, MiruTenantTopologyUpdate>>(Maps.<MiruTenantId, MiruTenantTopologyUpdate>newHashMap());
-
     @Override
-    public void thumpthump(MiruHost host) throws Exception {
-        MiruHeartbeatResponse thumpthump = heartbeatHandler.thumpthump(host);
+    public void thumpthump() throws Exception {
+        MiruHeartbeatResponse thumpthump = heartbeatHandler.thumpthump(localHost);
 
-        ListMultimap<MiruTenantId, MiruPartitionId> tenantPartitionIds = ArrayListMultimap.create();
-        for (Partition active : thumpthump.active) {
-            tenantPartitionIds.put(active.tenantId, MiruPartitionId.of(active.partitionId));
+        ListMultimap<MiruTenantId, MiruPartitionActiveUpdate> tenantPartitionActive = ArrayListMultimap.create();
+        for (MiruPartitionActiveUpdate active : thumpthump.activeHasChanged.result) {
+            tenantPartitionActive.put(active.tenantId, active);
         }
-        expect(host, tenantPartitionIds);
+        expect(tenantPartitionActive);
 
-        Map<MiruTenantId, MiruTenantTopologyUpdate> last = lastTopologyChanges.get();
-        for (MiruTenantTopologyUpdate update : thumpthump.topologyHasChanged) {
-            MiruTenantTopologyUpdate lastUpdate = last.get(update.tenantId);
-            if (lastUpdate == null || lastUpdate.timestamp < update.timestamp) {
-                routingTopologies.invalidate(update.tenantId);
-            }
+        for (MiruTenantTopologyUpdate update : thumpthump.topologyHasChanged.result) {
+            routingTopologies.invalidate(update.tenantId);
         }
-        lastTopologyChanges.set(Maps.uniqueIndex(thumpthump.topologyHasChanged, new Function<MiruTenantTopologyUpdate, MiruTenantId>() {
-            @Override
-            public MiruTenantId apply(MiruTenantTopologyUpdate input) {
-                return input.tenantId;
-            }
-        }));
     }
 
-    private void expect(MiruHost host, ListMultimap<MiruTenantId, MiruPartitionId> expected) throws Exception {
+    private void expect(ListMultimap<MiruTenantId, MiruPartitionActiveUpdate> expected) throws Exception {
 
-        Set<MiruTenantId> synced = Sets.newHashSet();
         for (MiruTenantId tenantId : expected.keys()) {
             synchronized (tenantLocks.lock(tenantId)) {
-                if (synced.add(tenantId)) {
-                    MiruTenantTopology<?> tenantTopology = localTopologies.get(tenantId);
-                    if (tenantTopology == null) {
-                        tenantTopology = tenantTopologyFactory.create(tenantId);
-                        localTopologies.put(tenantId, tenantTopology);
-                    }
-
-                    tenantTopology.checkForPartitionAlignment(host, tenantId, expected.get(tenantId));
-
+                MiruTenantTopology<?> tenantTopology = localTopologies.get(tenantId);
+                if (tenantTopology == null) {
+                    tenantTopology = tenantTopologyFactory.create(tenantId);
+                    localTopologies.put(tenantId, tenantTopology);
                 }
-            }
-        }
 
-        for (MiruTenantId tenantId : localTopologies.keySet()) {
-            synchronized (tenantLocks.lock(tenantId)) {
-                if (!synced.contains(tenantId)) {
+                tenantTopology.checkForPartitionAlignment(expected.get(tenantId));
+
+                if (tenantTopology.allPartitions().isEmpty()) {
                     final MiruTenantTopology removed = localTopologies.remove(tenantId);
                     if (removed != null) {
                         removed.remove();
@@ -208,17 +184,17 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 coord.tenantId, routingTopologies.getIfPresent(coord.tenantId) != null);
             return false;
         }
-        Optional<MiruLocalHostedPartition<?>> optionalPartition = topology.getPartition(coord);
+        Optional<MiruLocalHostedPartition<?>> optionalPartition = topology.getPartition(coord.partitionId);
         if (optionalPartition.isPresent()) {
             MiruLocalHostedPartition<?> partition = optionalPartition.get();
             if (partition.getState() == MiruPartitionState.bootstrap) {
                 tenantTopologyFactory.prioritizeRebuild(partition);
                 return true;
             } else if (partition.getState() == MiruPartitionState.offline) {
-                topology.warm(coord);
+                topology.warm(coord.partitionId);
                 return true;
             } else if (partition.getState() == MiruPartitionState.online) {
-                return topology.updateStorage(coord, MiruBackingStorage.memory);
+                return topology.updateStorage(coord.partitionId, MiruBackingStorage.memory);
             }
         }
         return false;

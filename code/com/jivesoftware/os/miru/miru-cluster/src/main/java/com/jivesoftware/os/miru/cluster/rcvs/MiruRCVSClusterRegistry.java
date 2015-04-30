@@ -27,8 +27,11 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
+import com.jivesoftware.os.miru.api.topology.NamedCursor;
+import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
@@ -43,6 +46,7 @@ import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -51,6 +55,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.lang.mutable.MutableLong;
 
 public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
@@ -149,11 +154,11 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 @Override
                 public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(
                     ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> value) throws Exception {
-                        if (value != null) {
-                            tenants.add(value.getColumn());
-                        }
-                        return value;
+                    if (value != null) {
+                        tenants.add(value.getColumn());
                     }
+                    return value;
+                }
             });
         return tenants;
     }
@@ -280,7 +285,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public void updateTopologies(MiruHost host, List<TopologyUpdate> topologyUpdates) throws Exception {
+    public void updateTopologies(MiruHost host, Collection<TopologyUpdate> topologyUpdates) throws Exception {
         //TODO batch update more efficiently
         for (TopologyUpdate topologyUpdate : topologyUpdates) {
             MiruPartitionCoord coord = topologyUpdate.coord;
@@ -338,23 +343,65 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
     }
 
     @Override
-    public List<MiruTenantTopologyUpdate> getTopologyUpdatesForHost(MiruHost host, long sinceTimestamp) throws Exception {
+    public NamedCursorsResult<Collection<MiruTenantTopologyUpdate>> getTopologyUpdatesForHost(MiruHost host,
+        Collection<NamedCursor> sinceCursors)
+        throws Exception {
+
+        long cursorTimestamp = 0;
+        for (NamedCursor sinceCursor : sinceCursors) {
+            if ("rcvs".equals(sinceCursor.name)) {
+                cursorTimestamp = sinceCursor.id;
+                break;
+            }
+        }
+        final long acceptableTimestamp = cursorTimestamp - TimeUnit.MINUTES.toMillis(1); //TODO max GC pause or clock drift
+
         final List<MiruTenantTopologyUpdate> updates = Lists.newArrayList();
-        final long acceptableTimestamp = sinceTimestamp - TimeUnit.MINUTES.toMillis(1); //TODO max GC pause or clock drift
+        final MutableLong highestTimestamp = new MutableLong(acceptableTimestamp);
         topologyUpdatesRegistry.getEntrys(MiruVoidByte.INSTANCE, host, null, Long.MAX_VALUE, 10_000, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(
                     ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> cvat) throws Exception {
                     if (cvat != null) {
-                        if (cvat.getTimestamp() > acceptableTimestamp) {
-                            updates.add(new MiruTenantTopologyUpdate(cvat.getColumn(), cvat.getTimestamp()));
+                        long timestamp = cvat.getTimestamp();
+                        if (timestamp > acceptableTimestamp) {
+                            updates.add(new MiruTenantTopologyUpdate(cvat.getColumn(), timestamp));
+                            if (timestamp > highestTimestamp.longValue()) {
+                                highestTimestamp.setValue(timestamp);
+                            }
                         }
                     }
                     return cvat;
                 }
             });
-        return updates;
+        return new NamedCursorsResult<Collection<MiruTenantTopologyUpdate>>(
+            Collections.singletonList(new NamedCursor("rcvs", highestTimestamp.longValue())),
+            updates);
+    }
+
+    @Override
+    public NamedCursorsResult<Collection<MiruPartitionActiveUpdate>> getPartitionActiveUpdatesForHost(MiruHost host,
+        Collection<NamedCursor> sinceCursors) throws Exception {
+
+        List<MiruPartitionActiveUpdate> updates = Lists.newArrayList();
+        for (MiruTenantId tenantId : getTenantsForHost(host)) {
+            SetMultimap<MiruPartitionId, MiruHost> replicaHosts = HashMultimap.create();
+            for (MiruTopologyStatus status : getTopologyStatusForTenant(tenantId)) {
+                replicaHosts.put(status.partition.coord.partitionId, status.partition.coord.host);
+                if (host.equals(status.partition.coord.host)) {
+                    MiruPartitionActive partitionActive = isPartitionActive(status.partition.coord);
+                    MiruPartitionId partitionId = status.partition.coord.partitionId;
+                    updates.add(new MiruPartitionActiveUpdate(tenantId, partitionId.getId(), true, partitionActive.active, partitionActive.idle));
+                }
+            }
+            for (Map.Entry<MiruPartitionId, Collection<MiruHost>> entry : replicaHosts.asMap().entrySet()) {
+                if (!entry.getValue().contains(host)) {
+                    updates.add(new MiruPartitionActiveUpdate(tenantId, entry.getKey().getId(), false, false, false));
+                }
+            }
+        }
+        return new NamedCursorsResult<Collection<MiruPartitionActiveUpdate>>(Collections.<NamedCursor>emptyList(), updates);
     }
 
     @Override
