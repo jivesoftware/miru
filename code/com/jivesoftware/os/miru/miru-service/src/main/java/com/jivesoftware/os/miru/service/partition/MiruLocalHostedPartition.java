@@ -483,7 +483,8 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
             MiruPartitionActive partitionActive = heartbeatHandler.getPartitionActive(coord);
-            if (partitionActive.active) {
+            System.out.println("checkActive: " + partitionActive.activeUntilTimestamp + " > " + System.currentTimeMillis());
+            if (partitionActive.activeUntilTimestamp > System.currentTimeMillis()) {
                 if (accessor.info.state == MiruPartitionState.offline) {
                     if (accessor.info.storage == MiruBackingStorage.memory) {
                         try {
@@ -499,7 +500,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                             open(accessor, accessor.info.copyToState(MiruPartitionState.online));
                         }
                     }
-                } else if (accessor.context.isPresent() && partitionActive.idle) {
+                } else if (accessor.context.isPresent() && System.currentTimeMillis() > partitionActive.idleAfterTimestamp) {
                     MiruContext<BM> context = accessor.context.get();
                     contextFactory.releaseCaches(context, accessor.info.storage);
                 }

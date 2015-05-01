@@ -126,16 +126,16 @@ public class MiruLocalHostedPartitionTest {
     private MiruIndexer<EWAHCompressedBitmap> indexer;
     private MiruLocalHostedPartition.Timings timings;
     private Timestamper timestamper;
-    private AtomicLong syntheticTimestamp = new AtomicLong(System.currentTimeMillis());
+    //private AtomicLong syntheticTimestamp = new AtomicLong(System.currentTimeMillis());
     private long topologyIsStaleAfterMillis = TimeUnit.HOURS.toMillis(1);
 
     @BeforeMethod
     public void setUp() throws Exception {
-        syntheticTimestamp.set(System.currentTimeMillis());
+        //syntheticTimestamp.set(System.currentTimeMillis());
         timestamper = new Timestamper() {
             @Override
             public long get() {
-                return syntheticTimestamp.incrementAndGet();
+                return System.currentTimeMillis();
             }
         };
         tenantId = new MiruTenantId("test".getBytes(Charsets.UTF_8));
@@ -449,11 +449,13 @@ public class MiruLocalHostedPartitionTest {
     }
 
     private void setActive(boolean active) throws Exception {
-        clusterRegistry.updateTopologies(host, Arrays.asList(
-            new MiruClusterRegistry.TopologyUpdate(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(syntheticTimestamp.incrementAndGet()))));
+        partitionEventHandler.thumpthump(host); // flush any heartbeats
+        long refreshTimestamp = System.currentTimeMillis();
         if (!active) {
-            syntheticTimestamp.addAndGet(topologyIsStaleAfterMillis * 2);
+            refreshTimestamp -= topologyIsStaleAfterMillis * 2;
         }
+        clusterRegistry.updateTopologies(host, Arrays.asList(
+            new MiruClusterRegistry.TopologyUpdate(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(refreshTimestamp))));
         partitionEventHandler.thumpthump(host);
     }
 
