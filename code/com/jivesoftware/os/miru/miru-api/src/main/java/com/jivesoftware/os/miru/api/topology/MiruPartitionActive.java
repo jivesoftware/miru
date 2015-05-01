@@ -5,11 +5,11 @@ package com.jivesoftware.os.miru.api.topology;
  */
 public class MiruPartitionActive {
 
-    public final boolean active;
-    public final boolean idle;
+    public final long activeUntilTimestamp;
+    public final long idleAfterTimestamp;
 
-    public MiruPartitionActive(boolean active, boolean idle) {
-        this.active = active;
-        this.idle = idle;
+    public MiruPartitionActive(long activeUntilTimestamp, long idleAfterTimestamp) {
+        this.activeUntilTimestamp = activeUntilTimestamp;
+        this.idleAfterTimestamp = idleAfterTimestamp;
     }
 }

@@ -10,8 +10,8 @@ public class MiruPartitionActiveUpdate {
     public MiruTenantId tenantId;
     public int partitionId;
     public boolean hosted;
-    public boolean active;
-    public boolean idle;
+    public long activeUntilTimestamp;
+    public long idleAfterTimestamp;
 
     public MiruPartitionActiveUpdate() {
     }
@@ -19,12 +19,12 @@ public class MiruPartitionActiveUpdate {
     public MiruPartitionActiveUpdate(MiruTenantId tenantId,
         int partitionId,
         boolean hosted,
-        boolean active,
-        boolean idle) {
+        long activeUntilTimestamp,
+        long idleAfterTimestamp) {
         this.tenantId = tenantId;
         this.partitionId = partitionId;
         this.hosted = hosted;
-        this.active = active;
-        this.idle = idle;
+        this.activeUntilTimestamp = activeUntilTimestamp;
+        this.idleAfterTimestamp = idleAfterTimestamp;
     }
 }

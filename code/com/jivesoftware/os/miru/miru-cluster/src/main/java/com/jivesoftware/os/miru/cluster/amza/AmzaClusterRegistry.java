@@ -407,7 +407,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     }
                 }
                 MiruPartitionActive partitionActive = isPartitionActive(new MiruPartitionCoord(tenantId, partitionId, host));
-                updates.add(new MiruPartitionActiveUpdate(tenantId, partitionId.getId(), hosted, partitionActive.active, partitionActive.idle));
+                updates.add(new MiruPartitionActiveUpdate(tenantId, partitionId.getId(), hosted,
+                    partitionActive.activeUntilTimestamp, partitionActive.idleAfterTimestamp));
             }
         }
 
@@ -757,12 +758,12 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         AmzaRegion topologyInfo = createRegionIfAbsent("host-" + coord.host.toStringForm() + "-partition-info");
         byte[] got = topologyInfo.get(topologyKey(coord.tenantId, coord.partitionId));
         if (got == null) {
-            return new MiruPartitionActive(false, false);
+            return new MiruPartitionActive(-1, -1);
         } else {
             MiruTopologyColumnValue columnValue = topologyColumnValueMarshaller.fromBytes(got);
             long now = System.currentTimeMillis();
-            return new MiruPartitionActive(columnValue.lastActiveTimestamp + defaultTopologyIsStaleAfterMillis > now,
-                columnValue.lastActiveTimestamp + defaultTopologyIsIdleAfterMillis < now);
+            return new MiruPartitionActive(columnValue.lastActiveTimestamp + defaultTopologyIsStaleAfterMillis,
+                columnValue.lastActiveTimestamp + defaultTopologyIsIdleAfterMillis);
         }
     }
 
