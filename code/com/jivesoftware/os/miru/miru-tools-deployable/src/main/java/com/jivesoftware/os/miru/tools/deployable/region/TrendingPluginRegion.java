@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.tools.deployable.region;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -172,18 +171,13 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         }
                     }
 
-                    data.put("results", Lists.transform(results, new Function<Trendy, Map<String, String>>() {
-                        @Override
-                        public Map<String, String> apply(Trendy input) {
-                            return ImmutableMap.of(
-                                "name", input.distinctValue,
-                                "rank", String.valueOf(input.rank),
-                                "waveform", "data:image/png;base64," + new PNGWaveforms()
-                                    .hitsToBase64PNGWaveform(600, 128, 10,
-                                        ImmutableMap.of(input.distinctValue, new AnalyticsAnswer.Waveform(input.waveform)),
-                                        Optional.of(mmd)));
-                        }
-                    }));
+                    data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
+                        "name", trendy.distinctValue,
+                        "rank", String.valueOf(trendy.rank),
+                        "waveform", "data:image/png;base64," + new PNGWaveforms()
+                            .hitsToBase64PNGWaveform(600, 128, 10,
+                                ImmutableMap.of(trendy.distinctValue, new AnalyticsAnswer.Waveform(trendy.waveform)),
+                                Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));

@@ -19,7 +19,6 @@ import com.jivesoftware.os.miru.service.solver.MiruSolved;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import org.testng.annotations.Test;
@@ -52,12 +51,9 @@ public class MiruLowestLatencySolverTest {
                 new MiruHost("localhost", 49_600 + i));
             solvables.add(new MiruSolvable<>(
                 coord,
-                new Callable<MiruPartitionResponse<Integer>>() {
-                    @Override
-                    public MiruPartitionResponse<Integer> call() throws Exception {
-                        Thread.sleep(id * 1_000); // Fake latency for each callable, 0 should always win
-                        return new MiruPartitionResponse<>(id, null);
-                    }
+                () -> {
+                    Thread.sleep(id * 1_000); // Fake latency for each callable, 0 should always win
+                    return new MiruPartitionResponse<>(id, null);
                 }));
             orderedPartitions.add(new MiruPartition(coord, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory)));
         }

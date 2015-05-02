@@ -42,12 +42,7 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
 
     @Override
     public BM getCompositeAuthz(MiruAuthzExpression authzExpression) throws Exception {
-        return cache.getOrCompose(authzExpression, new MiruAuthzUtils.IndexRetriever<BM>() {
-            @Override
-            public BM getIndex(String authz) throws Exception {
-                return getAuthz(authz).getIndex().orNull();
-            }
-        });
+        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex().orNull());
     }
 
     @Override

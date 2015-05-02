@@ -66,8 +66,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         if (topology == null) {
             return Optional.absent();
         }
-        Optional<MiruLocalHostedPartition<?>> partition = topology.getPartition(miruPartitionCoord.partitionId);
-        return partition;
+        return topology.getPartition(miruPartitionCoord.partitionId);
     }
 
     /** Updates topology timestamps */
@@ -105,7 +104,7 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception {
         MiruTenantTopology<?> topology = expectedTenants.getLocalTopology(tenantId);
         if (topology != null) {
-            Optional<MiruLocalHostedPartition<?>> partition = topology.getPartition(partitionId);
+            Optional<? extends MiruLocalHostedPartition<?>> partition = topology.getPartition(partitionId);
             if (partition.isPresent()) {
                 return info.state == partition.get().getState()
                     && (info.storage == MiruBackingStorage.unknown || info.storage == partition.get().getStorage());

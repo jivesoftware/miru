@@ -244,11 +244,6 @@ public class MiruInternalActivity {
             return new MiruInternalActivity(tenantId, time, authz, version, fieldsValues, propsValues);
         }
 
-        private static final Function<String, MiruIBA> STRING_TO_IBA = new Function<String, MiruIBA>() {
-            @Override
-            public MiruIBA apply(String input) {
-                return input != null ? new MiruIBA(input.getBytes(Charsets.UTF_8)) : null;
-            }
-        };
+        private static final Function<String, MiruIBA> STRING_TO_IBA = input -> input != null ? new MiruIBA(input.getBytes(Charsets.UTF_8)) : null;
     }
 }

@@ -5,10 +5,8 @@ import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.RegionName;
 import com.jivesoftware.os.amza.shared.RegionProperties;
 import com.jivesoftware.os.amza.shared.RingHost;
-import com.jivesoftware.os.amza.shared.Scan;
 import com.jivesoftware.os.amza.shared.WALKey;
 import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
-import com.jivesoftware.os.amza.shared.WALValue;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -153,17 +151,13 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] rawTenantBytes = tenantId.getBytes();
         final AtomicInteger largestPartitionId = new AtomicInteger(0);
         WALKey from = new WALKey(rawTenantBytes);
-        createRegionIfAbsent(LATEST_PARTITIONS_REGION_NAME).rangeScan(from, from.prefixUpperExclusive(),
-            new Scan<WALValue>() {
-                @Override
-                public boolean row(long rowTxId, WALKey key, WALValue value) throws Exception {
-                    int partitionId = FilerIO.bytesInt(value.getValue());
-                    if (largestPartitionId.get() < partitionId) {
-                        largestPartitionId.set(partitionId);
-                    }
-                    return true;
-                }
-            });
+        createRegionIfAbsent(LATEST_PARTITIONS_REGION_NAME).rangeScan(from, from.prefixUpperExclusive(), (rowTxId, key, value) -> {
+            int partitionId = FilerIO.bytesInt(value.getValue());
+            if (largestPartitionId.get() < partitionId) {
+                largestPartitionId.set(partitionId);
+            }
+            return true;
+        });
         return MiruPartitionId.of(largestPartitionId.get());
     }
 

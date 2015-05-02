@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.stumptown.deployable.region;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
@@ -152,7 +151,7 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                                     100),
                                 MiruSolutionLogLevel.INFO),
                             TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                            new Class[]{TrendingAnswer.class},
+                            new Class[] { TrendingAnswer.class },
                             null);
                         response = trendingResponse;
                         if (response != null && response.answer != null) {
@@ -161,7 +160,7 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                             log.warn("Empty trending response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed trending request to {}, trying another", new Object[]{requestHelper}, e);
+                        log.warn("Failed trending request to {}, trying another", new Object[] { requestHelper }, e);
                     }
                 }
 
@@ -183,18 +182,13 @@ public class StumptownTrendsPluginRegion implements PageRegion<Optional<Stumptow
                         }
                     }
 
-                    data.put("results", Lists.transform(results, new Function<Trendy, Map<String, String>>() {
-                        @Override
-                        public Map<String, String> apply(Trendy input) {
-                            return ImmutableMap.of(
-                                "name", input.distinctValue,
-                                "rank", String.valueOf(Math.round(input.rank * 100.0) / 100.0),
-                                "waveform", "data:image/png;base64," + new PNGWaveforms()
-                                .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                    ImmutableMap.of(input.distinctValue, input.waveform),
-                                    Optional.of(mmd)));
-                        }
-                    }));
+                    data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
+                        "name", trendy.distinctValue,
+                        "rank", String.valueOf(Math.round(trendy.rank * 100.0) / 100.0),
+                        "waveform", "data:image/png;base64," + new PNGWaveforms()
+                            .hitsToBase64PNGWaveform(600, 96, 10, 4,
+                                ImmutableMap.of(trendy.distinctValue, trendy.waveform),
+                                Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));

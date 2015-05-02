@@ -1,12 +1,10 @@
 package com.jivesoftware.os.miru.writer.deployable.region;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -93,13 +91,8 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                                     0),
                                 limit);
 
-                            walActivities = Lists.transform(sipped.batch, new Function<MiruWALEntry, WALBean>() {
-
-                                @Override
-                                public WALBean apply(MiruWALEntry input) {
-                                    return new WALBean(input.collisionId, Optional.of(input.activity), input.version);
-                                }
-                            });
+                            walActivities = Lists.transform(sipped.batch,
+                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
                             lastTimestamp.set(sipped.cursor != null ? sipped.cursor.collisionId : Long.MAX_VALUE);
 
                         } else {
@@ -107,13 +100,8 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                                 partitionId,
                                 new MiruWALClient.GetActivityCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp),
                                 limit);
-                            walActivities = Lists.transform(gopped.batch, new Function<MiruWALEntry, WALBean>() {
-
-                                @Override
-                                public WALBean apply(MiruWALEntry input) {
-                                    return new WALBean(input.collisionId, Optional.of(input.activity), input.version);
-                                }
-                            });
+                            walActivities = Lists.transform(gopped.batch,
+                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
                             lastTimestamp.set(gopped.cursor != null ? gopped.cursor.collisionId : Long.MAX_VALUE);
 
                         }
@@ -135,13 +123,6 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
 
         return renderer.render(template, data);
     }
-
-    private final Function<MiruPartition, MiruPartitionId> partitionToId = new Function<MiruPartition, MiruPartitionId>() {
-        @Override
-        public MiruPartitionId apply(MiruPartition input) {
-            return input != null ? input.coord.partitionId : null;
-        }
-    };
 
     @Override
     public String getTitle() {

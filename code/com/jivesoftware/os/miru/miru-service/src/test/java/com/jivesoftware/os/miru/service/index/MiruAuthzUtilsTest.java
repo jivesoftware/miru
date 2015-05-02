@@ -42,12 +42,7 @@ public class MiruAuthzUtilsTest {
         values.add("seq_1_3_5_7_9_11"); // [1,3,5,7,9,11..]
         MiruAuthzExpression authzExpression = new MiruAuthzExpression(values);
 
-        EWAHCompressedBitmap result = utils.getCompositeAuthz(authzExpression, new MiruAuthzUtils.IndexRetriever() {
-            @Override
-            public EWAHCompressedBitmap getIndex(String authz) throws Exception {
-                return authzIndexes.get(authz);
-            }
-        });
+        EWAHCompressedBitmap result = utils.getCompositeAuthz(authzExpression, authzIndexes::get);
 
         // result should be [0,2,4..] | [1,3,5..] = [0,1,2,3..]
         EWAHCompressedBitmap expected = authzIndexes.get("seq_0_2_4_6_8_10").or(authzIndexes.get("seq_1_3_5_7_9_11"));

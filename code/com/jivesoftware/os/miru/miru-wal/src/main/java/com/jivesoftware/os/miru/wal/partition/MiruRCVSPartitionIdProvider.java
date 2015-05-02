@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.wal.partition;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
@@ -10,7 +9,6 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -97,28 +95,22 @@ public class MiruRCVSPartitionIdProvider implements MiruPartitionIdProvider {
 
     @Override
     public MiruPartitionId getLargestPartitionIdAcrossAllWriters(final MiruTenantId tenantId) throws Exception {
-        return tenantLargestPartition.get(tenantId, new Callable<MiruPartitionId>() {
-            @Override
-            public MiruPartitionId call() throws Exception {
-                final AtomicReference<MiruPartitionId> largestPartitionId = new AtomicReference<>(MiruPartitionId.of(0));
+        return tenantLargestPartition.get(tenantId, () -> {
+            final AtomicReference<MiruPartitionId> largestPartitionId = new AtomicReference<>(MiruPartitionId.of(0));
 
-                writerPartitionRegistry.getValues(MiruVoidByte.INSTANCE, tenantId, null, 100L, 100, false, null, null, new CallbackStream<MiruPartitionId>() {
-                    @Override
-                    public MiruPartitionId callback(MiruPartitionId partitionId) throws Exception {
-                        if (partitionId == null) {
-                            return partitionId;
-                        }
+            writerPartitionRegistry.getValues(MiruVoidByte.INSTANCE, tenantId, null, 100L, 100, false, null, null, partitionId -> {
+                if (partitionId == null) {
+                    return null;
+                }
 
-                        if (partitionId.compareTo(largestPartitionId.get()) > 0) {
-                            largestPartitionId.set(partitionId);
-                        }
+                if (partitionId.compareTo(largestPartitionId.get()) > 0) {
+                    largestPartitionId.set(partitionId);
+                }
 
-                        return partitionId;
-                    }
-                });
+                return partitionId;
+            });
 
-                return largestPartitionId.get();
-            }
+            return largestPartitionId.get();
         });
     }
 

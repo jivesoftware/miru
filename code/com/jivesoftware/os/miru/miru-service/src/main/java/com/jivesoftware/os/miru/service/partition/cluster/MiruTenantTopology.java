@@ -92,12 +92,12 @@ public class MiruTenantTopology<BM> {
     }
 
     public boolean updateStorage(MiruPartitionId partitionId, MiruBackingStorage backingStorage) throws Exception {
-        Optional<MiruLocalHostedPartition<?>> partition = getPartition(partitionId);
+        Optional<MiruLocalHostedPartition<BM>> partition = getPartition(partitionId);
         return partition.isPresent() && partition.get().setStorage(backingStorage);
     }
 
     public void setStorage(MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception {
-        Optional<MiruLocalHostedPartition<?>> partition = getPartition(partitionId);
+        Optional<MiruLocalHostedPartition<BM>> partition = getPartition(partitionId);
         if (partition.isPresent()) {
             partition.get().setStorage(storage);
         }
@@ -126,8 +126,8 @@ public class MiruTenantTopology<BM> {
         return Collections.unmodifiableCollection(topology.values());
     }
 
-    public Optional<MiruLocalHostedPartition<?>> getPartition(MiruPartitionId partitionId) {
-        return Optional.<MiruLocalHostedPartition<?>>fromNullable(topology.get(partitionId));
+    public Optional<MiruLocalHostedPartition<BM>> getPartition(MiruPartitionId partitionId) {
+        return Optional.fromNullable(topology.get(partitionId));
     }
 
     public void remove() {
@@ -188,11 +188,8 @@ public class MiruTenantTopology<BM> {
         }
     }
 
-    private static final Comparator<MiruPartitionActiveUpdate> RECENT_UPDATES_COMPARATOR = new Comparator<MiruPartitionActiveUpdate>() {
-        @Override
-        public int compare(MiruPartitionActiveUpdate u1, MiruPartitionActiveUpdate u2) {
-            return Integer.compare(u2.partitionId, u1.partitionId); // reversed for descending order
-        }
+    private static final Comparator<MiruPartitionActiveUpdate> RECENT_UPDATES_COMPARATOR = (u1, u2) -> {
+        return Integer.compare(u2.partitionId, u1.partitionId); // reversed for descending order
     };
 
     @Override

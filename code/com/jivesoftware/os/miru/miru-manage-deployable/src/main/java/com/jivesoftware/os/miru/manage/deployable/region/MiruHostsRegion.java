@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
@@ -44,12 +43,7 @@ public class MiruHostsRegion implements MiruPageRegion<Optional<MiruHost>> {
         Map<String, Object> data = Maps.newHashMap();
         try {
             LinkedHashSet<HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
-            data.put("hosts", Collections2.transform(hostHeartbeats, new Function<HostHeartbeat, String>() {
-                @Override
-                public String apply(HostHeartbeat input) {
-                    return input != null ? hostEntryRegion.render(input) : null;
-                }
-            }));
+            data.put("hosts", Collections2.transform(hostHeartbeats, input -> input != null ? hostEntryRegion.render(input) : null));
             if (optionalHost.isPresent()) {
                 data.put("hostFocusRegion", hostFocusRegion.render(optionalHost.get()));
             }

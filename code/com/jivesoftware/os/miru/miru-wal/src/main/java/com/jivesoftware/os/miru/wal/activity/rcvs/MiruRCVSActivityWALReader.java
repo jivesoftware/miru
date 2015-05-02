@@ -13,7 +13,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
-import com.jivesoftware.os.rcvs.api.TenantIdAndRow;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -153,19 +152,16 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
         activityWAL.getValues(tenantId,
             new MiruActivityWALRow(partitionId.getId()),
             new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0),
-            null, 1_000, false, null, null, new CallbackStream<MiruPartitionedActivity>() {
-                @Override
-                public MiruPartitionedActivity callback(MiruPartitionedActivity partitionedActivity) throws Exception {
-                    if (partitionedActivity != null) {
-                        if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                            count.add(partitionedActivity.index);
-                            begins.add(partitionedActivity.writerId);
-                        } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
-                            ends.add(partitionedActivity.writerId);
-                        }
+            null, 1_000, false, null, null, partitionedActivity -> {
+                if (partitionedActivity != null) {
+                    if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
+                        count.add(partitionedActivity.index);
+                        begins.add(partitionedActivity.writerId);
+                    } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
+                        ends.add(partitionedActivity.writerId);
                     }
-                    return partitionedActivity;
                 }
+                return partitionedActivity;
             });
         return new MiruActivityWALStatus(partitionId, count.longValue(), begins, ends);
     }
@@ -176,14 +172,11 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
         activitySipWAL.getValues(tenantId,
             new MiruActivityWALRow(partitionId.getId()),
             new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), 0, 0),
-            null, 1_000, false, null, null, new CallbackStream<MiruPartitionedActivity>() {
-                @Override
-                public MiruPartitionedActivity callback(MiruPartitionedActivity partitionedActivity) throws Exception {
-                    if (partitionedActivity != null && partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                        count.add(partitionedActivity.index);
-                    }
-                    return partitionedActivity;
+            null, 1_000, false, null, null, partitionedActivity -> {
+                if (partitionedActivity != null && partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
+                    count.add(partitionedActivity.index);
                 }
+                return partitionedActivity;
             });
         return count.longValue();
     }
@@ -208,14 +201,11 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
             false,
             null,
             null,
-            new CallbackStream<MiruPartitionedActivity>() {
-                @Override
-                public MiruPartitionedActivity callback(MiruPartitionedActivity miruPartitionedActivity) throws Exception {
-                    if (miruPartitionedActivity != null && miruPartitionedActivity.type.isActivityType()) {
-                        oldestClockTimestamp.setValue(miruPartitionedActivity.clockTimestamp);
-                    }
-                    return null; // one and done
+            miruPartitionedActivity -> {
+                if (miruPartitionedActivity != null && miruPartitionedActivity.type.isActivityType()) {
+                    oldestClockTimestamp.setValue(miruPartitionedActivity.clockTimestamp);
                 }
+                return null; // one and done
             });
         return oldestClockTimestamp.longValue();
     }
@@ -285,17 +275,13 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
 
     @Override
     public void allPartitions(final PartitionsStream stream) throws Exception {
-        activityWAL.getAllRowKeys(10_000, null, new CallbackStream<TenantIdAndRow<MiruTenantId, MiruActivityWALRow>>() {
-            @Override
-            public TenantIdAndRow<MiruTenantId, MiruActivityWALRow> callback(TenantIdAndRow<MiruTenantId, MiruActivityWALRow>
-                tenantIdAndRow) throws Exception {
-                if (tenantIdAndRow != null) {
-                    if (!stream.stream(tenantIdAndRow.getTenantId(), MiruPartitionId.of(tenantIdAndRow.getRow().getPartitionId()))) {
-                        return null;
-                    }
+        activityWAL.getAllRowKeys(10_000, null, tenantIdAndRow -> {
+            if (tenantIdAndRow != null) {
+                if (!stream.stream(tenantIdAndRow.getTenantId(), MiruPartitionId.of(tenantIdAndRow.getRow().getPartitionId()))) {
+                    return null;
                 }
-                return tenantIdAndRow;
             }
+            return tenantIdAndRow;
         });
     }
 }

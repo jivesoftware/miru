@@ -48,12 +48,7 @@ public class ActivityProducerRunnable implements Runnable {
     public void run() {
         try {
             final AtomicLong timestamps = new AtomicLong(System.currentTimeMillis() - activityDistributor.getTotalActivities());
-            MiruPartitionedActivityFactory factory = new MiruPartitionedActivityFactory(new MiruPartitionedActivityFactory.ClockTimestamper() {
-                @Override
-                public long get() {
-                    return timestamps.getAndIncrement();
-                }
-            });
+            MiruPartitionedActivityFactory factory = new MiruPartitionedActivityFactory(timestamps::getAndIncrement);
 
             MiruTenantId tenantId = featureSupplier.miruTenantId();
 

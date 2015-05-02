@@ -18,8 +18,6 @@ import com.jivesoftware.os.amza.shared.AmzaRing;
 import com.jivesoftware.os.amza.shared.HighwaterMarks;
 import com.jivesoftware.os.amza.shared.RegionProperties;
 import com.jivesoftware.os.amza.shared.RingHost;
-import com.jivesoftware.os.amza.shared.RowChanges;
-import com.jivesoftware.os.amza.shared.RowsChanged;
 import com.jivesoftware.os.amza.shared.UpdatesSender;
 import com.jivesoftware.os.amza.shared.UpdatesTaker;
 import com.jivesoftware.os.amza.shared.stats.AmzaStats;
@@ -172,10 +170,7 @@ public class AmzaClusterRegistryInitializer {
             tableTaker,
             Optional.<SendFailureListener>absent(),
             Optional.<TakeFailureListener>absent(),
-            new RowChanges() {
-                @Override
-                public void changes(RowsChanged changes) throws Exception {
-                }
+            changes -> {
             });
 
         amzaService.start();

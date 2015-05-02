@@ -253,30 +253,24 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         }
     }
 
-    private static final ChunkTransaction<Void, Integer> lastIdTransaction = new ChunkTransaction<Void, Integer>() {
-        @Override
-        public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-            if (filer != null) {
-                return getLastId(lock, filer);
-            } else {
-                return -1;
-            }
+    private static final ChunkTransaction<Void, Integer> lastIdTransaction = (monkey, filer, lock) -> {
+        if (filer != null) {
+            return getLastId(lock, filer);
+        } else {
+            return -1;
         }
     };
 
-    private static final ChunkTransaction<Void, byte[]> getTransaction = new ChunkTransaction<Void, byte[]>() {
-
-        public byte[] commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-            if (filer != null) {
-                synchronized (lock) {
-                    filer.seek(0);
-                    byte[] bytes = new byte[(int) filer.length()];
-                    FilerIO.read(filer, bytes);
-                    return bytes;
-                }
+    private static final ChunkTransaction<Void, byte[]> getTransaction = (monkey, filer, lock) -> {
+        if (filer != null) {
+            synchronized (lock) {
+                filer.seek(0);
+                byte[] bytes = new byte[(int) filer.length()];
+                FilerIO.read(filer, bytes);
+                return bytes;
             }
-            return null;
         }
+        return null;
     };
 
     private static class SetTransaction implements ChunkTransaction<Void, Void> {

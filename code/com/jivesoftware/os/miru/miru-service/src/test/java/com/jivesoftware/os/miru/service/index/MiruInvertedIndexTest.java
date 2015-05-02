@@ -271,64 +271,58 @@ public class MiruInvertedIndexTest {
 
         List<Future<?>> futures = Lists.newArrayListWithCapacity(8);
 
-        futures.add(executorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                while (done.get() < 7) {
-                    int id = idProvider.incrementAndGet();
-                    if (id == Integer.MAX_VALUE) {
-                        System.out.println("appender hit max value");
-                        break;
-                    }
-                    if (random.nextBoolean()) {
-                        try {
-                            invertedIndex.append(id);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
+        futures.add(executorService.submit(() -> {
+            while (done.get() < 7) {
+                int id = idProvider.incrementAndGet();
+                if (id == Integer.MAX_VALUE) {
+                    System.out.println("appender hit max value");
+                    break;
+                }
+                if (random.nextBoolean()) {
+                    try {
+                        invertedIndex.append(id);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 }
-                try {
-                    EWAHCompressedBitmap index = invertedIndex.getIndex().get();
-                    System.out.println("appender is done, final cardinality=" + index.cardinality() + " bits=" + index.sizeInBits());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    throw new RuntimeException(e);
-                }
+            }
+            try {
+                EWAHCompressedBitmap index = invertedIndex.getIndex().get();
+                System.out.println("appender is done, final cardinality=" + index.cardinality() + " bits=" + index.sizeInBits());
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         }));
         System.out.println("started appender");
 
         for (int i = 0; i < 7; i++) {
-            futures.add(executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    EWAHCompressedBitmap other = new EWAHCompressedBitmap();
-                    int r = 0;
-                    for (int i = 0; i < runs; i++) {
-                        int size = idProvider.get();
-                        while (r < size) {
-                            if (random.nextBoolean()) {
-                                other.set(r);
-                            }
-                            r++;
+            futures.add(executorService.submit(() -> {
+                EWAHCompressedBitmap other = new EWAHCompressedBitmap();
+                int r = 0;
+                for (int i1 = 0; i1 < runs; i1++) {
+                    int size = idProvider.get();
+                    while (r < size) {
+                        if (random.nextBoolean()) {
+                            other.set(r);
                         }
-
-                        try {
-                            EWAHCompressedBitmap index = invertedIndex.getIndex().get();
-                            EWAHCompressedBitmap container = new EWAHCompressedBitmap();
-                            AnswerCardinalityLastSetBitmapStorage answer = new AnswerCardinalityLastSetBitmapStorage(container);
-                            index.andToContainer(other, answer);
-                        } catch (Exception e) {
-                            done.incrementAndGet();
-                            e.printStackTrace();
-                            throw new RuntimeException(e);
-                        }
+                        r++;
                     }
 
-                    System.out.println("aggregator is done, final cardinality=" + other.cardinality() + " bits=" + other.sizeInBits());
-                    done.incrementAndGet();
+                    try {
+                        EWAHCompressedBitmap index = invertedIndex.getIndex().get();
+                        EWAHCompressedBitmap container = new EWAHCompressedBitmap();
+                        AnswerCardinalityLastSetBitmapStorage answer = new AnswerCardinalityLastSetBitmapStorage(container);
+                        index.andToContainer(other, answer);
+                    } catch (Exception e) {
+                        done.incrementAndGet();
+                        e.printStackTrace();
+                        throw new RuntimeException(e);
+                    }
                 }
+
+                System.out.println("aggregator is done, final cardinality=" + other.cardinality() + " bits=" + other.sizeInBits());
+                done.incrementAndGet();
             }));
             System.out.println("started aggregators");
         }

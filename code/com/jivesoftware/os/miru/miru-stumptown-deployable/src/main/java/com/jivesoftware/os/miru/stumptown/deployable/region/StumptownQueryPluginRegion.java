@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.stumptown.deployable.region;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
@@ -247,7 +246,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                             stumptownFilters),
                         MiruSolutionLogLevel.NONE),
                     StumptownConstants.STUMPTOWN_PREFIX + StumptownConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                    new Class[]{StumptownAnswer.class},
+                    new Class[] { StumptownAnswer.class },
                     null);
                 response = analyticsResponse;
                 if (response != null && response.answer != null) {
@@ -256,7 +255,7 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
                     log.warn("Empty stumptown response from {}, trying another", requestHelper);
                 }
             } catch (Exception e) {
-                log.warn("Failed stumptown request to {}, trying another", new Object[]{requestHelper}, e);
+                log.warn("Failed stumptown request to {}, trying another", new Object[] { requestHelper }, e);
             }
         }
 
@@ -289,30 +288,26 @@ public class StumptownQueryPluginRegion implements PageRegion<Optional<Stumptown
             }
             List<MiruLogEvent> logEvents = Lists.newArrayList(payloads.multiGet(tenantId, activityTimes, MiruLogEvent.class));
             if (!logEvents.isEmpty()) {
-                data.put("logEvents", Lists.transform(logEvents, new Function<MiruLogEvent, String>() {
-                    @Override
-                    public String apply(MiruLogEvent input) {
-                        return renderer.render(logEventTemplate, ImmutableMap.of("event", ImmutableMap.<String, Object>builder()
-                            .put("datacenter", firstNonNull(input.datacenter, ""))
-                            .put("cluster", firstNonNull(input.cluster, ""))
-                            .put("host", firstNonNull(input.host, ""))
-                            .put("service", firstNonNull(input.service, ""))
-                            .put("instance", firstNonNull(input.instance, ""))
-                            .put("version", firstNonNull(input.version, ""))
-                            .put("level", firstNonNull(input.level, ""))
-                            .put("threadName", firstNonNull(input.threadName, ""))
-                            .put("loggerName", firstNonNull(input.loggerName, ""))
-                            .put("method", firstNonNull(input.methodName, ""))
-                            .put("line", firstNonNull(input.lineNumber, ""))
-                            .put("message", firstNonNull(input.message, ""))
-                            .put("timestamp", input.timestamp != null
-                                    ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(input.timestamp)))
-                                    : "")
-                            .put("exceptionClass", firstNonNull(input.exceptionClass, ""))
-                            .put("thrownStackTrace", input.thrownStackTrace != null ? Arrays.asList(input.thrownStackTrace) : Arrays.asList())
-                            .build()));
-                    }
-                }));
+                data.put("logEvents", Lists.transform(logEvents,
+                    logEvent -> renderer.render(logEventTemplate, ImmutableMap.of("event", ImmutableMap.<String, Object>builder()
+                        .put("datacenter", firstNonNull(logEvent.datacenter, ""))
+                        .put("cluster", firstNonNull(logEvent.cluster, ""))
+                        .put("host", firstNonNull(logEvent.host, ""))
+                        .put("service", firstNonNull(logEvent.service, ""))
+                        .put("instance", firstNonNull(logEvent.instance, ""))
+                        .put("version", firstNonNull(logEvent.version, ""))
+                        .put("level", firstNonNull(logEvent.level, ""))
+                        .put("threadName", firstNonNull(logEvent.threadName, ""))
+                        .put("loggerName", firstNonNull(logEvent.loggerName, ""))
+                        .put("method", firstNonNull(logEvent.methodName, ""))
+                        .put("line", firstNonNull(logEvent.lineNumber, ""))
+                        .put("message", firstNonNull(logEvent.message, ""))
+                        .put("timestamp", logEvent.timestamp != null
+                            ? new ISO8601DateFormat(TimeZone.getDefault()).format(new Date(Long.parseLong(logEvent.timestamp)))
+                            : "")
+                        .put("exceptionClass", firstNonNull(logEvent.exceptionClass, ""))
+                        .put("thrownStackTrace", logEvent.thrownStackTrace != null ? Arrays.asList(logEvent.thrownStackTrace) : Arrays.asList())
+                        .build()))));
             } else {
                 data.put("logEvents", Arrays.asList(renderer.render(noEventsTemplate, Collections.<String, Object>emptyMap())));
             }

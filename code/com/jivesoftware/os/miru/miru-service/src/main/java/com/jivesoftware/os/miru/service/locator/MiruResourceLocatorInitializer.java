@@ -20,7 +20,6 @@ import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.api.ScheduledMinMaxHealthCheckConfig;
 import com.jivesoftware.os.jive.utils.health.checkers.DiskFreeHealthChecker;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
-import com.jivesoftware.os.mlogger.core.Counter;
 import java.io.File;
 import java.io.IOException;
 import org.apache.commons.io.FileUtils;
@@ -55,13 +54,7 @@ public class MiruResourceLocatorInitializer {
         checkThese[checkThese.length - 1] = new File(System.getProperty("user.dir"));
 
         HealthFactory.scheduleHealthChecker(ResidentResourceDiskCheck.class,
-            new HealthFactory.HealthCheckerConstructor<Counter, ResidentResourceDiskCheck>() {
-
-                @Override
-                public HealthChecker<Counter> construct(ResidentResourceDiskCheck config) {
-                    return new DiskFreeHealthChecker(config, checkThese);
-                }
-            });
+            config1 -> (HealthChecker) new DiskFreeHealthChecker(config1, checkThese));
 
         final MiruResourceLocator residentDiskResourceLocator = new DiskIdentifierPartResourceLocator(
             residentDiskPaths,

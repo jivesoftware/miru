@@ -8,7 +8,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -61,12 +60,9 @@ public class MiruIndexer<BM> {
         List<Future<?>> internFutures = new ArrayList<>(numPartitions);
         for (int i = 0; i < activityAndIds.size(); i += partitionSize) {
             final int startOfSubList = i;
-            internFutures.add(indexExecutor.submit(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    context.activityInternExtern.intern(activityAndIds, startOfSubList, partitionSize, internalActivityAndIds, context.schema);
-                    return null;
-                }
+            internFutures.add(indexExecutor.submit(() -> {
+                context.activityInternExtern.intern(activityAndIds, startOfSubList, partitionSize, internalActivityAndIds, context.schema);
+                return null;
             }));
         }
         awaitFutures(internFutures, "indexIntern");
@@ -97,25 +93,19 @@ public class MiruIndexer<BM> {
         otherFutures.addAll(indexPairedLatest.index(context, pairedLatestPrepared, repair, indexExecutor));
 
         // 6. Update activity index
-        otherFutures.add(indexExecutor.submit(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                context.activityIndex.set(internalActivityAndIds);
-                return null;
-            }
+        otherFutures.add(indexExecutor.submit(() -> {
+            context.activityIndex.set(internalActivityAndIds);
+            return null;
         }));
 
         // 7. Update removal index
         if (repair) {
-            otherFutures.add(indexExecutor.submit(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    // repairs also unhide (remove from removal)
-                    for (MiruActivityAndId<MiruActivity> activityAndId : activityAndIds) {
-                        context.removalIndex.remove(activityAndId.id);
-                    }
-                    return null;
+            otherFutures.add(indexExecutor.submit(() -> {
+                // repairs also unhide (remove from removal)
+                for (MiruActivityAndId<MiruActivity> activityAndId : activityAndIds) {
+                    context.removalIndex.remove(activityAndId.id);
                 }
+                return null;
             }));
         }
 

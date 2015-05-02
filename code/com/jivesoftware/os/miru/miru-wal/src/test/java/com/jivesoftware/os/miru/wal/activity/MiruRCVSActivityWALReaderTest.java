@@ -48,12 +48,9 @@ public class MiruRCVSActivityWALReaderTest {
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
         activityWALReader.stream(tenantId, partitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(),
-            startingTimestamp, batchSize, new MiruActivityWALReader.StreamMiruActivityWAL() {
-                @Override
-                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                    timestamps.add(collisionId);
-                    return true;
-                }
+            startingTimestamp, batchSize, (collisionId, partitionedActivity, timestamp) -> {
+                timestamps.add(collisionId);
+                return true;
             });
 
         assertEquals(timestamps.size(), totalActivities);
@@ -79,12 +76,7 @@ public class MiruRCVSActivityWALReaderTest {
         MiruActivityWALWriter activityWALWriter = new MiruRCVSActivityWALWriter(activityWAL, activitySipWAL);
         MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(activityWAL, activitySipWAL);
         final AtomicLong clockTimestamp = new AtomicLong();
-        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(new MiruPartitionedActivityFactory.ClockTimestamper() {
-            @Override
-            public long get() {
-                return clockTimestamp.get();
-            }
-        });
+        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 
         for (int i = 0; i < totalActivities; i++) {
             clockTimestamp.set(startingTimestamp + i);
@@ -95,12 +87,9 @@ public class MiruRCVSActivityWALReaderTest {
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
         activityWALReader.streamSip(tenantId, partitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(),
             Sip.INITIAL, batchSize,
-            new MiruActivityWALReader.StreamMiruActivityWAL() {
-                @Override
-                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                    timestamps.add(collisionId);
-                    return true;
-                }
+            (collisionId, partitionedActivity, timestamp) -> {
+                timestamps.add(collisionId);
+                return true;
             });
 
         assertEquals(timestamps.size(), totalActivities);
@@ -126,12 +115,7 @@ public class MiruRCVSActivityWALReaderTest {
         MiruActivityWALWriter activityWALWriter = new MiruRCVSActivityWALWriter(activityWAL, activitySipWAL);
         MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(activityWAL, activitySipWAL);
         final AtomicLong clockTimestamp = new AtomicLong();
-        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(new MiruPartitionedActivityFactory.ClockTimestamper() {
-            @Override
-            public long get() {
-                return clockTimestamp.get();
-            }
-        });
+        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 
         clockTimestamp.set(startingTimestamp);
         for (int i = 0; i < totalActivities; i++) {
@@ -141,13 +125,10 @@ public class MiruRCVSActivityWALReaderTest {
 
         final AtomicLong expectedTimestamp = new AtomicLong(startingTimestamp);
         activityWALReader.streamSip(tenantId, partitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(), Sip.INITIAL, batchSize,
-            new MiruActivityWALReader.StreamMiruActivityWAL() {
-                @Override
-                public boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception {
-                    assertEquals(partitionedActivity.clockTimestamp, startingTimestamp);
-                    assertEquals(partitionedActivity.timestamp, expectedTimestamp.getAndIncrement());
-                    return true;
-                }
+            (collisionId, partitionedActivity, timestamp) -> {
+                assertEquals(partitionedActivity.clockTimestamp, startingTimestamp);
+                assertEquals(partitionedActivity.timestamp, expectedTimestamp.getAndIncrement());
+                return true;
             });
 
         assertEquals(expectedTimestamp.get(), startingTimestamp + totalActivities);

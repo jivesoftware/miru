@@ -89,18 +89,15 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
                 }
             }
         }
-        backingFieldIndex.streamTermIdsForField(fieldId, ranges, new TermIdStream() {
-            @Override
-            public boolean stream(MiruTermId termId) {
-                if (termId != null) {
-                    if (!indexKeys.contains(termId)) {
-                        if (!termIdStream.stream(termId)) {
-                            return false;
-                        }
+        backingFieldIndex.streamTermIdsForField(fieldId, ranges, termId -> {
+            if (termId != null) {
+                if (!indexKeys.contains(termId)) {
+                    if (!termIdStream.stream(termId)) {
+                        return false;
                     }
                 }
-                return true;
             }
+            return true;
         });
     }
 

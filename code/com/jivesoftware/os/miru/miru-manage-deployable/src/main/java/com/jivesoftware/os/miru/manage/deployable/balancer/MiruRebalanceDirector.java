@@ -1,15 +1,12 @@
 package com.jivesoftware.os.miru.manage.deployable.balancer;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
-import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -36,9 +33,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 
 import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX;
@@ -56,21 +52,6 @@ public class MiruRebalanceDirector {
     private final OrderIdProvider orderIdProvider;
     private final ReaderRequestHelpers readerRequestHelpers;
 
-    private Function<MiruPartition, MiruHost> partitionToHost = new Function<MiruPartition, MiruHost>() {
-        @Override
-        public MiruHost apply(MiruPartition input) {
-            return input.coord.host;
-        }
-    };
-    private Function<HostHeartbeat, MiruHost> heartbeatToHost = new Function<HostHeartbeat, MiruHost>() {
-        @Override
-        public MiruHost apply(HostHeartbeat input) {
-            return input.host;
-        }
-    };
-
-    private final AtomicReference<List<MiruTopologyStatus>> topologies = new AtomicReference<>();
-
     public MiruRebalanceDirector(MiruClusterRegistry clusterRegistry,
         MiruWALClient miruWALClient,
         OrderIdProvider orderIdProvider,
@@ -83,7 +64,7 @@ public class MiruRebalanceDirector {
 
     public void shiftTopologies(Optional<MiruHost> fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
         LinkedHashSet<HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
-        List<MiruHost> allHosts = Lists.newArrayList(Collections2.transform(hostHeartbeats, heartbeatToHost));
+        List<MiruHost> allHosts = hostHeartbeats.stream().map(input -> input.host).collect(Collectors.toList());
 
         int moved = 0;
         int skipped = 0;
@@ -103,7 +84,7 @@ public class MiruRebalanceDirector {
             for (Table.Cell<MiruTenantId, MiruPartitionId, List<MiruPartition>> cell : replicaTable.cellSet()) {
                 MiruPartitionId partitionId = cell.getColumnKey();
                 List<MiruPartition> partitions = cell.getValue();
-                Set<MiruHost> hostsWithPartition = Sets.newHashSet(Collections2.transform(partitions, partitionToHost));
+                Set<MiruHost> hostsWithPartition = partitions.stream().map(input -> input.coord.host).collect(Collectors.toSet());
                 if (fromHost.isPresent() && !hostsWithPartition.contains(fromHost.get())) {
                     missed++;
                     LOG.trace("Missed {} {}", tenantId, partitionId);
@@ -123,7 +104,7 @@ public class MiruRebalanceDirector {
                     pivotHost = partitions.get(0).coord.host;
                 }
                 List<MiruHost> hostsToElect = selectHostsStrategy.selectHosts(pivotHost, allHosts, partitions, numberOfReplicas);
-                electHosts(tenantId, partitionId, Lists.transform(partitions, partitionToHost), hostsToElect);
+                electHosts(tenantId, partitionId, Lists.transform(partitions, input -> input.coord.host), hostsToElect);
                 moved++;
             }
         }
@@ -185,17 +166,6 @@ public class MiruRebalanceDirector {
         return replicaTable;
     }
 
-    private MiruPartitionId findCurrentPartitionId(List<MiruPartition> partitionsForTenant) {
-        MiruPartitionId currentPartitionId = null;
-        for (MiruPartition partition : partitionsForTenant) {
-            MiruPartitionId partitionId = partition.coord.partitionId;
-            if (currentPartitionId == null || partitionId.compareTo(currentPartitionId) > 0) {
-                currentPartitionId = partitionId;
-            }
-        }
-        return currentPartitionId;
-    }
-
     private static final int VISUAL_PARTITION_HEIGHT = 4;
     private static final int VISUAL_PADDING = 2;
     private static final int VISUAL_PADDING_HALVED = VISUAL_PADDING / 2;
@@ -238,43 +208,37 @@ public class MiruRebalanceDirector {
     public void visualizeTopologies(int width, final int split, int index, String token, OutputStream out) throws Exception {
         VisualizeContext context;
         synchronized (tokenLocks.lock(token)) {
-            context = contextCache.get(token, new Callable<VisualizeContext>() {
-                @Override
-                public VisualizeContext call() throws Exception {
-                    LinkedHashSet<HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
-                    List<MiruHost> allHosts = Lists.newArrayList();
-                    Set<MiruHost> unhealthyHosts = Sets.newHashSet();
-                    for (HostHeartbeat heartbeat : heartbeats) {
-                        allHosts.add(heartbeat.host);
-                        if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
-                            unhealthyHosts.add(heartbeat.host);
-                        }
+            context = contextCache.get(token, () -> {
+                LinkedHashSet<HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
+                List<MiruHost> allHosts = Lists.newArrayList();
+                Set<MiruHost> unhealthyHosts = Sets.newHashSet();
+                for (HostHeartbeat heartbeat : heartbeats) {
+                    allHosts.add(heartbeat.host);
+                    if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
+                        unhealthyHosts.add(heartbeat.host);
                     }
-
-                    List<MiruTenantId> allTenantIds = miruWALClient.getAllTenantIds();
-                    List<List<MiruTenantId>> splitTenantIds = Lists.partition(allTenantIds, Math.max(1, (allTenantIds.size() + split - 1) / split));
-
-                    return new VisualizeContext(allHosts, unhealthyHosts, splitTenantIds);
                 }
+
+                List<MiruTenantId> allTenantIds = miruWALClient.getAllTenantIds();
+                List<List<MiruTenantId>> splitTenantIds = Lists.partition(allTenantIds, Math.max(1, (allTenantIds.size() + split - 1) / split));
+
+                return new VisualizeContext(allHosts, unhealthyHosts, splitTenantIds);
             });
         }
 
         final Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
         List<MiruTenantId> tenantIds = (index < context.splitTenantIds.size() - 1) ? context.splitTenantIds.get(index) : Collections.<MiruTenantId>emptyList();
-        clusterRegistry.topologiesForTenants(tenantIds, new CallbackStream<MiruTopologyStatus>() {
-            @Override
-            public MiruTopologyStatus callback(MiruTopologyStatus status) throws Exception {
-                if (status != null) {
-                    MiruPartitionCoord coord = status.partition.coord;
-                    List<MiruTopologyStatus> statuses = topologies.get(coord.tenantId, coord.partitionId);
-                    if (statuses == null) {
-                        statuses = Lists.newArrayList();
-                        topologies.put(coord.tenantId, coord.partitionId, statuses);
-                    }
-                    statuses.add(status);
+        clusterRegistry.topologiesForTenants(tenantIds, status -> {
+            if (status != null) {
+                MiruPartitionCoord coord = status.partition.coord;
+                List<MiruTopologyStatus> statuses = topologies.get(coord.tenantId, coord.partitionId);
+                if (statuses == null) {
+                    statuses = Lists.newArrayList();
+                    topologies.put(coord.tenantId, coord.partitionId, statuses);
                 }
-                return status;
+                statuses.add(status);
             }
+            return status;
         });
 
         int numHosts = context.allHosts.size();

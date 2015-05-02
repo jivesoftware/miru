@@ -68,7 +68,7 @@ import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
-import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
+import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.util.Arrays;
@@ -83,8 +83,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.merlin.config.Config;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -125,19 +123,10 @@ public class MiruLocalHostedPartitionTest {
     private MiruBitmapsEWAH bitmaps;
     private MiruIndexer<EWAHCompressedBitmap> indexer;
     private MiruLocalHostedPartition.Timings timings;
-    private Timestamper timestamper;
-    //private AtomicLong syntheticTimestamp = new AtomicLong(System.currentTimeMillis());
     private long topologyIsStaleAfterMillis = TimeUnit.HOURS.toMillis(1);
 
     @BeforeMethod
     public void setUp() throws Exception {
-        //syntheticTimestamp.set(System.currentTimeMillis());
-        timestamper = new Timestamper() {
-            @Override
-            public long get() {
-                return System.currentTimeMillis();
-            }
-        };
         tenantId = new MiruTenantId("test".getBytes(Charsets.UTF_8));
         partitionId = MiruPartitionId.of(0);
         host = new MiruHost("localhost", 49_600);
@@ -174,11 +163,11 @@ public class MiruLocalHostedPartitionTest {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenReturn(schema);
 
         bitmaps = new MiruBitmapsEWAH(2);
-        indexer = new MiruIndexer<>(new MiruIndexAuthz<EWAHCompressedBitmap>(),
-            new MiruIndexFieldValues<EWAHCompressedBitmap>(),
+        indexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
+            new MiruIndexFieldValues<>(),
             new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
-            new MiruIndexLatest<EWAHCompressedBitmap>(),
-            new MiruIndexPairedLatest<EWAHCompressedBitmap>());
+            new MiruIndexLatest<>(),
+            new MiruIndexPairedLatest<>());
         timings = new MiruLocalHostedPartition.Timings(5_000, 5_000, 5_000, 30_000, 3_000);
 
         MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
@@ -226,7 +215,7 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<String>(8));
 
         clusterRegistry = new MiruRCVSClusterRegistry(
-            timestamper,
+            new CurrentTimestamper(),
             new InMemoryRowColumnValueStore(),
             new InMemoryRowColumnValueStore(),
             new InMemoryRowColumnValueStore(),
@@ -477,13 +466,9 @@ public class MiruLocalHostedPartitionTest {
 
     private <T extends Runnable> void captureRunnable(ScheduledExecutorService scheduledExecutor, final AtomicReference<T> ref, Class<T> runnableClass) {
         when(scheduledExecutor.scheduleWithFixedDelay(isA(runnableClass), anyLong(), anyLong(), any(TimeUnit.class)))
-            .thenAnswer(new Answer<ScheduledFuture<?>>() {
-                @Override
-                @SuppressWarnings("unchecked")
-                public ScheduledFuture<?> answer(InvocationOnMock invocation) throws Throwable {
-                    ref.set((T) invocation.getArguments()[0]);
-                    return mockFuture();
-                }
+            .thenAnswer(invocation -> {
+                ref.set((T) invocation.getArguments()[0]);
+                return mockFuture();
             });
     }
 

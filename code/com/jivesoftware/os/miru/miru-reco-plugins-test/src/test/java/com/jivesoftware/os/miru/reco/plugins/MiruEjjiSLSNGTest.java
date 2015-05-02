@@ -10,8 +10,6 @@ import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.IBA;
-import com.jivesoftware.os.filer.io.api.ChunkTransaction;
-import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.map.MapStore;
@@ -173,24 +171,16 @@ public class MiruEjjiSLSNGTest {
 
             final AtomicLong count = new AtomicLong();
             for (Integer type : docTypes) {
-                otu.read(FilerIO.intsBytes(new int[]{type, doc}), 1, new ChunkTransaction<MapContext, Void>() {
-
-                    @Override
-                    public Void commit(MapContext monkey, ChunkFiler filer, Object lock) throws IOException {
-                        if (lock != null) {
-                            synchronized (lock) {
-                                MapStore.INSTANCE.streamKeys(filer, monkey, lock, new MapStore.KeyStream() {
-
-                                    @Override
-                                    public boolean stream(byte[] key) throws IOException {
-                                        count.incrementAndGet();
-                                        return true;
-                                    }
-                                });
-                            }
+                otu.read(FilerIO.intsBytes(new int[]{type, doc}), 1, (monkey, filer, lock) -> {
+                    if (lock != null) {
+                        synchronized (lock) {
+                            MapStore.INSTANCE.streamKeys(filer, monkey, lock, key -> {
+                                count.incrementAndGet();
+                                return true;
+                            });
                         }
-                        return null;
                     }
+                    return null;
                 });
             }
 
@@ -207,19 +197,15 @@ public class MiruEjjiSLSNGTest {
     private void flush(ListMultimap<IBA, byte[]> buffer, TxKeyedFilerStore<Integer, MapContext> store) throws IOException {
         for (IBA k : buffer.keySet()) {
             final List<byte[]> got = buffer.get(k);
-            store.readWriteAutoGrow(k.getBytes(), got.size(), new ChunkTransaction<MapContext, Void>() {
-
-                @Override
-                public Void commit(MapContext monkey, ChunkFiler f, Object lock) throws IOException {
-                    if (lock != null) {
-                        synchronized (lock) {
-                            for (byte[] g : got) {
-                                MapStore.INSTANCE.add(f, monkey, (byte) 1, g, new byte[0]);
-                            }
+            store.readWriteAutoGrow(k.getBytes(), got.size(), (monkey, f, lock) -> {
+                if (lock != null) {
+                    synchronized (lock) {
+                        for (byte[] g : got) {
+                            MapStore.INSTANCE.add(f, monkey, (byte) 1, g, new byte[0]);
                         }
                     }
-                    return null;
                 }
+                return null;
             });
         }
         buffer.clear();

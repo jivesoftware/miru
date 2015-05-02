@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashMultiset;
@@ -8,7 +7,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
-import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
@@ -55,33 +53,27 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
 
             final ListMultimap<MiruHost, MiruTopologyStatus> topologies = ArrayListMultimap.create();
             List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
-            clusterRegistry.topologiesForTenants(tenantIds, new CallbackStream<MiruTopologyStatus>() {
-                @Override
-                public MiruTopologyStatus callback(MiruTopologyStatus status) throws Exception {
-                    if (status != null) {
-                        topologies.put(status.partition.coord.host, status);
-                    }
-                    return status;
+            clusterRegistry.topologiesForTenants(tenantIds, status -> {
+                if (status != null) {
+                    topologies.put(status.partition.coord.host, status);
                 }
+                return status;
             });
 
-            data.put("hosts", Collections2.transform(hostHeartbeats, new Function<HostHeartbeat, Map<String, String>>() {
-                @Override
-                public Map<String, String> apply(HostHeartbeat input) {
-                    List<MiruTopologyStatus> statuses = topologies.get(input.host);
-                    Multiset<MiruPartitionState> stateCounts = HashMultiset.create();
-                    for (MiruTopologyStatus status : statuses) {
-                        stateCounts.add(status.partition.info.state);
-                    }
-                    return ImmutableMap.<String, String>builder()
-                        .put("logicalName", input.host.getLogicalName())
-                        .put("port", String.valueOf(input.host.getPort()))
-                        .put("numOffline", String.valueOf(stateCounts.count(MiruPartitionState.offline)))
-                        .put("numBootstrap", String.valueOf(stateCounts.count(MiruPartitionState.bootstrap)))
-                        .put("numRebuilding", String.valueOf(stateCounts.count(MiruPartitionState.rebuilding)))
-                        .put("numOnline", String.valueOf(stateCounts.count(MiruPartitionState.online)))
-                        .build();
+            data.put("hosts", Collections2.transform(hostHeartbeats, heartbeat -> {
+                List<MiruTopologyStatus> statuses = topologies.get(heartbeat.host);
+                Multiset<MiruPartitionState> stateCounts = HashMultiset.create();
+                for (MiruTopologyStatus status : statuses) {
+                    stateCounts.add(status.partition.info.state);
                 }
+                return ImmutableMap.<String, String>builder()
+                    .put("logicalName", heartbeat.host.getLogicalName())
+                    .put("port", String.valueOf(heartbeat.host.getPort()))
+                    .put("numOffline", String.valueOf(stateCounts.count(MiruPartitionState.offline)))
+                    .put("numBootstrap", String.valueOf(stateCounts.count(MiruPartitionState.bootstrap)))
+                    .put("numRebuilding", String.valueOf(stateCounts.count(MiruPartitionState.rebuilding)))
+                    .put("numOnline", String.valueOf(stateCounts.count(MiruPartitionState.online)))
+                    .build();
             }));
             data.put("numHosts", String.valueOf(hostHeartbeats.size()));
             data.put("token", RandomStringUtils.randomAlphanumeric(8));

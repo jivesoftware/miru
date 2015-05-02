@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.stumptown.plugins;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -61,13 +60,8 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
             return new MiruPartitionResponse<>(
                 new StumptownAnswer(
                     Maps.transformValues(request.query.stumptownFilters,
-                        new Function<MiruFilter, StumptownAnswer.Waveform>() {
-                            @Override
-                            public StumptownAnswer.Waveform apply(MiruFilter input) {
-                                return new StumptownAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments],
-                                    Collections.<MiruActivity>emptyList());
-                            }
-                        }),
+                        input -> new StumptownAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments],
+                            Collections.<MiruActivity>emptyList())),
                     resultsExhausted),
                 solutionLog.asList());
         }

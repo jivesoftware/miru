@@ -7,7 +7,6 @@ import com.jivesoftware.os.miru.writer.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.LoggerSummary;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,14 +73,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
         List<Map.Entry<String, Stat>> sortedEntries = new ArrayList<>(map.entrySet());
 
         Collections.sort(sortedEntries,
-            new Comparator<Map.Entry<String, Stat>>() {
-
-                @Override
-                public int compare(Map.Entry<String, Stat> o1, Map.Entry<String, Stat> o2) {
-                    return Long.compare(o2.getValue().count.longValue(), o1.getValue().count.longValue());
-                }
-            }
-        );
+            (o1, o2) -> Long.compare(o2.getValue().count.longValue(), o1.getValue().count.longValue()));
 
         long grandTotal = 0;
         long mostRecentUpdateTimestamp = 0;
@@ -116,14 +108,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
         List<Map.Entry<String, Stat>> sortedEntries = new ArrayList<>(map.entrySet());
 
         Collections.sort(sortedEntries,
-            new Comparator<Map.Entry<String, Stat>>() {
-
-                @Override
-                public int compare(Map.Entry<String, Stat> o1, Map.Entry<String, Stat> o2) {
-                    return Long.compare(o2.getValue().count.longValue(), o1.getValue().count.longValue());
-                }
-            }
-        );
+            (o1, o2) -> Long.compare(o2.getValue().count.longValue(), o1.getValue().count.longValue()));
 
         long grandTotal = 0;
         long mostRecentUpdateTimestamp = 0;

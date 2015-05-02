@@ -3,11 +3,9 @@ package com.jivesoftware.os.miru.service.index.filer;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.api.ChunkTransaction;
 import com.jivesoftware.os.filer.io.api.KeyValueContext;
 import com.jivesoftware.os.filer.io.api.KeyValueStore;
 import com.jivesoftware.os.filer.io.api.KeyValueTransaction;
-import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -63,25 +61,22 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
         final AtomicBoolean initialized = new AtomicBoolean(false);
 
         //TODO consider using a custom CreateFiler in the KeyValueStore to handle the uninitialized case
-        filerProvider.read(null, new ChunkTransaction<Void, Void>() {
-            @Override
-            public Void commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                if (filer != null) {
-                    synchronized (lock) {
-                        filer.seek(0);
-                        MiruFilerTimeIndex.this.id.set(FilerIO.readInt(filer, "lastId"));
-                        MiruFilerTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp");
-                        MiruFilerTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp");
-                        MiruFilerTimeIndex.this.timestampsLength = FilerIO.readInt(filer, "timestampsLength");
-                        MiruFilerTimeIndex.this.searchIndexLevels = FilerIO.readShort(filer, "searchIndexLevels");
-                        MiruFilerTimeIndex.this.searchIndexSegments = FilerIO.readShort(filer, "searchIndexSegments");
-                        MiruFilerTimeIndex.this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
-                        initialized.set(true);
-                    }
-
+        filerProvider.read(null, (monkey, filer, lock) -> {
+            if (filer != null) {
+                synchronized (lock) {
+                    filer.seek(0);
+                    MiruFilerTimeIndex.this.id.set(FilerIO.readInt(filer, "lastId"));
+                    MiruFilerTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp");
+                    MiruFilerTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp");
+                    MiruFilerTimeIndex.this.timestampsLength = FilerIO.readInt(filer, "timestampsLength");
+                    MiruFilerTimeIndex.this.searchIndexLevels = FilerIO.readShort(filer, "searchIndexLevels");
+                    MiruFilerTimeIndex.this.searchIndexSegments = FilerIO.readShort(filer, "searchIndexSegments");
+                    MiruFilerTimeIndex.this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
+                    initialized.set(true);
                 }
-                return null;
+
             }
+            return null;
         });
         log.inc("init-read>total");
         log.inc("init-read>bytes", HEADER_SIZE_IN_BYTES);
@@ -95,20 +90,17 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             this.searchIndexSegments = SEGMENTS;
             this.searchIndexSizeInBytes = segmentWidth(LEVELS, SEGMENTS);
 
-            filerProvider.writeNewReplace((long) HEADER_SIZE_IN_BYTES, new ChunkTransaction<Void, Void>() {
-                @Override
-                public Void commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
+            filerProvider.writeNewReplace((long) HEADER_SIZE_IN_BYTES, (monkey, filer, lock) -> {
 
-                    filer.seek(0);
-                    FilerIO.writeInt(filer, MiruFilerTimeIndex.this.id.get(), "lastId");
-                    FilerIO.writeLong(filer, MiruFilerTimeIndex.this.smallestTimestamp, "smallestTimestamp");
-                    FilerIO.writeLong(filer, MiruFilerTimeIndex.this.largestTimestamp, "largestTimestamp");
-                    FilerIO.writeInt(filer, MiruFilerTimeIndex.this.timestampsLength, "timestampsLength");
-                    FilerIO.writeShort(filer, MiruFilerTimeIndex.this.searchIndexLevels, "searchIndexLevels");
-                    FilerIO.writeShort(filer, MiruFilerTimeIndex.this.searchIndexSegments, "searchIndexSegments");
+                filer.seek(0);
+                FilerIO.writeInt(filer, MiruFilerTimeIndex.this.id.get(), "lastId");
+                FilerIO.writeLong(filer, MiruFilerTimeIndex.this.smallestTimestamp, "smallestTimestamp");
+                FilerIO.writeLong(filer, MiruFilerTimeIndex.this.largestTimestamp, "largestTimestamp");
+                FilerIO.writeInt(filer, MiruFilerTimeIndex.this.timestampsLength, "timestampsLength");
+                FilerIO.writeShort(filer, MiruFilerTimeIndex.this.searchIndexLevels, "searchIndexLevels");
+                FilerIO.writeShort(filer, MiruFilerTimeIndex.this.searchIndexSegments, "searchIndexSegments");
 
-                    return null;
-                }
+                return null;
             });
 
             log.inc("init-write>total");
@@ -214,17 +206,14 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             return 0l;
         }
         try {
-            long ts = filerProvider.read(null, new ChunkTransaction<Void, Long>() {
-                @Override
-                public Long commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                    long timestamp;
-                    synchronized (lock) {
-                        filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
-                        timestamp = FilerIO.readLong(filer, "ts");
-                    }
-
-                    return timestamp;
+            long ts = filerProvider.read(null, (monkey, filer, lock) -> {
+                long timestamp;
+                synchronized (lock) {
+                    filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
+                    timestamp = FilerIO.readLong(filer, "ts");
                 }
+
+                return timestamp;
             });
             log.inc("get>total");
             log.inc("get>bytes", 8);
@@ -283,27 +272,24 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                 final int _lastId = lastId;
 
                 //TODO we should be concerned about potential corruption with failures during readWriteAutoGrow
-                filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, new ChunkTransaction<Void, Void>() {
-                    @Override
-                    public Void commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                        synchronized (lock) {
-                            filer.seek(0);
-                            FilerIO.writeInt(filer, _lastId, "int");
-                            FilerIO.writeLong(filer, smallestTimestamp, "smallestTimestamp");
-                            FilerIO.writeLong(filer, largestTimestamp, "largestTimestamp");
-                            timestampsLength = _lastId + 1;
-                            FilerIO.writeInt(filer, timestampsLength, "timestampsLength");
+                filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, (monkey, filer, lock) -> {
+                    synchronized (lock) {
+                        filer.seek(0);
+                        FilerIO.writeInt(filer, _lastId, "int");
+                        FilerIO.writeLong(filer, smallestTimestamp, "smallestTimestamp");
+                        FilerIO.writeLong(filer, largestTimestamp, "largestTimestamp");
+                        timestampsLength = _lastId + 1;
+                        FilerIO.writeInt(filer, timestampsLength, "timestampsLength");
 
-                            filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + (_firstId * timestampSize));
-                            TLongIterator iter = monotonicTimestamps.iterator();
-                            while (iter.hasNext()) {
-                                FilerIO.writeLong(filer, iter.next(), "long");
-                            }
-
-                            segmentForSearch(filer, searchIndexSizeInBytes, searchIndexLevels, searchIndexSegments, HEADER_SIZE_IN_BYTES, 0, _lastId + 1);
+                        filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + (_firstId * timestampSize));
+                        TLongIterator iter = monotonicTimestamps.iterator();
+                        while (iter.hasNext()) {
+                            FilerIO.writeLong(filer, iter.next(), "long");
                         }
-                        return null;
+
+                        segmentForSearch(filer, searchIndexSizeInBytes, searchIndexLevels, searchIndexSegments, HEADER_SIZE_IN_BYTES, 0, _lastId + 1);
                     }
+                    return null;
                 });
                 log.inc("nextId>total");
                 log.inc("nextId>bytes", HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs);
@@ -313,12 +299,9 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
                         log.inc("nextId>sets");
                         final int nextId = nextIds[i];
                         // TODO would be nice to batch here :)
-                        timestampToIndex.execute(timestamps[i], true, new KeyValueTransaction<Integer, Void>() {
-                            @Override
-                            public Void commit(KeyValueContext<Integer> keyValueContext) throws IOException {
-                                keyValueContext.set(nextId);
-                                return null;
-                            }
+                        timestampToIndex.execute(timestamps[i], true, keyValueContext -> {
+                            keyValueContext.set(nextId);
+                            return null;
                         });
                     }
                 }
@@ -337,14 +320,11 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     @Override
     public int getClosestId(final long timestamp) {
         try {
-            int i = filerProvider.read(null, new ChunkTransaction<Void, Integer>() {
-                @Override
-                public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                    if (filer != null) {
-                        return readClosestId(lock, filer, timestamp);
-                    }
-                    return -1;
+            int i = filerProvider.read(null, (monkey, filer, lock) -> {
+                if (filer != null) {
+                    return readClosestId(lock, filer, timestamp);
                 }
+                return -1;
             });
             if (i < 0) {
                 i = -(i + 1);
@@ -397,12 +377,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
         }
     }
 
-    private final KeyValueTransaction<Integer, Integer> exactIdTransaction = new KeyValueTransaction<Integer, Integer>() {
-        @Override
-        public Integer commit(KeyValueContext<Integer> keyValueContext) throws IOException {
-            return keyValueContext.get();
-        }
-    };
+    private final KeyValueTransaction<Integer, Integer> exactIdTransaction = KeyValueContext::get;
 
     @Override
     public int getExactId(long timestamp) throws Exception {
@@ -421,28 +396,25 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             if (id.get() < 0) {
                 return 0;
             }
-            return filerProvider.read(null, new ChunkTransaction<Void, Integer>() {
-                @Override
-                public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                    if (filer != null) {
-                        int index = readClosestId(lock, filer, timestamp);
-                        if (index == -1) {
-                            return 0;
-                        }
-                        if (index < -1) {
-                            index = -(index + 1);
-                        }
-                        int lastId = lastId();
-                        if (index > lastId) {
-                            return lastId + 1;
-                        }
-                        while (index <= lastId && readTimestamp(lock, filer, index) <= timestamp) {
-                            index++;
-                        }
-                        return index;
+            return filerProvider.read(null, (monkey, filer, lock) -> {
+                if (filer != null) {
+                    int index = readClosestId(lock, filer, timestamp);
+                    if (index == -1) {
+                        return 0;
                     }
-                    return 0;
+                    if (index < -1) {
+                        index = -(index + 1);
+                    }
+                    int lastId = lastId();
+                    if (index > lastId) {
+                        return lastId + 1;
+                    }
+                    while (index <= lastId && readTimestamp(lock, filer, index) <= timestamp) {
+                        index++;
+                    }
+                    return index;
                 }
+                return 0;
             });
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -455,30 +427,27 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             if (id.get() < 0) {
                 return -1;
             }
-            return filerProvider.read(null, new ChunkTransaction<Void, Integer>() {
-                @Override
-                public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                    if (filer != null) {
-                        int index = readClosestId(lock, filer, timestamp);
-                        if (index < 0) {
-                            return -(index + 1) - 1;
-                        }
-
-                        if (index == timestampsLength) {
-                            return timestampsLength - 1;
-                        }
-                        int lastId = lastId();
-                        if (index > lastId) {
-                            return lastId;
-                        }
-
-                        while (index <= lastId && readTimestamp(lock, filer, index) <= timestamp) {
-                            index++;
-                        }
-                        return index - 1;
+            return filerProvider.read(null, (monkey, filer, lock) -> {
+                if (filer != null) {
+                    int index = readClosestId(lock, filer, timestamp);
+                    if (index < 0) {
+                        return -(index + 1) - 1;
                     }
-                    return -1;
+
+                    if (index == timestampsLength) {
+                        return timestampsLength - 1;
+                    }
+                    int lastId = lastId();
+                    if (index > lastId) {
+                        return lastId;
+                    }
+
+                    while (index <= lastId && readTimestamp(lock, filer, index) <= timestamp) {
+                        index++;
+                    }
+                    return index - 1;
                 }
+                return -1;
             });
         } catch (IOException e) {
             throw new RuntimeException(e);

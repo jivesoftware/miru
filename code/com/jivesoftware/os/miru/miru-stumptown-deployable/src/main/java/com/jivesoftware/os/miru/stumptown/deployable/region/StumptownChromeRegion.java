@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.stumptown.deployable.region;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -31,12 +30,8 @@ public class StumptownChromeRegion<I, R extends PageRegion<I>> implements Region
 
     @Override
     public String render(I input) {
-        List<Map<String, String>> p = Lists.transform(plugins, new Function<MiruManagePlugin, Map<String, String>>() {
-            @Override
-            public Map<String, String> apply(MiruManagePlugin input) {
-                return ImmutableMap.of("name", input.name, "path", input.path, "glyphicon", input.glyphicon);
-            }
-        });
+        List<Map<String, String>> p = Lists.transform(plugins,
+            plugin -> ImmutableMap.of("name", plugin.name, "path", plugin.path, "glyphicon", plugin.glyphicon));
         Map<String, Object> headerData = new HashMap<>();
         headerData.put("plugins", p);
 

@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
@@ -27,12 +26,7 @@ public class MiruTenantRoutingTopology {
         List<MiruRoutablePartition> allPartitions = Lists.newArrayList(topology.values());
 
         ListMultimap<MiruPartitionId, MiruRoutablePartition> partitionsPerId = Multimaps.index(allPartitions,
-            new Function<MiruRoutablePartition, MiruPartitionId>() {
-                @Override
-                public MiruPartitionId apply(MiruRoutablePartition input) {
-                    return input.partitionId;
-                }
-            });
+            input -> input.partitionId);
 
         List<PartitionGroup> allOrderedPartitions = Lists.newArrayList();
         List<MiruPartitionId> partitionIds = Lists.newArrayList(partitionsPerId.keySet());

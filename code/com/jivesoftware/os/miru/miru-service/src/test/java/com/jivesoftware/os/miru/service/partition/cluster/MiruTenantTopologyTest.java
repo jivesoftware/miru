@@ -26,7 +26,6 @@ import java.util.Map;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.merlin.config.Config;
 import org.mockito.Matchers;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -85,14 +84,11 @@ public class MiruTenantTopologyTest {
         MiruPartitionId p1 = MiruPartitionId.of(1);
 
         final Map<MiruPartitionCoord, MiruLocalHostedPartition> coordToPartition = Maps.newHashMap();
-        Answer<MiruHostedPartition> localAnswer = new Answer<MiruHostedPartition>() {
-            @Override
-            public MiruLocalHostedPartition answer(InvocationOnMock invocation) throws Throwable {
-                MiruPartitionCoord coord = (MiruPartitionCoord) invocation.getArguments()[1];
-                MiruLocalHostedPartition hostedPartition = mock(MiruLocalHostedPartition.class);
-                coordToPartition.put(coord, hostedPartition);
-                return hostedPartition;
-            }
+        Answer<MiruHostedPartition> localAnswer = invocation -> {
+            MiruPartitionCoord coord = (MiruPartitionCoord) invocation.getArguments()[1];
+            MiruLocalHostedPartition hostedPartition = mock(MiruLocalHostedPartition.class);
+            coordToPartition.put(coord, hostedPartition);
+            return hostedPartition;
         };
 
         when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class), anyLong())).thenAnswer(localAnswer);
@@ -132,27 +128,20 @@ public class MiruTenantTopologyTest {
         MiruPartitionId p1 = MiruPartitionId.of(1);
         MiruPartitionId p2 = MiruPartitionId.of(2);
 
-        Answer<MiruHostedPartition> answer = new Answer<MiruHostedPartition>() {
-            @Override
-            public MiruHostedPartition answer(InvocationOnMock invocation) throws Throwable {
-                final MiruPartitionCoord coord = (MiruPartitionCoord) invocation.getArguments()[1];
-                MiruLocalHostedPartition hostedPartition = mock(MiruLocalHostedPartition.class);
-                doAnswer(new Answer<Void>() {
-                    @Override
-                    @SuppressWarnings("unchecked")
-                    public Void answer(InvocationOnMock invocation) throws Throwable {
-                        Iterator<MiruPartitionedActivity> iter = (Iterator<MiruPartitionedActivity>) invocation.getArguments()[0];
-                        while (iter.hasNext()) {
-                            MiruPartitionedActivity activity = iter.next();
-                            if (activity.getPartitionId() == coord.partitionId.getId()) {
-                                iter.remove();
-                            }
-                        }
-                        return null;
+        Answer<MiruHostedPartition> answer = createInvocation -> {
+            final MiruPartitionCoord coord = (MiruPartitionCoord) createInvocation.getArguments()[1];
+            MiruLocalHostedPartition hostedPartition = mock(MiruLocalHostedPartition.class);
+            doAnswer(indexInvocation -> {
+                Iterator<MiruPartitionedActivity> iter = (Iterator<MiruPartitionedActivity>) indexInvocation.getArguments()[0];
+                while (iter.hasNext()) {
+                    MiruPartitionedActivity activity = iter.next();
+                    if (activity.getPartitionId() == coord.partitionId.getId()) {
+                        iter.remove();
                     }
-                }).when(hostedPartition).index(Matchers.<Iterator<MiruPartitionedActivity>>any());
-                return hostedPartition;
-            }
+                }
+                return null;
+            }).when(hostedPartition).index(Matchers.<Iterator<MiruPartitionedActivity>>any());
+            return hostedPartition;
         };
         when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class), anyLong())).thenAnswer(answer);
 

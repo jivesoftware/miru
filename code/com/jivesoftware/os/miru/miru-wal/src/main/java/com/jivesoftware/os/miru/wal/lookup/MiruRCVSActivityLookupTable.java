@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
-import com.jivesoftware.os.rcvs.api.TenantIdAndRow;
 import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
 import java.util.List;
 
@@ -74,14 +73,11 @@ public class MiruRCVSActivityLookupTable implements MiruActivityLookupTable {
     @Override
     public List<MiruTenantId> allTenantIds() throws Exception {
         final List<MiruTenantId> tenantIds = Lists.newArrayList();
-        lookupTable.getAllRowKeys(10_000, null, new CallbackStream<TenantIdAndRow<MiruVoidByte, MiruTenantId>>() {
-            @Override
-            public TenantIdAndRow<MiruVoidByte, MiruTenantId> callback(TenantIdAndRow<MiruVoidByte, MiruTenantId> r) throws Exception {
-                if (r != null) {
-                    tenantIds.add(r.getRow());
-                }
-                return r;
+        lookupTable.getAllRowKeys(10_000, null, r -> {
+            if (r != null) {
+                tenantIds.add(r.getRow());
             }
+            return r;
         });
         return tenantIds;
     }

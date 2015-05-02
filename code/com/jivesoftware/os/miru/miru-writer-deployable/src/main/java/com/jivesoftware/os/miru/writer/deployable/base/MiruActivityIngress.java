@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.writer.deployable.base;
 
-import com.google.common.base.Function;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ArrayListMultimap;
@@ -113,12 +112,7 @@ public class MiruActivityIngress {
                 // This will contain all existing replicas as well as newly elected replicas
                 Set<MiruHost> fullReplicaSet = electHostsForTenantPartition(tenantId, partitionId, replicaHosts);
                 Collection<MiruPartitionCoord> allCoords = Collections2.transform(fullReplicaSet,
-                    new Function<MiruHost, MiruPartitionCoord>() {
-                        @Override
-                        public MiruPartitionCoord apply(MiruHost host) {
-                            return new MiruPartitionCoord(tenantId, partitionId, host);
-                        }
-                    });
+                    host -> new MiruPartitionCoord(tenantId, partitionId, host));
                 List<MiruPartitionedActivity> tenantPartitionedActivities = activitiesPerPartition.get(partitionId);
                 sendForTenant(allCoords, tenantId, tenantPartitionedActivities);
                 LOG.inc("sendActivity>sent", tenantPartitionedActivities.size());
@@ -177,25 +171,22 @@ public class MiruActivityIngress {
         List<Future<?>> futures = Lists.newArrayListWithCapacity(coords.size());
         for (final MiruPartitionCoord coord : coords) {
             try {
-                Future<?> future = sendActivitiesToHostsThreadPool.submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            activitySenderProvider.get(coord.host).send(tenantPartitionedActivities);
-                            LOG.inc("sendForTenant>sent", tenantPartitionedActivities.size());
-                            LOG.inc("sendForTenant>sent>host>" + coord.host, tenantPartitionedActivities.size());
-                        } catch (Exception x) {
+                Future<?> future = sendActivitiesToHostsThreadPool.submit(() -> {
+                    try {
+                        activitySenderProvider.get(coord.host).send(tenantPartitionedActivities);
+                        LOG.inc("sendForTenant>sent", tenantPartitionedActivities.size());
+                        LOG.inc("sendForTenant>sent>host>" + coord.host, tenantPartitionedActivities.size());
+                    } catch (Exception x) {
 
-                            // TODO add hook to track of tenant partition inconsistent
-                            LOG.warn("Failed to send {} activities for tenantId:{} to host:{}",
-                                tenantPartitionedActivities.size(), tenantId, coord.host);
-                            LOG.inc("sendForTenant>notSent", tenantPartitionedActivities.size());
-                            LOG.inc("sendForTenant>notSent>host>" + coord.host, tenantPartitionedActivities.size());
+                        // TODO add hook to track of tenant partition inconsistent
+                        LOG.warn("Failed to send {} activities for tenantId:{} to host:{}",
+                            tenantPartitionedActivities.size(), tenantId, coord.host);
+                        LOG.inc("sendForTenant>notSent", tenantPartitionedActivities.size());
+                        LOG.inc("sendForTenant>notSent>host>" + coord.host, tenantPartitionedActivities.size());
 
-                            // invalidate the replica cache since this host might be sick
-                            //TODO also need a blacklist
-                            replicaCache.invalidate(new TenantAndPartitionKey(tenantId, coord.partitionId));
-                        }
+                        // invalidate the replica cache since this host might be sick
+                        //TODO also need a blacklist
+                        replicaCache.invalidate(new TenantAndPartitionKey(tenantId, coord.partitionId));
                     }
                 });
                 futures.add(future);

@@ -3,10 +3,8 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruHost;
-import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.manage.deployable.balancer.CaterpillarSelectHostsStrategy;
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
@@ -15,9 +13,6 @@ import com.jivesoftware.os.miru.manage.deployable.balancer.UnhealthyTopologyShif
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Collection;
-import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -29,7 +24,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -166,15 +160,7 @@ public class MiruManageEndpoints {
     public Response repairTopologies() {
         try {
             rebalanceDirector.shiftTopologies(Optional.<MiruHost>absent(),
-                new ShiftPredicate() {
-                    @Override
-                    public boolean needsToShift(MiruTenantId tenantId,
-                        MiruPartitionId partitionId,
-                        Collection<HostHeartbeat> hostHeartbeats,
-                        List<MiruPartition> partitions) {
-                        return true;
-                    }
-                },
+                (tenantId, partitionId, hostHeartbeats, partitions) -> true,
                 new CaterpillarSelectHostsStrategy(true, 0, false));
             return Response.ok("success").build();
         } catch (Throwable t) {
@@ -191,16 +177,12 @@ public class MiruManageEndpoints {
         @QueryParam("index") final int index,
         @QueryParam("token") final String token) {
         try {
-            return Response.ok().entity(new StreamingOutput() {
-                @Override
-                public void write(OutputStream output)
-                    throws IOException, WebApplicationException {
-                    try {
-                        rebalanceDirector.visualizeTopologies(width, split, index, token, output);
-                        output.flush();
-                    } catch (Exception e) {
-                        throw new IOException("Problem generating visual", e);
-                    }
+            return Response.ok().entity((StreamingOutput) output -> {
+                try {
+                    rebalanceDirector.visualizeTopologies(width, split, index, token, output);
+                    output.flush();
+                } catch (Exception e) {
+                    throw new IOException("Problem generating visual", e);
                 }
             }).build();
         } catch (Throwable t) {

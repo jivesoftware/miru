@@ -11,12 +11,7 @@ public class MiruPartitionedActivityFactory {
     private final ClockTimestamper timestamper;
 
     public MiruPartitionedActivityFactory() {
-        this(new ClockTimestamper() {
-            @Override
-            public long get() {
-                return System.currentTimeMillis();
-            }
-        });
+        this(System::currentTimeMillis);
     }
 
     public MiruPartitionedActivityFactory(ClockTimestamper timestamper) {

@@ -1,12 +1,10 @@
 package com.jivesoftware.os.miru.writer.deployable.region;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupEntry;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.writer.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.writer.deployable.region.bean.LookupBean;
@@ -50,13 +48,7 @@ public class MiruLookupRegion implements MiruPageRegion<MiruLookupRegionInput> {
                 final AtomicLong lastTimestamp = new AtomicLong();
                 try {
                     lookupActivities = Lists.transform(miruWALDirector.lookupActivity(tenantId, afterTimestamp, limit),
-                        new Function<MiruLookupEntry, LookupBean>() {
-
-                            @Override
-                            public LookupBean apply(MiruLookupEntry input) {
-                                return new LookupBean(input.collisionId, input.entry, input.version);
-                            }
-                        });
+                        input -> new LookupBean(input.collisionId, input.entry, input.version));
                 } catch (Exception e) {
                     log.error("Failed to read activity WAL", e);
                     data.put("error", e.getMessage());

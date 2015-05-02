@@ -20,7 +20,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
-import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -208,25 +207,22 @@ public class MiruAggregateUtil {
                             byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
                             fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).streamTermIdsForField(fieldId,
                                 Arrays.asList(new KeyRange(lowerInclusive, upperExclusive)),
-                                new TermIdStream() {
-                                    @Override
-                                    public boolean stream(MiruTermId termId) {
-                                        if (termId != null) {
-                                            try {
-                                                MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
-                                                    fieldId,
-                                                    termId,
-                                                    considerIfIndexIdGreaterThanN);
-                                                Optional<BM> index = got.getIndex();
-                                                if (index.isPresent()) {
-                                                    fieldBitmaps.add(index.get());
-                                                }
-                                            } catch (Exception e) {
-                                                throw new RuntimeException("Failed to get wildcard index", e);
+                                termId -> {
+                                    if (termId != null) {
+                                        try {
+                                            MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
+                                                fieldId,
+                                                termId,
+                                                considerIfIndexIdGreaterThanN);
+                                            Optional<BM> index = got.getIndex();
+                                            if (index.isPresent()) {
+                                                fieldBitmaps.add(index.get());
                                             }
+                                        } catch (Exception e) {
+                                            throw new RuntimeException("Failed to get wildcard index", e);
                                         }
-                                        return true;
                                     }
+                                    return true;
                                 });
                         } else {
                             MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(

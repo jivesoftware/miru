@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -38,29 +37,26 @@ public class MiruIndexLatest<BM> {
             for (final MiruFieldDefinition fieldDefinition : writeTimeAggregateFields) {
                 final MiruTermId[] fieldValues = internalActivityAndId.activity.fieldsValues[fieldDefinition.fieldId];
                 if (fieldValues != null && fieldValues.length > 0) {
-                    futures.add(indexExecutor.submit(new Callable<Void>() {
-                        @Override
-                        public Void call() throws Exception {
-                            // Answers the question,
-                            // "What is the latest activity against each distinct value of this field?"
-                            MiruInvertedIndex<BM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex(
-                                fieldDefinition.fieldId, fieldAggregateTermId);
+                    futures.add(indexExecutor.submit(() -> {
+                        // Answers the question,
+                        // "What is the latest activity against each distinct value of this field?"
+                        MiruInvertedIndex<BM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex(
+                            fieldDefinition.fieldId, fieldAggregateTermId);
 
-                            // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
-                            for (MiruTermId fieldValue : fieldValues) {
-                                MiruInvertedIndex<BM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
-                                Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe();
-                                if (optionalIndex.isPresent()) {
-                                    aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()));
-                                }
+                        // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
+                        for (MiruTermId fieldValue : fieldValues) {
+                            MiruInvertedIndex<BM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
+                            Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe();
+                            if (optionalIndex.isPresent()) {
+                                aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()));
                             }
-                            if (repair) {
-                                latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
-                            } else {
-                                latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
-                            }
-                            return null;
                         }
+                        if (repair) {
+                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
+                        } else {
+                            latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
+                        }
+                        return null;
                     }));
                 }
             }

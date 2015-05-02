@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -14,7 +12,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
-import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -61,12 +58,9 @@ public class Distincts {
                 }
             }
 
-            requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).streamTermIdsForField(fieldId, ranges, new TermIdStream() {
-                @Override
-                public boolean stream(MiruTermId termId) {
-                    results.add(termComposer.decompose(fieldDefinition, termId));
-                    return true;
-                }
+            requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).streamTermIdsForField(fieldId, ranges, termId -> {
+                results.add(termComposer.decompose(fieldDefinition, termId));
+                return true;
             });
         } else {
             final byte[][] prefixesAsBytes;
@@ -89,28 +83,20 @@ public class Distincts {
             aggregateUtil.gather(bitmaps, requestContext, result, fieldId, 100, termIds);
 
             if (prefixesAsBytes.length > 0) {
-                termIds = Sets.filter(termIds, new Predicate<MiruTermId>() {
-                    @Override
-                    public boolean apply(MiruTermId input) {
-                        if (input != null) {
-                            byte[] termBytes = input.getBytes();
-                            for (byte[] prefixAsBytes : prefixesAsBytes) {
-                                if (arrayStartsWith(termBytes, prefixAsBytes)) {
-                                    return true;
-                                }
+                termIds = Sets.filter(termIds, input -> {
+                    if (input != null) {
+                        byte[] termBytes = input.getBytes();
+                        for (byte[] prefixAsBytes : prefixesAsBytes) {
+                            if (arrayStartsWith(termBytes, prefixAsBytes)) {
+                                return true;
                             }
                         }
-                        return false;
                     }
+                    return false;
                 });
             }
 
-            results.addAll(Collections2.transform(termIds, new Function<MiruTermId, String>() {
-                @Override
-                public String apply(MiruTermId input) {
-                    return termComposer.decompose(fieldDefinition, input);
-                }
-            }));
+            results.addAll(Collections2.transform(termIds, input -> termComposer.decompose(fieldDefinition, input)));
         }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();

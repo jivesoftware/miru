@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -34,15 +33,12 @@ public class ClusterSchemaProvider implements MiruSchemaProvider {
     @Override
     public MiruSchema getSchema(final MiruTenantId tenantId) throws MiruSchemaUnvailableException {
         try {
-            return cache.get(tenantId, new Callable<MiruSchema>() {
-                @Override
-                public MiruSchema call() throws Exception {
-                    MiruSchema schema = client.getSchema(tenantId);
-                    if (schema != null) {
-                        return schema;
-                    } else {
-                        throw new RuntimeException("Tenant not registered");
-                    }
+            return cache.get(tenantId, () -> {
+                MiruSchema schema = client.getSchema(tenantId);
+                if (schema != null) {
+                    return schema;
+                } else {
+                    throw new RuntimeException("Tenant not registered");
                 }
             });
         } catch (UncheckedExecutionException | ExecutionException e) {

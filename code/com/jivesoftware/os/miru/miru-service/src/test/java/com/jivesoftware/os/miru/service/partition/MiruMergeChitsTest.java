@@ -25,12 +25,7 @@ public class MiruMergeChitsTest {
         ScheduledExecutorService scheduledMergers = Executors.newScheduledThreadPool(8);
         List<Future<?>> futures = Lists.newArrayList();
 
-        futures.add(scheduledInfo.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("free=" + mergeChits.remaining());
-            }
-        }, 1_000, 1_000, TimeUnit.MILLISECONDS));
+        futures.add(scheduledInfo.scheduleWithFixedDelay(() -> System.out.println("free=" + mergeChits.remaining()), 1_000, 1_000, TimeUnit.MILLISECONDS));
 
         int[][] callersAndRates = new int[][] {
             { 1024, 1 },
@@ -53,22 +48,19 @@ public class MiruMergeChitsTest {
                 final MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId(FilerIO.longBytes(i)),
                     MiruPartitionId.of(j),
                     new MiruHost("localhost:1234"));
-                futures.add(scheduledMergers.scheduleWithFixedDelay(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            long currentTime = System.currentTimeMillis();
-                            long elapsed = currentTime - lastMerge.get();
-                            long count = (long) ((double) rate * (double) (currentTime - lastTake.getAndSet(currentTime)) / 1_000d);
-                            if (mergeChits.take(coord, count)) {
-                                notifyMerged(elapsed);
-                                mergeChits.refundAll(coord);
-                                lastMerge.set(currentTime);
-                            }
-                        } catch (Throwable t) {
-                            System.out.println("Caller died");
-                            t.printStackTrace();
+                futures.add(scheduledMergers.scheduleWithFixedDelay(() -> {
+                    try {
+                        long currentTime = System.currentTimeMillis();
+                        long elapsed = currentTime - lastMerge.get();
+                        long count = (long) ((double) rate * (double) (currentTime - lastTake.getAndSet(currentTime)) / 1_000d);
+                        if (mergeChits.take(coord, count)) {
+                            notifyMerged(elapsed);
+                            mergeChits.refundAll(coord);
+                            lastMerge.set(currentTime);
                         }
+                    } catch (Throwable t) {
+                        System.out.println("Caller died");
+                        t.printStackTrace();
                     }
                 }, 1_000, 1_000, TimeUnit.MILLISECONDS));
             }

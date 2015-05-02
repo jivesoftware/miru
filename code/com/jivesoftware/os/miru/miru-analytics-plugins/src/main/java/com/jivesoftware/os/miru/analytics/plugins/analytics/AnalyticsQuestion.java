@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -60,12 +59,7 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
                 new AnalyticsAnswer(
                     Maps.transformValues(
                         request.query.analyticsFilters,
-                        new Function<MiruFilter, AnalyticsAnswer.Waveform>() {
-                            @Override
-                            public AnalyticsAnswer.Waveform apply(MiruFilter input) {
-                                return new AnalyticsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
-                            }
-                        }),
+                        input -> new AnalyticsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments])),
                     resultsExhausted),
                 solutionLog.asList());
         }

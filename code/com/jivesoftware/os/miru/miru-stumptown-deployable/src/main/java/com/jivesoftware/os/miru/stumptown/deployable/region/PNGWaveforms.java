@@ -12,7 +12,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -53,12 +52,8 @@ public class PNGWaveforms {
         int padBottom = padding;
 
         List<Map.Entry<String, long[]>> entries = Lists.newArrayList(waveforms.entrySet());
-        Collections.sort(entries, new Comparator<Map.Entry<String, long[]>>() {
-
-            @Override
-            public int compare(Map.Entry<String, long[]> o1, Map.Entry<String, long[]> o2) {
-                return Long.compare(rank(o2.getValue()), rank(o1.getValue())); // reverse
-            }
+        Collections.sort(entries, (o1, o2) -> {
+            return Long.compare(rank(o2.getValue()), rank(o1.getValue())); // reverse
         });
 
         int labelYOffset = padding;

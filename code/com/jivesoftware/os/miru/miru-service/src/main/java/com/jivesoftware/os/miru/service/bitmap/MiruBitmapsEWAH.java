@@ -28,7 +28,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
@@ -158,12 +157,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
             throw new IllegalArgumentException("We need at least two bitmaps");
         }
         PriorityQueue<EWAHCompressedBitmap> pq = new PriorityQueue<>(bitmaps.size(),
-            new Comparator<EWAHCompressedBitmap>() {
-                @Override
-                public int compare(EWAHCompressedBitmap a, EWAHCompressedBitmap b) {
-                    return a.sizeInBytes() - b.sizeInBytes();
-                }
-            });
+            (a, b) -> a.sizeInBytes() - b.sizeInBytes());
         for (EWAHCompressedBitmap x : bitmaps) {
             pq.add(x);
         }

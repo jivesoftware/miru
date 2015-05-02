@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.writer.deployable.region;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -34,12 +33,8 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
         data.put("header", headerRegion.render(null));
         data.put("region", region.render(input));
         data.put("title", region.getTitle());
-        data.put("plugins", Lists.transform(plugins, new Function<MiruManagePlugin, Map<String, String>>() {
-            @Override
-            public Map<String, String> apply(MiruManagePlugin input) {
-                return ImmutableMap.of("name", input.name, "path", input.path);
-            }
-        }));
+        data.put("plugins", Lists.transform(plugins,
+            plugin -> ImmutableMap.of("name", plugin.name, "path", plugin.path)));
         return renderer.render(template, data);
     }
 

@@ -121,35 +121,32 @@ public class RemoteRecoHttpTest {
         final Random rand = new Random();
         for (int i = 0; i < numQueries; i++) {
             final int index = i;
-            executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    MiruTenantId tenantId = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
-                    MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3_765)),
-                        MiruAuthzExpression.NOT_PROVIDED,
-                        new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
-                            new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
-                            null,
-                            32,
-                            constraintsFilter,
-                            "parent",
-                            MiruFilter.NO_FILTER,
-                            Arrays.asList("102", "2", "38"),
-                            100),
-                        MiruSolutionLogLevel.INFO);
+            executorService.submit(() -> {
+                MiruTenantId tenantId = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
+                MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3_765)),
+                    MiruAuthzExpression.NOT_PROVIDED,
+                    new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
+                        new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
+                        null,
+                        32,
+                        constraintsFilter,
+                        "parent",
+                        MiruFilter.NO_FILTER,
+                        Arrays.asList("102", "2", "38"),
+                        100),
+                    MiruSolutionLogLevel.INFO);
 
-                    @SuppressWarnings("unchecked")
-                    MiruResponse<TrendingAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(query,
-                        TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
-                        MiruResponse.class, new Class[] { TrendingAnswer.class }, null);
-                    /*
-                    if (response.totalElapsed > 100) {
-                        System.out.println("tenantId=" + tenantId);
-                    }
-                    */
-                    System.out.println("tenantId: " + tenantId + ", index: " + index + ", totalElapsed: " + response.totalElapsed);
-                    assertNotNull(response);
+                @SuppressWarnings("unchecked")
+                MiruResponse<TrendingAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(query,
+                    TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT,
+                    MiruResponse.class, new Class[] { TrendingAnswer.class }, null);
+                /*
+                if (response.totalElapsed > 100) {
+                    System.out.println("tenantId=" + tenantId);
                 }
+                */
+                System.out.println("tenantId: " + tenantId + ", index: " + index + ", totalElapsed: " + response.totalElapsed);
+                assertNotNull(response);
             });
         }
 
@@ -184,68 +181,65 @@ public class RemoteRecoHttpTest {
         final Random rand = new Random();
         for (int i = 0; i < numQueries; i++) {
             final int index = i;
-            executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    int userId = userIds[rand.nextInt(userIds.length)]; // 2002 + rand.nextInt(2000);
+            executorService.submit(() -> {
+                int userId = userIds[rand.nextInt(userIds.length)]; // 2002 + rand.nextInt(2000);
 
-                    MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
-                        false,
-                        Arrays.asList(
-                            new MiruFieldFilter(MiruFieldType.primary, "user", Arrays.asList("3 " + userId))),
-                        null);
+                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
+                    false,
+                    Arrays.asList(
+                        new MiruFieldFilter(MiruFieldType.primary, "user", Arrays.asList("3 " + userId))),
+                    null);
 
-                    MiruFilter scorableFilter = new MiruFilter(MiruFilterOperation.and,
-                        false,
-                        Arrays.asList(
-                            new MiruFieldFilter(MiruFieldType.primary, "parentType", Arrays.asList("102", "38", "2", "1464927464", "96891546", "1100")),
-                            new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "65"))),
-                        null);
+                MiruFilter scorableFilter = new MiruFilter(MiruFilterOperation.and,
+                    false,
+                    Arrays.asList(
+                        new MiruFieldFilter(MiruFieldType.primary, "parentType", Arrays.asList("102", "38", "2", "1464927464", "96891546", "1100")),
+                        new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "65"))),
+                    null);
 
-                    MiruTenantId tenantId = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
-                    MiruRequest<RecoQuery> request = new MiruRequest<>(tenantId,
-                        new MiruActorId(new Id(userId)),
-                        MiruAuthzExpression.NOT_PROVIDED,
-                        new RecoQuery(
-                            new DistinctsQuery(
-                                lookBackFromNow(TimeUnit.DAYS.toMillis(7)),
-                                "parent",
-                                new MiruFilter(MiruFilterOperation.or,
-                                    false,
-                                    null,
-                                    Arrays.asList(
-                                        new MiruFilter(MiruFilterOperation.and,
-                                            false,
-                                            Arrays.asList(
-                                                new MiruFieldFilter(MiruFieldType.primary, "user", Arrays.asList("3 " + userId)),
-                                                new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "16"))),
-                                            null),
-                                        new MiruFilter(MiruFilterOperation.and,
-                                            false,
-                                            Arrays.asList(
-                                                new MiruFieldFilter(MiruFieldType.primary, "authors", Arrays.asList("3 " + userId))),
-                                            null))),
-                                null),
-                            constraintsFilter,
-                            "parent", "parent", "parent",
-                            "user", "user", "user",
-                            "parent", "parent",
-                            scorableFilter,
-                            100),
-                        MiruSolutionLogLevel.INFO);
+                MiruTenantId tenantId1 = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
+                MiruRequest<RecoQuery> request = new MiruRequest<>(tenantId1,
+                    new MiruActorId(new Id(userId)),
+                    MiruAuthzExpression.NOT_PROVIDED,
+                    new RecoQuery(
+                        new DistinctsQuery(
+                            lookBackFromNow(TimeUnit.DAYS.toMillis(7)),
+                            "parent",
+                            new MiruFilter(MiruFilterOperation.or,
+                                false,
+                                null,
+                                Arrays.asList(
+                                    new MiruFilter(MiruFilterOperation.and,
+                                        false,
+                                        Arrays.asList(
+                                            new MiruFieldFilter(MiruFieldType.primary, "user", Arrays.asList("3 " + userId)),
+                                            new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "16"))),
+                                        null),
+                                    new MiruFilter(MiruFilterOperation.and,
+                                        false,
+                                        Arrays.asList(
+                                            new MiruFieldFilter(MiruFieldType.primary, "authors", Arrays.asList("3 " + userId))),
+                                        null))),
+                            null),
+                        constraintsFilter,
+                        "parent", "parent", "parent",
+                        "user", "user", "user",
+                        "parent", "parent",
+                        scorableFilter,
+                        100),
+                    MiruSolutionLogLevel.INFO);
 
-                    @SuppressWarnings("unchecked")
-                    MiruResponse<RecoAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(request,
-                        RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
-                        MiruResponse.class, new Class[] { RecoAnswer.class }, null);
-                    /*
-                    if (response.totalElapsed > 100) {
-                        System.out.println("tenantId=" + tenantId);
-                    }
-                    */
-                    System.out.println("tenantId: " + tenantId + ", index: " + index + ", totalElapsed: " + response.totalElapsed);
-                    assertNotNull(response);
+                @SuppressWarnings("unchecked")
+                MiruResponse<RecoAnswer> response = requestHelpers[rand.nextInt(requestHelpers.length)].executeRequest(request,
+                    RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT,
+                    MiruResponse.class, new Class[] { RecoAnswer.class }, null);
+                /*
+                if (response.totalElapsed > 100) {
+                    System.out.println("tenantId=" + tenantId);
                 }
+                */
+                System.out.println("tenantId: " + tenantId1 + ", index: " + index + ", totalElapsed: " + response.totalElapsed);
+                assertNotNull(response);
             });
         }
 

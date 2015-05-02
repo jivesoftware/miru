@@ -253,13 +253,7 @@ public class MiruServiceInitializer {
             @Override
             public void start() throws Exception {
                 long heartbeatInterval = config.getHeartbeatIntervalInMillis();
-                serviceScheduledExecutor.scheduleWithFixedDelay(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        partitionDirector.heartbeat();
-                    }
-                }, 0, heartbeatInterval, TimeUnit.MILLISECONDS);
+                serviceScheduledExecutor.scheduleWithFixedDelay(partitionDirector::heartbeat, 0, heartbeatInterval, TimeUnit.MILLISECONDS);
             }
 
             @Override

@@ -23,8 +23,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.shared.RowChanges;
-import com.jivesoftware.os.amza.shared.RowsChanged;
 import com.jivesoftware.os.amza.shared.WALKey;
 import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
@@ -227,14 +225,11 @@ public class MiruWriterMain {
                     instanceConfig.getMainPort(),
                     "miru-wal-" + instanceConfig.getClusterName(),
                     amzaServiceConfig,
-                    new RowChanges() {
-                        @Override
-                        public void changes(RowsChanged changes) throws Exception {
-                            if (changes.getRegionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_REGION_NAME)) {
-                                for (WALKey key : changes.getApply().columnKeySet()) {
-                                    MiruTenantId tenantId = AmzaPartitionIdProvider.extractTenantForLatestPartition(key);
-                                    latestAlignmentCache.remove(tenantId);
-                                }
+                    changes -> {
+                        if (changes.getRegionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_REGION_NAME)) {
+                            for (WALKey key : changes.getApply().columnKeySet()) {
+                                MiruTenantId tenantId = AmzaPartitionIdProvider.extractTenantForLatestPartition(key);
+                                latestAlignmentCache.remove(tenantId);
                             }
                         }
                     });

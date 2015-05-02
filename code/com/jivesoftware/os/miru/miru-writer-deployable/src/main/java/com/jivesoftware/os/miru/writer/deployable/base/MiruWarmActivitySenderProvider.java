@@ -13,7 +13,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.writer.deployable.MiruActivitySenderProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -47,25 +46,21 @@ public class MiruWarmActivitySenderProvider implements MiruActivitySenderProvide
             }
         }
         final RequestHelper requestHelper = got;
-        return new MiruActivitySender() {
+        return activities -> {
+            Set<MiruTenantId> tenantIds = Sets.newHashSet();
+            for (MiruPartitionedActivity activity : activities) {
+                tenantIds.add(activity.tenantId);
+            }
 
-            @Override
-            public void send(List<MiruPartitionedActivity> activities) {
-                Set<MiruTenantId> tenantIds = Sets.newHashSet();
-                for (MiruPartitionedActivity activity : activities) {
-                    tenantIds.add(activity.tenantId);
+            try {
+                requestHelper.executeRequest(Lists.newArrayList(tenantIds), warmAllEndpointUrl, String.class, null);
+
+                LOG.inc("warm", activities.size());
+                for (MiruTenantId tenantId : tenantIds) {
+                    LOG.inc("warm", 1, tenantId.toString());
                 }
-
-                try {
-                    requestHelper.executeRequest(Lists.newArrayList(tenantIds), warmAllEndpointUrl, String.class, null);
-
-                    LOG.inc("warm", activities.size());
-                    for (MiruTenantId tenantId : tenantIds) {
-                        LOG.inc("warm", 1, tenantId.toString());
-                    }
-                } catch (Exception x) {
-                    LOG.warn("Failed to warm tenants {} for host: {}", new Object[] { tenantIds, host }, x);
-                }
+            } catch (Exception x) {
+                LOG.warn("Failed to warm tenants {} for host: {}", new Object[] { tenantIds, host }, x);
             }
         };
     }

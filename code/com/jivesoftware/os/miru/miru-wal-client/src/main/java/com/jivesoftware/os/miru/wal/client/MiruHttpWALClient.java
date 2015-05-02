@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.wal.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientException;
 import com.jivesoftware.os.jive.utils.http.client.HttpResponse;
 import com.jivesoftware.os.jive.utils.http.client.rest.ResponseMapper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -49,51 +48,36 @@ public class MiruHttpWALClient implements MiruWALClient {
 
     @Override
     public List<MiruTenantId> getAllTenantIds() throws Exception {
-        return send(new HttpCallable<List<MiruTenantId>>() {
-
-            @Override
-            public List<MiruTenantId> call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                HttpResponse response = client.get(routingTenantId, "/miru/wal/tenants/all");
-                return responseMapper.extractResultFromResponse(response, List.class, new Class[]{MiruTenantId.class}, null);
-            }
+        return send(client -> {
+            HttpResponse response = client.get(routingTenantId, "/miru/wal/tenants/all");
+            return (List<MiruTenantId>) responseMapper.extractResultFromResponse(response, List.class, new Class[] { MiruTenantId.class }, null);
         });
     }
 
     @Override
     public MiruPartitionId getLargestPartitionIdAcrossAllWriters(final MiruTenantId tenantId) throws Exception {
-        return send(new HttpCallable<MiruPartitionId>() {
-
-            @Override
-            public MiruPartitionId call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                HttpResponse response = client.get(routingTenantId, "/miru/wal/largestPartitionId/" + tenantId.toString());
-                return responseMapper.extractResultFromResponse(response, MiruPartitionId.class, null);
-            }
+        return send(client -> {
+            HttpResponse response = client.get(routingTenantId, "/miru/wal/largestPartitionId/" + tenantId.toString());
+            return responseMapper.extractResultFromResponse(response, MiruPartitionId.class, null);
         });
     }
 
     @Override
     public List<MiruActivityWALStatus> getPartitionStatus(final MiruTenantId tenantId, List<MiruPartitionId> partitionIds) throws Exception {
         final String jsonPartitionIds = requestMapper.writeValueAsString(partitionIds);
-        return send(new HttpCallable<List<MiruActivityWALStatus>>() {
-
-            @Override
-            public List<MiruActivityWALStatus> call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                HttpResponse response = client.postJson(routingTenantId, "/miru/wal/partition/status/" + tenantId.toString(), jsonPartitionIds);
-                return responseMapper.extractResultFromResponse(response, List.class, new Class[]{MiruActivityWALStatus.class}, null);
-            }
+        return send(client -> {
+            HttpResponse response = client.postJson(routingTenantId, "/miru/wal/partition/status/" + tenantId.toString(), jsonPartitionIds);
+            return (List<MiruActivityWALStatus>) responseMapper.extractResultFromResponse(response, List.class, new Class[] { MiruActivityWALStatus.class },
+                null);
         });
     }
 
     @Override
     public List<MiruLookupEntry> lookupActivity(final MiruTenantId tenantId, final long afterTimestamp, final int batchSize) throws Exception {
-        return send(new HttpCallable<List<MiruLookupEntry>>() {
-
-            @Override
-            public List<MiruLookupEntry> call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                HttpResponse response = client.get(routingTenantId,
-                    "/miru/wal/lookup/activity/" + tenantId.toString() + "/" + batchSize + "/" + afterTimestamp);
-                return responseMapper.extractResultFromResponse(response, List.class, new Class[]{MiruLookupEntry.class}, null);
-            }
+        return send(client -> {
+            HttpResponse response = client.get(routingTenantId,
+                "/miru/wal/lookup/activity/" + tenantId.toString() + "/" + batchSize + "/" + afterTimestamp);
+            return (List<MiruLookupEntry>) responseMapper.extractResultFromResponse(response, List.class, new Class[] { MiruLookupEntry.class }, null);
         });
     }
 
@@ -106,22 +90,18 @@ public class MiruHttpWALClient implements MiruWALClient {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
         while (true) {
             try {
-                StreamBatch<MiruWALEntry, SipActivityCursor> response = send(new HttpCallable<StreamBatch<MiruWALEntry, SipActivityCursor>>() {
-
-                    @Override
-                    public StreamBatch<MiruWALEntry, SipActivityCursor> call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                        HttpResponse response = client.postJson(routingTenantId,
-                            "/miru/wal/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor);
-                        return responseMapper.extractResultFromResponse(response, StreamBatch.class, new Class[]{MiruWALEntry.class, SipActivityCursor.class},
-                            null);
-                    }
+                StreamBatch<MiruWALEntry, SipActivityCursor> response = send(client -> {
+                    HttpResponse response1 = client.postJson(routingTenantId,
+                        "/miru/wal/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor);
+                    return (StreamBatch<MiruWALEntry, SipActivityCursor>) responseMapper.extractResultFromResponse(response1, StreamBatch.class,
+                        new Class[] { MiruWALEntry.class, SipActivityCursor.class }, null);
                 });
                 if (response != null) {
                     return response;
                 }
             } catch (Exception e) {
                 // non-interrupts are retried
-                LOG.warn("Failure while streaming, will retry in {} ms", new Object[]{sleepOnFailureMillis}, e);
+                LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
                 try {
                     Thread.sleep(sleepOnFailureMillis);
                 } catch (InterruptedException ie) {
@@ -142,22 +122,18 @@ public class MiruHttpWALClient implements MiruWALClient {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
         while (true) {
             try {
-                StreamBatch<MiruWALEntry, GetActivityCursor> response = send(new HttpCallable<StreamBatch<MiruWALEntry, GetActivityCursor>>() {
-
-                    @Override
-                    public StreamBatch<MiruWALEntry, GetActivityCursor> call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                        HttpResponse response = client.postJson(routingTenantId,
-                            "/miru/wal/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor);
-                        return responseMapper.extractResultFromResponse(response, StreamBatch.class, new Class[]{MiruWALEntry.class, GetActivityCursor.class},
-                            null);
-                    }
+                StreamBatch<MiruWALEntry, GetActivityCursor> response = send(client -> {
+                    HttpResponse response1 = client.postJson(routingTenantId,
+                        "/miru/wal/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor);
+                    return (StreamBatch<MiruWALEntry, GetActivityCursor>) responseMapper.extractResultFromResponse(response1, StreamBatch.class,
+                        new Class[] { MiruWALEntry.class, GetActivityCursor.class }, null);
                 });
                 if (response != null) {
                     return response;
                 }
             } catch (Exception e) {
                 // non-interrupts are retried
-                LOG.warn("Failure while streaming, will retry in {} ms", new Object[]{sleepOnFailureMillis}, e);
+                LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
                 try {
                     Thread.sleep(sleepOnFailureMillis);
                 } catch (InterruptedException ie) {
@@ -175,14 +151,11 @@ public class MiruHttpWALClient implements MiruWALClient {
         final int batchSize) throws
         Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return send(new HttpCallable<StreamBatch<MiruReadSipEntry, SipReadCursor>>() {
-
-            @Override
-            public StreamBatch<MiruReadSipEntry, SipReadCursor> call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                HttpResponse response = client.postJson(routingTenantId,
-                    "/miru/wal/sip/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + batchSize, jsonCursor);
-                return responseMapper.extractResultFromResponse(response, StreamBatch.class, new Class[]{MiruReadSipEntry.class, SipReadCursor.class}, null);
-            }
+        return send(client -> {
+            HttpResponse response = client.postJson(routingTenantId,
+                "/miru/wal/sip/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + batchSize, jsonCursor);
+            return (StreamBatch<MiruReadSipEntry, SipReadCursor>) responseMapper.extractResultFromResponse(response, StreamBatch.class,
+                new Class[] { MiruReadSipEntry.class, SipReadCursor.class }, null);
         });
     }
 
@@ -193,14 +166,11 @@ public class MiruHttpWALClient implements MiruWALClient {
         final int batchSize) throws
         Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return send(new HttpCallable<StreamBatch<MiruWALEntry, GetReadCursor>>() {
-
-            @Override
-            public StreamBatch<MiruWALEntry, GetReadCursor> call(TenantAwareHttpClient<String> client) throws HttpClientException {
-                HttpResponse response = client.postJson(routingTenantId,
-                    "/miru/wal/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + batchSize, jsonCursor);
-                return responseMapper.extractResultFromResponse(response, StreamBatch.class, new Class[]{MiruWALEntry.class, GetReadCursor.class}, null);
-            }
+        return send(client -> {
+            HttpResponse response = client.postJson(routingTenantId,
+                "/miru/wal/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + batchSize, jsonCursor);
+            return (StreamBatch<MiruWALEntry, GetReadCursor>) responseMapper.extractResultFromResponse(response, StreamBatch.class,
+                new Class[] { MiruWALEntry.class, GetReadCursor.class }, null);
         });
     }
 

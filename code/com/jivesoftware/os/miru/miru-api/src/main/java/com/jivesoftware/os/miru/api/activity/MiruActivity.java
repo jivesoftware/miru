@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- *
  * @author jonathan
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -43,7 +42,7 @@ public class MiruActivity {
     public final Map<String, List<String>> propsValues;
 
     public MiruActivity(MiruTenantId tenantId, long time, String[] authz, long version,
-            Map<String, List<String>> fieldsValues, Map<String, List<String>> propsValues) {
+        Map<String, List<String>> fieldsValues, Map<String, List<String>> propsValues) {
         this.tenantId = tenantId;
         this.time = time;
         this.authz = authz;
@@ -54,12 +53,12 @@ public class MiruActivity {
 
     @JsonCreator
     public static MiruActivity fromJson(
-            @JsonProperty("tenantId") MiruTenantId tenantId,
-            @JsonProperty("time") long time,
-            @JsonProperty("authz") String[] authz,
-            @JsonProperty("version") long version,
-            @JsonProperty("fieldsValues") Map<String, List<String>> fieldsValues,
-            @JsonProperty("propsValues") Map<String, List<String>> propsValues) {
+        @JsonProperty("tenantId") MiruTenantId tenantId,
+        @JsonProperty("time") long time,
+        @JsonProperty("authz") String[] authz,
+        @JsonProperty("version") long version,
+        @JsonProperty("fieldsValues") Map<String, List<String>> fieldsValues,
+        @JsonProperty("propsValues") Map<String, List<String>> propsValues) {
         return new MiruActivity(tenantId, time, authz, version, fieldsValues, propsValues);
     }
 
@@ -102,13 +101,13 @@ public class MiruActivity {
     @Override
     public String toString() {
         return "MiruActivity{"
-                + "tenantId=" + tenantId
-                + ", time=" + time
-                + ", authz=" + Arrays.toString(authz)
-                + ", version=" + version
-                + ", fieldsValues=" + fieldsValues
-                + ", propsValues=" + propsValues
-                + '}';
+            + "tenantId=" + tenantId
+            + ", time=" + time
+            + ", authz=" + Arrays.toString(authz)
+            + ", version=" + version
+            + ", fieldsValues=" + fieldsValues
+            + ", propsValues=" + propsValues
+            + '}';
     }
 
     public static class Builder {

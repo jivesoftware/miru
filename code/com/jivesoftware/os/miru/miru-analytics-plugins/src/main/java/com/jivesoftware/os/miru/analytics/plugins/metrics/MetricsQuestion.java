@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.analytics.plugins.metrics;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -65,12 +64,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             return new MiruPartitionResponse<>(
                 new MetricsAnswer(
                     Maps.transformValues(request.query.filters,
-                        new Function<MiruFilter, MetricsAnswer.Waveform>() {
-                            @Override
-                            public MetricsAnswer.Waveform apply(MiruFilter input) {
-                                return new MetricsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
-                            }
-                        }),
+                        input -> new MetricsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments])),
                     resultsExhausted),
                 solutionLog.asList());
         }

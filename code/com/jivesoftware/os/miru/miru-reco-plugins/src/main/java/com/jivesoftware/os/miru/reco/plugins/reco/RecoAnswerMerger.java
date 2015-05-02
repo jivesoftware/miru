@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -70,16 +69,13 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
 
     @Override
     public RecoAnswer done(Optional<RecoAnswer> last, RecoAnswer alternative, final MiruSolutionLog solutionLog) {
-        return last.transform(new Function<RecoAnswer, RecoAnswer>() {
-            @Override
-            public RecoAnswer apply(RecoAnswer answer) {
-                List<RecoAnswer.Recommendation> results = Lists.newArrayList(answer.results);
-                long t = System.currentTimeMillis();
-                Collections.sort(results);
-                solutionLog.log(MiruSolutionLogLevel.INFO, "mergeReco: sorted in {} ms", (System.currentTimeMillis() - t));
-                results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
-                return new RecoAnswer(ImmutableList.copyOf(results), answer.partitionsVisited);
-            }
+        return last.transform(answer -> {
+            List<RecoAnswer.Recommendation> results = Lists.newArrayList(answer.results);
+            long t = System.currentTimeMillis();
+            Collections.sort(results);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "mergeReco: sorted in {} ms", (System.currentTimeMillis() - t));
+            results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
+            return new RecoAnswer(ImmutableList.copyOf(results), answer.partitionsVisited);
         }).or(alternative);
     }
 

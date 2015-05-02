@@ -2,7 +2,6 @@ package org.roaringbitmap;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.PriorityQueue;
 
 /**
@@ -67,12 +66,7 @@ public class RoaringAggregation {
             container.or(bitmaps[0]);
         } else if (bitmaps.length > 1) {
             RoaringBitmap[] array = Arrays.copyOf(bitmaps, bitmaps.length);
-            Arrays.sort(array, new Comparator<RoaringBitmap>() {
-                @Override
-                public int compare(RoaringBitmap a, RoaringBitmap b) {
-                    return a.getSizeInBytes() - b.getSizeInBytes();
-                }
-            });
+            Arrays.sort(array, (a, b) -> a.getSizeInBytes() - b.getSizeInBytes());
             RoaringBitmap answer = RoaringBitmap.and(array[0], array[1]);
             for (int k = 2; k < array.length; ++k) {
                 and(answer, answer, array[k]);
@@ -206,13 +200,7 @@ public class RoaringAggregation {
             return;
         }
 
-        PriorityQueue<RoaringBitmap> pq = new PriorityQueue<>(bitmaps.length, new Comparator<RoaringBitmap>() {
-            @Override
-            public int compare(RoaringBitmap a,
-                    RoaringBitmap b) {
-                return a.getSizeInBytes() - b.getSizeInBytes();
-            }
-        });
+        PriorityQueue<RoaringBitmap> pq = new PriorityQueue<>(bitmaps.length, (a, b) -> a.getSizeInBytes() - b.getSizeInBytes());
         Collections.addAll(pq, bitmaps);
         while (pq.size() > 1) {
             RoaringBitmap x1 = pq.poll();

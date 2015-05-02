@@ -3,23 +3,17 @@ package com.jivesoftware.os.miru.service.partition;
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.PriorityQueue;
 
 public class MiruBitsAggregation {
 
     public static void and(final BitmapStorage container,
-            final EWAHCompressedBitmap... bitmaps) {
+        final EWAHCompressedBitmap... bitmaps) {
         if (bitmaps.length < 2) {
             throw new IllegalArgumentException("We need at least two bitmaps");
         }
         PriorityQueue<EWAHCompressedBitmap> pq = new PriorityQueue<>(bitmaps.length,
-                new Comparator<EWAHCompressedBitmap>() {
-                    @Override
-                    public int compare(EWAHCompressedBitmap a, EWAHCompressedBitmap b) {
-                        return a.sizeInBytes() - b.sizeInBytes();
-                    }
-                });
+            (a, b) -> a.sizeInBytes() - b.sizeInBytes());
         pq.addAll(Arrays.asList(bitmaps));
         while (pq.size() > 2) {
             EWAHCompressedBitmap x1 = pq.poll();
@@ -32,12 +26,12 @@ public class MiruBitsAggregation {
     /**
      * Unlike other supported aggregations, pButNotQ (andNot) is NOT commutative: (P & ~Q) != (Q & ~P),
      * so we cannot sort the full array. The first element in the array is P, and the rest are ~Qs.
-     *
+     * <p/>
      * Note: (P & ~Q1 & ~Q2 & ~Q3) is the same as (P & ~(Q1 | Q2 | Q3)), so we can leverage the
      * {@link #or} optimization for a subsection of the array.
      *
      * @param container the container
-     * @param bitmaps the bitmaps
+     * @param bitmaps   the bitmaps
      */
     public static void pButNotQ(final BitmapStorage container, final EWAHCompressedBitmap... bitmaps) {
         if (bitmaps.length < 2) {
@@ -57,17 +51,12 @@ public class MiruBitsAggregation {
     }
 
     public static void or(final BitmapStorage container,
-            final EWAHCompressedBitmap... bitmaps) {
+        final EWAHCompressedBitmap... bitmaps) {
         if (bitmaps.length < 2) {
             throw new IllegalArgumentException("We need at least two bitmaps");
         }
         PriorityQueue<EWAHCompressedBitmap> pq = new PriorityQueue<>(bitmaps.length,
-                new Comparator<EWAHCompressedBitmap>() {
-                    @Override
-                    public int compare(EWAHCompressedBitmap a, EWAHCompressedBitmap b) {
-                        return a.sizeInBytes() - b.sizeInBytes();
-                    }
-                });
+            (a, b) -> a.sizeInBytes() - b.sizeInBytes());
         pq.addAll(Arrays.asList(bitmaps));
         while (pq.size() > 2) {
             EWAHCompressedBitmap x1 = pq.poll();
@@ -78,17 +67,12 @@ public class MiruBitsAggregation {
     }
 
     public static void xor(final BitmapStorage container,
-            final EWAHCompressedBitmap... bitmaps) {
+        final EWAHCompressedBitmap... bitmaps) {
         if (bitmaps.length < 2) {
             throw new IllegalArgumentException("We need at least two bitmaps");
         }
         PriorityQueue<EWAHCompressedBitmap> pq = new PriorityQueue<>(bitmaps.length,
-                new Comparator<EWAHCompressedBitmap>() {
-                    @Override
-                    public int compare(EWAHCompressedBitmap a, EWAHCompressedBitmap b) {
-                        return a.sizeInBytes() - b.sizeInBytes();
-                    }
-                });
+            (a, b) -> a.sizeInBytes() - b.sizeInBytes());
         pq.addAll(Arrays.asList(bitmaps));
         while (pq.size() > 2) {
             EWAHCompressedBitmap x1 = pq.poll();
@@ -100,8 +84,6 @@ public class MiruBitsAggregation {
 
     private MiruBitsAggregation() {
     }
-
-
 
 
 }

@@ -97,40 +97,28 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
                 }
             }
         };
-        this.activitySerializerFunction = new Function<MiruPartitionedActivity, WALValue>() {
-            @Override
-            public WALValue apply(MiruPartitionedActivity partitionedActivity) {
-                try {
-                    long timestamp = partitionedActivity.activity.isPresent()
-                        ? partitionedActivity.activity.get().version
-                        : System.currentTimeMillis();
-                    return new WALValue(partitionedActivityMarshaller.toBytes(partitionedActivity), timestamp, false);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+        this.activitySerializerFunction = partitionedActivity -> {
+            try {
+                long timestamp = partitionedActivity.activity.isPresent()
+                    ? partitionedActivity.activity.get().version
+                    : System.currentTimeMillis();
+                return new WALValue(partitionedActivityMarshaller.toBytes(partitionedActivity), timestamp, false);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         };
-        this.sipSerializerFunction = new Function<MiruPartitionedActivity, WALValue>() {
-            @Override
-            public WALValue apply(MiruPartitionedActivity partitionedActivity) {
-                try {
-                    return new WALValue(partitionedActivityMarshaller.toBytes(partitionedActivity), System.currentTimeMillis(), false);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+        this.sipSerializerFunction = partitionedActivity -> {
+            try {
+                return new WALValue(partitionedActivityMarshaller.toBytes(partitionedActivity), System.currentTimeMillis(), false);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         };
     }
 
     @Override
     public void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        ListMultimap<MiruPartitionId, MiruPartitionedActivity> partitions = Multimaps.index(partitionedActivities,
-            new Function<MiruPartitionedActivity, MiruPartitionId>() {
-                @Override
-                public MiruPartitionId apply(MiruPartitionedActivity input) {
-                    return input.partitionId;
-                }
-            });
+        ListMultimap<MiruPartitionId, MiruPartitionedActivity> partitions = Multimaps.index(partitionedActivities, input -> input.partitionId);
 
         for (MiruPartitionId partitionId : partitions.keySet()) {
             List<MiruPartitionedActivity> activities = partitions.get(partitionId);

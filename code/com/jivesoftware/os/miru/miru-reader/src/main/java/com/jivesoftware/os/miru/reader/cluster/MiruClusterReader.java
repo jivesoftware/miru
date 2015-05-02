@@ -110,12 +110,7 @@ public class MiruClusterReader implements MiruReader {
         try {
             List<MiruPartition> partitionsForTenant = partitionsForTenant(tenantId);
             R result = callForRandomBestOnlineHost(tenantId, partitionsForTenant, defaultResult, randomAffinity(actorId),
-                new RandomBestOnlineHostCallback<R>() {
-                    @Override
-                    public R call(MiruHost host) throws MiruQueryServiceException {
-                        return readerForHost(host).read(tenantId, actorId, params, endpoint, resultClass, defaultResult);
-                    }
-                });
+                host -> readerForHost(host).read(tenantId, actorId, params, endpoint, resultClass, defaultResult));
             submitWarmForOfflineHosts(tenantId, partitionsForTenant);
             return result;
         } catch (Exception e) {
@@ -150,14 +145,11 @@ public class MiruClusterReader implements MiruReader {
     private void submitWarmForOfflineHosts(final MiruTenantId tenantId, List<MiruPartition> partitions) {
         for (final MiruHost host : offlineHosts(partitions)) {
             try {
-                warmOfflineHostExecutor.submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            readerForHost(host).warm(tenantId);
-                        } catch (MiruQueryServiceException e) {
-                            log.warn("Failed to perform background read for tenantId:{} on host:{}", new Object[] { tenantId, host }, e);
-                        }
+                warmOfflineHostExecutor.submit(() -> {
+                    try {
+                        readerForHost(host).warm(tenantId);
+                    } catch (MiruQueryServiceException e) {
+                        log.warn("Failed to perform background read for tenantId:{} on host:{}", new Object[] { tenantId, host }, e);
                     }
                 });
             } catch (Exception e) {

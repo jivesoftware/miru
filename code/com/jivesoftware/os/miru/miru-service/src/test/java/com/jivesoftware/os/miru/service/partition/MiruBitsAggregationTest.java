@@ -191,99 +191,20 @@ public class MiruBitsAggregationTest {
     @Test
     public void testBitStuff() {
 
-        test("AND", ~0, 0, 0, 0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return (P & Q);
-            }
-        });
-
-        test("NAND", 0, ~0, ~0, ~0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ~(P & Q);
-            }
-        });
-
-        test("OR", ~0, ~0, ~0, 0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return (P | Q);
-            }
-        });
-
-        test("NOR", 0, 0, 0, ~0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ~(P | Q);
-            }
-        });
-
-        test("XOR", 0, ~0, ~0, 0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return (P ^ Q);
-            }
-        });
-
-        test("XNOR", ~0, 0, 0, ~0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ~(P ^ Q);
-            }
-        });
-
-        test("PButNotQ", 0, ~0, 0, 0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return (P & (~Q));
-            }
-        });
-        test("PButNotQ", 0, ~0, 0, 0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ~((~P) | Q);
-            }
-        });
-
-        test("IfThen", ~0, 0, ~0, ~0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ~(P & (~Q));
-            }
-        });
-        test("IfThen", ~0, 0, ~0, ~0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ((~P) | Q);
-            }
-        });
-
-        test("ThenIf", ~0, ~0, 0, ~0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ~((~P) & Q);
-            }
-        });
-        test("ThenIf", ~0, ~0, 0, ~0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return (P | (~Q));
-            }
-        });
-
-        test("NotPButQ", 0, 0, ~0, 0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ((~P) & Q);
-            }
-        });
-        test("NotPButQ", 0, 0, ~0, 0, new BF() {
-            @Override
-            public long bf(long P, long Q) {
-                return ~(P | (~Q));
-            }
-        });
+        test("AND", ~0, 0, 0, 0, (P, Q) -> (P & Q));
+        test("NAND", 0, ~0, ~0, ~0, (P, Q) -> ~(P & Q));
+        test("OR", ~0, ~0, ~0, 0, (P, Q) -> (P | Q));
+        test("NOR", 0, 0, 0, ~0, (P, Q) -> ~(P | Q));
+        test("XOR", 0, ~0, ~0, 0, (P, Q) -> (P ^ Q));
+        test("XNOR", ~0, 0, 0, ~0, (P, Q) -> ~(P ^ Q));
+        test("PButNotQ", 0, ~0, 0, 0, (P, Q) -> (P & (~Q)));
+        test("PButNotQ", 0, ~0, 0, 0, (P, Q) -> ~((~P) | Q));
+        test("IfThen", ~0, 0, ~0, ~0, (P, Q) -> ~(P & (~Q)));
+        test("IfThen", ~0, 0, ~0, ~0, (P, Q) -> ((~P) | Q));
+        test("ThenIf", ~0, ~0, 0, ~0, (P, Q) -> ~((~P) & Q));
+        test("ThenIf", ~0, ~0, 0, ~0, (P, Q) -> (P | (~Q)));
+        test("NotPButQ", 0, 0, ~0, 0, (P, Q) -> ((~P) & Q));
+        test("NotPButQ", 0, 0, ~0, 0, (P, Q) -> ~(P | (~Q)));
 
     }
 

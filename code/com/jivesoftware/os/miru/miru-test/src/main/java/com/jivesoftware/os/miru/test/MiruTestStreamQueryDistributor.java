@@ -187,10 +187,5 @@ public class MiruTestStreamQueryDistributor {
         }
     }
 
-    private static final Function<Id, String> ID_TO_TERMID = new Function<Id, String>() {
-        @Override
-        public String apply(Id input) {
-            return input != null ? input.toStringForm() : null;
-        }
-    };
+    private static final Function<Id, String> ID_TO_TERMID = input -> input != null ? input.toStringForm() : null;
 }

@@ -6,11 +6,9 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruReaderEndpointConstants;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.writer.deployable.MiruActivitySenderProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** @author jonathan */
@@ -43,15 +41,11 @@ public class MiruLiveIngressActivitySenderProvider implements MiruActivitySender
             }
         }
         final RequestHelper requestHelper = got;
-        return new MiruActivitySender() {
-
-            @Override
-            public void send(List<MiruPartitionedActivity> activities) {
-                try {
-                    requestHelper.executeRequest(activities, sendActivitesEndpointUrl, String.class, null);
-                } catch (Exception x) {
-                    LOG.warn("Failed to send {} activities to host:{}", new Object[] { activities.size(), host });
-                }
+        return activities -> {
+            try {
+                requestHelper.executeRequest(activities, sendActivitesEndpointUrl, String.class, null);
+            } catch (Exception x) {
+                LOG.warn("Failed to send {} activities to host:{}", new Object[] { activities.size(), host });
             }
         };
     }

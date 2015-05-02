@@ -1,9 +1,7 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.api.ChunkTransaction;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
-import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -47,17 +45,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            return keyedStore.read(FilerIO.intBytes(index), null, new ChunkTransaction<Void, MiruInternalActivity>() {
-                @Override
-                public MiruInternalActivity commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                    if (filer != null) {
-                        synchronized (lock) {
-                            filer.seek(0);
-                            return internalActivityMarshaller.fromFiler(tenantId, filer);
-                        }
-                    } else {
-                        return null;
+            return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, lock) -> {
+                if (filer != null) {
+                    synchronized (lock) {
+                        filer.seek(0);
+                        return internalActivityMarshaller.fromFiler(tenantId, filer);
                     }
+                } else {
+                    return null;
                 }
             });
         } catch (IOException e) {
@@ -70,17 +65,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            return keyedStore.read(FilerIO.intBytes(index), null, new ChunkTransaction<Void, MiruTermId[]>() {
-                @Override
-                public MiruTermId[] commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                    if (filer != null) {
-                        synchronized (lock) {
-                            filer.seek(0);
-                            return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
-                        }
-                    } else {
-                        return null;
+            return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, lock) -> {
+                if (filer != null) {
+                    synchronized (lock) {
+                        filer.seek(0);
+                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
                     }
+                } else {
+                    return null;
                 }
             });
         } catch (IOException e) {
@@ -100,17 +92,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                     bytesForIndexes[i] = FilerIO.intBytes(indexes[i]);
                 }
             }
-            return keyedStore.readEach(bytesForIndexes, null, new ChunkTransaction<Void, MiruTermId[]>() {
-                @Override
-                public MiruTermId[] commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                    if (filer != null) {
-                        synchronized (lock) {
-                            filer.seek(0);
-                            return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
-                        }
-                    } else {
-                        return null;
+            return keyedStore.readEach(bytesForIndexes, null, (monkey, filer, lock) -> {
+                if (filer != null) {
+                    synchronized (lock) {
+                        filer.seek(0);
+                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
                     }
+                } else {
+                    return null;
                 }
             });
         } catch (IOException e) {
@@ -147,15 +136,12 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
             try {
                 final byte[] bytes = internalActivityMarshaller.toBytes(activity);
-                keyedStore.writeNewReplace(FilerIO.intBytes(index), (long) 4 + bytes.length, new ChunkTransaction<Void, Void>() {
-                    @Override
-                    public Void commit(Void monkey, ChunkFiler newFiler, Object newLock) throws IOException {
-                        synchronized (newLock) {
-                            newFiler.seek(0);
-                            FilerIO.write(newFiler, bytes);
-                        }
-                        return null;
+                keyedStore.writeNewReplace(FilerIO.intBytes(index), (long) 4 + bytes.length, (monkey, newFiler, newLock) -> {
+                    synchronized (newLock) {
+                        newFiler.seek(0);
+                        FilerIO.write(newFiler, bytes);
                     }
+                    return null;
                 });
                 log.inc("set>total");
                 log.inc("set>bytes", bytes.length);
@@ -172,15 +158,12 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         final int size = index + 1;
         synchronized (indexSize) {
             if (size > indexSize.get()) {
-                indexSizeFiler.readWriteAutoGrow(4L, new ChunkTransaction<Void, Void>() {
-                    @Override
-                    public Void commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                        synchronized (lock) {
-                            filer.seek(0);
-                            FilerIO.writeInt(filer, size, "size");
-                        }
-                        return null;
+                indexSizeFiler.readWriteAutoGrow(4L, (monkey, filer, lock) -> {
+                    synchronized (lock) {
+                        filer.seek(0);
+                        FilerIO.writeInt(filer, size, "size");
                     }
+                    return null;
                 });
                 log.inc("ready>total");
                 log.inc("ready>bytes", 4);
@@ -194,19 +177,16 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         try {
             int size = indexSize.get();
             if (size < 0) {
-                size = indexSizeFiler.read(null, new ChunkTransaction<Void, Integer>() {
-                    @Override
-                    public Integer commit(Void monkey, ChunkFiler filer, Object lock) throws IOException {
-                        if (filer != null) {
-                            int size;
-                            synchronized (lock) {
-                                filer.seek(0);
-                                size = FilerIO.readInt(filer, "size");
-                            }
-                            return size;
-                        } else {
-                            return 0;
+                size = indexSizeFiler.read(null, (monkey, filer, lock) -> {
+                    if (filer != null) {
+                        int size1;
+                        synchronized (lock) {
+                            filer.seek(0);
+                            size1 = FilerIO.readInt(filer, "size");
                         }
+                        return size1;
+                    } else {
+                        return 0;
                     }
                 });
                 log.inc("capacity>total");

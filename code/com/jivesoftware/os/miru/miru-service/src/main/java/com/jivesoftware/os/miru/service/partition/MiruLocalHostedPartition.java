@@ -483,7 +483,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
             MiruPartitionActive partitionActive = heartbeatHandler.getPartitionActive(coord);
-            System.out.println("checkActive: " + partitionActive.activeUntilTimestamp + " > " + System.currentTimeMillis());
             if (partitionActive.activeUntilTimestamp > System.currentTimeMillis()) {
                 if (accessor.info.state == MiruPartitionState.offline) {
                     if (accessor.info.storage == MiruBackingStorage.memory) {
@@ -592,36 +591,33 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
             log.debug("Starting rebuild at {} for {}", rebuildTimestamp.get(), coord);
 
-            rebuildWALExecutors.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
+            rebuildWALExecutors.submit(() -> {
+                try {
 
-                        MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetActivityCursor> activity = walClient.getActivity(coord.tenantId,
-                            coord.partitionId,
-                            new MiruWALClient.GetActivityCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), accessor.getRebuildTimestamp()),
-                            partitionRebuildBatchSize);
+                    MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetActivityCursor> activity = walClient.getActivity(coord.tenantId,
+                        coord.partitionId,
+                        new MiruWALClient.GetActivityCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), accessor.getRebuildTimestamp()),
+                        partitionRebuildBatchSize);
 
-                        while (rebuilding.get() && accessorRef.get() == accessor && activity != null && !activity.batch.isEmpty()) {
-                            List<MiruPartitionedActivity> bs = new ArrayList<>(activity.batch.size());
-                            for (MiruWALEntry batch : activity.batch) {
-                                bs.add(batch.activity);
-                            }
-                            tryQueuePut(rebuilding, queue, bs);
-
-                            activity = (activity.cursor != null)
-                                ? walClient.getActivity(coord.tenantId, coord.partitionId, activity.cursor, partitionRebuildBatchSize)
-                                : null;
+                    while (rebuilding.get() && accessorRef.get() == accessor && activity != null && !activity.batch.isEmpty()) {
+                        List<MiruPartitionedActivity> bs = new ArrayList<>(activity.batch.size());
+                        for (MiruWALEntry batch : activity.batch) {
+                            bs.add(batch.activity);
                         }
+                        tryQueuePut(rebuilding, queue, bs);
 
-                        // signals end of rebuild
-                        log.debug("Signaling end of rebuild for {}", coord);
-                        endOfWAL.set(true);
-                    } catch (Exception x) {
-                        log.error("Failure while rebuilding {}", new Object[] { coord }, x);
-                    } finally {
-                        rebuilding.set(false);
+                        activity = (activity.cursor != null)
+                            ? walClient.getActivity(coord.tenantId, coord.partitionId, activity.cursor, partitionRebuildBatchSize)
+                            : null;
                     }
+
+                    // signals end of rebuild
+                    log.debug("Signaling end of rebuild for {}", coord);
+                    endOfWAL.set(true);
+                } catch (Exception x) {
+                    log.error("Failure while rebuilding {}", new Object[] { coord }, x);
+                } finally {
+                    rebuilding.set(false);
                 }
             });
 

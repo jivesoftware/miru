@@ -267,42 +267,18 @@ public class MiruTestDatasetGenerator {
         activityProduceAndConsume(activityWriter, index, Optional.<MiruTestActivityDistributor.Revisitor>absent(), executor);
         activityProduceAndConsume(backgroundWriter, index, Optional.of(activityRevisitor), executor);
 
-        queryProduceAndConsume(queryAggregateCustomWriter, executor, streamQueryDistributor.getNumQueries(), new Callable<Object>() {
-            @Override
-            public Object call() throws Exception {
-                return streamQueryDistributor.aggregateCountsQuery(false);
-            }
-        });
-        queryProduceAndConsume(queryAggregateInboxWriter, executor, streamQueryDistributor.getNumQueries(), new Callable<Object>() {
-            @Override
-            public Object call() throws Exception {
-                return streamQueryDistributor.aggregateCountsQuery(true);
-            }
-        });
-        queryProduceAndConsume(queryDistinctCustomWriter, executor, streamQueryDistributor.getNumQueries(), new Callable<Object>() {
-            @Override
-            public Object call() throws Exception {
-                return streamQueryDistributor.distinctCountQuery(false);
-            }
-        });
-        queryProduceAndConsume(queryDistinctInboxWriter, executor, streamQueryDistributor.getNumQueries(), new Callable<Object>() {
-            @Override
-            public Object call() throws Exception {
-                return streamQueryDistributor.distinctCountQuery(true);
-            }
-        });
-        queryProduceAndConsume(queryGlobalTrendyWriter, executor, recoQueryDistributor.getNumQueries(), new Callable<Object>() {
-            @Override
-            public Object call() throws Exception {
-                return recoQueryDistributor.globalTrending();
-            }
-        });
-        queryProduceAndConsume(queryCollaborativeFilteringWriter, executor, recoQueryDistributor.getNumQueries(), new Callable<Object>() {
-            @Override
-            public Object call() throws Exception {
-                return recoQueryDistributor.collaborativeFiltering();
-            }
-        });
+        queryProduceAndConsume(queryAggregateCustomWriter, executor, streamQueryDistributor.getNumQueries(),
+            () -> streamQueryDistributor.aggregateCountsQuery(false));
+        queryProduceAndConsume(queryAggregateInboxWriter, executor, streamQueryDistributor.getNumQueries(),
+            () -> streamQueryDistributor.aggregateCountsQuery(true));
+        queryProduceAndConsume(queryDistinctCustomWriter, executor, streamQueryDistributor.getNumQueries(),
+            () -> streamQueryDistributor.distinctCountQuery(false));
+        queryProduceAndConsume(queryDistinctInboxWriter, executor, streamQueryDistributor.getNumQueries(),
+            () -> streamQueryDistributor.distinctCountQuery(true));
+        queryProduceAndConsume(queryGlobalTrendyWriter, executor, recoQueryDistributor.getNumQueries(),
+            recoQueryDistributor::globalTrending);
+        queryProduceAndConsume(queryCollaborativeFilteringWriter, executor, recoQueryDistributor.getNumQueries(),
+            recoQueryDistributor::collaborativeFiltering);
 
         executor.shutdown();
         while (!executor.awaitTermination(1, TimeUnit.SECONDS)) {

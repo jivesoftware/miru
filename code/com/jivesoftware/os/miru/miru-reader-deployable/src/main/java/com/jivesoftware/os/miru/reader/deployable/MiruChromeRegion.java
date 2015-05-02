@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -33,12 +32,8 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
         data.put("header", headerRegion.render(null));
         data.put("region", region.render(input));
         data.put("title", region.getTitle());
-        data.put("plugins", Lists.transform(plugins, new Function<MiruReaderUIPlugin, Map<String, String>>() {
-            @Override
-            public Map<String, String> apply(MiruReaderUIPlugin input) {
-                return ImmutableMap.of("glyphicon", input.glyphicon, "name", input.name, "path", input.path);
-            }
-        }));
+        data.put("plugins", Lists.transform(plugins,
+            plugin -> ImmutableMap.of("glyphicon", plugin.glyphicon, "name", plugin.name, "path", plugin.path)));
         return renderer.render(template, data);
     }
 

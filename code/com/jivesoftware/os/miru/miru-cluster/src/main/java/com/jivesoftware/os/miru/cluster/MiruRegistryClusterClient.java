@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.cluster;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.Collections2;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -22,7 +20,6 @@ import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
-import com.jivesoftware.os.miru.api.topology.PartitionInfo;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -30,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author jonathan.colt
@@ -104,28 +102,17 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     @Override
     public MiruHeartbeatResponse thumpthump(final MiruHost miruHost, MiruHeartbeatRequest heartbeatRequest) throws Exception {
         clusterRegistry.sendHeartbeatForHost(miruHost);
-        clusterRegistry.updateTopologies(miruHost, Collections2.transform(heartbeatRequest.active,
-            new Function<PartitionInfo, MiruClusterRegistry.TopologyUpdate>() {
-                @Override
-                public MiruClusterRegistry.TopologyUpdate apply(PartitionInfo partitionInfo) {
-                    Optional<MiruPartitionCoordInfo> info = Optional.fromNullable(partitionInfo.info);
-                    Optional<Long> refreshTimestamp = (partitionInfo.activeTimestamp > -1) ? Optional.of(
-                        partitionInfo.activeTimestamp) : Optional.<Long>absent();
-                    return new MiruClusterRegistry.TopologyUpdate(
-                        new MiruPartitionCoord(partitionInfo.tenantId, MiruPartitionId.of(partitionInfo.partitionId), miruHost),
-                        info,
-                        refreshTimestamp);
-                }
-            }));
-
-        /*List<MiruHeartbeatResponse.Partition> partitions = new ArrayList<>();
-        for (MiruTenantId tenantId : clusterRegistry.getTenantsForHost(miruHost)) {
-            for (MiruTopologyStatus status : clusterRegistry.getTopologyStatusForTenantHost(tenantId, miruHost)) {
-                MiruPartitionActive partitionActive = clusterRegistry.isPartitionActive(status.partition.coord);
-                partitions.add(new MiruHeartbeatResponse.Partition(tenantId,
-                    status.partition.coord.partitionId.getId(), partitionActive.active, partitionActive.idle));
-            }
-        }*/
+        clusterRegistry.updateTopologies(miruHost, heartbeatRequest.active.stream()
+            .map(partitionInfo -> {
+                Optional<MiruPartitionCoordInfo> info = Optional.fromNullable(partitionInfo.info);
+                Optional<Long> refreshTimestamp = (partitionInfo.activeTimestamp > -1) ? Optional.of(
+                    partitionInfo.activeTimestamp) : Optional.<Long>absent();
+                return new MiruClusterRegistry.TopologyUpdate(
+                    new MiruPartitionCoord(partitionInfo.tenantId, MiruPartitionId.of(partitionInfo.partitionId), miruHost),
+                    info,
+                    refreshTimestamp);
+            })
+            .collect(Collectors.toList()));
 
         NamedCursorsResult<Collection<MiruPartitionActiveUpdate>> partitionActiveHasChanged =
             clusterRegistry.getPartitionActiveUpdatesForHost(miruHost, heartbeatRequest.partitionActiveUpdatesSinceCursors);

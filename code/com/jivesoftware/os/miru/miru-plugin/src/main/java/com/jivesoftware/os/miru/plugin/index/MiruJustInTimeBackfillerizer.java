@@ -24,7 +24,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -75,77 +74,74 @@ public class MiruJustInTimeBackfillerizer {
         throws Exception {
 
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
-        Future<?> future = backfillExecutor.submit(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                try {
+        Future<?> future = backfillExecutor.submit(() -> {
+            try {
 
-                    synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
-                        int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId);
-                        int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId());
-                        BM answer = bitmaps.create();
-                        aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                            streamFilter, solutionLog, answer, requestContext.getActivityIndex().lastId(), lastActivityIndex);
+                synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
+                    int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId);
+                    int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId());
+                    BM answer = bitmaps.create();
+                    aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
+                        streamFilter, solutionLog, answer, requestContext.getActivityIndex().lastId(), lastActivityIndex);
 
-                        MiruInvertedIndexAppender inbox = requestContext.getInboxIndex().getAppender(streamId);
-                        MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
-                        if (log.isDebugEnabled()) {
-                            log.debug("before:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
-                                localHost,
-                                streamId.getBytes(),
-                                requestContext.getInboxIndex().getInbox(streamId).getIndex(),
-                                requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(),
-                                lastActivityIndex);
-                        }
-
-                        MiruIBA streamIdAsIBA = new MiruIBA(streamId.getBytes());
-
-                        long oldestBackfilledEventId = Long.MAX_VALUE;
-                        int propId = readStreamIdsPropName.isPresent() ? requestContext.getSchema().getPropertyId(readStreamIdsPropName.get()) : -1;
-                        //TODO more efficient way to merge answer into inbox and unread
-                        MiruIntIterator intIterator = bitmaps.intIterator(answer);
-                        List<Integer> inboxIds = Lists.newLinkedList();
-                        List<Integer> unreadIds = Lists.newLinkedList();
-                        while (intIterator.hasNext()) {
-                            int i = intIterator.next();
-                            if (i > lastActivityIndex && i <= lastId) {
-                                MiruInternalActivity miruActivity = requestContext.getActivityIndex().get(tenantId, i);
-                                if (miruActivity == null) {
-                                    log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
-                                        i, requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId());
-                                    continue;
-                                }
-                                oldestBackfilledEventId = Math.min(oldestBackfilledEventId, miruActivity.time);
-
-                                inboxIds.add(i);
-
-                                MiruIBA[] readStreamIds = propId >= 0 ? miruActivity.propsValues[propId] : null;
-                                if (readStreamIds == null || !Arrays.asList(readStreamIds).contains(streamIdAsIBA)) {
-                                    unreadIds.add(i);
-                                }
-                            }
-                        }
-                        inbox.appendAndExtend(inboxIds, lastId);
-                        unread.appendAndExtend(unreadIds, lastId);
-
-                        if (log.isDebugEnabled()) {
-                            log.debug("after:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
-                                localHost,
-                                streamId.getBytes(),
-                                requestContext.getInboxIndex().getInbox(streamId).getIndex(),
-                                requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(),
-                                lastActivityIndex);
-                        }
-
-                        sipAndApplyReadTracking(bitmaps, requestContext, tenantId, partitionId, streamId, solutionLog, lastId, oldestBackfilledEventId);
+                    MiruInvertedIndexAppender inbox = requestContext.getInboxIndex().getAppender(streamId);
+                    MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
+                    if (log.isDebugEnabled()) {
+                        log.debug("before:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
+                            localHost,
+                            streamId.getBytes(),
+                            requestContext.getInboxIndex().getInbox(streamId).getIndex(),
+                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(),
+                            lastActivityIndex);
                     }
 
-                } catch (Exception e) {
-                    log.error("Backfillerizer failed", e);
-                    throw new RuntimeException("Backfillerizer failed");
+                    MiruIBA streamIdAsIBA = new MiruIBA(streamId.getBytes());
+
+                    long oldestBackfilledEventId = Long.MAX_VALUE;
+                    int propId = readStreamIdsPropName.isPresent() ? requestContext.getSchema().getPropertyId(readStreamIdsPropName.get()) : -1;
+                    //TODO more efficient way to merge answer into inbox and unread
+                    MiruIntIterator intIterator = bitmaps.intIterator(answer);
+                    List<Integer> inboxIds = Lists.newLinkedList();
+                    List<Integer> unreadIds = Lists.newLinkedList();
+                    while (intIterator.hasNext()) {
+                        int i = intIterator.next();
+                        if (i > lastActivityIndex && i <= lastId) {
+                            MiruInternalActivity miruActivity = requestContext.getActivityIndex().get(tenantId, i);
+                            if (miruActivity == null) {
+                                log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
+                                    i, requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId());
+                                continue;
+                            }
+                            oldestBackfilledEventId = Math.min(oldestBackfilledEventId, miruActivity.time);
+
+                            inboxIds.add(i);
+
+                            MiruIBA[] readStreamIds = propId >= 0 ? miruActivity.propsValues[propId] : null;
+                            if (readStreamIds == null || !Arrays.asList(readStreamIds).contains(streamIdAsIBA)) {
+                                unreadIds.add(i);
+                            }
+                        }
+                    }
+                    inbox.appendAndExtend(inboxIds, lastId);
+                    unread.appendAndExtend(unreadIds, lastId);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("after:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
+                            localHost,
+                            streamId.getBytes(),
+                            requestContext.getInboxIndex().getInbox(streamId).getIndex(),
+                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(),
+                            lastActivityIndex);
+                    }
+
+                    sipAndApplyReadTracking(bitmaps, requestContext, tenantId, partitionId, streamId, solutionLog, lastId, oldestBackfilledEventId);
                 }
-                return null;
+
+            } catch (Exception e) {
+                log.error("Backfillerizer failed", e);
+                throw new RuntimeException("Backfillerizer failed");
             }
+            return null;
         });
 
         // if this is interrupted, the backfill will still complete

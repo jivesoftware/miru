@@ -1,16 +1,13 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
-import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;
-import com.jivesoftware.os.filer.io.api.KeyValueStore;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -20,13 +17,13 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final long[] indexIds;
-    private final KeyedFilerStore[] indexes;
+    private final KeyedFilerStore<Long, Void>[] indexes;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
 
     public MiruFilerFieldIndex(MiruBitmaps<BM> bitmaps,
         long[] indexIds,
-        KeyedFilerStore[] indexes,
+        KeyedFilerStore<Long, Void>[] indexes,
         StripingLocksProvider<MiruTermId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
@@ -53,12 +50,7 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
 
     @Override
     public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream) throws Exception {
-        indexes[fieldId].streamKeys(ranges, new KeyValueStore.KeyStream<IBA>() {
-            @Override
-            public boolean stream(IBA iba) throws IOException {
-                return termIdStream.stream(new MiruTermId(iba.getBytes()));
-            }
-        });
+        indexes[fieldId].streamKeys(ranges, iba -> termIdStream.stream(new MiruTermId(iba.getBytes())));
     }
 
     @Override

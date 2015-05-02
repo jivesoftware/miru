@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.sea.anomaly.plugins;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -18,7 +17,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
-import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -72,12 +70,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
             return new MiruPartitionResponse<>(
                 new SeaAnomalyAnswer(
                     Maps.transformValues(request.query.filters,
-                        new Function<MiruFilter, SeaAnomalyAnswer.Waveform>() {
-                            @Override
-                            public SeaAnomalyAnswer.Waveform apply(MiruFilter input) {
-                                return new SeaAnomalyAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
-                            }
-                        }),
+                        input -> new SeaAnomalyAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments])),
                     resultsExhausted),
                 solutionLog.asList());
         }
@@ -147,21 +140,17 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                     byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
                     keyRange = new KeyRange(lowerInclusive, upperExclusive);
                 }
-                fieldIndex.streamTermIdsForField(fieldId, (keyRange == null ? null : Arrays.asList(keyRange)), new TermIdStream() {
+                fieldIndex.streamTermIdsForField(fieldId, (keyRange == null ? null : Arrays.asList(keyRange)), termId -> {
+                    for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
+                        ArrayList<MiruFieldFilter> join = new ArrayList<>();
+                        join.addAll(entry.getValue().fieldFilters);
+                        join.add(new MiruFieldFilter(MiruFieldType.primary,
+                            request.query.expansionField, Lists.newArrayList(new String(termId.getBytes(), StandardCharsets.UTF_8))));
 
-                    @Override
-                    public boolean stream(MiruTermId termId) {
-                        for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
-                            ArrayList<MiruFieldFilter> join = new ArrayList<>();
-                            join.addAll(entry.getValue().fieldFilters);
-                            join.add(new MiruFieldFilter(MiruFieldType.primary,
-                                request.query.expansionField, Lists.newArrayList(new String(termId.getBytes(), StandardCharsets.UTF_8))));
-
-                            expandable.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
-                                new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
-                        }
-                        return true;
+                        expandable.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
+                            new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                     }
+                    return true;
                 });
             } else {
                 // TODO use got.

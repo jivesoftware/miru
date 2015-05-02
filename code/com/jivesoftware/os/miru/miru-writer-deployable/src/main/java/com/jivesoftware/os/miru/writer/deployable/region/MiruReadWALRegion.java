@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.writer.deployable.region;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -70,26 +69,15 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
                             new MiruWALClient.SipReadCursor(afterTimestamp, 0),
                             limit);
 
-                        walReadEvents = Lists.transform(sipped.batch, new Function<MiruReadSipEntry, WALBean>() {
-
-                            @Override
-                            public WALBean apply(MiruReadSipEntry input) {
-                                return new WALBean(input.timestamp, Optional.<MiruPartitionedActivity>absent(), input.eventId);
-                            }
-                        });
+                        walReadEvents = Lists.transform(sipped.batch,
+                            input -> new WALBean(input.timestamp, Optional.<MiruPartitionedActivity>absent(), input.eventId));
                         lastTimestamp.set(sipped.cursor != null ? sipped.cursor.sipId : Long.MAX_VALUE);
 
                     } else {
                         MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetReadCursor> read = miruWALDirector.getRead(miruTenantId, miruStreamId,
                             new MiruWALClient.GetReadCursor(afterTimestamp), limit);
 
-                        walReadEvents = Lists.transform(read.batch, new Function<MiruWALEntry, WALBean>() {
-
-                            @Override
-                            public WALBean apply(MiruWALEntry input) {
-                                return new WALBean(input.collisionId, Optional.of(input.activity), input.version);
-                            }
-                        });
+                        walReadEvents = Lists.transform(read.batch, input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
                         lastTimestamp.set(read.cursor != null ? read.cursor.eventId : Long.MAX_VALUE);
                     }
                 } catch (Exception e) {

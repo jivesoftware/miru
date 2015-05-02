@@ -37,46 +37,18 @@ public class MiruWriteToReadTrackingAndSipWAL implements MiruReadTrackingWALWrit
     }
 
     // ReadTrackingWAL
-    private static final ColumnKey<MiruReadTrackingWALColumnKey> READTRACKING_WAL_COLUMN_KEY = new ColumnKey<MiruReadTrackingWALColumnKey>() {
-        @Override
-        public MiruReadTrackingWALColumnKey provideColumnKey(MiruPartitionedActivity activity, CollisionId collisionId) {
-            return new MiruReadTrackingWALColumnKey(collisionId.collisionId(activity));
-        }
-    };
+    private static final ColumnKey<MiruReadTrackingWALColumnKey> READTRACKING_WAL_COLUMN_KEY =
+        (activity, collisionId) -> new MiruReadTrackingWALColumnKey(collisionId.collisionId(activity));
 
-    private static final ColumnValue<MiruPartitionedActivity> READTRACKING_WAL_COLUMN_VALUE = new ColumnValue<MiruPartitionedActivity>() {
-        @Override
-        public MiruPartitionedActivity provideColumnValue(MiruPartitionedActivity activity) {
-            return activity;
-        }
-    };
+    private static final ColumnValue<MiruPartitionedActivity> READTRACKING_WAL_COLUMN_VALUE = activity -> activity;
 
-    private static final CollisionId READTRACKING_WAL_COLLISIONID = new CollisionId() {
-        @Override
-        public long collisionId(MiruPartitionedActivity activity) {
-            return activity.timestamp;
-        }
-    };
+    private static final CollisionId READTRACKING_WAL_COLLISIONID = activity -> activity.timestamp;
 
     // ReadTrackingSipWAL
-    private static final ColumnKey<MiruReadTrackingSipWALColumnKey> READTRACKING_SIP_WAL_COLUMN_KEY = new ColumnKey<MiruReadTrackingSipWALColumnKey>() {
-        @Override
-        public MiruReadTrackingSipWALColumnKey provideColumnKey(MiruPartitionedActivity activity, CollisionId collisionId) {
-            return new MiruReadTrackingSipWALColumnKey(collisionId.collisionId(activity), activity.timestamp);
-        }
-    };
+    private static final ColumnKey<MiruReadTrackingSipWALColumnKey> READTRACKING_SIP_WAL_COLUMN_KEY =
+        (activity, collisionId) -> new MiruReadTrackingSipWALColumnKey(collisionId.collisionId(activity), activity.timestamp);
 
-    private static final ColumnValue<Long> READTRACKING_SIP_WAL_COLUMN_VALUE = new ColumnValue<Long>() {
-        @Override
-        public Long provideColumnValue(MiruPartitionedActivity activity) {
-            return activity.timestamp;
-        }
-    };
+    private static final ColumnValue<Long> READTRACKING_SIP_WAL_COLUMN_VALUE = activity -> activity.timestamp;
 
-    private static final CollisionId READTRACKING_SIP_WAL_COLLISIONID = new CollisionId() {
-        @Override
-        public long collisionId(MiruPartitionedActivity activity) {
-            return System.currentTimeMillis();
-        }
-    };
+    private static final CollisionId READTRACKING_SIP_WAL_COLLISIONID = activity -> System.currentTimeMillis();
 }

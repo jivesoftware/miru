@@ -43,11 +43,11 @@ public class IngressGuaranteedDeliveryQueueProvider {
 
     static interface IngressPendingCheck extends ScheduledMinMaxHealthCheckConfig {
 
-        @StringDefault ("ingress>pending")
+        @StringDefault("ingress>pending")
         @Override
         public String getName();
 
-        @LongDefault (100000)
+        @LongDefault(100000)
         @Override
         public Long getMax();
 
@@ -61,13 +61,7 @@ public class IngressGuaranteedDeliveryQueueProvider {
         DeliveryCallback deliveryCallback) throws IOException {
 
         HealthFactory.scheduleHealthChecker(IngressDiskCheck.class,
-            new HealthFactory.HealthCheckerConstructor<Counter, IngressDiskCheck>() {
-
-                @Override
-                public HealthChecker<Counter> construct(IngressDiskCheck config) {
-                    return new DiskFreeHealthChecker(config, new File[] { new File(pathToQueues) });
-                }
-            });
+            config -> (HealthChecker) new DiskFreeHealthChecker(config, new File[] { new File(pathToQueues) }));
 
         this.guaranteedDeliveryServices = new GuaranteedDeliveryService[numberOfPartitions];
         for (int i = 0; i < guaranteedDeliveryServices.length; i++) {
@@ -86,13 +80,7 @@ public class IngressGuaranteedDeliveryQueueProvider {
         }
 
         HealthFactory.scheduleHealthChecker(IngressPendingCheck.class,
-            new HealthFactory.HealthCheckerConstructor<Counter, IngressPendingCheck>() {
-
-                @Override
-                public HealthChecker<Counter> construct(IngressPendingCheck config) {
-                    return new PendingHealthChecker(guaranteedDeliveryServices, config);
-                }
-            });
+            config -> (HealthChecker) new PendingHealthChecker(guaranteedDeliveryServices, config));
     }
 
     private static class PendingHealthChecker extends MinMaxHealthChecker implements ScheduledHealthCheck {

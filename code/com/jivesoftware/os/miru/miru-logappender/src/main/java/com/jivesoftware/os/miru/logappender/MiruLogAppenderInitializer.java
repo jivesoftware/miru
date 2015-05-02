@@ -95,11 +95,7 @@ public class MiruLogAppenderInitializer {
                 config.getNonBlockingDrainThreshold(),
                 config.getNonBlockingDrainCount());
         } else {
-            return new MiruLogAppender() {
-
-                @Override
-                public void install() {
-                }
+            return () -> {
             };
         }
     }

@@ -8,10 +8,7 @@
  */
 package com.jivesoftware.os.miru.cluster.client;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -54,20 +51,10 @@ public class MiruReplicaSetDirector {
         Set<MiruHost> hostsWithReplica = Sets.newHashSet(replicaHosts.replicaHosts);
         int countOfMissingReplicas = replicaHosts.countOfMissingReplicas;
 
-        MiruHost[] hostsArray = FluentIterable.from(hostHeartbeats)
-            .filter(new Predicate<HostHeartbeat>() {
-                @Override
-                public boolean apply(HostHeartbeat input) {
-                    return input != null && input.heartbeat > eligibleAfter;
-                }
-            })
-            .transform(new Function<HostHeartbeat, MiruHost>() {
-                @Override
-                public MiruHost apply(HostHeartbeat input) {
-                    return input.host;
-                }
-            })
-            .toArray(MiruHost.class);
+        MiruHost[] hostsArray = hostHeartbeats.stream()
+            .filter(input -> input != null && input.heartbeat > eligibleAfter)
+            .map(input -> input.host)
+            .toArray(MiruHost[]::new);
 
         // We use a hash code derived from the tenant and partition to choose a starting index,
         // and start electing eligible hosts from there.

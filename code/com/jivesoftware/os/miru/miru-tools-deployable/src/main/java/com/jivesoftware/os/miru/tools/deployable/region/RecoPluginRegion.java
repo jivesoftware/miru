@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.tools.deployable.region;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -180,14 +179,9 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                     }
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    data.put("results", Lists.transform(results, new Function<Recommendation, Map<String, String>>() {
-                        @Override
-                        public Map<String, String> apply(Recommendation input) {
-                            return ImmutableMap.of(
-                                "name", input.distinctValue,
-                                "rank", String.valueOf(input.rank));
-                        }
-                    }));
+                    data.put("results", Lists.transform(results, recommendation -> ImmutableMap.of(
+                        "name", recommendation.distinctValue,
+                        "rank", String.valueOf(recommendation.rank))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));

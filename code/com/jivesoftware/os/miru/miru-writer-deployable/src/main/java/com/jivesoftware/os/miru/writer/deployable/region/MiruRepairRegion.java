@@ -80,18 +80,15 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<String>> {
     private Table<String, String, String> getBadPartitions() throws Exception {
         final ListMultimap<MiruTenantId, MiruPartitionId> allPartitions = ArrayListMultimap.create();
         final AtomicLong count = new AtomicLong(0);
-        activityWALReader.allPartitions(new MiruActivityWALReader.PartitionsStream() {
-            @Override
-            public boolean stream(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-                if (tenantId != null && partitionId != null) {
-                    allPartitions.put(tenantId, partitionId);
-                    long got = count.incrementAndGet();
-                    if (got % 1_000 == 0) {
-                        log.info("Repair has scanned {} partitions", got);
-                    }
+        activityWALReader.allPartitions((tenantId, partitionId) -> {
+            if (tenantId != null && partitionId != null) {
+                allPartitions.put(tenantId, partitionId);
+                long got = count.incrementAndGet();
+                if (got % 1_000 == 0) {
+                    log.info("Repair has scanned {} partitions", got);
                 }
-                return true;
             }
+            return true;
         });
 
         final Table<String, String, String> badPartitions = TreeBasedTable.create(); // tree for order

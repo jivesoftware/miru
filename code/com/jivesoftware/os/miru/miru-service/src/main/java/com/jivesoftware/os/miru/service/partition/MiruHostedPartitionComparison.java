@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
@@ -39,24 +38,21 @@ public class MiruHostedPartitionComparison {
     private final int percentile;
     private final Timestamper timestamper;
 
-    private final Comparator<PartitionAndTime> partitionAndTimeComparator = new Comparator<PartitionAndTime>() {
-        @Override
-        public int compare(PartitionAndTime pat1, PartitionAndTime pat2) {
-            MiruRoutablePartition p1 = pat1.partition;
-            MiruRoutablePartition p2 = pat2.partition;
-            long t1 = pat1.time;
-            long t2 = pat2.time;
-            return ComparisonChain
-                .start()
-                .compare(p2.partitionId, p1.partitionId) // flipped p1 and p2 so that we get descending order.
-                .compareTrueFirst(p1.local, p2.local)
-                .compare(p1.storage, p2.storage, Ordering.explicit(
-                    MiruBackingStorage.memory,
-                    MiruBackingStorage.disk,
-                    MiruBackingStorage.unknown))
-                .compare(t2, t1) // descending order
-                .result();
-        }
+    private final Comparator<PartitionAndTime> partitionAndTimeComparator = (pat1, pat2) -> {
+        MiruRoutablePartition p1 = pat1.partition;
+        MiruRoutablePartition p2 = pat2.partition;
+        long t1 = pat1.time;
+        long t2 = pat2.time;
+        return ComparisonChain
+            .start()
+            .compare(p2.partitionId, p1.partitionId) // flipped p1 and p2 so that we get descending order.
+            .compareTrueFirst(p1.local, p2.local)
+            .compare(p1.storage, p2.storage, Ordering.explicit(
+                MiruBackingStorage.memory,
+                MiruBackingStorage.disk,
+                MiruBackingStorage.unknown))
+            .compare(t2, t1) // descending order
+            .result();
     };
 
     public MiruHostedPartitionComparison(int windowSize, int percentile, Timestamper timestamper) {
@@ -66,12 +62,7 @@ public class MiruHostedPartitionComparison {
     }
 
     public MiruHostedPartitionComparison(int percentile, int windowSize) {
-        this(percentile, windowSize, new Timestamper() {
-            @Override
-            public long get() {
-                return System.currentTimeMillis();
-            }
-        });
+        this(percentile, windowSize, System::currentTimeMillis);
     }
 
     /**
@@ -108,12 +99,7 @@ public class MiruHostedPartitionComparison {
         }
 
         Collections.sort(partitionAndTimes, partitionAndTimeComparator);
-        return Lists.transform(partitionAndTimes, new Function<PartitionAndTime, MiruRoutablePartition>() {
-            @Override
-            public MiruRoutablePartition apply(PartitionAndTime input) {
-                return input.partition;
-            }
-        });
+        return Lists.transform(partitionAndTimes, input -> input.partition);
     }
 
     /**

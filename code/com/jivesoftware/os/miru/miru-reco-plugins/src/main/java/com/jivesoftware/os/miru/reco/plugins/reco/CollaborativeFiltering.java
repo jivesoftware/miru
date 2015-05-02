@@ -5,7 +5,6 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -39,11 +38,8 @@ public class CollaborativeFiltering {
     private final MiruAggregateUtil aggregateUtil;
     private final MiruIndexUtil indexUtil;
 
-    private final Comparator<MiruTermCount> highestCountComparator = new Comparator<MiruTermCount>() {
-        @Override
-        public int compare(MiruTermCount o1, MiruTermCount o2) {
-            return -Long.compare(o1.count, o2.count); // minus to reverse :)
-        }
+    private final Comparator<MiruTermCount> highestCountComparator = (o1, o2) -> {
+        return -Long.compare(o1.count, o2.count); // minus to reverse :)
     };
 
     public CollaborativeFiltering(MiruAggregateUtil aggregateUtil, MiruIndexUtil indexUtil) {
@@ -128,15 +124,12 @@ public class CollaborativeFiltering {
         final MinMaxPriorityQueue<MiruTermCount> contributorHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
             .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
             .create();
-        aggregateUtil.stream(bitmaps, requestContext, otherOkField1Activity, Optional.<BM>absent(), fieldId2,
-            request.query.aggregateFieldName2, new CallbackStream<MiruTermCount>() {
-                @Override
-                public MiruTermCount callback(MiruTermCount miruTermCount) throws Exception {
-                    if (miruTermCount != null) {
-                        contributorHeap.add(miruTermCount);
-                    }
-                    return miruTermCount;
+        aggregateUtil.stream(bitmaps, requestContext, otherOkField1Activity, Optional.<BM>absent(), fieldId2, request.query.aggregateFieldName2,
+            miruTermCount -> {
+                if (miruTermCount != null) {
+                    contributorHeap.add(miruTermCount);
                 }
+                return miruTermCount;
             });
 
         if (request.query.aggregateFieldName2.equals(request.query.aggregateFieldName3)) {
