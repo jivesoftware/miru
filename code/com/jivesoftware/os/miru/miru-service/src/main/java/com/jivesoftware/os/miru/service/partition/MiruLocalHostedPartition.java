@@ -483,7 +483,6 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
             MiruPartitionActive partitionActive = heartbeatHandler.getPartitionActive(coord);
-            System.out.println("checkActive: " + partitionActive.activeUntilTimestamp + " > " + System.currentTimeMillis());
             if (partitionActive.activeUntilTimestamp > System.currentTimeMillis()) {
                 if (accessor.info.state == MiruPartitionState.offline) {
                     if (accessor.info.storage == MiruBackingStorage.memory) {

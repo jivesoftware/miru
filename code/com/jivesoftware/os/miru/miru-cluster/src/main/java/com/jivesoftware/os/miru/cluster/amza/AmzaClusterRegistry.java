@@ -761,9 +761,13 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             return new MiruPartitionActive(-1, -1);
         } else {
             MiruTopologyColumnValue columnValue = topologyColumnValueMarshaller.fromBytes(got);
-            long now = System.currentTimeMillis();
-            return new MiruPartitionActive(columnValue.lastActiveTimestamp + defaultTopologyIsStaleAfterMillis,
-                columnValue.lastActiveTimestamp + defaultTopologyIsIdleAfterMillis);
+            long activeUntilTimestamp = -1;
+            long idleAfterTimestamp = -1;
+            if (columnValue.lastActiveTimestamp > 0) {
+                activeUntilTimestamp = columnValue.lastActiveTimestamp + defaultTopologyIsStaleAfterMillis;
+                idleAfterTimestamp = columnValue.lastActiveTimestamp + defaultTopologyIsIdleAfterMillis;
+            }
+            return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp);
         }
     }
 
