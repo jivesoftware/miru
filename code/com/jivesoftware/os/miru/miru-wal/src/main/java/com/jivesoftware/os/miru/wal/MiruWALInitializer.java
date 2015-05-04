@@ -94,6 +94,7 @@ public class MiruWALInitializer {
                 tableNameSpace,
                 "miru.lookup.t", // Tenant
                 "a",
+                new String[] { "r" },
                 new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruVoidByteMarshaller(),
                     new SaltingDelegatingMarshaller<>(new MiruTenantIdMarshaller()),
@@ -108,6 +109,7 @@ public class MiruWALInitializer {
                 tableNameSpace,
                 "miru.lookup.t", // Tenant
                 "r",
+                new String[] { "a" },
                 new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruVoidByteMarshaller(),
                     new SaltingDelegatingMarshaller<>(new MiruTenantIdMarshaller()),
