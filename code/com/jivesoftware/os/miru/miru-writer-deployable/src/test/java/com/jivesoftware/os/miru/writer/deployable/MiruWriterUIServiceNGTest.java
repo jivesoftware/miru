@@ -14,8 +14,8 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALWriter;
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
-import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.wal.lookup.MiruRCVSWALLookup;
+import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
@@ -61,12 +61,12 @@ public class MiruWriterUIServiceNGTest {
         MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(wal.getActivityLookupTable());
+        MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
         MiruPartitionIdProvider miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(100_000,
             wal.getWriterPartitionRegistry(),
             activityWALReader);
 
-        MiruWALDirector director = new MiruWALDirector(activityLookupTable,
+        MiruWALDirector director = new MiruWALDirector(walLookup,
             activityWALReader, activityWALWriter, miruPartitionIdProvider, readTrackingWALReader);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);

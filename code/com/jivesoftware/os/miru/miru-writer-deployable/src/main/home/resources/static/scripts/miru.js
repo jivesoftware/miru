@@ -60,6 +60,30 @@ miru.repair = {
         });
     },
 
+    repairRanges: function (ele) {
+        var $button = $(ele);
+        $button.attr('disabled', 'disabled');
+        var value = $button.val();
+        $.ajax({
+            type: "POST",
+            url: "/miru/writer/repair/repairRanges",
+            data: {},
+            //contentType: "application/json",
+            success: function () {
+                $button.val('Success');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            },
+            error: function () {
+                $button.val('Failure');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            }
+        });
+    },
+
     removePartition: function (ele, tenantId, partitionId) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');

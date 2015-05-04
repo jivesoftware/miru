@@ -59,6 +59,19 @@ public class MiruWALEndpoints {
     }
 
     @POST
+    @Path("/repairRanges")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response repairRanges() throws Exception {
+        try {
+            walDirector.repairRanges();
+            return responseHelper.jsonResponse("ok");
+        } catch (Exception x) {
+            log.error("Failed calling repairRanges()", x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @POST
     @Path("/sanitize/activity/wal/{tenantId}/{partitionId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response sanitizeActivityWAL(@PathParam("tenantId") String tenantId,
