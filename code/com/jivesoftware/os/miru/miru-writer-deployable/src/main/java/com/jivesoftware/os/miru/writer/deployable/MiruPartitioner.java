@@ -10,8 +10,8 @@ import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
 import com.jivesoftware.os.miru.wal.lookup.MiruVersionedActivityLookupEntry;
+import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionCursor;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
@@ -34,7 +34,7 @@ public class MiruPartitioner {
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruActivityWALReader activityWALReader;
     private final MiruReadTrackingWALWriter readTrackingWAL;
-    private final MiruActivityLookupTable activityLookupTable;
+    private final MiruWALLookup walLookup;
     private final long partitionMaximumAgeInMillis;
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
     private final StripingLocksProvider<MiruTenantId> locks = new StripingLocksProvider<>(64);
@@ -44,14 +44,14 @@ public class MiruPartitioner {
         MiruActivityWALWriter activityWALWriter,
         MiruActivityWALReader activityWALReader,
         MiruReadTrackingWALWriter readTrackingWAL,
-        MiruActivityLookupTable activityLookupTable,
+        MiruWALLookup walLookup,
         long partitionMaximumAgeInMillis) {
         this.writerId = writerId;
         this.partitionIdProvider = partitionIdProvider;
         this.activityWALWriter = activityWALWriter;
         this.activityWALReader = activityWALReader;
         this.readTrackingWAL = readTrackingWAL;
-        this.activityLookupTable = activityLookupTable;
+        this.walLookup = walLookup;
         this.partitionMaximumAgeInMillis = partitionMaximumAgeInMillis;
     }
 
@@ -157,7 +157,7 @@ public class MiruPartitioner {
                 index++;
             }
 
-            MiruVersionedActivityLookupEntry[] versionedEntries = activityLookupTable.getVersionedEntries(tenantId, times);
+            MiruVersionedActivityLookupEntry[] versionedEntries = walLookup.getVersionedEntries(tenantId, times);
             index = 0;
             for (MiruActivity activity : activities) {
                 MiruVersionedActivityLookupEntry versionedEntry = versionedEntries[index];
@@ -175,7 +175,7 @@ public class MiruPartitioner {
             }
 
             activityWALWriter.write(tenantId, partitionedActivities);
-            activityLookupTable.add(tenantId, partitionedActivities);
+            walLookup.add(tenantId, partitionedActivities);
         }
     }
 
@@ -216,7 +216,7 @@ public class MiruPartitioner {
         List<MiruPartitionedActivity> partitionedActivities) throws Exception {
 
         activityWALWriter.write(tenantId, partitionedActivities);
-        activityLookupTable.add(tenantId, partitionedActivities);
+        walLookup.add(tenantId, partitionedActivities);
 
         if (!partitionedActivities.isEmpty()) {
             log.set(ValueType.COUNT, "partitioner>index>" + currentPartition.getId(),
@@ -250,7 +250,7 @@ public class MiruPartitioner {
             index++;
         }
 
-        MiruVersionedActivityLookupEntry[] versionedEntries = activityLookupTable.getVersionedEntries(tenantId, times);
+        MiruVersionedActivityLookupEntry[] versionedEntries = walLookup.getVersionedEntries(tenantId, times);
         index = 0;
 
         for (MiruActivity activity : activities) {

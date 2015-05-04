@@ -172,12 +172,26 @@ public class MiruWriterEndpoints {
     @Path("/repair/repairBoundaries")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
-    public Response repairWAL() {
+    public Response repairBoundaries() {
         try {
             miruWALDirector.repairBoundaries();
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("POST /repair/repairBoundaries", t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @POST
+    @Path("/repair/repairRanges")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
+    public Response repairRanges() {
+        try {
+            miruWALDirector.repairRanges();
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /repair/repairRanges", t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

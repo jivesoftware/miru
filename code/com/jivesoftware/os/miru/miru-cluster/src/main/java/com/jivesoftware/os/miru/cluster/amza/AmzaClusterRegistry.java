@@ -47,9 +47,11 @@ import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
+import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruHostMarshaller;
 import com.jivesoftware.os.miru.cluster.marshaller.MiruTopologyColumnValueMarshaller;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruTopologyColumnValue;
@@ -86,9 +88,11 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private final TypeMarshaller<MiruSchema> schemaMarshaller;
 
     private final AmzaService amzaService;
+    private final MiruTenantPartitionRangeProvider rangeProvider;
     private final int defaultNumberOfReplicas;
     private final long defaultTopologyIsStaleAfterMillis;
     private final long defaultTopologyIsIdleAfterMillis;
+    private final long defaultTopologyDestroyAfterMillis;
     private final int replicationFactor;
     private final int takeFromFactor;
     private final WALStorageDescriptor amzaStorageDescriptor;
@@ -96,17 +100,21 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private final AtomicBoolean ringInitialized = new AtomicBoolean(false);
 
     public AmzaClusterRegistry(AmzaService amzaService,
+        MiruTenantPartitionRangeProvider rangeProvider,
         TypeMarshaller<MiruSchema> schemaMarshaller,
         int defaultNumberOfReplicas,
         long defaultTopologyIsStaleAfterMillis,
         long defaultTopologyIsIdleAfterMillis,
+        long defaultTopologyDestroyAfterMillis,
         int replicationFactor,
         int takeFromFactor) throws Exception {
         this.amzaService = amzaService;
+        this.rangeProvider = rangeProvider;
         this.schemaMarshaller = schemaMarshaller;
         this.defaultNumberOfReplicas = defaultNumberOfReplicas;
         this.defaultTopologyIsStaleAfterMillis = defaultTopologyIsStaleAfterMillis;
         this.defaultTopologyIsIdleAfterMillis = defaultTopologyIsIdleAfterMillis;
+        this.defaultTopologyDestroyAfterMillis = defaultTopologyDestroyAfterMillis;
         this.replicationFactor = replicationFactor;
         this.takeFromFactor = takeFromFactor;
         this.amzaStorageDescriptor = new WALStorageDescriptor(
@@ -408,7 +416,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 }
                 MiruPartitionActive partitionActive = isPartitionActive(new MiruPartitionCoord(tenantId, partitionId, host));
                 updates.add(new MiruPartitionActiveUpdate(tenantId, partitionId.getId(), hosted,
-                    partitionActive.activeUntilTimestamp, partitionActive.idleAfterTimestamp));
+                    partitionActive.activeUntilTimestamp, partitionActive.idleAfterTimestamp, partitionActive.destroyAfterTimestamp));
             }
         }
 
@@ -758,7 +766,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         AmzaRegion topologyInfo = createRegionIfAbsent("host-" + coord.host.toStringForm() + "-partition-info");
         byte[] got = topologyInfo.get(topologyKey(coord.tenantId, coord.partitionId));
         if (got == null) {
-            return new MiruPartitionActive(-1, -1);
+            return new MiruPartitionActive(-1, -1, -1);
         } else {
             MiruTopologyColumnValue columnValue = topologyColumnValueMarshaller.fromBytes(got);
             long activeUntilTimestamp = -1;
@@ -767,7 +775,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 activeUntilTimestamp = columnValue.lastActiveTimestamp + defaultTopologyIsStaleAfterMillis;
                 idleAfterTimestamp = columnValue.lastActiveTimestamp + defaultTopologyIsIdleAfterMillis;
             }
-            return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp);
+
+            long destroyAfterTimestamp = -1;
+            Optional<MiruWALClient.MiruLookupRange> range = rangeProvider.getRange(coord.tenantId, coord.partitionId);
+            if (range.isPresent() && range.get().maxClock > 0) {
+                destroyAfterTimestamp = range.get().maxClock + defaultTopologyDestroyAfterMillis;
+            }
+
+            return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp, destroyAfterTimestamp);
         }
     }
 

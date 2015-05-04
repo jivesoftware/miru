@@ -128,13 +128,13 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                             public ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> callback(
                                 ColumnValueAndTimestamp<MiruHostsColumnKey, MiruHostsColumnValue, Long> columnValueAndTimestamp) throws Exception {
 
-                                    if (columnValueAndTimestamp != null
+                                if (columnValueAndTimestamp != null
                                     && columnValueAndTimestamp.getColumn().getIndex() == MiruHostsColumnKey.heartbeat.getIndex()) {
-                                        MiruHostsColumnValue value = columnValueAndTimestamp.getValue();
-                                        hostHeartbeats.add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp()));
-                                    }
-                                    return columnValueAndTimestamp;
+                                    MiruHostsColumnValue value = columnValueAndTimestamp.getValue();
+                                    hostHeartbeats.add(new HostHeartbeat(host, columnValueAndTimestamp.getTimestamp()));
                                 }
+                                return columnValueAndTimestamp;
+                            }
                         }));
                 }
                 return value;
@@ -323,7 +323,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
                 topologyRegistry.add(MiruVoidByte.INSTANCE, coord.tenantId, new MiruTopologyColumnKey(coord.partitionId, coord.host),
                     update, null, timestamper);
-                log.debug("Updated {} to {} at {}", new Object[]{coord, coordInfo, refreshTimestamp});
+                log.debug("Updated {} to {} at {}", new Object[] { coord, coordInfo, refreshTimestamp });
             }
 
             if (optionalInfo.isPresent()) {
@@ -393,12 +393,12 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                     MiruPartitionActive partitionActive = isPartitionActive(status.partition.coord);
                     MiruPartitionId partitionId = status.partition.coord.partitionId;
                     updates.add(new MiruPartitionActiveUpdate(tenantId, partitionId.getId(), true,
-                        partitionActive.activeUntilTimestamp, partitionActive.idleAfterTimestamp));
+                        partitionActive.activeUntilTimestamp, partitionActive.idleAfterTimestamp, partitionActive.destroyAfterTimestamp));
                 }
             }
             for (Map.Entry<MiruPartitionId, Collection<MiruHost>> entry : replicaHosts.asMap().entrySet()) {
                 if (!entry.getValue().contains(host)) {
-                    updates.add(new MiruPartitionActiveUpdate(tenantId, entry.getKey().getId(), false, -1, -1));
+                    updates.add(new MiruPartitionActiveUpdate(tenantId, entry.getKey().getId(), false, -1, -1, -1));
                 }
             }
         }
@@ -418,7 +418,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
             new CallbackStream<ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> callback(ColumnValueAndTimestamp<MiruTenantId, MiruVoidByte, Long> v)
-                throws Exception {
+                    throws Exception {
                     if (v != null) {
                         tenantIds.add(v.getColumn());
                     }
@@ -452,23 +452,23 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                     @Override
                     public ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> callback(
                         ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> c) throws Exception {
-                            if (c != null) {
-                                MiruTopologyColumnValue value = c.getValue();
-                                MiruHost host = c.getColumn().host;
-                                MiruTopologyStatus status = new MiruTopologyStatus(
-                                    new MiruPartition(
-                                        new MiruPartitionCoord(tenantId, c.getColumn().partitionId, host),
-                                        new MiruPartitionCoordInfo(value.state, value.storage)), value.lastActiveTimestamp);
+                        if (c != null) {
+                            MiruTopologyColumnValue value = c.getValue();
+                            MiruHost host = c.getColumn().host;
+                            MiruTopologyStatus status = new MiruTopologyStatus(
+                                new MiruPartition(
+                                    new MiruPartitionCoord(tenantId, c.getColumn().partitionId, host),
+                                    new MiruPartitionCoordInfo(value.state, value.storage)), value.lastActiveTimestamp);
 
-                                List<MiruTopologyStatus> statuses = topologies.get(tenantId, c.getColumn().partitionId);
-                                if (statuses == null) {
-                                    statuses = Lists.newArrayList();
-                                    topologies.put(tenantId, c.getColumn().partitionId, statuses);
-                                }
-                                statuses.add(status);
+                            List<MiruTopologyStatus> statuses = topologies.get(tenantId, c.getColumn().partitionId);
+                            if (statuses == null) {
+                                statuses = Lists.newArrayList();
+                                topologies.put(tenantId, c.getColumn().partitionId, statuses);
                             }
-                            return c;
+                            statuses.add(status);
                         }
+                        return c;
+                    }
                 }));
         }
         if (!callbacks.isEmpty()) {
@@ -548,12 +548,12 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 public ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> callback(
                     ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long> cvat) throws Exception {
 
-                        if (cvat != null) {
-                            MiruPartitionId partitionId = cvat.getColumn().partitionId;
-                            partitionsTopology.put(partitionId, cvat);
-                        }
-                        return cvat;
+                    if (cvat != null) {
+                        MiruPartitionId partitionId = cvat.getColumn().partitionId;
+                        partitionsTopology.put(partitionId, cvat);
                     }
+                    return cvat;
+                }
             });
 
         long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis.name(), defaultTopologyIsStaleAfterMillis);
@@ -604,7 +604,7 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
 
         MiruTopologyColumnKey key = new MiruTopologyColumnKey(partitionId, host);
         ColumnValueAndTimestamp<MiruTopologyColumnKey, MiruTopologyColumnValue, Long>[] valueAndTimestamps = topologyRegistry
-            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[]{key}, null, null);
+            .multiGetEntries(MiruVoidByte.INSTANCE, tenantId, new MiruTopologyColumnKey[] { key }, null, null);
 
         long topologyTimestamp = -1;
         if (valueAndTimestamps != null && valueAndTimestamps.length > 0 && valueAndTimestamps[0] != null) {
@@ -613,7 +613,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis.name(), defaultTopologyIsStaleAfterMillis);
         long activeUntilTimestamp = topologyTimestamp > -1 ? (topologyTimestamp + topologyIsStaleAfterMillis) : -1;
         long idleAfterTimestamp = topologyTimestamp > -1 ? (topologyTimestamp + defaultTopologyIsIdleAfterMillis) : -1;
-        return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp);
+        long destroyAfterTimestamp = -1; //TODO
+        return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp, destroyAfterTimestamp);
     }
 
     private final Function<MiruTopologyStatus, MiruPartition> topologyStatusToPartition = new Function<MiruTopologyStatus, MiruPartition>() {

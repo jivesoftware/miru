@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.api.wal;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -19,7 +20,7 @@ public interface MiruWALClient {
 
     List<MiruLookupEntry> lookupActivity(MiruTenantId tenantId, long afterTimestamp, int batchSize) throws Exception;
 
-    public class MiruLookupEntry {
+    class MiruLookupEntry {
 
         public long collisionId;
         public long version;
@@ -41,13 +42,35 @@ public interface MiruWALClient {
 
     }
 
+    Collection<MiruLookupRange> lookupRanges(MiruTenantId tenantId) throws Exception;
+
+    class MiruLookupRange {
+
+        public int partitionId;
+        public long minClock;
+        public long maxClock;
+        public long minOrderId;
+        public long maxOrderId;
+
+        public MiruLookupRange() {
+        }
+
+        public MiruLookupRange(int partitionId, long minClock, long maxClock, long minOrderId, long maxOrderId) {
+            this.partitionId = partitionId;
+            this.minClock = minClock;
+            this.maxClock = maxClock;
+            this.minOrderId = minOrderId;
+            this.maxOrderId = maxOrderId;
+        }
+    }
+
     StreamBatch<MiruWALEntry, SipActivityCursor> sipActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId, SipActivityCursor cursor, int batchSize) throws Exception;
 
     StreamBatch<MiruWALEntry, GetActivityCursor> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId, GetActivityCursor cursor, int batchSize) throws Exception;
 
-    public class StreamBatch<T, C> {
+    class StreamBatch<T, C> {
 
         public List<T> batch; // non final for json ser-der
         public C cursor; // non final for json ser-der
@@ -67,7 +90,7 @@ public interface MiruWALClient {
 
     }
 
-    public class SipActivityCursor {
+    class SipActivityCursor {
 
         public byte sort; // non final for json ser-der
         public long collisionId; // non final for json ser-der
@@ -89,7 +112,7 @@ public interface MiruWALClient {
 
     }
 
-    public class GetActivityCursor {
+    class GetActivityCursor {
 
         public byte sort; // non final for json ser-der
         public long collisionId; // non final for json ser-der
@@ -115,7 +138,7 @@ public interface MiruWALClient {
     StreamBatch<MiruWALEntry, GetReadCursor> getRead(MiruTenantId tenantId,
         MiruStreamId streamId, GetReadCursor cursor, int batchSize) throws Exception;
 
-    public class SipReadCursor {
+    class SipReadCursor {
 
         public long sipId; // non final for json ser-der
         public long eventId; // non final for json ser-der
@@ -135,7 +158,7 @@ public interface MiruWALClient {
 
     }
 
-    public class GetReadCursor {
+    class GetReadCursor {
 
         public long eventId; // non final for json ser-der
 
