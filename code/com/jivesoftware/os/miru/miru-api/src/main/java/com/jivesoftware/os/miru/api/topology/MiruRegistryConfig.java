@@ -25,6 +25,10 @@ public interface MiruRegistryConfig extends Config {
     @LongDefault(600_000)
     long getDefaultTopologyIsIdleAfterMillis();
 
+    // 90 days
+    @LongDefault(7_776_000_000L)
+    long getDefaultTopologyDestroyAfterMillis();
+
     @ClassDefault(IllegalStateException.class)
     <C extends Config, I extends RowColumnValueStoreInitializer<E>, E extends Exception> Class<RowColumnValueStoreProvider<C, I, E>>
     getRowColumnValueStoreProviderClass();

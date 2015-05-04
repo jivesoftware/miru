@@ -483,7 +483,19 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
 
             MiruPartitionAccessor<BM> accessor = accessorRef.get();
             MiruPartitionActive partitionActive = heartbeatHandler.getPartitionActive(coord);
-            if (partitionActive.activeUntilTimestamp > System.currentTimeMillis()) {
+            if (partitionActive.destroyAfterTimestamp > 0 && System.currentTimeMillis() > partitionActive.destroyAfterTimestamp) {
+                if (accessor.info.state != MiruPartitionState.offline) {
+                    log.info("Taking partition offline because it is marked for destruction: {}", coord);
+                    close();
+                    accessor = accessorRef.get();
+                }
+                if (accessor.info.state == MiruPartitionState.offline && accessor.info.storage == MiruBackingStorage.disk) {
+                    synchronized (factoryLock) {
+                        log.info("Cleaning disk for partition because it is marked for destruction: {}", coord);
+                        contextFactory.cleanDisk(coord);
+                    }
+                }
+            } else if (partitionActive.activeUntilTimestamp > System.currentTimeMillis()) {
                 if (accessor.info.state == MiruPartitionState.offline) {
                     if (accessor.info.storage == MiruBackingStorage.memory) {
                         try {

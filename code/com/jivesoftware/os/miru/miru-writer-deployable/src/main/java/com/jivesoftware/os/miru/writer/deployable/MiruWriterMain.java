@@ -56,8 +56,8 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALWriter;
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupTable;
-import com.jivesoftware.os.miru.wal.lookup.MiruRCVSActivityLookupTable;
+import com.jivesoftware.os.miru.wal.lookup.MiruRCVSWALLookup;
+import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.AmzaServiceInitializer;
 import com.jivesoftware.os.miru.wal.partition.AmzaServiceInitializer.AmzaServiceConfig;
@@ -257,7 +257,7 @@ public class MiruWriterMain {
             MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
             MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
             MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-            MiruActivityLookupTable activityLookupTable = new MiruRCVSActivityLookupTable(wal.getActivityLookupTable());
+            MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
 
             MiruPartitionIdProvider miruPartitionIdProvider;
             if (clientConfig.getPartitionIdProviderType().equals("rcvs")) {
@@ -280,7 +280,7 @@ public class MiruWriterMain {
                 activityWALWriter,
                 activityWALReader,
                 readTrackingWALWriter,
-                activityLookupTable,
+                walLookup,
                 clientConfig.getPartitionMaximumAgeInMillis());
 
             MiruActivityIngress activityIngress = new MiruActivityIngress(sendActivitiesToHostsThreadPool,
@@ -293,7 +293,7 @@ public class MiruWriterMain {
                 clientConfig.getTopologyCacheExpiresInMillis());
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
-            MiruWALDirector miruWALDirector = new MiruWALDirector(activityLookupTable,
+            MiruWALDirector miruWALDirector = new MiruWALDirector(walLookup,
                 activityWALReader,
                 activityWALWriter,
                 miruPartitionIdProvider,
