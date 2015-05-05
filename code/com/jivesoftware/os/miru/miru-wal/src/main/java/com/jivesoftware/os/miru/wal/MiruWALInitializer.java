@@ -106,7 +106,7 @@ public class MiruWALInitializer {
         RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruRangeLookupColumnKey, Long, ? extends Exception> rangeLookupTable =
             rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
-                "miru.lookup.t", // Tenant
+                "miru.ranges.t", // Tenant
                 "r",
                 new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruVoidByteMarshaller(),
