@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.jivesoftware.os.miru</groupId>
+    <artifactId>inheritance-poms</artifactId>
+    <version>0.448</version>
+    <packaging>pom</packaging>
+    <parent>
+        <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
+        <artifactId>global-repo-management</artifactId>
+        <version>0.448</version>
+        <relativePath>../inheritance-poms/global-repo-management/pom.xml</relativePath>
+    </parent>
+    <modules>
+        <module>global-build-management</module>
+        <module>global-plugin-management</module>
+        <module>global-repo-management</module>
+        <module>global-version-management</module>
+        <module>shared-lib-build-management</module>
+        <module>shared-lib-version-management</module>
+        <module>upena-deployable-management</module>
+    </modules>
+</project>

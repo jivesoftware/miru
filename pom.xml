@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.jivesoftware.miru</groupId>
+    <artifactId>miru</artifactId>
+    <version>0.448</version>
+    <packaging>pom</packaging>
+    <parent>
+        <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
+        <artifactId>global-repo-management</artifactId>
+        <version>0.448</version>
+        <relativePath>inheritance-poms/global-repo-management/pom.xml</relativePath>
+    </parent>
+    <modules>
+        <module>inheritance-poms</module>
+        <module>miru-service</module>
+        <module>miru-api</module>
+        <module>miru-reader</module>
+        <module>miru-logappender</module>
+        <module>miru-cluster-client</module>
+        <module>miru-cluster</module>
+        <module>miru-wal</module>
+        <module>miru-plugin</module>
+        <module>miru-reco</module>
+        <module>miru-reader-deployable</module>
+        <module>miru-writer-deployable</module>
+        <module>miru-manage-deployable</module>
+        <module>miru-tools-deployable</module>
+        <module>miru-test</module>
+        <module>miru-plugin-test</module>
+        <module>miru-stream-plugins</module>
+        <module>miru-stream-plugins-test</module>
+        <module>miru-reco-plugins</module>
+        <module>miru-reco-plugins-test</module>
+        <module>miru-analytics-plugins</module>
+        <module>miru-analytics-plugins-test</module>
+        <module>miru-stumptown-deployable</module>
+        <module>miru-stumptown-plugins</module>
+        <module>miru-stumptown-plugins-test</module>
+        <module>miru-sea-anomaly-deployable</module>
+        <module>miru-sea-anomaly-plugins</module>
+        <module>miru-sea-anomaly-plugins-test</module>
+        <module>miru-metric-sampler</module>
+        <module>miru-wal-client</module>
+  </modules>
+</project>
