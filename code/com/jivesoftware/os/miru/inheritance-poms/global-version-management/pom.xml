@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.446</version>
+        <version>0.447</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <artifactId>global-version-management</artifactId>
@@ -15,7 +15,7 @@
         <rcvs-version>0.12</rcvs-version>
         <filer-version>0.69</filer-version>
         <upena-version>0.78</upena-version>
-        <amza-version>0.58</amza-version>
+        <amza-version>0.59</amza-version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -82,7 +82,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.446</version>
+                <version>0.447</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
