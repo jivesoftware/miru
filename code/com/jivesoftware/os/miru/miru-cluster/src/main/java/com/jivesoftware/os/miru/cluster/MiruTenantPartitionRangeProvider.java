@@ -9,7 +9,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,20 +26,16 @@ public class MiruTenantPartitionRangeProvider {
     }
 
     public Optional<MiruWALClient.MiruLookupRange> getRange(final MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        Map<MiruPartitionId, MiruWALClient.MiruLookupRange> partitionLookupRange = rangeCache.get(tenantId,
-            new Callable<Map<MiruPartitionId, MiruWALClient.MiruLookupRange>>() {
-                @Override
-                public Map<MiruPartitionId, MiruWALClient.MiruLookupRange> call() throws Exception {
-                    Collection<MiruWALClient.MiruLookupRange> ranges = walClient.lookupRanges(tenantId);
-                    Map<MiruPartitionId, MiruWALClient.MiruLookupRange> partitionLookupRange = Maps.newConcurrentMap();
-                    if (ranges != null) {
-                        for (MiruWALClient.MiruLookupRange range : ranges) {
-                            partitionLookupRange.put(MiruPartitionId.of(range.partitionId), range);
-                        }
-                    }
-                    return partitionLookupRange;
+        Map<MiruPartitionId, MiruWALClient.MiruLookupRange> partitionLookupRange = rangeCache.get(tenantId, () -> {
+            Collection<MiruWALClient.MiruLookupRange> ranges = walClient.lookupRanges(tenantId);
+            Map<MiruPartitionId, MiruWALClient.MiruLookupRange> partitionLookupRange1 = Maps.newConcurrentMap();
+            if (ranges != null) {
+                for (MiruWALClient.MiruLookupRange range : ranges) {
+                    partitionLookupRange1.put(MiruPartitionId.of(range.partitionId), range);
                 }
-            });
+            }
+            return partitionLookupRange1;
+        });
         return Optional.fromNullable(partitionLookupRange.get(partitionId));
     }
 }
