@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionCoordBean
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -81,16 +82,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
             for (MiruTopologyStatus topologyStatus : statusForTenant) {
                 MiruPartition partition = topologyStatus.partition;
                 MiruPartitionId partitionId = partition.coord.partitionId;
-                PartitionBean partitionBean = partitionsMap.get(partitionId);
-                if (partitionBean == null) {
-                    List<MiruActivityWALStatus> partitionStatus = miruWALClient.getPartitionStatus(tenant, Collections.singletonList(partitionId));
-                    for (MiruActivityWALStatus status : partitionStatus) {
-                        if (status != null) {
-                            partitionsMap.put(status.partitionId,
-                                new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size()));
-                        }
-                    }
-                }
+                PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
                 MiruPartitionState state = partition.info.state;
                 String idle = timeAgo(System.currentTimeMillis() - topologyStatus.lastActiveTimestamp);
                 PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, idle);
@@ -104,6 +96,17 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                     partitionBean.getOffline().add(partitionCoordBean);
                 }
             }
+
+            Collection<MiruWALClient.MiruLookupRange> lookupRanges = miruWALClient.lookupRanges(tenant);
+            for (MiruWALClient.MiruLookupRange lookupRange : lookupRanges) {
+                MiruPartitionId partitionId = MiruPartitionId.of(lookupRange.partitionId);
+                PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
+                partitionBean.setMinClock(String.valueOf(lookupRange.minClock));
+                partitionBean.setMaxClock(String.valueOf(lookupRange.maxClock));
+                partitionBean.setMinOrderId(String.valueOf(lookupRange.minOrderId));
+                partitionBean.setMaxOrderId(String.valueOf(lookupRange.maxOrderId));
+            }
+
         } catch (Exception e) {
             log.error("Unable to get partitions for tenant: " + tenant);
         }
@@ -112,6 +115,26 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         data.put("partitions", partitionsMap.values());
 
         return renderer.render(template, data);
+    }
+
+    private PartitionBean getPartitionBean(MiruTenantId tenant,
+        SortedMap<MiruPartitionId, PartitionBean> partitionsMap,
+        MiruPartitionId partitionId) throws Exception {
+        PartitionBean partitionBean = partitionsMap.get(partitionId);
+        if (partitionBean == null) {
+            List<MiruActivityWALStatus> partitionStatus = miruWALClient.getPartitionStatus(tenant, Collections.singletonList(partitionId));
+            for (MiruActivityWALStatus status : partitionStatus) {
+                if (status != null && status.partitionId.equals(partitionId)) {
+                    partitionBean = new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size());
+                    break;
+                }
+            }
+            if (partitionBean == null) {
+                partitionBean = new PartitionBean(partitionId.getId(), -1, -1, -1);
+            }
+            partitionsMap.put(partitionId, partitionBean);
+        }
+        return partitionBean;
     }
 
     private static String timeAgo(long millis) {
