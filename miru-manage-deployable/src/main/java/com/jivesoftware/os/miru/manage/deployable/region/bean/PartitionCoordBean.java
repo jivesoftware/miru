@@ -12,13 +12,15 @@ public class PartitionCoordBean {
     private final int partitionId;
     private final MiruHost host;
     private final MiruBackingStorage backingStorage;
-    private final String idle;
+    private final String lastIngress;
+    private final String lastQuery;
 
-    public PartitionCoordBean(MiruPartitionCoord coord, MiruBackingStorage backingStorage, String idle) {
-        this.idle = idle;
+    public PartitionCoordBean(MiruPartitionCoord coord, MiruBackingStorage backingStorage, String lastIngress, String lastQuery) {
         this.partitionId = coord.partitionId.getId();
         this.host = coord.host;
         this.backingStorage = backingStorage;
+        this.lastIngress = lastIngress;
+        this.lastQuery = lastQuery;
     }
 
     public int getPartitionId() {
@@ -33,7 +35,11 @@ public class PartitionCoordBean {
         return backingStorage;
     }
 
-    public String getIdle() {
-        return idle;
+    public String getLastIngress() {
+        return lastIngress;
+    }
+
+    public String getLastQuery() {
+        return lastQuery;
     }
 }

@@ -617,16 +617,20 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 AmzaRegion topologyInfo = createRegionIfAbsent("host-" + hat.host.toStringForm() + "-partition-info");
                 byte[] rawInfo = topologyInfo.get(topologyKey(tenantId, partitionId));
                 MiruPartitionCoordInfo info;
-                long lastActiveTimestampMillis = 0;
+                long lastIngressTimestampMillis = 0;
+                long lastQueryTimestampMillis = 0;
                 if (rawInfo == null) {
                     info = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
                 } else {
                     MiruTopologyColumnValue columnValue = topologyColumnValueMarshaller.fromBytes(rawInfo);
                     info = new MiruPartitionCoordInfo(columnValue.state, columnValue.storage);
-                    lastActiveTimestampMillis = columnValue.lastIngressTimestamp;
+                    lastIngressTimestampMillis = columnValue.lastIngressTimestamp;
+                    lastQueryTimestampMillis = columnValue.lastQueryTimestamp;
                 }
-                MiruPartition miruPartition = new MiruPartition(new MiruPartitionCoord(tenantId, partitionId, hat.host), info);
-                status.add(new MiruTopologyStatus(miruPartition, lastActiveTimestampMillis));
+                MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hat.host);
+                MiruPartition miruPartition = new MiruPartition(coord, info);
+                status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis,
+                    getDestroyAfterTimestamp(coord, lastIngressTimestampMillis)));
             }
         }
         return status;
@@ -643,16 +647,20 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     AmzaRegion topologyInfo = createRegionIfAbsent("host-" + hat.host.toStringForm() + "-partition-info");
                     byte[] rawInfo = topologyInfo.get(topologyKey(tenantId, partitionId));
                     MiruPartitionCoordInfo info;
-                    long lastActiveTimestampMillis = 0;
+                    long lastIngressTimestampMillis = 0;
+                    long lastQueryTimestampMillis = 0;
                     if (rawInfo == null) {
                         info = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
                     } else {
                         MiruTopologyColumnValue columnValue = topologyColumnValueMarshaller.fromBytes(rawInfo);
                         info = new MiruPartitionCoordInfo(columnValue.state, columnValue.storage);
-                        lastActiveTimestampMillis = columnValue.lastIngressTimestamp;
+                        lastIngressTimestampMillis = columnValue.lastIngressTimestamp;
+                        lastQueryTimestampMillis = columnValue.lastQueryTimestamp;
                     }
-                    MiruPartition miruPartition = new MiruPartition(new MiruPartitionCoord(tenantId, partitionId, hat.host), info);
-                    status.add(new MiruTopologyStatus(miruPartition, lastActiveTimestampMillis));
+                    MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hat.host);
+                    MiruPartition miruPartition = new MiruPartition(coord, info);
+                    status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis,
+                        getDestroyAfterTimestamp(coord, lastIngressTimestampMillis)));
                 }
             }
         }
@@ -714,14 +722,17 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 idleAfterTimestamp = activeTimestamp + defaultTopologyIsIdleAfterMillis;
             }
 
-            long destroyAfterTimestamp = -1;
-            Optional<MiruWALClient.MiruLookupRange> range = rangeProvider.getRange(coord.tenantId, coord.partitionId, columnValue.lastIngressTimestamp);
-            if (range.isPresent() && range.get().maxClock > 0) {
-                destroyAfterTimestamp = range.get().maxClock + defaultTopologyDestroyAfterMillis;
-            }
-
-            return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp, destroyAfterTimestamp);
+            return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp, getDestroyAfterTimestamp(coord, columnValue.lastIngressTimestamp));
         }
+    }
+
+    private long getDestroyAfterTimestamp(MiruPartitionCoord coord, long lastIngressTimestamp) throws Exception {
+        long destroyAfterTimestamp = -1;
+        Optional<MiruWALClient.MiruLookupRange> range = rangeProvider.getRange(coord.tenantId, coord.partitionId, lastIngressTimestamp);
+        if (range.isPresent() && range.get().maxClock > 0) {
+            destroyAfterTimestamp = range.get().maxClock + defaultTopologyDestroyAfterMillis;
+        }
+        return destroyAfterTimestamp;
     }
 
     @Override

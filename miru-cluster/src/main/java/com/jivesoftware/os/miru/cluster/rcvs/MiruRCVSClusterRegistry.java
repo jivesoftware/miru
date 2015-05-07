@@ -433,10 +433,12 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                     if (c != null) {
                         MiruTopologyColumnValue value = c.getValue();
                         MiruHost host = c.getColumn().host;
+                        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, c.getColumn().partitionId, host);
                         MiruTopologyStatus status = new MiruTopologyStatus(
-                            new MiruPartition(
-                                new MiruPartitionCoord(tenantId, c.getColumn().partitionId, host),
-                                new MiruPartitionCoordInfo(value.state, value.storage)), value.lastIngressTimestamp);
+                            new MiruPartition(coord, new MiruPartitionCoordInfo(value.state, value.storage)),
+                            value.lastIngressTimestamp,
+                            value.lastQueryTimestamp,
+                            getDestroyAfterTimestamp(coord, value.lastIngressTimestamp));
 
                         List<MiruTopologyStatus> statuses = topologies.get(tenantId, c.getColumn().partitionId);
                         if (statuses == null) {
@@ -559,7 +561,8 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
                 MiruPartitionState state = normalizeState(value.state, value.lastIngressTimestamp, topologyIsStaleAfterMillis);
                 MiruBackingStorage storage = value.storage;
                 MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(state, storage);
-                statuses.add(new MiruTopologyStatus(new MiruPartition(coord, coordInfo), value.lastIngressTimestamp));
+                statuses.add(new MiruTopologyStatus(new MiruPartition(coord, coordInfo), value.lastIngressTimestamp, value.lastQueryTimestamp,
+                    getDestroyAfterTimestamp(coord, value.lastIngressTimestamp)));
             }
         }
         return statuses;
@@ -590,8 +593,11 @@ public class MiruRCVSClusterRegistry implements MiruClusterRegistry {
         long topologyIsStaleAfterMillis = config.getLong(MiruTenantConfigFields.topology_is_stale_after_millis.name(), defaultTopologyIsStaleAfterMillis);
         long activeUntilTimestamp = activeTimestamp > -1 ? (activeTimestamp + topologyIsStaleAfterMillis) : -1;
         long idleAfterTimestamp = activeTimestamp > -1 ? (activeTimestamp + defaultTopologyIsIdleAfterMillis) : -1;
-        long destroyAfterTimestamp = -1; //TODO
-        return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp, destroyAfterTimestamp);
+        return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp, -1);
+    }
+
+    private long getDestroyAfterTimestamp(MiruPartitionCoord coord, long lastIngressTimestamp) {
+        return -1; //TODO
     }
 
     private final Function<MiruTopologyStatus, MiruPartition> topologyStatusToPartition = input -> input.partition;

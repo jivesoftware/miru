@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyPartition;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -127,12 +128,16 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     @Override
     public MiruTopologyResponse routingTopology(MiruTenantId tenantId) throws Exception {
         List<MiruTopologyStatus> topologyStatusForTenant = clusterRegistry.getTopologyStatusForTenant(tenantId);
-        ArrayList<MiruTopologyResponse.Partition> partitions = new ArrayList<>();
+        ArrayList<MiruTopologyPartition> partitions = new ArrayList<>();
         for (MiruTopologyStatus status : topologyStatusForTenant) {
-            partitions.add(new MiruTopologyResponse.Partition(status.partition.coord.host,
+            if (status.destroyAfterTimestamp > 0 && System.currentTimeMillis() > status.destroyAfterTimestamp) {
+                continue;
+            }
+            partitions.add(new MiruTopologyPartition(status.partition.coord.host,
                 status.partition.coord.partitionId.getId(),
                 status.partition.info.state,
-                status.partition.info.storage));
+                status.partition.info.storage,
+                status.destroyAfterTimestamp));
         }
         return new MiruTopologyResponse(partitions);
     }

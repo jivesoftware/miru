@@ -42,7 +42,8 @@
                     <tr>
                         <th>Status</th>
                         <th>Storage</th>
-                        <th>Idle</th>
+                        <th>Last Ingress</th>
+                        <th>Last Query</th>
                         <th>Logical name</th>
                         <th>Port</th>
                         <th>Actions</th>
@@ -107,7 +108,8 @@
         <tr>
             <td style="text-transform:uppercase;">{$type}</td>
             <td>{$partition.backingStorage}</td>
-            <td>{$partition.idle}</td>
+            <td>{$partition.lastIngress}</td>
+            <td>{$partition.lastQuery}</td>
             <td>
                 <a href="/miru/manage/hosts/{$partition.host.logicalName|escapeUri}/{$partition.host.port}#focus">
                     {$partition.host.logicalName}
