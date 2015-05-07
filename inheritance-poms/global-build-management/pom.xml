@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.456-SNAPSHOT</version>
+    <version>0.456</version>
     <packaging>pom</packaging>
 
     <inceptionYear>2013</inceptionYear>
@@ -107,7 +107,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.456-SNAPSHOT</version>
+                <version>0.456</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
