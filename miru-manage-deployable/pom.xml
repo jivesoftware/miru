@@ -81,10 +81,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
-            <artifactId>row-column-value-store-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-inmemory</artifactId>
             <scope>test</scope>
         </dependency>
