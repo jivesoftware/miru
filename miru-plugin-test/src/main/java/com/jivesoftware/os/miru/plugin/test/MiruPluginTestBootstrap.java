@@ -6,6 +6,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Interners;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
+import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
@@ -58,8 +60,8 @@ import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALWriter;
 import com.jivesoftware.os.miru.wal.lookup.MiruRCVSWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
+import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
@@ -137,12 +139,7 @@ public class MiruPluginTestBootstrap {
         MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
         MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
-        MiruPartitionIdProvider miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(1_000_000, wal.getWriterPartitionRegistry(), activityWALReader);
 
-        MiruWALClient walClient = new MiruWALDirector(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
-            readTrackingWALReader);
-
-        
         MiruClusterRegistry clusterRegistry;
 
         File amzaDataDir = Files.createTempDir();
@@ -152,6 +149,15 @@ public class MiruPluginTestBootstrap {
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
         AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
+
+        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
+            null, 1000, 1000);
+        MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000,
+            activityWALReader);
+
+        MiruWALClient walClient = new MiruWALDirector(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
+            readTrackingWALReader);
+
         clusterRegistry = new AmzaClusterRegistry(amzaService,
             new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),

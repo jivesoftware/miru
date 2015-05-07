@@ -18,7 +18,6 @@ package com.jivesoftware.os.miru.writer.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.service.AmzaService;
@@ -40,7 +39,6 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
-import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
@@ -62,7 +60,6 @@ import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.AmzaServiceInitializer;
 import com.jivesoftware.os.miru.wal.partition.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
@@ -88,7 +85,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruWriterMain {
@@ -158,16 +154,14 @@ public class MiruWriterMain {
                 metricSamplerConfig);
             sampler.start();
 
-            MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
+            MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
 
-            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass()
+            RowColumnValueStoreProvider rowColumnValueStoreProvider = clientConfig.getRowColumnValueStoreProviderClass()
                 .newInstance();
             @SuppressWarnings("unchecked")
             RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
                 .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-
-            MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
-
+            
             TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-manage", // TODO expose to conf
                 "main");
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
@@ -201,39 +195,23 @@ public class MiruWriterMain {
                 activitySenderProvider = new MiruWarmActivitySenderProvider(httpClientFactory, new ObjectMapper());
             }
 
-            final Map<MiruTenantId, Boolean> latestAlignmentCache;
-            if (clientConfig.getPartitionIdProviderType().equals("rcvs")) {
-                latestAlignmentCache = CacheBuilder.newBuilder() // TODO config
-                    .maximumSize(clientConfig.getTopologyCacheSize())
-                    .expireAfterWrite(1, TimeUnit.MINUTES)
-                    .<MiruTenantId, Boolean>build()
-                    .asMap();
-            } else if (clientConfig.getPartitionIdProviderType().equals("amza")) {
-                latestAlignmentCache = Maps.newConcurrentMap();
-            } else {
-                throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
-            }
+            final Map<MiruTenantId, Boolean> latestAlignmentCache = Maps.newConcurrentMap();
 
-            AmzaService amzaService = null;
             AmzaServiceConfig amzaServiceConfig = deployable.config(AmzaServiceConfig.class);
-            if (clientConfig.getPartitionIdProviderType().equals("amza")
-                || clientConfig.getActivityWALType().equals("amza")
-                || clientConfig.getActivityWALType().equals("fork")) {
-                amzaService = new AmzaServiceInitializer().initialize(deployable,
-                    instanceConfig.getInstanceName(),
-                    instanceConfig.getHost(),
-                    instanceConfig.getMainPort(),
-                    "miru-wal-" + instanceConfig.getClusterName(),
-                    amzaServiceConfig,
-                    changes -> {
-                        if (changes.getRegionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_REGION_NAME)) {
-                            for (WALKey key : changes.getApply().columnKeySet()) {
-                                MiruTenantId tenantId = AmzaPartitionIdProvider.extractTenantForLatestPartition(key);
-                                latestAlignmentCache.remove(tenantId);
-                            }
+            AmzaService amzaService = new AmzaServiceInitializer().initialize(deployable,
+                instanceConfig.getInstanceName(),
+                instanceConfig.getHost(),
+                instanceConfig.getMainPort(),
+                "miru-wal-" + instanceConfig.getClusterName(),
+                amzaServiceConfig,
+                changes -> {
+                    if (changes.getRegionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_REGION_NAME)) {
+                        for (WALKey key : changes.getApply().columnKeySet()) {
+                            MiruTenantId tenantId = AmzaPartitionIdProvider.extractTenantForLatestPartition(key);
+                            latestAlignmentCache.remove(tenantId);
                         }
-                    });
-            }
+                    }
+                });
 
             MiruActivityWALWriter activityWALWriter;
             if (clientConfig.getActivityWALType().equals("rcvs")) {
@@ -259,21 +237,12 @@ public class MiruWriterMain {
             MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
             MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
 
-            MiruPartitionIdProvider miruPartitionIdProvider;
-            if (clientConfig.getPartitionIdProviderType().equals("rcvs")) {
-                miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(clientConfig.getTotalCapacity(),
-                    wal.getWriterPartitionRegistry(),
-                    activityWALReader);
-            } else if (clientConfig.getPartitionIdProviderType().equals("amza")) {
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-                    null, 1000, 1000);
-                miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
-                    storageDescriptor,
-                    clientConfig.getTotalCapacity(),
-                    activityWALReader);
-            } else {
-                throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
-            }
+            WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
+                null, 1000, 1000);
+            MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
+                storageDescriptor,
+                clientConfig.getTotalCapacity(),
+                activityWALReader);
 
             MiruPartitioner miruPartitioner = new MiruPartitioner(instanceConfig.getInstanceName(),
                 miruPartitionIdProvider,
