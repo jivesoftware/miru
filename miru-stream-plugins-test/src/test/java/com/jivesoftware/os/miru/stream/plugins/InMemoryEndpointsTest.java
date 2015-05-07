@@ -8,6 +8,7 @@ import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -76,7 +77,7 @@ public class InMemoryEndpointsTest {
 
         this.aggregateCountsEndpoints = new AggregateCountsEndpoints(
             new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider)));
-        this.miruWriterEndpoints = new MiruWriterEndpoints(miruService);
+        this.miruWriterEndpoints = new MiruWriterEndpoints(miruService, new MiruStats());
     }
 
     @Test(enabled = true, description = "Disabled until we can figure out a  better solution for bootstrapping instead of sleeping.")
@@ -86,22 +87,22 @@ public class InMemoryEndpointsTest {
 
         List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
-                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                    .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
-                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                    .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] { }, 0)
-                    .putFieldValue(OBJECT_ID.getFieldName(), "value2")
-                    .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
-                    .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value2")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
+                .build()
             )
         );
         Response addResponse = miruWriterEndpoints.addActivities(partitionedActivities);

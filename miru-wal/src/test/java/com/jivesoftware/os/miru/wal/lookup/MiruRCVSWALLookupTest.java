@@ -23,7 +23,7 @@ public class MiruRCVSWALLookupTest {
     public void testRangeMinMax() throws Exception {
         MiruTenantId tenantId = new MiruTenantId("test".getBytes());
         final AtomicLong clockTimestamp = new AtomicLong(0);
-        MiruPartitionedActivityFactory factory = new MiruPartitionedActivityFactory(() -> clockTimestamp.incrementAndGet());
+        MiruPartitionedActivityFactory factory = new MiruPartitionedActivityFactory(clockTimestamp::incrementAndGet);
         MiruRCVSWALLookup walLookup = new MiruRCVSWALLookup(new InMemoryRowColumnValueStore(), new InMemoryRowColumnValueStore());
         walLookup.add(tenantId, Arrays.asList(
             buildActivity(tenantId, factory, 0, 1001L), // clock 1
@@ -38,29 +38,34 @@ public class MiruRCVSWALLookupTest {
             buildActivity(tenantId, factory, 1, 2005L) // clock 10
         ));
 
-        walLookup.streamRanges(tenantId, (partitionId, type, timestamp) -> {
-            if (partitionId.getId() == 0 && type == MiruWALLookup.RangeType.clockMin) {
+        walLookup.streamRanges(tenantId, MiruPartitionId.of(0), (partitionId, type, timestamp) -> {
+            assertEquals(partitionId.getId(), 0);
+            if (type == MiruWALLookup.RangeType.clockMin) {
                 assertEquals(timestamp, 1);
             }
-            if (partitionId.getId() == 0 && type == MiruWALLookup.RangeType.clockMax) {
+            if (type == MiruWALLookup.RangeType.clockMax) {
                 assertEquals(timestamp, 5);
             }
-            if (partitionId.getId() == 0 && type == MiruWALLookup.RangeType.orderIdMin) {
+            if (type == MiruWALLookup.RangeType.orderIdMin) {
                 assertEquals(timestamp, 1001L);
             }
-            if (partitionId.getId() == 0 && type == MiruWALLookup.RangeType.orderIdMax) {
+            if (type == MiruWALLookup.RangeType.orderIdMax) {
                 assertEquals(timestamp, 1005L);
             }
-            if (partitionId.getId() == 1 && type == MiruWALLookup.RangeType.clockMin) {
+            return true;
+        });
+        walLookup.streamRanges(tenantId, MiruPartitionId.of(1), (partitionId, type, timestamp) -> {
+            assertEquals(partitionId.getId(), 1);
+            if (type == MiruWALLookup.RangeType.clockMin) {
                 assertEquals(timestamp, 6);
             }
-            if (partitionId.getId() == 1 && type == MiruWALLookup.RangeType.clockMax) {
+            if (type == MiruWALLookup.RangeType.clockMax) {
                 assertEquals(timestamp, 10);
             }
-            if (partitionId.getId() == 1 && type == MiruWALLookup.RangeType.orderIdMin) {
+            if (type == MiruWALLookup.RangeType.orderIdMin) {
                 assertEquals(timestamp, 2001L);
             }
-            if (partitionId.getId() == 1 && type == MiruWALLookup.RangeType.orderIdMax) {
+            if (type == MiruWALLookup.RangeType.orderIdMax) {
                 assertEquals(timestamp, 2005L);
             }
             return true;

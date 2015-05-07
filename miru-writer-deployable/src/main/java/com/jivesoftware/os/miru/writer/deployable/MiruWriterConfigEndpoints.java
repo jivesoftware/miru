@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.writer.deployable;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
@@ -28,9 +29,11 @@ public class MiruWriterConfigEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruReplicaSetDirector replicaSetDirector;
+    private final MiruStats stats;
 
-    public MiruWriterConfigEndpoints(@Context MiruReplicaSetDirector replicaSetDirector) {
+    public MiruWriterConfigEndpoints(@Context MiruReplicaSetDirector replicaSetDirector, @Context MiruStats stats) {
         this.replicaSetDirector = replicaSetDirector;
+        this.stats = stats;
     }
 
     @POST
@@ -53,14 +56,16 @@ public class MiruWriterConfigEndpoints {
 
         MiruHost to = new MiruHost(logicalName, port);
         try {
+            long start = System.currentTimeMillis();
             replicaSetDirector.moveReplica(
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId),
                 fromHostPort,
                 to);
+            stats.ingressed("POST:/replicas/" + tenantId + "/" + partitionId + "/" + logicalName + "/" + port, 1, System.currentTimeMillis() - start);
             return Response.ok(to.toStringForm()).build();
         } catch (Throwable t) {
-            log.error("Failed to move replica for tenant {} partition {} from {} to {}", new Object[] { tenantId, partitionId, fromHostPort,  to}, t);
+            log.error("Failed to move replica for tenant {} partition {} from {} to {}", new Object[]{tenantId, partitionId, fromHostPort, to}, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -72,12 +77,14 @@ public class MiruWriterConfigEndpoints {
         @PathParam("tenantId") String tenantId,
         @PathParam("partitionId") Integer partitionId) {
         try {
+            long start = System.currentTimeMillis();
             replicaSetDirector.removeReplicas(
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId));
+            stats.ingressed("DELETE:/replicas/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return Response.ok(partitionId.toString()).build();
         } catch (Throwable t) {
-            log.error("Failed to remove replicas for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
+            log.error("Failed to remove replicas for tenant {} partition {}", new Object[]{tenantId, partitionId}, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

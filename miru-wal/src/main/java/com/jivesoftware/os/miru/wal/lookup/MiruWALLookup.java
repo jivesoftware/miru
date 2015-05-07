@@ -19,7 +19,7 @@ public interface MiruWALLookup {
 
     void stream(MiruTenantId tenantId, long afterTimestamp, StreamLookupEntry streamLookupEntry) throws Exception;
 
-    void streamRanges(MiruTenantId tenantId, StreamRangeLookup streamRangeLookup) throws Exception;
+    void streamRanges(MiruTenantId tenantId, MiruPartitionId partitionId, StreamRangeLookup streamRangeLookup) throws Exception;
 
     void putRange(MiruTenantId tenantId, MiruPartitionId partitionId, RangeMinMax minMax) throws Exception;
 

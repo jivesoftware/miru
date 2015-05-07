@@ -182,7 +182,7 @@ public class MiruManageMain {
                     "amza-topology-" + instanceConfig.getClusterName(),
                     amzaClusterRegistryConfig);
                 AmzaClusterRegistry amzaClusterRegistry = new AmzaClusterRegistry(amzaService,
-                    new MiruTenantPartitionRangeProvider(miruWALClient),
+                    new MiruTenantPartitionRangeProvider(miruWALClient, amzaClusterRegistryConfig.getMinimumRangeCheckIntervalInMillis()),
                     new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                     registryConfig.getDefaultNumberOfReplicas(),
                     registryConfig.getDefaultTopologyIsStaleAfterMillis(),

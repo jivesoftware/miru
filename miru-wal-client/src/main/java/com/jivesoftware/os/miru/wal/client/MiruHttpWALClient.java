@@ -83,9 +83,17 @@ public class MiruHttpWALClient implements MiruWALClient {
     }
 
     @Override
+    public MiruLookupRange lookupRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return send(client -> {
+            HttpResponse response = client.get(routingTenantId, "/miru/wal/lookup/range/" + tenantId.toString() + "/" + partitionId.getId());
+            return responseMapper.extractResultFromResponse(response, MiruLookupRange.class, null);
+        });
+    }
+
+    @Override
     public Collection<MiruLookupRange> lookupRanges(MiruTenantId tenantId) throws Exception {
         return send(client -> {
-            HttpResponse response = client.get(routingTenantId, "/miru/wal/lookup/range/" + tenantId.toString());
+            HttpResponse response = client.get(routingTenantId, "/miru/wal/lookup/ranges/" + tenantId.toString());
             return (List<MiruLookupRange>) responseMapper.extractResultFromResponse(response, List.class, new Class[] { MiruLookupRange.class }, null);
         });
     }

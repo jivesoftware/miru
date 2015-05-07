@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.endpoint;
 
 import com.google.common.collect.ImmutableList;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.service.MiruService;
 import java.util.List;
@@ -25,7 +26,7 @@ public class MiruWriterEndpointsTest {
     @BeforeMethod
     public void setUp() {
         this.service = mock(MiruService.class);
-        this.miruWriterEndpoints = new MiruWriterEndpoints(service);
+        this.miruWriterEndpoints = new MiruWriterEndpoints(service, new MiruStats());
     }
 
     @Test

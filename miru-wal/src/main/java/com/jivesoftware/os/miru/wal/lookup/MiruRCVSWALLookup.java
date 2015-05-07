@@ -104,21 +104,30 @@ public class MiruRCVSWALLookup implements MiruWALLookup {
     }
 
     @Override
-    public void streamRanges(MiruTenantId tenantId, final StreamRangeLookup streamRangeLookup) throws Exception {
-
-        rangeLookupTable.getEntrys(MiruVoidByte.INSTANCE, tenantId, null, Long.MAX_VALUE, 1_000, false, null, null,
+    public void streamRanges(MiruTenantId tenantId, final MiruPartitionId partitionId, final StreamRangeLookup streamRangeLookup) throws Exception {
+        MiruRangeLookupColumnKey rangeLookupColumnKey = null;
+        long maxCount = Long.MAX_VALUE;
+        int batchSize = 1_000;
+        if (partitionId != null) {
+            rangeLookupColumnKey = new MiruRangeLookupColumnKey(partitionId.getId(), (byte) 0);
+            maxCount = RangeType.values().length;
+            batchSize = RangeType.values().length + 1;
+        }
+        rangeLookupTable.getEntrys(MiruVoidByte.INSTANCE, tenantId, rangeLookupColumnKey, maxCount, batchSize, false, null, null,
             new CallbackStream<ColumnValueAndTimestamp<MiruRangeLookupColumnKey, Long, Long>>() {
                 @Override
                 public ColumnValueAndTimestamp<MiruRangeLookupColumnKey, Long, Long> callback(
                     ColumnValueAndTimestamp<MiruRangeLookupColumnKey, Long, Long> v) throws Exception {
 
                     if (v != null) {
-                        if (!streamRangeLookup.stream(MiruPartitionId.of(v.getColumn().partitionId), RangeType.fromType(v.getColumn().type),
-                            v.getValue())) {
-                            return null;
+                        MiruPartitionId streamPartitionId = MiruPartitionId.of(v.getColumn().partitionId);
+                        if (partitionId == null || partitionId.equals(streamPartitionId)) {
+                            if (streamRangeLookup.stream(streamPartitionId, RangeType.fromType(v.getColumn().type), v.getValue())) {
+                                return v;
+                            }
                         }
                     }
-                    return v;
+                    return null;
                 }
             });
     }

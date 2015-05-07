@@ -316,10 +316,10 @@ public class MiruWriterMain {
             deployable.addInjectables(MiruWALDirector.class, miruWALDirector);
 
             deployable.addEndpoints(MiruWALEndpoints.class);
+            deployable.addInjectables(MiruStats.class, miruStats);
 
             deployable.addEndpoints(MiruIngressEndpoints.class);
             deployable.addInjectables(MiruActivityIngress.class, activityIngress);
-            deployable.addInjectables(MiruStats.class, miruStats);
             deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 
             deployable.addResource(sourceTree);

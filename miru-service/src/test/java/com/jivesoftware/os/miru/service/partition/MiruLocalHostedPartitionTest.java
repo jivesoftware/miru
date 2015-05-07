@@ -444,7 +444,7 @@ public class MiruLocalHostedPartitionTest {
             refreshTimestamp -= topologyIsStaleAfterMillis * 2;
         }
         clusterRegistry.updateTopologies(host, Arrays.asList(
-            new MiruClusterRegistry.TopologyUpdate(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(refreshTimestamp))));
+            new MiruClusterRegistry.TopologyUpdate(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(refreshTimestamp), Optional.<Long>absent())));
         partitionEventHandler.thumpthump(host);
     }
 

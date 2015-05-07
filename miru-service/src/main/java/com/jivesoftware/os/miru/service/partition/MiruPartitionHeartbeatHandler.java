@@ -41,7 +41,8 @@ public class MiruPartitionHeartbeatHandler {
 
     public void heartbeat(MiruPartitionCoord coord,
         Optional<MiruPartitionCoordInfo> info,
-        Optional<Long> refreshTimestamp)
+        Optional<Long> ingressTimestamp,
+        Optional<Long> queryTimestamp)
         throws Exception {
 
         Map<MiruPartitionCoord, PartitionInfo> beats;
@@ -51,13 +52,15 @@ public class MiruPartitionHeartbeatHandler {
             if (got == null) {
                 got = new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
-                    refreshTimestamp.or(-1L),
+                    ingressTimestamp.or(-1L),
+                    queryTimestamp.or(-1L),
                     info.orNull());
                 beats.put(coord, got);
             } else {
                 got = new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
-                    refreshTimestamp.or(got.activeTimestamp),
+                    ingressTimestamp.or(got.ingressTimestamp),
+                    queryTimestamp.or(got.queryTimestamp),
                     info.isPresent() ? info.get() : got.info);
                 beats.put(coord, got);
             }

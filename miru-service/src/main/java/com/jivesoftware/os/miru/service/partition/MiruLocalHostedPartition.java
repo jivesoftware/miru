@@ -173,7 +173,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
             Optional.<MiruContext<BM>>absent(),
             indexRepairs,
             indexer);
-        heartbeatHandler.heartbeat(coord, Optional.of(coordInfo), Optional.<Long>absent());
+        heartbeatHandler.heartbeat(coord, Optional.of(coordInfo), Optional.<Long>absent(), Optional.<Long>absent());
         this.accessorRef.set(accessor);
         log.incAtomic("state>" + accessor.info.state.name());
         log.incAtomic("storage>" + accessor.info.storage.name());
@@ -222,7 +222,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, accessor.info.copyToState(MiruPartitionState.online));
         }
-        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.<Long>absent(), Optional.of(System.currentTimeMillis()));
         return accessor.getRequestHandle();
     }
 
@@ -331,13 +331,13 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
         }
 
         if (partitionWakeOnIndex) {
-            heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
+            heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()), Optional.<Long>absent());
         }
     }
 
     @Override
     public void warm() throws Exception {
-        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()), Optional.<Long>absent());
 
         log.inc("warm", 1);
         log.inc("warm", 1, coord.tenantId.toString());
@@ -435,7 +435,7 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                 return null;
             }
 
-            heartbeatHandler.heartbeat(coord, Optional.of(update.info), Optional.<Long>absent());
+            heartbeatHandler.heartbeat(coord, Optional.of(update.info), Optional.<Long>absent(), Optional.<Long>absent());
 
             accessorRef.set(update);
 

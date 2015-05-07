@@ -228,7 +228,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             try {
                 MiruPartitionCoord coord = topologyUpdate.coord;
                 Optional<MiruPartitionCoordInfo> optionalInfo = topologyUpdate.optionalInfo;
-                Optional<Long> refreshTimestamp = topologyUpdate.refreshTimestamp;
+                Optional<Long> refreshIngressTimestamp = topologyUpdate.ingressTimestamp;
+                Optional<Long> refreshQueryTimestamp = topologyUpdate.queryTimestamp;
                 WALKey key = topologyKey(coord.tenantId, coord.partitionId);
 
                 MiruPartitionCoordInfo coordInfo;
@@ -243,21 +244,22 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                         coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
                     }
                 }
-                long timestamp;
-                if (refreshTimestamp.isPresent()) {
-                    timestamp = refreshTimestamp.get();
-                } else {
+                long ingressTimestamp = refreshIngressTimestamp.or(-1L);
+                long queryTimestamp = refreshQueryTimestamp.or(-1L);
+                if (ingressTimestamp == -1 || queryTimestamp == -1) {
                     byte[] got = topologyInfo.get(key);
                     if (got != null) {
                         MiruTopologyColumnValue value = topologyColumnValueMarshaller.fromBytes(got);
-                        timestamp = value.lastActiveTimestamp;
+                        ingressTimestamp = (ingressTimestamp == -1) ? value.lastIngressTimestamp : ingressTimestamp;
+                        queryTimestamp = (queryTimestamp == -1) ? value.lastQueryTimestamp : queryTimestamp;
                     } else {
-                        timestamp = 0;
+                        ingressTimestamp = (ingressTimestamp == -1) ? 0 : ingressTimestamp;
+                        queryTimestamp = (queryTimestamp == -1) ? 0 : queryTimestamp;
                     }
                 }
 
-                MiruTopologyColumnValue value = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, timestamp);
-                LOG.debug("Updating {} to {} at {}", new Object[] { coord, coordInfo, refreshTimestamp });
+                MiruTopologyColumnValue value = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, ingressTimestamp, queryTimestamp);
+                LOG.debug("Updating {} to {} at ingress={} query={}", new Object[] { coord, coordInfo, ingressTimestamp, queryTimestamp });
                 return topologyColumnValueMarshaller.toBytes(value);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to apply topology update", e);
@@ -409,7 +411,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         AmzaRegion topologyInfo = createRegionIfAbsent("host-" + coord.host.toStringForm() + "-partition-info");
         WALKey key = topologyKey(coord.tenantId, coord.partitionId);
         if (topologyInfo.get(key) == null) { // TODO don't have a set if absent. This is a little racy
-            MiruTopologyColumnValue update = new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, 0);
+            MiruTopologyColumnValue update = new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, 0, 0);
             topologyInfo.set(key, topologyColumnValueMarshaller.toBytes(update));
         }
 
@@ -621,7 +623,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 } else {
                     MiruTopologyColumnValue columnValue = topologyColumnValueMarshaller.fromBytes(rawInfo);
                     info = new MiruPartitionCoordInfo(columnValue.state, columnValue.storage);
-                    lastActiveTimestampMillis = columnValue.lastActiveTimestamp;
+                    lastActiveTimestampMillis = columnValue.lastIngressTimestamp;
                 }
                 MiruPartition miruPartition = new MiruPartition(new MiruPartitionCoord(tenantId, partitionId, hat.host), info);
                 status.add(new MiruTopologyStatus(miruPartition, lastActiveTimestampMillis));
@@ -647,7 +649,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     } else {
                         MiruTopologyColumnValue columnValue = topologyColumnValueMarshaller.fromBytes(rawInfo);
                         info = new MiruPartitionCoordInfo(columnValue.state, columnValue.storage);
-                        lastActiveTimestampMillis = columnValue.lastActiveTimestamp;
+                        lastActiveTimestampMillis = columnValue.lastIngressTimestamp;
                     }
                     MiruPartition miruPartition = new MiruPartition(new MiruPartitionCoord(tenantId, partitionId, hat.host), info);
                     status.add(new MiruTopologyStatus(miruPartition, lastActiveTimestampMillis));
@@ -706,13 +708,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             MiruTopologyColumnValue columnValue = topologyColumnValueMarshaller.fromBytes(got);
             long activeUntilTimestamp = -1;
             long idleAfterTimestamp = -1;
-            if (columnValue.lastActiveTimestamp > 0) {
-                activeUntilTimestamp = columnValue.lastActiveTimestamp + defaultTopologyIsStaleAfterMillis;
-                idleAfterTimestamp = columnValue.lastActiveTimestamp + defaultTopologyIsIdleAfterMillis;
+            long activeTimestamp = Math.max(columnValue.lastIngressTimestamp, columnValue.lastQueryTimestamp);
+            if (activeTimestamp > 0) {
+                activeUntilTimestamp = activeTimestamp + defaultTopologyIsStaleAfterMillis;
+                idleAfterTimestamp = activeTimestamp + defaultTopologyIsIdleAfterMillis;
             }
 
             long destroyAfterTimestamp = -1;
-            Optional<MiruWALClient.MiruLookupRange> range = rangeProvider.getRange(coord.tenantId, coord.partitionId);
+            Optional<MiruWALClient.MiruLookupRange> range = rangeProvider.getRange(coord.tenantId, coord.partitionId, columnValue.lastIngressTimestamp);
             if (range.isPresent() && range.get().maxClock > 0) {
                 destroyAfterTimestamp = range.get().maxClock + defaultTopologyDestroyAfterMillis;
             }
