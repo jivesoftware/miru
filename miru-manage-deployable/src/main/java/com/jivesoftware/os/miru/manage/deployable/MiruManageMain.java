@@ -35,15 +35,11 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -56,7 +52,6 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.Miru
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
-import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
@@ -156,46 +151,24 @@ public class MiruManageMain {
 
             MiruWALClient miruWALClient = new MiruWALClientInitializer().initialize("", miruWriterClient, mapper, 10_000);
 
-            MiruRegistryStore registryStore = new MiruRegistryStoreInitializer()
-                .initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-
-            MiruClusterRegistry clusterRegistry;
-            if (registryConfig.getClusterRegistryType().equals("rcvs")) {
-                clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-                    registryStore.getHostsRegistry(),
-                    registryStore.getExpectedTenantsRegistry(),
-                    registryStore.getTopologyUpdatesRegistry(),
-                    registryStore.getExpectedTenantPartitionsRegistry(),
-                    registryStore.getReplicaRegistry(),
-                    registryStore.getTopologyRegistry(),
-                    registryStore.getConfigRegistry(),
-                    registryStore.getSchemaRegistry(),
-                    registryConfig.getDefaultNumberOfReplicas(),
-                    registryConfig.getDefaultTopologyIsStaleAfterMillis(),
-                    registryConfig.getDefaultTopologyIsIdleAfterMillis());
-            } else if (registryConfig.getClusterRegistryType().equals("amza")) {
-                AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
-                AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable,
-                    instanceConfig.getInstanceName(),
-                    instanceConfig.getHost(),
-                    instanceConfig.getMainPort(),
-                    "amza-topology-" + instanceConfig.getClusterName(),
-                    amzaClusterRegistryConfig);
-                AmzaClusterRegistry amzaClusterRegistry = new AmzaClusterRegistry(amzaService,
-                    new MiruTenantPartitionRangeProvider(miruWALClient, amzaClusterRegistryConfig.getMinimumRangeCheckIntervalInMillis()),
-                    new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
-                    registryConfig.getDefaultNumberOfReplicas(),
-                    registryConfig.getDefaultTopologyIsStaleAfterMillis(),
-                    registryConfig.getDefaultTopologyIsIdleAfterMillis(),
-                    registryConfig.getDefaultTopologyDestroyAfterMillis(),
-                    amzaClusterRegistryConfig.getReplicationFactor(),
-                    amzaClusterRegistryConfig.getTakeFromFactor());
-                amzaService.watch(RegionProvider.RING_INDEX, amzaClusterRegistry);
-                clusterRegistry = amzaClusterRegistry;
-            } else {
-                throw new IllegalStateException("Invalid cluster registry type: " + registryConfig.getClusterRegistryType());
-            }
-
+            AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
+            AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable,
+                instanceConfig.getInstanceName(),
+                instanceConfig.getHost(),
+                instanceConfig.getMainPort(),
+                "amza-topology-" + instanceConfig.getClusterName(),
+                amzaClusterRegistryConfig);
+            AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+                new MiruTenantPartitionRangeProvider(miruWALClient, amzaClusterRegistryConfig.getMinimumRangeCheckIntervalInMillis()),
+                new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
+                registryConfig.getDefaultNumberOfReplicas(),
+                registryConfig.getDefaultTopologyIsStaleAfterMillis(),
+                registryConfig.getDefaultTopologyIsIdleAfterMillis(),
+                registryConfig.getDefaultTopologyDestroyAfterMillis(),
+                amzaClusterRegistryConfig.getReplicationFactor(),
+                amzaClusterRegistryConfig.getTakeFromFactor());
+            amzaService.watch(RegionProvider.RING_INDEX, clusterRegistry);
+            
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruStats stats = new MiruStats();

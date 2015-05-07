@@ -7,7 +7,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
+import com.google.common.io.Files;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
@@ -29,14 +31,16 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
-import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -68,9 +72,9 @@ import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
-import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
-import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
+import com.jivesoftware.os.upena.main.Deployable;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -101,7 +105,7 @@ public class MiruLocalHostedPartitionTest {
     private MiruContextFactory contextFactory;
     private MiruSchema schema;
     private MiruSchemaProvider schemaProvider;
-    private MiruRCVSClusterRegistry clusterRegistry;
+    private MiruClusterRegistry clusterRegistry;
     private MiruPartitionCoord coord;
     private MiruBackingStorage defaultStorage;
     private MiruWALClient walClient;
@@ -210,23 +214,41 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionAuthzCacheSize(),
             null,
             new AtomicLong(0),
-            new StripingLocksProvider<MiruTermId>(8),
-            new StripingLocksProvider<MiruStreamId>(8),
-            new StripingLocksProvider<String>(8));
+            new StripingLocksProvider<>(8),
+            new StripingLocksProvider<>(8),
+            new StripingLocksProvider<>(8));
 
-        clusterRegistry = new MiruRCVSClusterRegistry(
-            new CurrentTimestamper(),
-            new InMemoryRowColumnValueStore(),
-            new InMemoryRowColumnValueStore(),
-            new InMemoryRowColumnValueStore(),
-            new InMemoryRowColumnValueStore(),
-            new InMemoryRowColumnValueStore(),
-            new InMemoryRowColumnValueStore(),
-            new InMemoryRowColumnValueStore(),
-            new InMemoryRowColumnValueStore(),
+        ObjectMapper mapper = new ObjectMapper();
+        InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
+
+        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
+
+        MiruActivityWALWriter activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+        MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+        MiruPartitionIdProvider miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(1_000_000, wal.getWriterPartitionRegistry(), activityWALReader);
+
+        walClient = new MiruWALDirector(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
+            readTrackingWALReader);
+
+        File amzaDataDir = Files.createTempDir();
+        File amzaIndexDir = Files.createTempDir();
+        AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(
+            AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig.class);
+        acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
+        acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
+        Deployable deployable = new Deployable(new String[0]);
+        AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
+        clusterRegistry = new AmzaClusterRegistry(amzaService,
+            new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
+            new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
-            topologyIsStaleAfterMillis,
-            TimeUnit.HOURS.toMillis(1));
+            TimeUnit.HOURS.toMillis(1),
+            TimeUnit.HOURS.toMillis(1),
+            TimeUnit.DAYS.toMillis(365),
+            0,
+            0);
 
         MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
         clusterClient.elect(host, tenantId, partitionId, System.currentTimeMillis());
@@ -251,20 +273,7 @@ public class MiruLocalHostedPartitionTest {
         sipMigrateIndexRunnable = new AtomicReference<>();
         captureRunnable(scheduledSipMigrateService, sipMigrateIndexRunnable, MiruLocalHostedPartition.SipMigrateIndexRunnable.class);
 
-        ObjectMapper mapper = new ObjectMapper();
-
-        InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
-
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
-
-        MiruActivityWALWriter activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
-        MiruPartitionIdProvider miruPartitionIdProvider = new MiruRCVSPartitionIdProvider(1_000_000, wal.getWriterPartitionRegistry(), activityWALReader);
-
-        walClient = new MiruWALDirector(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
-            readTrackingWALReader);
+        
 
     }
 

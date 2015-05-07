@@ -3,26 +3,32 @@ package com.jivesoftware.os.miru.manage.deployable.balancer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
+import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
+import com.jivesoftware.os.upena.main.Deployable;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -67,18 +73,25 @@ public class MiruManageServiceTest {
         InMemoryRowColumnValueStoreInitializer rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         ObjectMapper mapper = new ObjectMapper();
         MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", rowColumnValueStoreInitializer, mapper);
-        MiruClusterRegistry clusterRegistry = new MiruRCVSClusterRegistry(new CurrentTimestamper(),
-            registryStore.getHostsRegistry(),
-            registryStore.getExpectedTenantsRegistry(),
-            registryStore.getTopologyUpdatesRegistry(),
-            registryStore.getExpectedTenantPartitionsRegistry(),
-            registryStore.getReplicaRegistry(),
-            registryStore.getTopologyRegistry(),
-            registryStore.getConfigRegistry(),
-            registryStore.getSchemaRegistry(),
-            numberOfReplicas,
+
+        MiruWALClient walClient = Mockito.mock(MiruWALClient.class);
+        File amzaDataDir = Files.createTempDir();
+        File amzaIndexDir = Files.createTempDir();
+        AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(
+            AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig.class);
+        acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
+        acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
+        Deployable deployable = new Deployable(new String[0]);
+        AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
+        MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+            new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
+            new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
+            3,
             TimeUnit.HOURS.toMillis(1),
-            TimeUnit.HOURS.toMillis(1));
+            TimeUnit.HOURS.toMillis(1),
+            TimeUnit.DAYS.toMillis(365),
+            0,
+            0);
 
         clusterRegistry.registerSchema(tenantId, miruSchema);
 

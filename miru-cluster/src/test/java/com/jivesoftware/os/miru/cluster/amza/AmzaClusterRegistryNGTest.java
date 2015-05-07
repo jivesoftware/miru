@@ -1,8 +1,26 @@
-package com.jivesoftware.os.miru.cluster.rcvs;
+/*
+ * Copyright 2015 jonathan.colt.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.jivesoftware.os.miru.cluster.amza;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.Files;
+import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -15,19 +33,27 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
+import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
+import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
+import com.jivesoftware.os.upena.main.Deployable;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.merlin.config.BindInterfaceToConfiguration;
+import org.mockito.Mockito;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -35,34 +61,43 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class MiruRCVSClusterRegistryTest {
+/**
+ *
+ * @author jonathan.colt
+ */
+public class AmzaClusterRegistryNGTest {
 
     private final int numReplicas = 3;
-    private final MiruTenantId tenantId = new MiruTenantId(new byte[] { 1, 2, 3, 4 });
+    private final MiruTenantId tenantId = new MiruTenantId(new byte[]{1, 2, 3, 4});
     private final MiruPartitionId partitionId = MiruPartitionId.of(0);
 
-    private Timestamper timestamper = new CurrentTimestamper();
+    private final Timestamper timestamper = new CurrentTimestamper();
     private MiruReplicaSetDirector replicaSetDirector;
-    private MiruRCVSClusterRegistry registry;
+    private MiruClusterRegistry registry;
 
     @BeforeMethod
     public void setUp() throws Exception {
-        registry = new MiruRCVSClusterRegistry(
-            timestamper,
-            new InMemoryRowColumnValueStore<>(),
-            new InMemoryRowColumnValueStore<>(),
-            new InMemoryRowColumnValueStore<>(),
-            new InMemoryRowColumnValueStore<>(),
-            new InMemoryRowColumnValueStore<>(),
-            new InMemoryRowColumnValueStore<>(),
-            new InMemoryRowColumnValueStore<>(),
-            new InMemoryRowColumnValueStore<>(),
-            numReplicas,
+        ObjectMapper mapper = new ObjectMapper();
+        MiruWALClient walClient = Mockito.mock(MiruWALClient.class);
+        File amzaDataDir = Files.createTempDir();
+        File amzaIndexDir = Files.createTempDir();
+        AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(
+            AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig.class);
+        acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
+        acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
+        Deployable deployable = new Deployable(new String[0]);
+        AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
+        registry = new AmzaClusterRegistry(amzaService,
+            new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
+            new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
+            3,
             TimeUnit.HOURS.toMillis(1),
-            TimeUnit.HOURS.toMillis(1));
+            TimeUnit.HOURS.toMillis(1),
+            TimeUnit.DAYS.toMillis(365),
+            0,
+            0);
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(registry);
-
         replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterClient);
     }
 
@@ -160,14 +195,14 @@ public class MiruRCVSClusterRegistryTest {
     public void testSchemaProvider() throws Exception {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[] {
+            .setFieldDefinitions(new MiruFieldDefinition[]{
                 new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
         MiruTenantId tenantId2 = new MiruTenantId("tenant2".getBytes());
         MiruSchema schema2 = new MiruSchema.Builder("test2", 2)
-            .setFieldDefinitions(new MiruFieldDefinition[] {
+            .setFieldDefinitions(new MiruFieldDefinition[]{
                 new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
@@ -195,13 +230,13 @@ public class MiruRCVSClusterRegistryTest {
     public void testSchemaVersions() throws Exception {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[] {
+            .setFieldDefinitions(new MiruFieldDefinition[]{
                 new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
         MiruSchema schema2 = new MiruSchema.Builder("test1", 2)
-            .setFieldDefinitions(new MiruFieldDefinition[] {
+            .setFieldDefinitions(new MiruFieldDefinition[]{
                 new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })

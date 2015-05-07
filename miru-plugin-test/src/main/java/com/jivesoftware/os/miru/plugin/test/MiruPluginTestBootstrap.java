@@ -33,14 +33,11 @@ import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
-import com.jivesoftware.os.miru.cluster.rcvs.MiruRCVSClusterRegistry;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
@@ -65,7 +62,6 @@ import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruRCVSPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
-import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import com.jivesoftware.os.upena.main.Deployable;
 import java.io.File;
@@ -146,43 +142,25 @@ public class MiruPluginTestBootstrap {
         MiruWALClient walClient = new MiruWALDirector(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
             readTrackingWALReader);
 
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
-
+        
         MiruClusterRegistry clusterRegistry;
 
-        boolean useAmza = true;
-        if (useAmza) {
-            File amzaDataDir = Files.createTempDir();
-            File amzaIndexDir = Files.createTempDir();
-            AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(AmzaClusterRegistryConfig.class);
-            acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
-            acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
-            Deployable deployable = new Deployable(new String[0]);
-            AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
-            clusterRegistry = new AmzaClusterRegistry(amzaService,
-                new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
-                new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
-                3,
-                TimeUnit.HOURS.toMillis(1),
-                TimeUnit.HOURS.toMillis(1),
-                TimeUnit.DAYS.toMillis(365),
-                0,
-                0);
-        } else {
-            clusterRegistry = new MiruRCVSClusterRegistry(
-                new CurrentTimestamper(),
-                registryStore.getHostsRegistry(),
-                registryStore.getExpectedTenantsRegistry(),
-                registryStore.getTopologyUpdatesRegistry(),
-                registryStore.getExpectedTenantPartitionsRegistry(),
-                registryStore.getReplicaRegistry(),
-                registryStore.getTopologyRegistry(),
-                registryStore.getConfigRegistry(),
-                registryStore.getSchemaRegistry(),
-                3,
-                TimeUnit.HOURS.toMillis(1),
-                TimeUnit.HOURS.toMillis(1));
-        }
+        File amzaDataDir = Files.createTempDir();
+        File amzaIndexDir = Files.createTempDir();
+        AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(AmzaClusterRegistryConfig.class);
+        acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
+        acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
+        Deployable deployable = new Deployable(new String[0]);
+        AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
+        clusterRegistry = new AmzaClusterRegistry(amzaService,
+            new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
+            new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
+            3,
+            TimeUnit.HOURS.toMillis(1),
+            TimeUnit.HOURS.toMillis(1),
+            TimeUnit.DAYS.toMillis(365),
+            0,
+            0);
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterClient);
