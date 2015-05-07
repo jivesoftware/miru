@@ -160,7 +160,7 @@ public class MiruPluginTestBootstrap {
             Deployable deployable = new Deployable(new String[0]);
             AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
             clusterRegistry = new AmzaClusterRegistry(amzaService,
-                new MiruTenantPartitionRangeProvider(walClient),
+                new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
                 new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                 3,
                 TimeUnit.HOURS.toMillis(1),
@@ -195,7 +195,8 @@ public class MiruPluginTestBootstrap {
             new MiruClusterRegistry.TopologyUpdate(
                 new MiruPartitionCoord(tenantId, partitionId, miruHost),
                 Optional.<MiruPartitionCoordInfo>absent(),
-                Optional.of(System.currentTimeMillis()))));
+                Optional.of(System.currentTimeMillis()),
+                Optional.<Long>absent())));
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
             .initialize(config.getReadStreamIdsPropName(), miruHost, walClient);

@@ -21,7 +21,7 @@ public interface MiruRegistryConfig extends Config {
     @LongDefault(3_600_000)
     long getDefaultTopologyIsStaleAfterMillis();
 
-    // 1 hour
+    // 10 minutes
     @LongDefault(600_000)
     long getDefaultTopologyIsIdleAfterMillis();
 

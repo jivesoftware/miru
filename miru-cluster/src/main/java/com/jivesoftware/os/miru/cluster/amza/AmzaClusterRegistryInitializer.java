@@ -71,6 +71,9 @@ public class AmzaClusterRegistryInitializer {
         @LongDefault(1 * 24 * 60 * 60 * 1000L)
         long getCompactTombstoneIfOlderThanNMillis();
 
+        @LongDefault(60_000L)
+        long getMinimumRangeCheckIntervalInMillis();
+
         @IntDefault(100)
         int getCorruptionParanoiaFactor();
 

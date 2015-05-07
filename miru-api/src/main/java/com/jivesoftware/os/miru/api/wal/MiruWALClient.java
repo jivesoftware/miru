@@ -42,6 +42,8 @@ public interface MiruWALClient {
 
     }
 
+    MiruLookupRange lookupRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     Collection<MiruLookupRange> lookupRanges(MiruTenantId tenantId) throws Exception;
 
     class MiruLookupRange {

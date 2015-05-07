@@ -73,12 +73,17 @@ public interface MiruClusterRegistry {
     class TopologyUpdate {
         public final MiruPartitionCoord coord;
         public final Optional<MiruPartitionCoordInfo> optionalInfo;
-        public final Optional<Long> refreshTimestamp;
+        public final Optional<Long> ingressTimestamp;
+        public final Optional<Long> queryTimestamp;
 
-        public TopologyUpdate(MiruPartitionCoord coord, Optional<MiruPartitionCoordInfo> optionalInfo, Optional<Long> refreshTimestamp) {
+        public TopologyUpdate(MiruPartitionCoord coord,
+            Optional<MiruPartitionCoordInfo> optionalInfo,
+            Optional<Long> ingressTimestamp,
+            Optional<Long> queryTimestamp) {
             this.coord = coord;
             this.optionalInfo = optionalInfo;
-            this.refreshTimestamp = refreshTimestamp;
+            this.ingressTimestamp = ingressTimestamp;
+            this.queryTimestamp = queryTimestamp;
         }
     }
 }

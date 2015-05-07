@@ -105,12 +105,15 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
         clusterRegistry.updateTopologies(miruHost, heartbeatRequest.active.stream()
             .map(partitionInfo -> {
                 Optional<MiruPartitionCoordInfo> info = Optional.fromNullable(partitionInfo.info);
-                Optional<Long> refreshTimestamp = (partitionInfo.activeTimestamp > -1) ? Optional.of(
-                    partitionInfo.activeTimestamp) : Optional.<Long>absent();
+                Optional<Long> ingressTimestamp = (partitionInfo.ingressTimestamp > -1) ?
+                    Optional.of(partitionInfo.ingressTimestamp) : Optional.<Long>absent();
+                Optional<Long> queryTimestamp = (partitionInfo.queryTimestamp > -1) ?
+                    Optional.of(partitionInfo.queryTimestamp) : Optional.<Long>absent();
                 return new MiruClusterRegistry.TopologyUpdate(
                     new MiruPartitionCoord(partitionInfo.tenantId, MiruPartitionId.of(partitionInfo.partitionId), miruHost),
                     info,
-                    refreshTimestamp);
+                    ingressTimestamp,
+                    queryTimestamp);
             })
             .collect(Collectors.toList()));
 

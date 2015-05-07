@@ -20,7 +20,6 @@ import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
-import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.rcvs.api.timestamper.CurrentTimestamper;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
@@ -50,14 +49,14 @@ public class MiruRCVSClusterRegistryTest {
     public void setUp() throws Exception {
         registry = new MiruRCVSClusterRegistry(
             timestamper,
-            new InMemoryRowColumnValueStore<MiruVoidByte, MiruHost, MiruHostsColumnKey, MiruHostsColumnValue>(),
-            new InMemoryRowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte>(),
-            new InMemoryRowColumnValueStore<MiruVoidByte, MiruHost, MiruTenantId, MiruVoidByte>(),
-            new InMemoryRowColumnValueStore<MiruTenantId, MiruHost, MiruPartitionId, MiruVoidByte>(),
-            new InMemoryRowColumnValueStore<MiruTenantId, MiruPartitionId, Long, MiruHost>(),
-            new InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTopologyColumnKey, MiruTopologyColumnValue>(),
-            new InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruTenantConfigFields, Long>(),
-            new InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema>(),
+            new InMemoryRowColumnValueStore<>(),
+            new InMemoryRowColumnValueStore<>(),
+            new InMemoryRowColumnValueStore<>(),
+            new InMemoryRowColumnValueStore<>(),
+            new InMemoryRowColumnValueStore<>(),
+            new InMemoryRowColumnValueStore<>(),
+            new InMemoryRowColumnValueStore<>(),
+            new InMemoryRowColumnValueStore<>(),
             numReplicas,
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1));
@@ -81,7 +80,8 @@ public class MiruRCVSClusterRegistryTest {
         registry.updateTopologies(hosts[0], Arrays.asList(
             new MiruClusterRegistry.TopologyUpdate(coord,
                 Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)),
-                Optional.of(timestamper.get()))));
+                Optional.of(timestamper.get()),
+                Optional.<Long>absent())));
 
         List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
         List<MiruTopologyStatus> onlineStatus = Lists.newArrayList();
@@ -109,7 +109,7 @@ public class MiruRCVSClusterRegistryTest {
 
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
         registry.updateTopologies(hosts[0], Arrays.asList(
-            new MiruClusterRegistry.TopologyUpdate(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(timestamper.get()))));
+            new MiruClusterRegistry.TopologyUpdate(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(timestamper.get()), Optional.<Long>absent())));
 
         List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
         List<MiruTopologyStatus> offlineStatus = Lists.newArrayList();

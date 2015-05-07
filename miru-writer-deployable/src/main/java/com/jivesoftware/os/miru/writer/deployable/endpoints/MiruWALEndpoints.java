@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.writer.deployable.endpoints;
 
 import com.google.common.base.Charsets;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -10,6 +11,7 @@ import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.GetActivityCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.GetReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupEntry;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupRange;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.SipActivityCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.SipReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
@@ -17,6 +19,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collection;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -39,10 +42,12 @@ public class MiruWALEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruWALDirector walDirector;
+    private final MiruStats stats;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruWALEndpoints(@Context MiruWALDirector walDirector) {
+    public MiruWALEndpoints(@Context MiruWALDirector walDirector, @Context MiruStats stats) {
         this.walDirector = walDirector;
+        this.stats = stats;
     }
 
     @POST
@@ -50,7 +55,9 @@ public class MiruWALEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response repairBoundaries() throws Exception {
         try {
+            long start = System.currentTimeMillis();
             walDirector.repairBoundaries();
+            stats.ingressed("/repairBoundaries", 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
             log.error("Failed calling repairBoundaries()", x);
@@ -63,7 +70,9 @@ public class MiruWALEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response repairRanges() throws Exception {
         try {
+            long start = System.currentTimeMillis();
             walDirector.repairRanges();
+            stats.ingressed("/repairRanges", 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
             log.error("Failed calling repairRanges()", x);
@@ -77,7 +86,9 @@ public class MiruWALEndpoints {
     public Response sanitizeActivityWAL(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId) throws Exception {
         try {
+            long start = System.currentTimeMillis();
             walDirector.sanitizeActivityWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            stats.ingressed("/sanitize/activity/wal/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
             log.error("Failed calling sanitizeActivityWAL({}, {})", new Object[] { tenantId, partitionId }, x);
@@ -91,7 +102,9 @@ public class MiruWALEndpoints {
     public Response sanitizeActivitySipWAL(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId) throws Exception {
         try {
+            long start = System.currentTimeMillis();
             walDirector.sanitizeActivitySipWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            stats.ingressed("/sanitize/sip/wal/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
             log.error("Failed calling sanitizeActivitySipWAL({}, {})", new Object[] { tenantId, partitionId }, x);
@@ -104,7 +117,9 @@ public class MiruWALEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllTenantIds() throws Exception {
         try {
+            long start = System.currentTimeMillis();
             List<MiruTenantId> allTenantIds = walDirector.getAllTenantIds();
+            stats.ingressed("/tenants/all", 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(allTenantIds);
         } catch (Exception x) {
             log.error("Failed calling getAllTenantIds()", x);
@@ -117,7 +132,9 @@ public class MiruWALEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getLargestPartitionIdAcrossAllWriters(@PathParam("tenantId") String tenantId) throws Exception {
         try {
+            long start = System.currentTimeMillis();
             MiruPartitionId partitionId = walDirector.getLargestPartitionIdAcrossAllWriters(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
+            stats.ingressed("/largestPartitionId/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(partitionId);
         } catch (Exception x) {
             log.error("Failed calling getLargestPartitionIdAcrossAllWriters({})", new Object[] { tenantId }, x);
@@ -132,7 +149,9 @@ public class MiruWALEndpoints {
     public Response getPartitionStatus(@PathParam("tenantId") String tenantId,
         List<MiruPartitionId> partitionIds) throws Exception {
         try {
+            long start = System.currentTimeMillis();
             List<MiruActivityWALStatus> partitionStatus = walDirector.getPartitionStatus(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), partitionIds);
+            stats.ingressed("/partition/status/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(partitionStatus);
         } catch (Exception x) {
             log.error("Failed calling getPartitionStatus({},{})", new Object[] { tenantId, partitionIds }, x);
@@ -147,10 +166,43 @@ public class MiruWALEndpoints {
         @PathParam("batchSize") int batchSize,
         @PathParam("afterTimestamp") long afterTimestamp) throws Exception {
         try {
+            long start = System.currentTimeMillis();
             List<MiruLookupEntry> lookupActivity = walDirector.lookupActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), afterTimestamp, batchSize);
+            stats.ingressed("/lookup/activity/" + tenantId + "/" + batchSize + "/" + afterTimestamp, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(lookupActivity);
         } catch (Exception x) {
-            log.error("Failed calling lookupActivity({},{},{},{})", new Object[] { tenantId, afterTimestamp, batchSize }, x);
+            log.error("Failed calling lookupActivity({},{},{})", new Object[] { tenantId, afterTimestamp, batchSize }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @GET
+    @Path("/lookup/range/{tenantId}/{partitionId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response lookupRanges(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) throws Exception {
+        try {
+            long start = System.currentTimeMillis();
+            MiruLookupRange lookupRange = walDirector.lookupRange(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            stats.ingressed("/lookup/range/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(lookupRange);
+        } catch (Exception x) {
+            log.error("Failed calling lookupRange({}, {})", new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @GET
+    @Path("/lookup/ranges/{tenantId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response lookupRanges(@PathParam("tenantId") String tenantId) throws Exception {
+        try {
+            long start = System.currentTimeMillis();
+            Collection<MiruLookupRange> lookupRanges = walDirector.lookupRanges(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
+            stats.ingressed("/lookup/ranges/" + tenantId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(lookupRanges);
+        } catch (Exception x) {
+            log.error("Failed calling lookupRanges({})", new Object[] { tenantId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
@@ -165,8 +217,10 @@ public class MiruWALEndpoints {
         SipActivityCursor cursor)
         throws Exception {
         try {
+            long start = System.currentTimeMillis();
             StreamBatch<MiruWALEntry, SipActivityCursor> sipActivity = walDirector.sipActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), cursor, batchSize);
+            stats.ingressed("/sip/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(sipActivity);
         } catch (Exception x) {
             log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
@@ -184,8 +238,10 @@ public class MiruWALEndpoints {
         GetActivityCursor cursor)
         throws Exception {
         try {
+            long start = System.currentTimeMillis();
             StreamBatch<MiruWALEntry, GetActivityCursor> activity = walDirector.getActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), cursor, batchSize);
+            stats.ingressed("/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(activity);
         } catch (Exception x) {
             log.error("Failed calling getActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
@@ -202,8 +258,10 @@ public class MiruWALEndpoints {
         @PathParam("batchSize") int batchSize,
         SipReadCursor cursor) throws Exception {
         try {
+            long start = System.currentTimeMillis();
             StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead = walDirector.sipRead(
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
+            stats.ingressed("/sip/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(sipRead);
         } catch (Exception x) {
             log.error("Failed calling sipRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
@@ -220,8 +278,10 @@ public class MiruWALEndpoints {
         @PathParam("batchSize") int batchSize,
         GetReadCursor cursor) throws Exception {
         try {
-            StreamBatch<MiruWALEntry, GetReadCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+            long start = System.currentTimeMillis();
+           StreamBatch<MiruWALEntry, GetReadCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
+            stats.ingressed("/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(read);
         } catch (Exception x) {
             log.error("Failed calling getRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);

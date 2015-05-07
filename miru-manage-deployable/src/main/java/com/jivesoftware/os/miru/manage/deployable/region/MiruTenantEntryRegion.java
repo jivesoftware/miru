@@ -98,15 +98,16 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
             }
 
             Collection<MiruWALClient.MiruLookupRange> lookupRanges = miruWALClient.lookupRanges(tenant);
-            for (MiruWALClient.MiruLookupRange lookupRange : lookupRanges) {
-                MiruPartitionId partitionId = MiruPartitionId.of(lookupRange.partitionId);
-                PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
-                partitionBean.setMinClock(String.valueOf(lookupRange.minClock));
-                partitionBean.setMaxClock(String.valueOf(lookupRange.maxClock));
-                partitionBean.setMinOrderId(String.valueOf(lookupRange.minOrderId));
-                partitionBean.setMaxOrderId(String.valueOf(lookupRange.maxOrderId));
+            if (lookupRanges != null) {
+                for (MiruWALClient.MiruLookupRange lookupRange : lookupRanges) {
+                    MiruPartitionId partitionId = MiruPartitionId.of(lookupRange.partitionId);
+                    PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
+                    partitionBean.setMinClock(String.valueOf(lookupRange.minClock));
+                    partitionBean.setMaxClock(String.valueOf(lookupRange.maxClock));
+                    partitionBean.setMinOrderId(String.valueOf(lookupRange.minOrderId));
+                    partitionBean.setMaxOrderId(String.valueOf(lookupRange.maxOrderId));
+                }
             }
-
         } catch (Exception e) {
             log.error("Unable to get partitions for tenant: " + tenant);
         }

@@ -31,24 +31,31 @@ public class MiruTopologyColumnValueMarshaller implements TypeMarshaller<MiruTop
         buffer.getLong(); // This is unused space from when we had sizeInMemory
         buffer.getLong(); // This is unused space from when we had sizeOnDisk
 
-        long lastActiveTimestamp = -1;
+        long lastIngressTimestamp = -1;
         if (buffer.remaining() >= 8) {
-            lastActiveTimestamp = buffer.getLong();
+            lastIngressTimestamp = buffer.getLong();
         }
 
-        return new MiruTopologyColumnValue(MiruPartitionState.fromIndex(stateIndex), MiruBackingStorage.fromIndex(storageIndex), lastActiveTimestamp);
+        long lastQueryTimestamp = -1;
+        if (buffer.remaining() >= 8) {
+            lastQueryTimestamp = buffer.getLong();
+        }
+
+        return new MiruTopologyColumnValue(MiruPartitionState.fromIndex(stateIndex), MiruBackingStorage.fromIndex(storageIndex),
+            lastIngressTimestamp, lastQueryTimestamp);
     }
 
     @Override
     public byte[] toLexBytes(MiruTopologyColumnValue miruTopologyColumnValue) throws Exception {
-        int capacity = 32;
+        int capacity = 40;
         ByteBuffer buffer = ByteBuffer.allocate(capacity);
 
         buffer.putInt(miruTopologyColumnValue.state.getIndex());
         buffer.putInt(miruTopologyColumnValue.storage.getIndex());
         buffer.putLong(-1); // This is unused space from when we had sizeInMemory
         buffer.putLong(-1); // This is unused space from when we had sizeOnDisk
-        buffer.putLong(miruTopologyColumnValue.lastActiveTimestamp);
+        buffer.putLong(miruTopologyColumnValue.lastIngressTimestamp);
+        buffer.putLong(miruTopologyColumnValue.lastQueryTimestamp);
 
         return buffer.array();
     }
