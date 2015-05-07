@@ -160,7 +160,7 @@ public class MiruManageMain {
                 amzaClusterRegistryConfig.getReplicationFactor(),
                 amzaClusterRegistryConfig.getTakeFromFactor());
             amzaService.watch(RegionProvider.RING_INDEX, clusterRegistry);
-            
+
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruStats stats = new MiruStats();
