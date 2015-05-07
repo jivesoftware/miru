@@ -13,11 +13,6 @@
     </parent>
     <modules>
         <module>global-build-management</module>
-        <module>global-plugin-management</module>
-        <module>global-repo-management</module>
-        <module>global-version-management</module>
-        <module>shared-lib-build-management</module>
-        <module>shared-lib-version-management</module>
         <module>upena-deployable-management</module>
     </modules>
 </project>

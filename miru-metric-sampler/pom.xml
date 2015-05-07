@@ -4,9 +4,9 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
-        <artifactId>shared-lib-build-management</artifactId>
+        <artifactId>global-build-management</artifactId>
         <version>0.456-SNAPSHOT</version>
-        <relativePath>../inheritance-poms/shared-lib-build-management/pom.xml</relativePath>
+        <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-metric-sampler</artifactId>
