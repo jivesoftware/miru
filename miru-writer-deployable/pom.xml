@@ -157,5 +157,15 @@
             <artifactId>row-column-value-store-inmemory</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-transport</artifactId>
+            <version>0.66</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-berkeleydb-storage</artifactId>
+            <version>0.66</version>
+        </dependency>
     </dependencies>
 </project>
