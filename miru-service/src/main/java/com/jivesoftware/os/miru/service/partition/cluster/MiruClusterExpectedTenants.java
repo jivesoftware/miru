@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyPartition;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
@@ -86,15 +87,15 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         MiruTenantRoutingTopology topology = routingTopologies.get(tenantId, () -> {
 
             MiruTopologyResponse topologyResponse = clusterClient.routingTopology(tenantId);
-            ConcurrentSkipListMap<PartitionAndHost, MiruRoutablePartition> topology1 = new ConcurrentSkipListMap<PartitionAndHost, MiruRoutablePartition>();
-            for (MiruTopologyResponse.Partition partition : topologyResponse.topology) {
+            ConcurrentSkipListMap<PartitionAndHost, MiruRoutablePartition> partitionHostTopology = new ConcurrentSkipListMap<>();
+            for (MiruTopologyPartition partition : topologyResponse.topology) {
                 MiruPartitionId partitionId = MiruPartitionId.of(partition.partitionId);
                 MiruRoutablePartition routablePartition = new MiruRoutablePartition(partition.host,
                     partitionId, partition.host.equals(localHost),
-                    partition.state, partition.storage);
-                topology1.put(new PartitionAndHost(partitionId, partition.host), routablePartition);
+                    partition.state, partition.storage, partition.destroyAfterTimestamp);
+                partitionHostTopology.put(new PartitionAndHost(partitionId, partition.host), routablePartition);
             }
-            return new MiruTenantRoutingTopology(partitionComparison, topology1);
+            return new MiruTenantRoutingTopology(partitionComparison, partitionHostTopology);
         });
         if (topology == null) {
             return Collections.emptyList();

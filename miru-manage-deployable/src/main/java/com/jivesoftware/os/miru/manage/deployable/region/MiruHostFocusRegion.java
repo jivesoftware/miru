@@ -66,9 +66,11 @@ public class MiruHostFocusRegion implements MiruRegion<MiruHost> {
                 MiruPartition partition = status.partition;
                 MiruPartitionState state = (partition != null) ? partition.info.state : MiruPartitionState.offline;
                 MiruBackingStorage storage = (partition != null) ? partition.info.storage : MiruBackingStorage.unknown;
+                String lastIngress = timeAgo(System.currentTimeMillis() - status.lastIngressTimestamp);
+                String lastQuery = timeAgo(System.currentTimeMillis() - status.lastQueryTimestamp);
                 PartitionCoordBean partitionCoordBean = new PartitionCoordBean(
                         partition != null ? partition.coord : null,
-                        storage, timeAgo(System.currentTimeMillis() - status.lastActiveTimestamp));
+                        storage, lastIngress, lastQuery);
                 if (state == MiruPartitionState.online) {
                     tenantBean.getOnline().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.rebuilding) {

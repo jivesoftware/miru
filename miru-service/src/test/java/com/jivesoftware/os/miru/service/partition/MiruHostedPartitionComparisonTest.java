@@ -82,7 +82,8 @@ public class MiruHostedPartitionComparisonTest {
     }
 
     private MiruRoutablePartition create(int port) {
-        return new MiruRoutablePartition(new MiruHost("localhost", port), partitionId, true, MiruPartitionState.online, MiruBackingStorage.memory);
+        return new MiruRoutablePartition(new MiruHost("localhost", port), partitionId, true, MiruPartitionState.online, MiruBackingStorage.memory,
+            Long.MAX_VALUE);
     }
 
     private class TestTimestamper implements MiruHostedPartitionComparison.Timestamper {

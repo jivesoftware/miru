@@ -87,6 +87,10 @@ public class MiruHostedPartitionComparison {
         List<PartitionAndTime> partitionAndTimes = Lists.newArrayListWithCapacity(partitions.size());
 
         for (MiruRoutablePartition partition : partitions) {
+            if (partition.destroyAfterTimestamp > 0 && System.currentTimeMillis() > partition.destroyAfterTimestamp) {
+                continue;
+            }
+
             PartitionAndHost partitionAndHost = new PartitionAndHost(partition.partitionId, partition.host);
             while (skipEntry != null && skipEntry.getKey().compareTo(partitionAndHost) < 0) {
                 skipEntry = skipIter.hasNext() ? skipIter.next() : null;

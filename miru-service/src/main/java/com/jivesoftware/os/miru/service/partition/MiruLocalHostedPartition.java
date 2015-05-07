@@ -492,7 +492,29 @@ public class MiruLocalHostedPartition<BM> implements MiruHostedPartition, MiruQu
                 if (accessor.info.state == MiruPartitionState.offline && accessor.info.storage == MiruBackingStorage.disk) {
                     synchronized (factoryLock) {
                         log.info("Cleaning disk for partition because it is marked for destruction: {}", coord);
-                        contextFactory.cleanDisk(coord);
+
+                        MiruPartitionAccessor<BM> existing = accessorRef.get();
+                        MiruPartitionCoordInfo coordInfo = existing.info
+                            .copyToStorage(MiruBackingStorage.memory)
+                            .copyToState(MiruPartitionState.offline);
+                        MiruPartitionAccessor<BM> cleaned = new MiruPartitionAccessor<>(miruStats, bitmaps, coord, coordInfo,
+                            Optional.<MiruContext<BM>>absent(),
+                            indexRepairs, indexer);
+                        cleaned = updatePartition(existing, cleaned);
+                        if (cleaned != null) {
+                            if (existing.context != null) {
+                                Optional<MiruContext<BM>> closedContext = existing.close();
+                                if (closedContext.isPresent()) {
+                                    contextFactory.close(closedContext.get(), existing.info.storage);
+                                }
+                            }
+                            existing.refundChits(mergeChits);
+                            clearFutures();
+                            contextFactory.cleanDisk(coord);
+                            contextFactory.markStorage(coord, MiruBackingStorage.memory);
+                        } else {
+                            log.warn("Failed to clean disk because accessor changed for partition: {}", coord);
+                        }
                     }
                 }
             } else if (partitionActive.activeUntilTimestamp > System.currentTimeMillis()) {
