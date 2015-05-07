@@ -50,8 +50,6 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
@@ -136,12 +134,6 @@ public class MiruManageMain {
             sampler.start();
 
             MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
-
-            RowColumnValueStoreProvider rowColumnValueStoreProvider = registryConfig.getRowColumnValueStoreProviderClass().newInstance();
-            @SuppressWarnings("unchecked")
-            RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
