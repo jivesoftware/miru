@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.endpoint;
 
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -23,10 +24,12 @@ public class MiruWriterEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruService service;
+    private final MiruStats stats;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruWriterEndpoints(@Context MiruService service) {
+    public MiruWriterEndpoints(@Context MiruService service, @Context MiruStats stats) {
         this.service = service;
+        this.stats = stats;
     }
 
     @POST
@@ -42,7 +45,9 @@ public class MiruWriterEndpoints {
         }
 
         try {
+            long start = System.currentTimeMillis();
             service.writeToIndex(activities);
+            stats.ingressed(ADD_ACTIVITIES, activities.size(), System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
             log.error("Failed to add activities.", e);

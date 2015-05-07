@@ -5,6 +5,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.MiruService;
@@ -30,9 +31,11 @@ public class MiruReaderConfigEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruService miruService;
+    private final MiruStats stats;
 
-    public MiruReaderConfigEndpoints(@Context MiruService miruService) {
+    public MiruReaderConfigEndpoints(@Context MiruService miruService, @Context MiruStats stats) {
         this.miruService = miruService;
+        this.stats = stats;
     }
 
     @POST
@@ -43,10 +46,12 @@ public class MiruReaderConfigEndpoints {
         @PathParam("partitionId") Integer partitionId,
         @PathParam("storage") String storage) {
         try {
+            long start = System.currentTimeMillis();
             miruService.setStorage(
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId),
                 MiruBackingStorage.valueOf(storage));
+            stats.ingressed("POST:/storage/" + tenantId + "/" + partitionId + "/" + storage, 1, System.currentTimeMillis() - start);
             return Response.ok(storage).build();
         } catch (Throwable t) {
             log.error("Failed to set storage to {} for tenant {} partition {}", new Object[]{storage, tenantId, partitionId}, t);
@@ -63,7 +68,9 @@ public class MiruReaderConfigEndpoints {
 
         MiruHost host = new MiruHost(logicalName, port);
         try {
+            long start = System.currentTimeMillis();
             miruService.removeHost(host);
+            stats.ingressed("DELETE:/hosts/" + logicalName + "/" + port, 1, System.currentTimeMillis() - start);
             return Response.ok(host.toStringForm()).build();
         } catch (Throwable t) {
             log.error("Failed to remove host {}", new Object[]{host}, t);
@@ -82,10 +89,12 @@ public class MiruReaderConfigEndpoints {
 
         MiruHost host = new MiruHost(logicalName, port);
         try {
+            long start = System.currentTimeMillis();
             miruService.removeTopology(
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId),
                 host);
+            stats.ingressed("DELETE:/topology/" + tenantId + "/" + partitionId + "/" + logicalName + "/" + port, 1, System.currentTimeMillis() - start);
             return Response.ok(host.toStringForm()).build();
         } catch (Throwable t) {
             log.error("Failed to remove topology for tenant {} partition {} host {}", new Object[]{tenantId, partitionId, host}, t);
@@ -101,13 +110,17 @@ public class MiruReaderConfigEndpoints {
         @PathParam("state") MiruPartitionState state,
         @PathParam("storage") MiruBackingStorage storage) {
         try {
+            long start = System.currentTimeMillis();
             MiruTenantId tenant = new MiruTenantId(tenantId.getBytes(Charsets.UTF_8));
             MiruPartitionId partition = MiruPartitionId.of(partitionId);
+            Response response;
             if (miruService.checkInfo(tenant, partition, new MiruPartitionCoordInfo(state, storage))) {
-                return Response.noContent().build();
+                response = Response.noContent().build();
             } else {
-                return Response.status(Response.Status.NOT_FOUND).build();
+                response = Response.status(Response.Status.NOT_FOUND).build();
             }
+            stats.ingressed("POST:/check/" + tenantId + "/" + partitionId + "/" + state + "/" + storage, 1, System.currentTimeMillis() - start);
+            return response;
         } catch (Throwable t) {
             log.error("Failed to check state for tenant {} partition {}", new Object[]{tenantId, partitionId}, t);
             return Response.serverError().build();
@@ -120,13 +133,17 @@ public class MiruReaderConfigEndpoints {
         @PathParam("tenantId") String tenantId,
         @PathParam("partitionId") Integer partitionId) {
         try {
+            long start = System.currentTimeMillis();
             MiruTenantId tenant = new MiruTenantId(tenantId.getBytes(Charsets.UTF_8));
             MiruPartitionId partition = MiruPartitionId.of(partitionId);
+            Response response;
             if (miruService.prioritizeRebuild(tenant, partition)) {
-                return Response.noContent().build();
+                response = Response.noContent().build();
             } else {
-                return Response.status(Response.Status.NOT_FOUND).build();
+                response = Response.status(Response.Status.NOT_FOUND).build();
             }
+            stats.ingressed("DELETE:" + PRIORITIZE_REBUILD_ENDPOINT + "/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return response;
         } catch (Throwable t) {
             log.error("Failed to prioritize rebuild for tenant {} partition {}", new Object[]{tenantId, partitionId}, t);
             return Response.serverError().build();

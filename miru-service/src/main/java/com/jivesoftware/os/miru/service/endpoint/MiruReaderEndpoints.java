@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.endpoint;
 
 import com.google.common.base.Charsets;
 import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.MiruService;
@@ -29,10 +30,12 @@ public class MiruReaderEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruService miruService;
+    private final MiruStats stats;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruReaderEndpoints(@Context MiruService miruService) {
+    public MiruReaderEndpoints(@Context MiruService miruService, @Context MiruStats stats) {
         this.miruService = miruService;
+        this.stats = stats;
     }
 
     @POST
@@ -41,7 +44,9 @@ public class MiruReaderEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response warm(MiruTenantId tenantId) {
         try {
+            long start = System.currentTimeMillis();
             miruService.warm(tenantId);
+            stats.ingressed(WARM_ENDPOINT + "/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("");
         } catch (Exception e) {
             log.error("Failed to warm.", e);
@@ -55,13 +60,15 @@ public class MiruReaderEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response warm(List<MiruTenantId> tenantIds) {
         try {
+            long start = System.currentTimeMillis();
             for (MiruTenantId tenantId : tenantIds) {
                 try {
                     miruService.warm(tenantId);
                 } catch (Exception e) {
-                    log.error("Failed to warm tenant {}", new Object[] { tenantId }, e);
+                    log.error("Failed to warm tenant {}", new Object[]{tenantId}, e);
                 }
             }
+            stats.ingressed(WARM_ALL_ENDPOINT, tenantIds.size(), System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("");
         } catch (Exception e) {
             log.error("Failed to warm multiple tenants.", e);
@@ -72,12 +79,15 @@ public class MiruReaderEndpoints {
     @GET
     @Path(INSPECT_ENDPOINT + "/{tenantId}/{partitionId}/{field}/{term}")
     @Produces(MediaType.TEXT_PLAIN)
-    public Response inspect(@PathParam("tenantId") String tenantId,
-            @PathParam("partitionId") int partitionId,
-            @PathParam("field") String field,
-            @PathParam("term") String term) {
+    public Response inspect(@PathParam("tenantId") String tenantIdString,
+        @PathParam("partitionId") int partitionId,
+        @PathParam("field") String field,
+        @PathParam("term") String term) {
         try {
-            String value = miruService.inspect(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId), field, term);
+            long start = System.currentTimeMillis();
+            MiruTenantId tenantId = new MiruTenantId(tenantIdString.getBytes(Charsets.UTF_8));
+            String value = miruService.inspect(tenantId, MiruPartitionId.of(partitionId), field, term);
+            stats.ingressed(INSPECT_ENDPOINT + "/" + tenantIdString + "/" + partitionId + "/" + field + "/" + term, 1, System.currentTimeMillis() - start);
             return Response.ok(value).build();
         } catch (Exception e) {
             log.error("Failed to inspect.", e);
