@@ -3,33 +3,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.457</version>
+    <version>0.460</version>
     <packaging>pom</packaging>
-
-    <inceptionYear>2013</inceptionYear>
-    <licenses>
-        <license>
-            <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-    <scm>
-        <url>https://github.com/jivesoftware/miru</url>
-        <connection>scm:git:git://github.com/jivesoftware/miru.git</connection>
-        <developerConnection>scm:git:git@github.com:jivesoftware/miru.git</developerConnection>
-    </scm>
-    <distributionManagement>
-        <repository>
-            <id>modified-thirdparty</id>
-            <name>Jive Internal Repository</name>
-            <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
-        </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <url>http://nexus-int-qa.eng.jiveland.com/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
+    <parent>
+        <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
+        <artifactId>global-repo-management</artifactId>
+        <version>0.460-SNAPSHOT</version>
+        <relativePath>../global-repo-management/pom.xml</relativePath>
+    </parent>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mlogger-version>0.9</mlogger-version>
@@ -107,7 +88,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.457</version>
+                <version>0.460</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
