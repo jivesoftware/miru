@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -24,10 +25,13 @@ public class SeaAnomalyInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final SeaAnomaly seaAnomaly;
+    private final MiruSolutionMarshaller<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> marshaller;
 
-    public SeaAnomalyInjectable(MiruProvider<? extends Miru> provider, SeaAnomaly seaAnomaly) {
+    public SeaAnomalyInjectable(MiruProvider<? extends Miru> provider, SeaAnomaly seaAnomaly,
+        MiruSolutionMarshaller<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> marshaller) {
         this.provider = provider;
         this.seaAnomaly = seaAnomaly;
+        this.marshaller = marshaller;
     }
 
     public MiruResponse<SeaAnomalyAnswer> score(MiruRequest<SeaAnomalyQuery> request) throws MiruQueryServiceException {
@@ -36,7 +40,7 @@ public class SeaAnomalyInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new SeaAnomalyQuestion(seaAnomaly, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new SeaAnomalyQuestion(seaAnomaly, request), marshaller),
                 new SeaAnomalyAnswerEvaluator(),
                 new SeaAnomalyAnswerMerger(),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
@@ -58,7 +62,7 @@ public class SeaAnomalyInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new SeaAnomalyQuestion(seaAnomaly, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new SeaAnomalyQuestion(seaAnomaly, requestAndReport.request), marshaller),
                 Optional.fromNullable(requestAndReport.report),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

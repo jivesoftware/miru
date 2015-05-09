@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.solution.JacksonMiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -36,6 +37,7 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsEndpoints;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsReport;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -75,8 +77,13 @@ public class InMemoryEndpointsTest {
 
         MiruService miruService = miruProvider.getMiru(tenantId);
 
+        ObjectMapper mapper = new ObjectMapper();
+        JacksonMiruSolutionMarshaller<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> marshaller = new JacksonMiruSolutionMarshaller<>(
+            mapper,
+            AggregateCountsQuery.class, AggregateCountsAnswer.class, AggregateCountsReport.class);
+
         this.aggregateCountsEndpoints = new AggregateCountsEndpoints(
-            new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider)));
+            new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider), marshaller));
         this.miruWriterEndpoints = new MiruWriterEndpoints(miruService, new MiruStats());
     }
 

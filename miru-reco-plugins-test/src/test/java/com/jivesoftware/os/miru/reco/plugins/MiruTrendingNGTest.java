@@ -5,11 +5,15 @@
  */
 package com.jivesoftware.os.miru.reco.plugins;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsReport;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -24,12 +28,16 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.solution.JacksonMiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -50,17 +58,17 @@ import org.testng.annotations.Test;
 public class MiruTrendingNGTest {
 
     MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[] {
+        .setFieldDefinitions(new MiruFieldDefinition[]{
             new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(2, "obj", MiruFieldDefinition.Type.singleTerm,
                 new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' '))
         })
         .setPairedLatest(ImmutableMap.of(
-            "user", Arrays.asList("doc"),
-            "doc", Arrays.asList("user")))
+                "user", Arrays.asList("doc"),
+                "doc", Arrays.asList("user")))
         .setBloom(ImmutableMap.of(
-            "doc", Arrays.asList("user")))
+                "doc", Arrays.asList("user")))
         .build();
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
@@ -85,7 +93,16 @@ public class MiruTrendingNGTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new TrendingInjectable(miruProvider, new Distincts(miruProvider.getTermComposer()), new Analytics());
+
+        ObjectMapper mapper = new ObjectMapper();
+        JacksonMiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> distinctsMarshaller = new JacksonMiruSolutionMarshaller<>(mapper,
+            DistinctsQuery.class, DistinctsAnswer.class, DistinctsReport.class);
+
+        JacksonMiruSolutionMarshaller<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> analyticsMarshaller = new JacksonMiruSolutionMarshaller<>(mapper,
+            AnalyticsQuery.class, AnalyticsAnswer.class, AnalyticsReport.class);
+
+        this.injectable = new TrendingInjectable(miruProvider, new Distincts(miruProvider.getTermComposer()), new Analytics(), distinctsMarshaller,
+            analyticsMarshaller);
     }
 
     @Test(enabled = true)

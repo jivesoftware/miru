@@ -136,7 +136,8 @@ public class MiruWriterUIServiceNGTest {
             tableTaker,
             Optional.<SendFailureListener>absent(),
             Optional.<TakeFailureListener>absent(),
-            (RowsChanged rc) -> {});
+            (RowsChanged rc) -> {
+            });
 
         amzaService.start();
 
