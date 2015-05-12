@@ -4,17 +4,17 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.463</version>
+        <version>0.464</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.463</version>
+    <version>0.464</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mlogger-version>0.9</mlogger-version>
-        <jive-utils-version>0.90-SNAPSHOT</jive-utils-version>
+        <jive-utils-version>0.89</jive-utils-version>
         <rcvs-version>0.15</rcvs-version>
         <filer-version>0.72</filer-version>
         <upena-version>0.116</upena-version>
@@ -88,7 +88,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.463</version>
+                <version>0.464</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
