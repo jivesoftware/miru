@@ -243,7 +243,7 @@ public class MiruLocalHostedPartitionTest {
             null, 1000, 1000);
         MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000,
             activityWALReader);
-        
+
         walClient = new MiruWALDirector(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
             readTrackingWALReader);
 

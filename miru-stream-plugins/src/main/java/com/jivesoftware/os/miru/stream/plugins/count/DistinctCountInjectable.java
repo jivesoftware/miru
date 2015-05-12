@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 
 /**
@@ -21,10 +22,13 @@ public class DistinctCountInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final DistinctCount distinctCount;
+    private final MiruSolutionMarshaller<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> distictCountMarshaller;
 
-    public DistinctCountInjectable(MiruProvider<? extends Miru> provider, DistinctCount distinctCount) {
+    public DistinctCountInjectable(MiruProvider<? extends Miru> provider, DistinctCount distinctCount,
+        MiruSolutionMarshaller<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> distictCountMarshaller) {
         this.provider = provider;
         this.distinctCount = distinctCount;
+        this.distictCountMarshaller = distictCountMarshaller;
     }
 
     public MiruResponse<DistinctCountAnswer> countCustomStream(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException {
@@ -32,7 +36,8 @@ public class DistinctCountInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "countCustomStream", new DistinctCountCustomQuestion(distinctCount, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "countCustomStream", new DistinctCountCustomQuestion(distinctCount, request),
+                    distictCountMarshaller),
                 new DistinctCountAnswerEvaluator(request.query),
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
@@ -51,7 +56,7 @@ public class DistinctCountInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(provider.getStats(), "countInboxStreamAll", new DistinctCountInboxQuestion(distinctCount,
-                    provider.getBackfillerizer(tenantId), request, false)),
+                        provider.getBackfillerizer(tenantId), request, false), distictCountMarshaller),
                 new DistinctCountAnswerEvaluator(request.query),
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
@@ -70,7 +75,7 @@ public class DistinctCountInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(provider.getStats(), "countInboxStreamUnread", new DistinctCountInboxQuestion(distinctCount,
-                    provider.getBackfillerizer(tenantId), request, true)),
+                        provider.getBackfillerizer(tenantId), request, true), distictCountMarshaller),
                 new DistinctCountAnswerEvaluator(request.query),
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
@@ -91,7 +96,8 @@ public class DistinctCountInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "countCustomStream", new DistinctCountCustomQuestion(distinctCount, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "countCustomStream", new DistinctCountCustomQuestion(distinctCount, requestAndReport.request),
+                    distictCountMarshaller),
                 Optional.fromNullable(requestAndReport.report),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -112,7 +118,7 @@ public class DistinctCountInjectable {
             return miru.askImmediate(tenantId,
                 partitionId,
                 new MiruSolvableFactory<>(provider.getStats(), "countInboxStreamAll", new DistinctCountInboxQuestion(distinctCount,
-                    provider.getBackfillerizer(tenantId), requestAndReport.request, false)),
+                        provider.getBackfillerizer(tenantId), requestAndReport.request, false), distictCountMarshaller),
                 Optional.fromNullable(requestAndReport.report),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -133,7 +139,7 @@ public class DistinctCountInjectable {
             return miru.askImmediate(tenantId,
                 partitionId,
                 new MiruSolvableFactory<>(provider.getStats(), "countInboxStreamUnread", new DistinctCountInboxQuestion(distinctCount,
-                    provider.getBackfillerizer(tenantId), requestAndReport.request, true)),
+                        provider.getBackfillerizer(tenantId), requestAndReport.request, true), distictCountMarshaller),
                 Optional.fromNullable(requestAndReport.report),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);

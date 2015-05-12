@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+     "-//Puppy Crawl//DTD Suppressions 1.0//EN"
+     "http://www.puppycrawl.com/dtds/suppressions_1_0.dtd">
+
+<suppressions>
+    <suppress checks="ModifiedControlVariable" files="MessageFormatter\.java"/>
+    <suppress checks="GenericWhitespaceCheck" files="TenantRoutingRowColumnValueStore\.java|ChromeRegion\.java|ChromeModule\.java|ChromeModuleImpl\.java"/>
+    <suppress checks="MethodLengthCheck|ModifiedControlVariable" files="SortScoresWithDocIds\.java"/>
+    <suppress checks=".*" files="target/generated-sources/"/>
+</suppressions>

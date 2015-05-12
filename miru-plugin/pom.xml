@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.462</version>
+        <version>0.463</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-plugin</artifactId>
-    <version>0.462</version>
+    <version>0.463</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -38,7 +38,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.462</version>
+            <version>0.463</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -51,12 +51,20 @@
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>http-client</artifactId>
+            <version>0.90-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

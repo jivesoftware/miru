@@ -161,7 +161,7 @@ public class MiruWriterMain {
             @SuppressWarnings("unchecked")
             RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
                 .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-            
+
             TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-manage", // TODO expose to conf
                 "main");
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();

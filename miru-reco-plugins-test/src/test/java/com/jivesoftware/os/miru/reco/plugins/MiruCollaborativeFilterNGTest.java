@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -21,16 +22,21 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.solution.JacksonMiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
+import com.jivesoftware.os.miru.reco.plugins.reco.RecoReport;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.ArrayList;
@@ -91,10 +97,17 @@ public class MiruCollaborativeFilterNGTest {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), partitionedActivities);
 
+        ObjectMapper mapper = new ObjectMapper();
+        JacksonMiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> distinctsMarshaller = new JacksonMiruSolutionMarshaller<>(mapper,
+            DistinctsQuery.class, DistinctsAnswer.class, DistinctsReport.class);
+
+        JacksonMiruSolutionMarshaller<RecoQuery, RecoAnswer, RecoReport> recoMarshaller = new JacksonMiruSolutionMarshaller<>(mapper,
+            RecoQuery.class, RecoAnswer.class, RecoReport.class);
+
         this.service = miruProvider.getMiru(tenant1);
         this.injectable = new RecoInjectable(miruProvider,
             new CollaborativeFiltering(new MiruAggregateUtil(), new MiruIndexUtil()),
-            new Distincts(termComposer));
+            new Distincts(termComposer), distinctsMarshaller, recoMarshaller);
     }
 
     @Test(enabled = true)

@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.stumptown.plugins;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -21,6 +22,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.solution.JacksonMiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -31,6 +33,7 @@ import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomaly;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyInjectable;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyQuery;
+import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyReport;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.ArrayList;
@@ -74,7 +77,11 @@ public class MiruSeaAnomalyNGTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new SeaAnomalyInjectable(miruProvider, new SeaAnomaly(miruProvider));
+
+        ObjectMapper mapper = new ObjectMapper();
+        JacksonMiruSolutionMarshaller<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> marshaller = new JacksonMiruSolutionMarshaller<>(mapper,
+            SeaAnomalyQuery.class, SeaAnomalyAnswer.class, SeaAnomalyReport.class);
+        this.injectable = new SeaAnomalyInjectable(miruProvider, new SeaAnomaly(miruProvider), marshaller);
     }
 
     @Test(enabled = true)

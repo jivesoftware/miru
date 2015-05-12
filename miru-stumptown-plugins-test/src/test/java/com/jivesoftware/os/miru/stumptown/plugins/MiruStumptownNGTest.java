@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.stumptown.plugins;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.jive.utils.id.Id;
@@ -8,6 +9,7 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsInjectable;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsReport;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -22,6 +24,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.solution.JacksonMiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -43,15 +46,15 @@ import org.testng.annotations.Test;
 public class MiruStumptownNGTest {
 
     MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[] {
+        .setFieldDefinitions(new MiruFieldDefinition[]{
             new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
         })
         .setPairedLatest(ImmutableMap.of(
-            "user", Arrays.asList("doc"),
-            "doc", Arrays.asList("user")))
+                "user", Arrays.asList("doc"),
+                "doc", Arrays.asList("user")))
         .setBloom(ImmutableMap.of(
-            "doc", Arrays.asList("user")))
+                "doc", Arrays.asList("user")))
         .build();
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
@@ -68,7 +71,11 @@ public class MiruStumptownNGTest {
             miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
-        this.injectable = new AnalyticsInjectable(miruProvider, new Analytics());
+        ObjectMapper mapper = new ObjectMapper();
+        JacksonMiruSolutionMarshaller<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> marshaller = new JacksonMiruSolutionMarshaller<>(mapper,
+            AnalyticsQuery.class, AnalyticsAnswer.class, AnalyticsReport.class);
+
+        this.injectable = new AnalyticsInjectable(miruProvider, new Analytics(), marshaller);
     }
 
     @Test(enabled = true)
@@ -127,8 +134,8 @@ public class MiruStumptownNGTest {
                     8,
                     MiruFilter.NO_FILTER,
                     ImmutableMap.<String, MiruFilter>builder()
-                        .put(user, filter)
-                        .build()),
+                    .put(user, filter)
+                    .build()),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<AnalyticsAnswer> result = injectable.score(request);
 

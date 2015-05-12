@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -25,10 +26,14 @@ public class DistinctsInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final Distincts distincts;
+    private final MiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> marshaller;
 
-    public DistinctsInjectable(MiruProvider<? extends Miru> provider, Distincts distincts) {
+    public DistinctsInjectable(MiruProvider<? extends Miru> provider,
+        Distincts distincts,
+        MiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> marshaller) {
         this.provider = provider;
         this.distincts = distincts;
+        this.marshaller = marshaller;
     }
 
     public MiruResponse<DistinctsAnswer> gatherDistincts(MiruRequest<DistinctsQuery> request) throws MiruQueryServiceException {
@@ -37,7 +42,7 @@ public class DistinctsInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts, request), marshaller),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(),
                 DistinctsAnswer.EMPTY_RESULTS,
@@ -60,7 +65,7 @@ public class DistinctsInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts, requestAndReport.request), marshaller),
                 Optional.fromNullable(requestAndReport.report),
                 DistinctsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
