@@ -24,6 +24,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableExceptio
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
@@ -64,6 +65,7 @@ import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -73,7 +75,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @author jonathan
  */
-public class MiruContextFactory {
+public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -85,6 +87,7 @@ public class MiruContextFactory {
     private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
     private final Map<MiruBackingStorage, MiruChunkAllocator> allocators;
+    private final TypeMarshaller<S> sipMarshaller;
     private final MiruResourceLocator diskResourceLocator;
     private final MiruBackingStorage defaultStorage;
     private final int partitionAuthzCacheSize;
@@ -99,6 +102,7 @@ public class MiruContextFactory {
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
         Map<MiruBackingStorage, MiruChunkAllocator> allocators,
+        TypeMarshaller<S> sipMarshaller,
         MiruResourceLocator diskResourceLocator,
         MiruBackingStorage defaultStorage,
         int partitionAuthzCacheSize,
@@ -113,6 +117,7 @@ public class MiruContextFactory {
         this.termComposer = termComposer;
         this.activityInternExtern = activityInternExtern;
         this.allocators = allocators;
+        this.sipMarshaller = sipMarshaller;
         this.diskResourceLocator = diskResourceLocator;
         this.defaultStorage = defaultStorage;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
@@ -145,12 +150,12 @@ public class MiruContextFactory {
         }
     }
 
-    public <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
+    public <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
         ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord);
         return allocate(bitmaps, coord, chunkStores);
     }
 
-    private <BM> MiruContext<BM> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ChunkStore[] chunkStores) throws Exception {
+    private <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ChunkStore[] chunkStores) throws Exception {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         int seed = coord.hashCode();
@@ -212,7 +217,8 @@ public class MiruContextFactory {
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
-        MiruSipIndex sipIndex = new MiruDeltaSipIndex(new MiruFilerSipIndex(new KeyedFilerProvider<>(genericFilerStore, GENERIC_FILER_SIP_INDEX_KEY)));
+        MiruSipIndex<S> sipIndex = new MiruDeltaSipIndex<>(new MiruFilerSipIndex<>(new KeyedFilerProvider<>(genericFilerStore, GENERIC_FILER_SIP_INDEX_KEY),
+            sipMarshaller));
 
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -304,7 +310,7 @@ public class MiruContextFactory {
             chunkStores);
     }
 
-    public <BM> MiruContext<BM> copy(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM> from, MiruBackingStorage toStorage) throws Exception {
+    public <BM> MiruContext<BM, S> copy(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM, S> from, MiruBackingStorage toStorage) throws Exception {
 
         ChunkStore[] fromChunks = from.chunkStores;
         ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord);
@@ -338,7 +344,7 @@ public class MiruContextFactory {
         diskResourceLocator.clean(new MiruPartitionCoordIdentifier(coord));
     }
 
-    public <BM> void close(MiruContext<BM> context, MiruBackingStorage storage) {
+    public <BM> void close(MiruContext<BM, S> context, MiruBackingStorage storage) {
         context.activityIndex.close();
         context.authzIndex.close();
         context.timeIndex.close();
@@ -348,7 +354,7 @@ public class MiruContextFactory {
         getAllocator(storage).close(context.chunkStores);
     }
 
-    public <BM> void releaseCaches(MiruContext<BM> context, MiruBackingStorage storage) throws IOException {
+    public <BM> void releaseCaches(MiruContext<BM, S> context, MiruBackingStorage storage) throws IOException {
         for (ChunkStore chunkStore : context.chunkStores) {
             chunkStore.rollCache();
         }

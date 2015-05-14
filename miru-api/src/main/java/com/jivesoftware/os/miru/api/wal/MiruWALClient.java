@@ -10,7 +10,7 @@ import java.util.List;
  *
  * @author jonathan.colt
  */
-public interface MiruWALClient {
+public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
     List<MiruTenantId> getAllTenantIds() throws Exception;
 
@@ -66,11 +66,11 @@ public interface MiruWALClient {
         }
     }
 
-    StreamBatch<MiruWALEntry, SipActivityCursor> sipActivity(MiruTenantId tenantId,
-        MiruPartitionId partitionId, SipActivityCursor cursor, int batchSize) throws Exception;
+    StreamBatch<MiruWALEntry, C> getActivity(MiruTenantId tenantId,
+        MiruPartitionId partitionId, C cursor, int batchSize) throws Exception;
 
-    StreamBatch<MiruWALEntry, GetActivityCursor> getActivity(MiruTenantId tenantId,
-        MiruPartitionId partitionId, GetActivityCursor cursor, int batchSize) throws Exception;
+    StreamBatch<MiruWALEntry, S> sipActivity(MiruTenantId tenantId,
+        MiruPartitionId partitionId, S cursor, int batchSize) throws Exception;
 
     class StreamBatch<T, C> {
 
@@ -88,48 +88,6 @@ public interface MiruWALClient {
         @Override
         public String toString() {
             return "StreamBatch{" + "batch=" + batch + ", cursor=" + cursor + '}';
-        }
-
-    }
-
-    class SipActivityCursor {
-
-        public byte sort; // non final for json ser-der
-        public long collisionId; // non final for json ser-der
-        public long sipId; // non final for json ser-der
-
-        public SipActivityCursor() {
-        }
-
-        public SipActivityCursor(byte sort, long collisionId, long sipId) {
-            this.sort = sort;
-            this.collisionId = collisionId;
-            this.sipId = sipId;
-        }
-
-        @Override
-        public String toString() {
-            return "SipActivityCursor{" + "sort=" + sort + ", collisionId=" + collisionId + ", sipId=" + sipId + '}';
-        }
-
-    }
-
-    class GetActivityCursor {
-
-        public byte sort; // non final for json ser-der
-        public long collisionId; // non final for json ser-der
-
-        public GetActivityCursor() {
-        }
-
-        public GetActivityCursor(byte sort, long collisionId) {
-            this.sort = sort;
-            this.collisionId = collisionId;
-        }
-
-        @Override
-        public String toString() {
-            return "GetActivityCursor{" + "sort=" + sort + ", collisionId=" + collisionId + '}';
         }
 
     }

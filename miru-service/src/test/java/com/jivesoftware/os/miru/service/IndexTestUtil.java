@@ -24,6 +24,8 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.marshall.RCVSSipCursorMarshaller;
+import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -46,7 +48,7 @@ public class IndexTestUtil {
 
     public static TxCogs cogs = new TxCogs(256, 64, null, null, null);
 
-    private static MiruContextFactory factory(int numberOfChunkStores) {
+    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores) {
 
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(1024);
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(1024);
@@ -54,8 +56,8 @@ public class IndexTestUtil {
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(
             new MiruSchema.Builder("test", 1)
-            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
-            .build());
+                .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+                .build());
         MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(),
@@ -79,14 +81,15 @@ public class IndexTestUtil {
             100,
             1_000);
 
-        return new MiruContextFactory(cogs,
+        return new MiruContextFactory<>(cogs,
             schemaProvider,
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
+            new RCVSSipCursorMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
             1024,
@@ -98,12 +101,12 @@ public class IndexTestUtil {
         );
     }
 
-    public static <BM> MiruContext<BM> buildInMemoryContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+    public static <BM> MiruContext<BM, ?> buildInMemoryContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory);
 
     }
 
-    public static <BM> MiruContext<BM> buildOnDiskContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+    public static <BM> MiruContext<BM, ?> buildOnDiskContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
         return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk);
 
     }
@@ -116,8 +119,8 @@ public class IndexTestUtil {
             keySize, variableKeySize, payloadSize, variablePayloadSizes);
     }
 
-    public static KeyedFilerStore buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {
-        return new TxKeyedFilerStore(cogs, 0, chunkStores, keyBytes(name), false,
+    public static KeyedFilerStore<Long, Void> buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {
+        return new TxKeyedFilerStore<>(cogs, 0, chunkStores, keyBytes(name), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
             TxNamedMapOfFiler.CHUNK_FILER_OPENER,
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,

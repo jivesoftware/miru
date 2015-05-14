@@ -4,7 +4,6 @@ import com.jivesoftware.os.amza.service.AmzaRegion;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.RegionName;
 import com.jivesoftware.os.amza.shared.RegionProperties;
-import com.jivesoftware.os.amza.shared.RingHost;
 import com.jivesoftware.os.amza.shared.WALKey;
 import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -12,7 +11,6 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -28,13 +26,13 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     private final AmzaService amzaService;
     private final WALStorageDescriptor amzaStorageDescriptor;
     private final int capacity;
-    private final MiruActivityWALReader walReader;
+    private final MiruActivityWALReader<?, ?> walReader;
     private final AtomicBoolean ringInitialized = new AtomicBoolean(false);
 
     public AmzaPartitionIdProvider(AmzaService amzaService,
         WALStorageDescriptor amzaStorageDescriptor,
         int capacity,
-        MiruActivityWALReader walReader)
+        MiruActivityWALReader<?, ?> walReader)
         throws Exception {
         this.amzaService = amzaService;
         this.amzaStorageDescriptor = amzaStorageDescriptor;
@@ -61,9 +59,10 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
     private AmzaRegion createRegionIfAbsent(RegionName regionName) throws Exception {
         if (!ringInitialized.get()) {
-            List<RingHost> ring = amzaService.getAmzaRing().getRing(AMZA_RING_NAME);
-            if (ring.isEmpty()) {
-                amzaService.getAmzaRing().buildRandomSubRing(AMZA_RING_NAME, amzaService.getAmzaRing().getRing("system").size());
+            int ringSize = amzaService.getAmzaRing().getRingSize(AMZA_RING_NAME);
+            int systemRingSize = amzaService.getAmzaRing().getRingSize("system");
+            if (ringSize < systemRingSize) {
+                amzaService.getAmzaRing().buildRandomSubRing(AMZA_RING_NAME, systemRingSize);
             }
             ringInitialized.set(true);
         }

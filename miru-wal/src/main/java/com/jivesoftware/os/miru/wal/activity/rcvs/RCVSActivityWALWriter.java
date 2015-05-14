@@ -14,12 +14,12 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class MiruRCVSActivityWALWriter implements MiruActivityWALWriter {
+public class RCVSActivityWALWriter implements MiruActivityWALWriter {
 
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> sipWAL;
 
-    public MiruRCVSActivityWALWriter(
+    public RCVSActivityWALWriter(
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> sipWAL) {
         this.activityWAL = activityWAL;

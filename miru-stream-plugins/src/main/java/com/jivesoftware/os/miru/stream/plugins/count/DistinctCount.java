@@ -28,7 +28,7 @@ public class DistinctCount {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     public <BM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> requestContext,
+        MiruRequestContext<BM, ?> requestContext,
         MiruRequest<DistinctCountQuery> request,
         Optional<DistinctCountReport> lastReport,
         BM answer)

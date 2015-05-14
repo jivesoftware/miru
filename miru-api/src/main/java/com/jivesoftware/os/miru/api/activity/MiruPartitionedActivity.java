@@ -9,29 +9,29 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 /** @author jonathan */
 public class MiruPartitionedActivity {
 
-    static public enum Type {
+    public enum Type {
 
-        // sort maintains things in lex descending order
-        BEGIN(0, true, false, false),
-        END(1, true, false, false),
-        // these 5 sort equally
-        ACTIVITY(2, false, true, false),
-        REPAIR(2, false, true, false),
-        REMOVE(2, false, true, false),
-        READ(2, false, false, true),
-        UNREAD(2, false, false, true),
-        MARK_ALL_READ(2, false, false, true);
+        ACTIVITY((byte) 125, false, true, false),
+        REPAIR((byte) 125, false, true, false),
+        REMOVE((byte) 125, false, true, false),
+        READ((byte) 125, false, false, true),
+        UNREAD((byte) 125, false, false, true),
+        MARK_ALL_READ((byte) 125, false, false, true),
+
+        END((byte) 126, true, false, false),
+
+        BEGIN((byte) 127, true, false, false);
 
         private final byte sort;
         private final boolean boundaryType;
         private final boolean activityType;
         private final boolean readType;
 
-        private Type(int reverseSort, boolean boundaryType, boolean activityType, boolean readType) {
+        private Type(byte sort, boolean boundaryType, boolean activityType, boolean readType) {
+            this.sort = sort;
             this.boundaryType = boundaryType;
             this.activityType = activityType;
             this.readType = readType;
-            this.sort = (byte) (Byte.MAX_VALUE - reverseSort);
         }
 
         public byte getSort() {

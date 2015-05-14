@@ -35,7 +35,7 @@ public class MiruIndexBloom<BM> {
         //this.bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
     }
 
-    public List<Future<List<BloomWork>>> compose(MiruContext<BM> context,
+    public List<Future<List<BloomWork>>> compose(MiruContext<BM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
@@ -75,7 +75,7 @@ public class MiruIndexBloom<BM> {
         return workFutures;
     }
 
-    public Future<List<BloomWork>> prepare(final MiruContext<BM> context,
+    public Future<List<BloomWork>> prepare(final MiruContext<BM, ?> context,
         final List<Future<List<BloomWork>>> bloomWorkFutures,
         ExecutorService indexExecutor)
         throws ExecutionException, InterruptedException {
@@ -90,7 +90,7 @@ public class MiruIndexBloom<BM> {
         });
     }
 
-    public List<Future<?>> index(final MiruContext<BM> context,
+    public List<Future<?>> index(final MiruContext<BM, ?> context,
         final Future<List<BloomWork>> bloomWorksFuture,
         boolean repair,
         ExecutorService indexExecutor)

@@ -7,6 +7,7 @@ import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
@@ -37,7 +38,7 @@ public class MiruRemoteQueryablePartitionFactory {
         return helper;
     }
 
-    public <BM> MiruQueryablePartition<BM> create(final MiruPartitionCoord coord, final MiruPartitionCoordInfo info) {
+    public <BM, S extends MiruSipCursor<S>> MiruQueryablePartition<BM> create(final MiruPartitionCoord coord, final MiruPartitionCoordInfo info) {
 
         final RequestHelper requestHelper = hostHelper(coord);
 
@@ -54,8 +55,8 @@ public class MiruRemoteQueryablePartitionFactory {
             }
 
             @Override
-            public MiruRequestHandle<BM> acquireQueryHandle() throws Exception {
-                return new MiruRequestHandle<BM>() {
+            public MiruRequestHandle<BM, S> acquireQueryHandle() throws Exception {
+                return new MiruRequestHandle<BM, S>() {
 
                     @Override
                     public MiruBitmaps<BM> getBitmaps() {
@@ -63,7 +64,7 @@ public class MiruRemoteQueryablePartitionFactory {
                     }
 
                     @Override
-                    public MiruRequestContext<BM> getRequestContext() {
+                    public MiruRequestContext<BM, S> getRequestContext() {
                         return null;
                     }
 

@@ -23,7 +23,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-
 /**
  * @author jonathan
  */
@@ -53,9 +52,9 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
     }
 
     @Override
-    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM> context = handle.getRequestContext();
+        MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {

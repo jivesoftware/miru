@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interners;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
@@ -37,8 +36,15 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.marshall.AmzaSipCursorMarshaller;
+import com.jivesoftware.os.miru.api.marshall.RCVSSipCursorMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.wal.AmzaCursor;
+import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
+import com.jivesoftware.os.miru.api.wal.RCVSCursor;
+import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
@@ -64,6 +70,8 @@ import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorInitializer;
+import com.jivesoftware.os.miru.service.partition.AmzaSipTrackerFactory;
+import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -78,7 +86,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
-import org.merlin.config.Config;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.scanners.TypesScanner;
@@ -99,12 +106,7 @@ public class MiruReaderMain {
             final Deployable deployable = new Deployable(args);
 
             HealthFactory.initialize(
-                new HealthCheckConfigBinder() {
-                    @Override
-                    public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                        return deployable.config(configurationInterfaceClass);
-                    }
-                },
+                deployable::config,
                 new HealthCheckRegistry() {
                     @Override
                     public void register(HealthChecker healthChecker) {
@@ -157,22 +159,10 @@ public class MiruReaderMain {
             MiruHost miruHost = new MiruHost(instanceConfig.getHost(), instanceConfig.getMainPort());
 
             MiruServiceConfig miruServiceConfig = deployable.config(MiruServiceConfig.class);
+            MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
 
             HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
                 .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
-
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main")); // TODO expose to conf
-
-            MiruWALClient walClient = new MiruWALClientInitializer().initialize("", miruWriterClient, mapper, 10_000);
-
-            MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-                .initialize(miruServiceConfig.getReadStreamIdsPropName(), miruHost, walClient);
-
-            backfillerizerLifecycle.start();
-            final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
 
             MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
 
@@ -187,6 +177,11 @@ public class MiruReaderMain {
 
             final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
 
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                .getTenantRoutingProvider()
+                .getConnections("miru-writer", "main")); // TODO expose to conf
+
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
                 .getConnections("miru-manage", "main"));  // TODO expose to conf
@@ -194,19 +189,55 @@ public class MiruReaderMain {
             // TODO add fall back to config
             final MiruStats miruStats = new MiruStats();
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", miruManageClient, mapper);
-
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
-            MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
-                miruStats,
-                clusterClient,
-                miruHost,
-                miruSchemaProvider,
-                walClient,
-                httpClientFactory,
-                miruResourceLocator,
-                termComposer,
-                internExtern,
-                new SingleBitmapsProvider<>(bitmaps));
+
+            MiruWALClient<?, ?> walClient;
+            MiruLifecyle<MiruService> miruServiceLifecyle;
+            if (walConfig.getActivityWALType().equals("rcvs")) {
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", miruWriterClient, mapper, 10_000,
+                    "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
+
+                walClient = rcvsWALClient;
+                miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
+                    miruStats,
+                    clusterClient,
+                    miruHost,
+                    miruSchemaProvider,
+                    rcvsWALClient,
+                    new RCVSSipTrackerFactory(),
+                    new RCVSSipCursorMarshaller(),
+                    httpClientFactory,
+                    miruResourceLocator,
+                    termComposer,
+                    internExtern,
+                    new SingleBitmapsProvider<>(bitmaps));
+            } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("fork")) {
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", miruWriterClient, mapper, 10_000,
+                    "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
+
+                walClient = amzaWALClient;
+                miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
+                    miruStats,
+                    clusterClient,
+                    miruHost,
+                    miruSchemaProvider,
+                    amzaWALClient,
+                    new AmzaSipTrackerFactory(),
+                    new AmzaSipCursorMarshaller(),
+                    httpClientFactory,
+                    miruResourceLocator,
+                    termComposer,
+                    internExtern,
+                    new SingleBitmapsProvider<>(bitmaps));
+            } else {
+                throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
+            }
+
+            MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
+                .initialize(miruServiceConfig.getReadStreamIdsPropName(), miruHost, walClient);
+
+            backfillerizerLifecycle.start();
+            final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
 
             miruServiceLifecyle.start();
             final MiruService miruService = miruServiceLifecyle.getService();

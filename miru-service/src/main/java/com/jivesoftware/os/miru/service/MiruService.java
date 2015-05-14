@@ -220,8 +220,8 @@ public class MiruService implements Miru {
     }
 
     private <BM> String inspect(MiruQueryablePartition<BM> partition, String fieldName, String termValue) throws Exception {
-        try (MiruRequestHandle<BM> handle = partition.acquireQueryHandle()) {
-            MiruRequestContext<BM> requestContext = handle.getRequestContext();
+        try (MiruRequestHandle<BM, ?> handle = partition.acquireQueryHandle()) {
+            MiruRequestContext<BM, ?> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
             Optional<BM> index = requestContext.getFieldIndexProvider()

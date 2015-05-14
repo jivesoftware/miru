@@ -15,8 +15,8 @@ public class MiruWALEntry {
     public MiruWALEntry() {
     }
 
-    public MiruWALEntry(long collesionId, long version, MiruPartitionedActivity activity) {
-        this.collisionId = collesionId;
+    public MiruWALEntry(long collisionId, long version, MiruPartitionedActivity activity) {
+        this.collisionId = collisionId;
         this.version = version;
         this.activity = activity;
     }

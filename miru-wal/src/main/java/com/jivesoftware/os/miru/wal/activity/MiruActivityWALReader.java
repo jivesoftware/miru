@@ -4,41 +4,31 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
-import com.jivesoftware.os.miru.api.wal.Sip;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionCursor;
 import java.util.Collection;
 
 /** @author jonathan */
-public interface MiruActivityWALReader {
+public interface MiruActivityWALReader<C, S> {
 
-    void stream(MiruTenantId tenantId,
+    C stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        byte sortOrder,
-        long afterTimestamp,
+        C afterCursor,
         int batchSize,
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 
-    void streamSip(MiruTenantId tenantId,
+    S streamSip(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        byte sortOrder,
-        Sip afterSip,
+        S afterSipCursor,
         int batchSize,
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 
     MiruPartitionCursor getCursorForWriterId(MiruTenantId tenantId, int writerId, int desiredPartitionCapacity) throws Exception;
 
-    MiruPartitionCursor getPartitionCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId, int desiredPartitionCapacity)
-        throws Exception;
-
     MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
-
-    long countSip(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
-
-    MiruPartitionedActivity findExisting(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionedActivity activity) throws Exception;
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 

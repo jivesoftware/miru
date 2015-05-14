@@ -52,9 +52,12 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     }
 
     @Override
-    public <BM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<AggregateCountsReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, ?> handle,
+        Optional<AggregateCountsReport> report)
+        throws Exception {
+
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM> context = handle.getRequestContext();
+        MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {

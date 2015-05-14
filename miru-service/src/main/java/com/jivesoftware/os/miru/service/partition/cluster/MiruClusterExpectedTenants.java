@@ -118,7 +118,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                         if (localTopology == null) {
                             return null;
                         } else {
-                            Optional<MiruLocalHostedPartition<BM>> partition = localTopology.getPartition(routablePartition.partitionId);
+                            Optional<MiruLocalHostedPartition<BM, ?, ?>> partition = localTopology.getPartition(routablePartition.partitionId);
                             return partition.orNull();
                         }
                     } else {
@@ -183,9 +183,9 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     }
 
     private <BM> boolean prioritizeRebuildInternal(MiruPartitionCoord coord, MiruTenantTopology<BM> topology) throws Exception {
-        Optional<MiruLocalHostedPartition<BM>> optionalPartition = topology.getPartition(coord.partitionId);
+        Optional<MiruLocalHostedPartition<BM, ?, ?>> optionalPartition = topology.getPartition(coord.partitionId);
         if (optionalPartition.isPresent()) {
-            MiruLocalHostedPartition<?> partition = optionalPartition.get();
+            MiruLocalHostedPartition<BM, ?, ?> partition = optionalPartition.get();
             if (partition.getState() == MiruPartitionState.bootstrap) {
                 tenantTopologyFactory.prioritizeRebuild(partition);
                 return true;

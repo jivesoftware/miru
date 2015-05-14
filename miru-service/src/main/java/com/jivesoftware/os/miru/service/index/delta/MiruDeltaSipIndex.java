@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
-import com.jivesoftware.os.miru.api.wal.Sip;
+import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import java.io.IOException;
@@ -9,29 +10,29 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaSipIndex implements MiruSipIndex, Mergeable {
+public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S>, Mergeable {
 
-    private final MiruSipIndex backingIndex;
-    private final AtomicReference<Sip> sipReference = new AtomicReference<>();
+    private final MiruSipIndex<S> backingIndex;
+    private final AtomicReference<S> sipReference = new AtomicReference<>();
 
-    public MiruDeltaSipIndex(MiruSipIndex backingIndex) {
+    public MiruDeltaSipIndex(MiruSipIndex<S> backingIndex) {
         this.backingIndex = backingIndex;
     }
 
     @Override
-    public Sip getSip() throws IOException {
-        Sip sip = sipReference.get();
+    public Optional<S> getSip() throws IOException {
+        S sip = sipReference.get();
         if (sip == null) {
             return backingIndex.getSip();
         }
-        return sip;
+        return Optional.fromNullable(sip);
     }
 
     @Override
-    public boolean setSip(final Sip sip) throws IOException {
-        Sip existing = sipReference.get();
+    public boolean setSip(final S sip) throws IOException {
+        S existing = sipReference.get();
         if (existing == null) {
-            existing = backingIndex.getSip();
+            existing = backingIndex.getSip().orNull();
             if (!sipReference.compareAndSet(null, existing)) {
                 existing = sipReference.get();
             }
@@ -53,7 +54,7 @@ public class MiruDeltaSipIndex implements MiruSipIndex, Mergeable {
 
     @Override
     public void merge() throws Exception {
-        Sip sip = sipReference.get();
+        S sip = sipReference.get();
         if (sip != null) {
             backingIndex.setSip(sip);
         }

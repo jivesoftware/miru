@@ -24,9 +24,9 @@ public class MiruLookupRegion implements MiruPageRegion<MiruLookupRegionInput> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruWALDirector miruWALDirector;
+    private final MiruWALDirector<?, ?> miruWALDirector;
 
-    public MiruLookupRegion(String template, MiruSoyRenderer renderer, MiruWALDirector miruWALDirector) {
+    public MiruLookupRegion(String template, MiruSoyRenderer renderer, MiruWALDirector<?, ?> miruWALDirector) {
         this.template = template;
         this.renderer = renderer;
         this.miruWALDirector = miruWALDirector;

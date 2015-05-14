@@ -1,81 +1,26 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.google.common.collect.Sets;
-import com.jivesoftware.os.miru.api.wal.Sip;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
  */
-public class MiruSipTracker {
+public interface MiruSipTracker<S extends MiruSipCursor<S>> {
 
-    private final long maxSipClockSkew;
+    Set<TimeAndVersion> getSeenLastSip();
 
-    private final long[] clockTimestamps;
-    private final long[] activityTimestamps;
-    private final AtomicInteger index;
+    Set<TimeAndVersion> getSeenThisSip();
 
-    private final Set<TimeAndVersion> seenLastSip;
-    private final Set<TimeAndVersion> seenThisSip;
+    void track(MiruPartitionedActivity activity);
 
-    public MiruSipTracker(int maxSipReplaySize, long maxSipClockSkew, Set<TimeAndVersion> seenLastSip) {
-        this.maxSipClockSkew = maxSipClockSkew;
+    S suggest(S lastSipCursor, S nextSipCursor);
 
-        this.clockTimestamps = new long[maxSipReplaySize];
-        this.activityTimestamps = new long[maxSipReplaySize];
-        this.index = new AtomicInteger();
+    boolean wasSeenLastSip(TimeAndVersion timeAndVersion);
 
-        this.seenLastSip = seenLastSip;
-        this.seenThisSip = Sets.newHashSet();
-    }
+    void addSeenThisSip(TimeAndVersion timeAndVersion);
 
-    public Set<TimeAndVersion> getSeenLastSip() {
-        return seenLastSip;
-    }
-
-    public Set<TimeAndVersion> getSeenThisSip() {
-        return seenThisSip;
-    }
-
-    public void put(long clockTimestamp, long activityTimestamp) {
-        int i = index.getAndIncrement() % clockTimestamps.length;
-        clockTimestamps[i] = clockTimestamp;
-        activityTimestamps[i] = activityTimestamp;
-    }
-
-    public Sip suggest(Sip initialSip) {
-        int lastIndex = index.get() - 1;
-        if (lastIndex < 0) {
-            return initialSip;
-        }
-
-        long latestTimestamp = clockTimestamps[lastIndex % clockTimestamps.length];
-        long latestMinusSkew = latestTimestamp - maxSipClockSkew;
-        if (lastIndex < clockTimestamps.length) {
-            // fewer than the max replay size, so sip to the more distant timestamp
-            if (clockTimestamps[0] < latestMinusSkew) {
-                return new Sip(clockTimestamps[0], activityTimestamps[0]);
-            } else {
-                return new Sip(latestMinusSkew, 0);
-            }
-        } else {
-            // more than the max replay size, so sip to the more recent timestamp
-            int oldestIndex = index.get() % clockTimestamps.length;
-            if (clockTimestamps[oldestIndex] > latestMinusSkew) {
-                return new Sip(clockTimestamps[oldestIndex], activityTimestamps[oldestIndex]);
-            } else {
-                return new Sip(latestMinusSkew, 0);
-            }
-        }
-    }
-
-    public boolean wasSeenLastSip(TimeAndVersion timeAndVersion) {
-        return seenLastSip.contains(timeAndVersion);
-    }
-
-    public void addSeenThisSip(TimeAndVersion timeAndVersion) {
-        seenThisSip.add(timeAndVersion);
-    }
-
+    void metrics(MiruPartitionCoord coord, S sip);
 }

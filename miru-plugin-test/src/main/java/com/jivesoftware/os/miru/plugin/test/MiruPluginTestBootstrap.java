@@ -8,7 +8,6 @@ import com.google.common.io.Files;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
@@ -31,8 +30,11 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
+import com.jivesoftware.os.miru.api.marshall.RCVSSipCursorMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.RCVSCursor;
+import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
@@ -52,14 +54,15 @@ import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
+import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALWriter;
-import com.jivesoftware.os.miru.wal.lookup.MiruRCVSWALLookup;
+import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
+import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
@@ -78,7 +81,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.merlin.config.BindInterfaceToConfiguration;
-import org.merlin.config.Config;
 
 /**
  *
@@ -95,12 +97,7 @@ public class MiruPluginTestBootstrap {
         throws Exception {
 
         HealthFactory.initialize(
-            new HealthCheckConfigBinder() {
-                @Override
-                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                    return BindInterfaceToConfiguration.bindDefault(configurationInterfaceClass);
-                }
-            },
+            BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
                 @Override
                 public void register(HealthChecker healthChecker) {
@@ -131,14 +128,14 @@ public class MiruPluginTestBootstrap {
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
         if (!partitionedActivities.isEmpty()) {
-            MiruActivityWALWriter activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+            MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
             activityWALWriter.write(tenantId, partitionedActivities);
         }
 
-        MiruActivityWALWriter activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+        MiruWALLookup walLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
 
         MiruClusterRegistry clusterRegistry;
 
@@ -155,8 +152,8 @@ public class MiruPluginTestBootstrap {
         MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000,
             activityWALReader);
 
-        MiruWALClient walClient = new MiruWALDirector(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
-            readTrackingWALReader);
+        MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
+            readTrackingWALReader, RCVSCursor.class, RCVSSipCursor.class, mapper);
 
         clusterRegistry = new AmzaClusterRegistry(amzaService,
             new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
@@ -173,7 +170,7 @@ public class MiruPluginTestBootstrap {
 
         clusterRegistry.sendHeartbeatForHost(miruHost);
         replicaSetDirector.electToReplicaSetForTenantPartition(tenantId, partitionId,
-            new MiruReplicaHosts(false, new HashSet<MiruHost>(), 3),
+            new MiruReplicaHosts(false, new HashSet<>(), 3),
             System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
         clusterRegistry.updateTopologies(miruHost, Arrays.asList(
             new MiruClusterRegistry.TopologyUpdate(
@@ -201,6 +198,8 @@ public class MiruPluginTestBootstrap {
             miruHost,
             new SingleSchemaProvider(miruSchema),
             walClient,
+            new RCVSSipTrackerFactory(),
+            new RCVSSipCursorMarshaller(),
             httpClientFactory,
             new MiruTempDirectoryResourceLocator(),
             termComposer,

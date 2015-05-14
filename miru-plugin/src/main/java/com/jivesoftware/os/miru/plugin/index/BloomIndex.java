@@ -71,7 +71,7 @@ public class BloomIndex<BM> {
         return Math.max(1, (int) Math.round(m / n * Math.log(2)));
     }
 
-    public void put(MiruInvertedIndex<BM> bloomIndex, List<MiruTermId> keys) throws Exception {
+    public void put(MiruInvertedIndex<?> bloomIndex, List<MiruTermId> keys) throws Exception {
 
         int[] bitIndexes = new int[keys.size() * numHashFunctions];
         for (int i = 0; i < keys.size(); i++) {

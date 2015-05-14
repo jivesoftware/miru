@@ -94,10 +94,10 @@ public class MiruInboxIndexTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(10);
 
-        MiruContext<EWAHCompressedBitmap> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> inMemoryIndex = inMemoryContext.inboxIndex;
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> onDiskIndex = onDiskContext.inboxIndex;
 
         return new Object[][] {
@@ -119,31 +119,31 @@ public class MiruInboxIndexTest {
         int[] data1_2 = new int[] { 1, 2 };
         int[] data2_2 = new int[] { 3, 4 };
 
-        MiruContext<EWAHCompressedBitmap> unmergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> unmergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> unmergedInMemoryIndex = unmergedInMemoryContext.inboxIndex;
         unmergedInMemoryIndex.append(streamId, data);
 
-        MiruContext<EWAHCompressedBitmap> unmergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> unmergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> unmergedOnDiskIndex = unmergedOnDiskContext.inboxIndex;
         unmergedOnDiskIndex.append(streamId, data);
 
-        MiruContext<EWAHCompressedBitmap> mergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> mergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> mergedInMemoryIndex = mergedInMemoryContext.inboxIndex;
         mergedInMemoryIndex.append(streamId, data);
         ((MiruDeltaInboxIndex<EWAHCompressedBitmap>) mergedInMemoryIndex).merge();
 
-        MiruContext<EWAHCompressedBitmap> mergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> mergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> mergedOnDiskIndex = mergedOnDiskContext.inboxIndex;
         mergedOnDiskIndex.append(streamId, data);
         ((MiruDeltaInboxIndex<EWAHCompressedBitmap>) mergedOnDiskIndex).merge();
 
-        MiruContext<EWAHCompressedBitmap> partiallyMergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> partiallyMergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> partiallyMergedInMemoryIndex = partiallyMergedInMemoryContext.inboxIndex;
         partiallyMergedInMemoryIndex.append(streamId, data1_2);
         ((MiruDeltaInboxIndex<EWAHCompressedBitmap>) partiallyMergedInMemoryIndex).merge();
         partiallyMergedInMemoryIndex.append(streamId, data2_2);
 
-        MiruContext<EWAHCompressedBitmap> partiallyMergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> partiallyMergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
         MiruInboxIndex<EWAHCompressedBitmap> partiallyMergedOnDiskIndex = partiallyMergedOnDiskContext.inboxIndex;
         partiallyMergedOnDiskIndex.append(streamId, data1_2);
         ((MiruDeltaInboxIndex<EWAHCompressedBitmap>) partiallyMergedOnDiskIndex).merge();

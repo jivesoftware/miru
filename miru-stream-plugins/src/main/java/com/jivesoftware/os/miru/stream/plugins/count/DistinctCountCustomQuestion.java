@@ -41,9 +41,9 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
     }
 
     @Override
-    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM> stream = handle.getRequestContext();
+        MiruRequestContext<BM, ?> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // First grab the stream filter (required)

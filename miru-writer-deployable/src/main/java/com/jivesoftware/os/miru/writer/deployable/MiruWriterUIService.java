@@ -9,7 +9,7 @@ import com.jivesoftware.os.miru.writer.deployable.region.MiruFrameRegion;
 import com.jivesoftware.os.miru.writer.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.writer.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.writer.deployable.region.MiruPageRegion;
-import com.jivesoftware.os.miru.writer.deployable.region.input.MiruActivityWALRegionInput;
+import com.jivesoftware.os.miru.writer.deployable.region.input.RCVSActivityWALRegionInput;
 import com.jivesoftware.os.miru.writer.deployable.region.input.MiruLookupRegionInput;
 import com.jivesoftware.os.miru.writer.deployable.region.input.MiruReadWALRegionInput;
 import java.util.List;
@@ -23,7 +23,7 @@ public class MiruWriterUIService {
     private final MiruHeaderRegion headerRegion;
     private final MiruPageRegion<Void> adminRegion;
     private final MiruPageRegion<MiruLookupRegionInput> lookupRegion;
-    private final MiruPageRegion<MiruActivityWALRegionInput> activityWALRegion;
+    private final MiruPageRegion<RCVSActivityWALRegionInput> activityWALRegion;
     private final MiruPageRegion<MiruReadWALRegionInput> readWALRegion;
     private final MiruPageRegion<Optional<String>> repairRegion;
 
@@ -34,7 +34,7 @@ public class MiruWriterUIService {
         MiruHeaderRegion headerRegion,
         MiruPageRegion<Void> adminRegion,
         MiruPageRegion<MiruLookupRegionInput> lookupRegion,
-        MiruPageRegion<MiruActivityWALRegionInput> activityWALRegion,
+        MiruPageRegion<RCVSActivityWALRegionInput> activityWALRegion,
         MiruPageRegion<MiruReadWALRegionInput> readWALRegion,
         MiruPageRegion<Optional<String>> repairRegion) {
         this.renderer = renderer;
@@ -71,13 +71,13 @@ public class MiruWriterUIService {
     }
 
     public String renderActivityWAL() {
-        return chrome(activityWALRegion).render(new MiruActivityWALRegionInput(
+        return chrome(activityWALRegion).render(new RCVSActivityWALRegionInput(
             Optional.<MiruTenantId>absent(), Optional.<MiruPartitionId>absent(), Optional.<Boolean>absent(),
             Optional.<Long>absent(), Optional.<Integer>absent()));
     }
 
     public String renderActivityWALWithTenant(MiruTenantId tenantId) {
-        return chrome(activityWALRegion).render(new MiruActivityWALRegionInput(
+        return chrome(activityWALRegion).render(new RCVSActivityWALRegionInput(
             Optional.of(tenantId), Optional.<MiruPartitionId>absent(), Optional.<Boolean>absent(), Optional.<Long>absent(),
             Optional.<Integer>absent()));
     }
@@ -85,7 +85,7 @@ public class MiruWriterUIService {
     public String renderActivityWALWithFocus(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<Boolean> sip, Optional<Long> afterTimestamp,
         Optional<Integer> limit) {
 
-        return chrome(activityWALRegion).render(new MiruActivityWALRegionInput(Optional.of(tenantId), Optional.of(partitionId), sip, afterTimestamp, limit));
+        return chrome(activityWALRegion).render(new RCVSActivityWALRegionInput(Optional.of(tenantId), Optional.of(partitionId), sip, afterTimestamp, limit));
     }
 
     public String renderReadWAL() {

@@ -32,7 +32,7 @@ public class MiruPartitioner {
     private final int writerId;
     private final MiruPartitionIdProvider partitionIdProvider;
     private final MiruActivityWALWriter activityWALWriter;
-    private final MiruActivityWALReader activityWALReader;
+    private final MiruActivityWALReader<?, ?> activityWALReader;
     private final MiruReadTrackingWALWriter readTrackingWAL;
     private final MiruWALLookup walLookup;
     private final long partitionMaximumAgeInMillis;
@@ -42,7 +42,7 @@ public class MiruPartitioner {
     public MiruPartitioner(int writerId,
         MiruPartitionIdProvider partitionIdProvider,
         MiruActivityWALWriter activityWALWriter,
-        MiruActivityWALReader activityWALReader,
+        MiruActivityWALReader<?, ?> activityWALReader,
         MiruReadTrackingWALWriter readTrackingWAL,
         MiruWALLookup walLookup,
         long partitionMaximumAgeInMillis) {

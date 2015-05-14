@@ -1,12 +1,14 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
-import com.jivesoftware.os.miru.api.wal.Sip;
+import com.jivesoftware.os.miru.api.wal.RCVSCursor;
+import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionCursor;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -19,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /** @author jonathan */
-public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
+public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, RCVSSipCursor> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -27,11 +29,9 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activitySipWAL;
 
-    public MiruRCVSActivityWALReader(
+    public RCVSActivityWALReader(
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
-        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL
-    ) {
-
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
         this.activityWAL = activityWAL;
         this.activitySipWAL = activitySipWAL;
     }
@@ -41,22 +41,30 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
     }
 
     @Override
-    public void stream(MiruTenantId tenantId,
+    public RCVSCursor stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        byte sortOrder,
-        long afterTimestamp,
+        RCVSCursor afterCursor,
         final int batchSize,
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception {
+
+        if (afterCursor != null && afterCursor.endOfStream) {
+            return afterCursor;
+        }
 
         MiruActivityWALRow rowKey = rowKey(partitionId);
 
         final List<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
         boolean streaming = true;
-        byte lastSort = sortOrder;
-        long lastTimestamp = afterTimestamp;
+        boolean endOfStream = false;
+        if (afterCursor == null) {
+            afterCursor = RCVSCursor.INITIAL;
+        }
+        byte nextSort = afterCursor.sort;
+        long nextTimestamp = afterCursor.activityTimestamp;
+        MiruPartitionedActivity lastActivity = null;
         while (streaming) {
-            MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(lastSort, lastTimestamp);
+            MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(nextSort, nextTimestamp);
             activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                 new CallbackStream<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>>() {
                     @Override
@@ -75,40 +83,75 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
                 });
 
             if (cvats.size() < batchSize) {
+                endOfStream = true;
                 streaming = false;
             }
             for (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
-                if (streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
+                byte sort = v.getColumn().getSort();
+                long collisionId = v.getColumn().getCollisionId();
+                MiruPartitionedActivity partitionedActivity = v.getValue();
+                if (streamMiruActivityWAL.stream(collisionId, partitionedActivity, v.getTimestamp())) {
+                    if (partitionedActivity.type.isActivityType()) {
+                        lastActivity = partitionedActivity;
+                    }
                     // add 1 to exclude last result
-                    lastSort = v.getColumn().getSort();
-                    lastTimestamp = v.getColumn().getCollisionId() + 1;
+                    if (collisionId == Long.MAX_VALUE) {
+                        if (sort == Byte.MAX_VALUE) {
+                            nextSort = sort;
+                            nextTimestamp = collisionId;
+                            endOfStream = true;
+                            streaming = false;
+                        } else {
+                            nextSort = (byte) (sort + 1);
+                            nextTimestamp = Long.MIN_VALUE;
+                        }
+                    } else {
+                        nextSort = sort;
+                        nextTimestamp = collisionId + 1;
+                    }
                 } else {
                     streaming = false;
+                    nextSort = sort;
+                    nextTimestamp = collisionId;
                     break;
                 }
             }
             cvats.clear();
         }
+
+        RCVSSipCursor sipCursor = null;
+        if (lastActivity != null) {
+            sipCursor = new RCVSSipCursor(lastActivity.type.getSort(), lastActivity.clockTimestamp, lastActivity.timestamp, false);
+        }
+
+        return new RCVSCursor(nextSort, nextTimestamp, endOfStream, Optional.fromNullable(sipCursor));
     }
 
     @Override
-    public void streamSip(MiruTenantId tenantId,
+    public RCVSSipCursor streamSip(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        byte sortOrder,
-        Sip afterSip,
+        RCVSSipCursor afterCursor,
         final int batchSize,
         final StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception {
+
+        if (afterCursor != null && afterCursor.endOfStream) {
+            return afterCursor;
+        }
 
         MiruActivityWALRow rowKey = rowKey(partitionId);
 
         final List<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
         boolean streaming = true;
-        byte lastSort = sortOrder;
-        long lastClockTimestamp = afterSip.clockTimestamp;
-        long lastActivityTimestamp = afterSip.activityTimestamp;
+        if (afterCursor == null) {
+            afterCursor = RCVSSipCursor.INITIAL;
+        }
+        byte nextSort = afterCursor.sort;
+        long nextClockTimestamp = afterCursor.clockTimestamp;
+        long nextActivityTimestamp = afterCursor.activityTimestamp;
+        boolean endOfStream = false;
         while (streaming) {
-            MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(lastSort, lastClockTimestamp, lastActivityTimestamp);
+            MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(nextSort, nextClockTimestamp, nextActivityTimestamp);
             activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                 new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
                     @Override
@@ -127,14 +170,38 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
                 });
 
             if (cvats.size() < batchSize) {
+                endOfStream = true;
                 streaming = false;
             }
             for (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
-                if (streamMiruActivityWAL.stream(v.getColumn().getCollisionId(), v.getValue(), v.getTimestamp())) {
+                byte sort = v.getColumn().getSort();
+                long collisionId = v.getColumn().getCollisionId();
+                long sipId = v.getColumn().getSipId();
+                if (streamMiruActivityWAL.stream(collisionId, v.getValue(), v.getTimestamp())) {
                     // add 1 to exclude last result
-                    lastSort = v.getColumn().getSort();
-                    lastClockTimestamp = v.getColumn().getCollisionId();
-                    lastActivityTimestamp = v.getColumn().getSipId() + 1;
+                    if (sipId == Long.MAX_VALUE) {
+                        if (collisionId == Long.MAX_VALUE) {
+                            if (sort == Byte.MAX_VALUE) {
+                                nextSort = sort;
+                                nextClockTimestamp = collisionId;
+                                nextActivityTimestamp = sipId;
+                                endOfStream = true;
+                                streaming = false;
+                            } else {
+                                nextSort = (byte) (sort + 1);
+                                nextClockTimestamp = Long.MIN_VALUE;
+                                nextActivityTimestamp = Long.MIN_VALUE;
+                            }
+                        } else {
+                            nextSort = sort;
+                            nextClockTimestamp = collisionId + 1;
+                            nextActivityTimestamp = Long.MIN_VALUE;
+                        }
+                    } else {
+                        nextSort = sort;
+                        nextClockTimestamp = collisionId;
+                        nextActivityTimestamp = sipId + 1;
+                    }
                 } else {
                     streaming = false;
                     break;
@@ -142,6 +209,7 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
             }
             cvats.clear();
         }
+        return new RCVSSipCursor(nextSort, nextClockTimestamp, nextActivityTimestamp, endOfStream);
     }
 
     @Override
@@ -164,30 +232,6 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
                 return partitionedActivity;
             });
         return new MiruActivityWALStatus(partitionId, count.longValue(), begins, ends);
-    }
-
-    @Override
-    public long countSip(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        final MutableLong count = new MutableLong(0);
-        activitySipWAL.getValues(tenantId,
-            new MiruActivityWALRow(partitionId.getId()),
-            new MiruActivitySipWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), 0, 0),
-            null, 1_000, false, null, null, partitionedActivity -> {
-                if (partitionedActivity != null && partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                    count.add(partitionedActivity.index);
-                }
-                return partitionedActivity;
-            });
-        return count.longValue();
-    }
-
-    @Override
-    public MiruPartitionedActivity findExisting(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionedActivity activity) throws Exception {
-        return activityWAL.get(
-            tenantId,
-            new MiruActivityWALRow(partitionId.getId()),
-            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), activity.timestamp),
-            null, null);
     }
 
     @Override
@@ -256,21 +300,6 @@ public class MiruRCVSActivityWALReader implements MiruActivityWALReader {
                 new AtomicInteger(latestBoundaryActivity.index),
                 desiredPartitionCapacity);
         }
-    }
-
-    @Override
-    public MiruPartitionCursor getPartitionCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId, int desiredPartitionCapacity)
-        throws Exception {
-        LOG.inc("getPartitionCursorForWriterId");
-        LOG.inc("getPartitionCursorForWriterId>" + partitionId + '>' + writerId, tenantId.toString());
-        MiruPartitionedActivity got = activityWAL.get(tenantId,
-            new MiruActivityWALRow(partitionId.getId()),
-            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId),
-            null, null);
-        int index = (got != null) ? got.index : 0;
-        return new MiruPartitionCursor(partitionId,
-            new AtomicInteger(index),
-            desiredPartitionCapacity);
     }
 
     @Override

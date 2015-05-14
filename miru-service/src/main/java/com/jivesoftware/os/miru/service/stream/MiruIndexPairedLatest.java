@@ -34,7 +34,7 @@ public class MiruIndexPairedLatest<BM> {
 
     // Answers the question,
     // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
-    public List<Future<List<PairedLatestWork>>> compose(MiruContext<BM> context,
+    public List<Future<List<PairedLatestWork>>> compose(MiruContext<BM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
@@ -83,7 +83,7 @@ public class MiruIndexPairedLatest<BM> {
         return workFutures;
     }
 
-    public Future<List<PairedLatestWork>> prepare(final MiruContext<BM> context,
+    public Future<List<PairedLatestWork>> prepare(final MiruContext<BM, ?> context,
         final List<Future<List<PairedLatestWork>>> pairedLatestWorkFutures,
         ExecutorService indexExecutor) throws Exception {
 
@@ -97,7 +97,7 @@ public class MiruIndexPairedLatest<BM> {
         });
     }
 
-    public List<Future<?>> index(final MiruContext<BM> context,
+    public List<Future<?>> index(final MiruContext<BM, ?> context,
         Future<List<PairedLatestWork>> pairedLatestWorksFuture,
         final boolean repair,
         ExecutorService indexExecutor)

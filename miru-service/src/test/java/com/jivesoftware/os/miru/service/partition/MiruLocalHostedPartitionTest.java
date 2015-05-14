@@ -15,7 +15,6 @@ import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
@@ -36,8 +35,11 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
+import com.jivesoftware.os.miru.api.marshall.RCVSSipCursorMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.RCVSCursor;
+import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
@@ -66,9 +68,9 @@ import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALWriter;
-import com.jivesoftware.os.miru.wal.lookup.MiruRCVSWALLookup;
+import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
+import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
+import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
@@ -88,7 +90,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.BindInterfaceToConfiguration;
-import org.merlin.config.Config;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -104,13 +105,14 @@ import static org.testng.Assert.assertNotNull;
 
 public class MiruLocalHostedPartitionTest {
 
-    private MiruContextFactory contextFactory;
+    private MiruContextFactory<RCVSSipCursor> contextFactory;
+    private MiruSipTrackerFactory<RCVSSipCursor> sipTrackerFactory;
     private MiruSchema schema;
     private MiruSchemaProvider schemaProvider;
     private MiruClusterRegistry clusterRegistry;
     private MiruPartitionCoord coord;
     private MiruBackingStorage defaultStorage;
-    private MiruWALClient walClient;
+    private MiruWALClient<RCVSCursor, RCVSSipCursor> walClient;
     private MiruPartitionHeartbeatHandler partitionEventHandler;
     private MiruRebuildDirector rebuildDirector;
     private ScheduledExecutorService scheduledBootstrapService;
@@ -140,12 +142,7 @@ public class MiruLocalHostedPartitionTest {
         defaultStorage = MiruBackingStorage.memory;
 
         HealthFactory.initialize(
-            new HealthCheckConfigBinder() {
-                @Override
-                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                    return BindInterfaceToConfiguration.bindDefault(configurationInterfaceClass);
-                }
-            },
+            BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
                 @Override
                 public void register(HealthChecker healthChecker) {
@@ -203,14 +200,15 @@ public class MiruLocalHostedPartitionTest {
 
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
 
-        contextFactory = new MiruContextFactory(cogs,
+        contextFactory = new MiruContextFactory<>(cogs,
             schemaProvider,
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, hybridContextAllocator)
-            .put(MiruBackingStorage.disk, diskContextAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
+            new RCVSSipCursorMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             defaultStorage,
             config.getPartitionAuthzCacheSize(),
@@ -219,16 +217,17 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8));
+        sipTrackerFactory = new RCVSSipTrackerFactory();
 
         ObjectMapper mapper = new ObjectMapper();
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
 
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
 
-        MiruActivityWALWriter activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+        MiruWALLookup walLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
 
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();
@@ -243,9 +242,9 @@ public class MiruLocalHostedPartitionTest {
             null, 1000, 1000);
         MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000,
             activityWALReader);
-        
-        walClient = new MiruWALDirector(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
-            readTrackingWALReader);
+
+        walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
+            readTrackingWALReader, RCVSCursor.class, RCVSSipCursor.class, mapper);
 
         clusterRegistry = new AmzaClusterRegistry(amzaService,
             new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
@@ -284,7 +283,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testBootstrapToOnline() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run();
@@ -305,7 +304,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testInactiveToOffline() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
@@ -321,7 +320,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testQueryHandleOfflineMemMappedHotDeploy() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
@@ -344,7 +343,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test(expectedExceptions = MiruPartitionUnavailableException.class)
     public void testQueryHandleOfflineMemoryException() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
@@ -363,7 +362,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testRemove() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
@@ -378,7 +377,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testWakeOnIndex_false() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(false);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(false);
 
         indexNormalActivity(localHostedPartition);
         partitionEventHandler.thumpthump(host);
@@ -390,7 +389,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testWakeOnIndex_true() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(true);
 
         indexNormalActivity(localHostedPartition);
         partitionEventHandler.thumpthump(host);
@@ -403,7 +402,7 @@ public class MiruLocalHostedPartitionTest {
     @Test
     public void testSchemaNotRegistered_checkActive() throws Exception {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(false);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(false);
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), defaultStorage);
@@ -420,7 +419,7 @@ public class MiruLocalHostedPartitionTest {
     @Test
     public void testSchemaRegisteredLate() throws Exception {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
-        MiruLocalHostedPartition<EWAHCompressedBitmap> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(false);
+        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition(false);
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), defaultStorage);
@@ -444,8 +443,8 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
-    private MiruLocalHostedPartition<EWAHCompressedBitmap> getEwahCompressedBitmapMiruLocalHostedPartition(boolean wakeOnIndex) throws Exception {
-        return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, coord, -1, contextFactory,
+    private MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> getEwahCompressedBitmapMiruLocalHostedPartition(boolean wakeOnIndex) throws Exception {
+        return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, coord, -1, contextFactory, sipTrackerFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
             scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, wakeOnIndex, 100_000, 100, 100, new MiruMergeChits(100_000, 10_000), timings);
@@ -465,9 +464,9 @@ public class MiruLocalHostedPartitionTest {
     private void indexNormalActivity(MiruLocalHostedPartition localHostedPartition) throws Exception {
         localHostedPartition.index(Lists.newArrayList(
             factory.activity(1, partitionId, 0, new MiruActivity(
-                    tenantId, System.currentTimeMillis(), new String[0], 0,
-                    Collections.<String, List<String>>emptyMap(),
-                    Collections.<String, List<String>>emptyMap()))
+                tenantId, System.currentTimeMillis(), new String[0], 0,
+                Collections.<String, List<String>>emptyMap(),
+                Collections.<String, List<String>>emptyMap()))
         ).iterator());
     }
 

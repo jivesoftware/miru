@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -39,8 +40,8 @@ public class MiruAggregateUtil {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    public <BM> void stream(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> requestContext,
+    public <BM, S extends MiruSipCursor<S>> void stream(MiruBitmaps<BM> bitmaps,
+        MiruRequestContext<BM, S> requestContext,
         BM answer,
         Optional<BM> counter,
         int pivotFieldId,
@@ -129,8 +130,8 @@ public class MiruAggregateUtil {
         LOG.debug("stream: bytesTraversed={}", bytesTraversed.longValue());
     }
 
-    public <BM> void gather(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> requestContext,
+    public <BM, S extends MiruSipCursor<S>> void gather(MiruBitmaps<BM> bitmaps,
+        MiruRequestContext<BM, S> requestContext,
         BM answer,
         int pivotFieldId,
         int batchSize,

@@ -7,7 +7,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 /**
  *
  */
-public class MiruActivityWALRegionInput {
+public class RCVSActivityWALRegionInput {
 
     private final Optional<MiruTenantId> tenantId;
     private final Optional<MiruPartitionId> partitionId;
@@ -15,7 +15,7 @@ public class MiruActivityWALRegionInput {
     private final Optional<Long> afterTimestamp;
     private final Optional<Integer> limit;
 
-    public MiruActivityWALRegionInput(
+    public RCVSActivityWALRegionInput(
         Optional<MiruTenantId> tenantId,
         Optional<MiruPartitionId> partitionId,
         Optional<Boolean> sip,

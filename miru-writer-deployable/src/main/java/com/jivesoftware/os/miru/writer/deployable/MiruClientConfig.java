@@ -7,7 +7,6 @@ import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.ClassDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
-import org.merlin.config.defaults.StringDefault;
 
 public interface MiruClientConfig extends Config {
 
@@ -35,9 +34,6 @@ public interface MiruClientConfig extends Config {
 
     @BooleanDefault(true)
     Boolean getLiveIngress();
-
-    @StringDefault("rcvs")
-    String getActivityWALType(); // rcvs or amza or fork
 
     @ClassDefault(IllegalStateException.class)
     <C extends Config, I extends RowColumnValueStoreInitializer<E>, E extends Exception> Class<RowColumnValueStoreProvider<C, I, E>>

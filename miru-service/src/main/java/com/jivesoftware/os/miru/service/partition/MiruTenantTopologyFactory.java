@@ -14,10 +14,10 @@ public class MiruTenantTopologyFactory {
     private final MiruServiceConfig config;
     private final MiruBitmapsProvider bitmapsProvider;
     private final MiruHost localHost;
-    private final MiruLocalPartitionFactory localPartitionFactory;
+    private final MiruLocalPartitionFactory<?, ?> localPartitionFactory;
 
     public MiruTenantTopologyFactory(MiruServiceConfig config, MiruBitmapsProvider bitmapsProvider, MiruHost localHost,
-        MiruLocalPartitionFactory localPartitionFactory) {
+        MiruLocalPartitionFactory<?, ?> localPartitionFactory) {
         this.config = config;
         this.bitmapsProvider = bitmapsProvider;
         this.localHost = localHost;
@@ -32,7 +32,7 @@ public class MiruTenantTopologyFactory {
             localPartitionFactory);
     }
 
-    public void prioritizeRebuild(MiruLocalHostedPartition<?> partition) {
+    public void prioritizeRebuild(MiruLocalHostedPartition<?, ?, ?> partition) {
         localPartitionFactory.prioritizeRebuild(partition);
     }
 }

@@ -27,7 +27,7 @@ public class MiruIndexFieldValues<BM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public List<Future<List<FieldValuesWork>>> compose(MiruContext<BM> context,
+    public List<Future<List<FieldValuesWork>>> compose(MiruContext<BM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
@@ -68,7 +68,7 @@ public class MiruIndexFieldValues<BM> {
         return workFutures;
     }
 
-    public List<Future<?>> index(final MiruContext<BM> context,
+    public List<Future<?>> index(final MiruContext<BM, ?> context,
         List<Future<List<FieldValuesWork>>> fieldWorkFutures,
         final boolean repair,
         ExecutorService indexExecutor)

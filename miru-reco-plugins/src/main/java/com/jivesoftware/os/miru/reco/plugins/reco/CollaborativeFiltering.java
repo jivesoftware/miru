@@ -52,7 +52,7 @@ public class CollaborativeFiltering {
      */
     public <BM> RecoAnswer collaborativeFiltering(MiruSolutionLog solutionLog,
         MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> requestContext,
+        MiruRequestContext<BM, ?> requestContext,
         final MiruRequest<RecoQuery> request,
         Optional<RecoReport> report,
         BM allMyActivity,
@@ -194,7 +194,7 @@ public class CollaborativeFiltering {
         return composeAnswer(requestContext, fieldDefinition3, scoredHeap);
     }
 
-    private <BM> RecoAnswer composeAnswer(MiruRequestContext<BM> requestContext,
+    private <BM> RecoAnswer composeAnswer(MiruRequestContext<BM, ?> requestContext,
         MiruFieldDefinition fieldDefinition,
         MinMaxPriorityQueue<MiruTermCount> heap) {
 

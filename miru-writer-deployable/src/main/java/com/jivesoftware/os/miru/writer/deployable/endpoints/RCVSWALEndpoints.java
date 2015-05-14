@@ -8,14 +8,14 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient.GetActivityCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.GetReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupRange;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient.SipActivityCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.SipReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
+import com.jivesoftware.os.miru.api.wal.RCVSCursor;
+import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -36,16 +36,16 @@ import javax.ws.rs.core.Response;
  * @author jonathan.colt
  */
 @Singleton
-@Path("/miru/wal")
-public class MiruWALEndpoints {
+@Path("/miru/wal/rcvs")
+public class RCVSWALEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruWALDirector walDirector;
+    private final MiruWALDirector<RCVSCursor, RCVSSipCursor> walDirector;
     private final MiruStats stats;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruWALEndpoints(@Context MiruWALDirector walDirector, @Context MiruStats stats) {
+    public RCVSWALEndpoints(@Context MiruWALDirector walDirector, @Context MiruStats stats) {
         this.walDirector = walDirector;
         this.stats = stats;
     }
@@ -214,11 +214,11 @@ public class MiruWALEndpoints {
     public Response sipActivity(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
         @PathParam("batchSize") int batchSize,
-        SipActivityCursor cursor)
+        RCVSSipCursor cursor)
         throws Exception {
         try {
             long start = System.currentTimeMillis();
-            StreamBatch<MiruWALEntry, SipActivityCursor> sipActivity = walDirector.sipActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+            StreamBatch<MiruWALEntry, RCVSSipCursor> sipActivity = walDirector.sipActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), cursor, batchSize);
             stats.ingressed("/sip/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(sipActivity);
@@ -235,11 +235,11 @@ public class MiruWALEndpoints {
     public Response getActivity(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
         @PathParam("batchSize") int batchSize,
-        GetActivityCursor cursor)
+        RCVSCursor cursor)
         throws Exception {
         try {
             long start = System.currentTimeMillis();
-            StreamBatch<MiruWALEntry, GetActivityCursor> activity = walDirector.getActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+            StreamBatch<MiruWALEntry, RCVSCursor> activity = walDirector.getActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), cursor, batchSize);
             stats.ingressed("/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(activity);

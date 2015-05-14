@@ -37,7 +37,7 @@ public class MiruIndexer<BM> {
         this.indexPairedLatest = indexPairedLatest;
     }
 
-    public void index(final MiruContext<BM> context,
+    public void index(final MiruContext<BM, ?> context,
         final List<MiruActivityAndId<MiruActivity>> activityAndIds,
         boolean repair,
         ExecutorService indexExecutor)
@@ -118,7 +118,7 @@ public class MiruIndexer<BM> {
         log.debug("End: Index batch of {}", internalActivityAndIds.size());
     }
 
-    public void set(MiruContext<BM> context, List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
+    public void set(MiruContext<BM, ?> context, List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
         @SuppressWarnings("unchecked")
         List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
@@ -168,7 +168,7 @@ public class MiruIndexer<BM> {
     }
     */
 
-    public void remove(MiruContext<BM> context, MiruActivity activity, int id) throws Exception {
+    public void remove(MiruContext<BM, ?> context, MiruActivity activity, int id) throws Exception {
         MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id);
         if (existing == null) {
             log.debug("Can't remove nonexistent activity at {}\n- offered: {}", id, activity);

@@ -17,14 +17,14 @@ import static org.testng.Assert.assertEquals;
 /**
  *
  */
-public class MiruRCVSWALLookupTest {
+public class RCVSWALLookupTest {
 
     @Test
     public void testRangeMinMax() throws Exception {
         MiruTenantId tenantId = new MiruTenantId("test".getBytes());
         final AtomicLong clockTimestamp = new AtomicLong(0);
         MiruPartitionedActivityFactory factory = new MiruPartitionedActivityFactory(clockTimestamp::incrementAndGet);
-        MiruRCVSWALLookup walLookup = new MiruRCVSWALLookup(new InMemoryRowColumnValueStore(), new InMemoryRowColumnValueStore());
+        RCVSWALLookup walLookup = new RCVSWALLookup(new InMemoryRowColumnValueStore(), new InMemoryRowColumnValueStore());
         walLookup.add(tenantId, Arrays.asList(
             buildActivity(tenantId, factory, 0, 1001L), // clock 1
             buildActivity(tenantId, factory, 0, 1002L), // clock 2

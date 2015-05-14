@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.wal;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -11,10 +12,11 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
-import com.jivesoftware.os.miru.api.wal.Sip;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
@@ -25,6 +27,7 @@ import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,34 +35,50 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang.mutable.MutableByte;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
  *
  */
-public class MiruWALDirector implements MiruWALClient {
+public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> implements MiruWALClient<C, S> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruWALLookup walLookup;
-    private final MiruActivityWALReader activityWALReader;
+    private final MiruActivityWALReader<C, S> activityWALReader;
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruPartitionIdProvider partitionIdProvider;
     private final MiruReadTrackingWALReader readTrackingWALReader;
+    private final Class<C> cursorClass;
+    private final Class<S> sipCursorClass;
+    private final ObjectMapper objectMapper;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
     public MiruWALDirector(MiruWALLookup walLookup,
-        MiruActivityWALReader activityWALReader,
+        MiruActivityWALReader<C, S> activityWALReader,
         MiruActivityWALWriter activityWALWriter,
         MiruPartitionIdProvider partitionIdProvider,
-        MiruReadTrackingWALReader readTrackingWALReader) {
+        MiruReadTrackingWALReader readTrackingWALReader,
+        Class<C> cursorClass,
+        Class<S> sipCursorClass,
+        ObjectMapper objectMapper) {
         this.walLookup = walLookup;
         this.activityWALReader = activityWALReader;
         this.activityWALWriter = activityWALWriter;
         this.partitionIdProvider = partitionIdProvider;
         this.readTrackingWALReader = readTrackingWALReader;
+        this.cursorClass = cursorClass;
+        this.sipCursorClass = sipCursorClass;
+        this.objectMapper = objectMapper;
+    }
+
+    public C parseCursor(String json) throws IOException {
+        return objectMapper.readValue(json, cursorClass);
+    }
+
+    public S parseSipCursor(String json) throws IOException {
+        return objectMapper.readValue(json, sipCursorClass);
     }
 
     public void repairBoundaries() throws Exception {
@@ -92,18 +111,22 @@ public class MiruWALDirector implements MiruWALClient {
         List<MiruTenantId> tenantIds = walLookup.allTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             final Set<MiruPartitionId> found = Sets.newHashSet();
+            final Set<MiruPartitionId> broken = Sets.newHashSet();
             walLookup.streamRanges(tenantId, null, (partitionId, type, timestamp) -> {
                 found.add(partitionId);
+                if (type == MiruWALLookup.RangeType.orderIdMax && timestamp == Long.MAX_VALUE) {
+                    broken.add(partitionId);
+                }
                 return true;
             });
 
             int count = 0;
             MiruPartitionId latestPartitionId = partitionIdProvider.getLargestPartitionIdAcrossAllWriters(tenantId);
             for (MiruPartitionId checkPartitionId = latestPartitionId; checkPartitionId != null; checkPartitionId = checkPartitionId.prev()) {
-                if (!found.contains(checkPartitionId)) {
+                if (!found.contains(checkPartitionId) || broken.contains(checkPartitionId)) {
                     count++;
                     final RangeMinMax minMax = new RangeMinMax();
-                    activityWALReader.stream(tenantId, checkPartitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(), 0L, 1_000,
+                    activityWALReader.stream(tenantId, checkPartitionId, null, 1_000,
                         (collisionId, partitionedActivity, timestamp) -> {
                             if (partitionedActivity.type.isActivityType()) {
                                 minMax.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
@@ -131,9 +154,8 @@ public class MiruWALDirector implements MiruWALClient {
     public void sanitizeActivityWAL(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
         long afterTimestamp = packTimestamp(TimeUnit.DAYS.toMillis(1));
         final List<MiruActivityWALColumnKey> badKeys = Lists.newArrayList();
-        activityWALReader.stream(tenantId, partitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(),
-            afterTimestamp, 10_000, (collisionId, partitionedActivity, timestamp) -> {
-                if (partitionedActivity.type.isActivityType()) {
+        activityWALReader.stream(tenantId, partitionId, null, 10_000, (collisionId, partitionedActivity, timestamp) -> {
+                if (partitionedActivity.timestamp > afterTimestamp && partitionedActivity.type.isActivityType()) {
                     LOG.warn("Sanitizer is removing activity " + collisionId + "/" + partitionedActivity.timestamp + " from "
                         + tenantId + "/" + partitionId);
                     badKeys.add(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(), collisionId));
@@ -146,8 +168,7 @@ public class MiruWALDirector implements MiruWALClient {
     public void sanitizeActivitySipWAL(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
         final long afterTimestamp = packTimestamp(TimeUnit.DAYS.toMillis(1));
         final List<MiruActivitySipWALColumnKey> badKeys = Lists.newArrayList();
-        activityWALReader.streamSip(tenantId, partitionId, MiruPartitionedActivity.Type.ACTIVITY.getSort(),
-            new Sip(0, 0), 10_000,
+        activityWALReader.streamSip(tenantId, partitionId, null, 10_000,
             (collisionId, partitionedActivity, timestamp) -> {
                 if (partitionedActivity.timestamp > afterTimestamp && partitionedActivity.type.isActivityType()) {
                     LOG.warn("Sanitizer is removing sip activity " + collisionId + "/" + partitionedActivity.timestamp + " from "
@@ -234,73 +255,58 @@ public class MiruWALDirector implements MiruWALClient {
     }
 
     @Override
-    public StreamBatch<MiruWALEntry, SipActivityCursor> sipActivity(MiruTenantId tenantId,
+    public StreamBatch<MiruWALEntry, C> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        SipActivityCursor cursor,
-        final int batchSize) throws Exception {
-
-        final List<MiruWALEntry> batch = new ArrayList<>();
-        final MutableLong lastCollisionId = new MutableLong(cursor.collisionId);
-        final MutableLong lastSipId = new MutableLong(cursor.sipId);
-        final MutableByte sortOrder = new MutableByte(cursor.sort);
-
-        activityWALReader.streamSip(tenantId, partitionId, cursor.sort, new Sip(cursor.collisionId, cursor.sipId), batchSize,
-            (collisionId, partitionedActivity, timestamp) -> {
-                batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                lastCollisionId.setValue(collisionId);
-                lastSipId.setValue(partitionedActivity.timestamp);
-                sortOrder.setValue(partitionedActivity.type.getSort());
-                return batch.size() < batchSize;
-            });
-
-        SipActivityCursor nextCursor;
-        if (batch.size() < batchSize) {
-            nextCursor = null;
-        } else if (lastSipId.longValue() == Long.MAX_VALUE) {
-            if (lastCollisionId.longValue() == Long.MAX_VALUE) {
-                if (sortOrder.byteValue() == Byte.MAX_VALUE) {
-                    nextCursor = null;
-                } else {
-                    nextCursor = new SipActivityCursor((byte) (sortOrder.byteValue() + 1), Long.MIN_VALUE, Long.MIN_VALUE);
-                }
-            } else {
-                nextCursor = new SipActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue() + 1, Long.MIN_VALUE);
-            }
-        } else {
-            nextCursor = new SipActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue(), lastSipId.longValue() + 1);
-        }
-        return new StreamBatch<>(batch, nextCursor);
-    }
-
-    @Override
-    public StreamBatch<MiruWALEntry, GetActivityCursor> getActivity(MiruTenantId tenantId,
-        MiruPartitionId partitionId,
-        GetActivityCursor cursor,
+        C cursor,
         final int batchSize)
         throws Exception {
 
         final List<MiruWALEntry> batch = new ArrayList<>();
-        final MutableLong lastCollisionId = new MutableLong(cursor.collisionId);
-        final MutableByte sortOrder = new MutableByte(cursor.sort);
-        activityWALReader.stream(tenantId, partitionId, cursor.sort, cursor.collisionId, batchSize,
+        C nextCursor = activityWALReader.stream(tenantId, partitionId, cursor, batchSize,
             (collisionId, partitionedActivity, timestamp) -> {
                 batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                lastCollisionId.setValue(collisionId);
-                sortOrder.setValue(partitionedActivity.type.getSort());
                 return batch.size() < batchSize;
             });
 
-        GetActivityCursor nextCursor;
-        if (batch.size() < batchSize) {
+        return new StreamBatch<>(batch, nextCursor);
+    }
+
+    @Override
+    public StreamBatch<MiruWALEntry, S> sipActivity(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        S cursor,
+        final int batchSize) throws Exception {
+
+        final List<MiruWALEntry> batch = new ArrayList<>();
+        S nextCursor = activityWALReader.streamSip(tenantId, partitionId, cursor, batchSize,
+            (long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) -> {
+                batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
+                return batch.size() < batchSize;
+            });
+
+        return new StreamBatch<>(batch, nextCursor);
+    }
+
+    @Override
+    public StreamBatch<MiruWALEntry, GetReadCursor> getRead(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        GetReadCursor cursor,
+        final int batchSize) throws Exception {
+
+        final List<MiruWALEntry> batch = new ArrayList<>();
+        final MutableLong lastEventId = new MutableLong(cursor.eventId);
+
+        readTrackingWALReader.stream(tenantId, streamId, cursor.eventId, (eventId, partitionedActivity, timestamp) -> {
+            batch.add(new MiruWALEntry(eventId, timestamp, partitionedActivity));
+            lastEventId.setValue(eventId);
+            return batch.size() < batchSize;
+        });
+
+        GetReadCursor nextCursor;
+        if (batch.size() < batchSize || lastEventId.longValue() == Long.MAX_VALUE) {
             nextCursor = null;
-        } else if (lastCollisionId.longValue() == Long.MAX_VALUE) {
-            if (sortOrder.byteValue() == Byte.MAX_VALUE) {
-                nextCursor = null;
-            } else {
-                nextCursor = new GetActivityCursor((byte) (sortOrder.byteValue() + 1), Long.MIN_VALUE);
-            }
         } else {
-            nextCursor = new GetActivityCursor(sortOrder.byteValue(), lastCollisionId.longValue() + 1);
+            nextCursor = new GetReadCursor(lastEventId.longValue() + 1);
         }
         return new StreamBatch<>(batch, nextCursor);
     }
@@ -332,30 +338,6 @@ public class MiruWALDirector implements MiruWALClient {
             }
         } else {
             nextCursor = new SipReadCursor(lastEventId.longValue(), lastSipId.longValue() + 1);
-        }
-        return new StreamBatch<>(batch, nextCursor);
-    }
-
-    @Override
-    public StreamBatch<MiruWALEntry, GetReadCursor> getRead(MiruTenantId tenantId,
-        MiruStreamId streamId,
-        GetReadCursor cursor,
-        final int batchSize) throws Exception {
-
-        final List<MiruWALEntry> batch = new ArrayList<>();
-        final MutableLong lastEventId = new MutableLong(cursor.eventId);
-
-        readTrackingWALReader.stream(tenantId, streamId, cursor.eventId, (eventId, partitionedActivity, timestamp) -> {
-            batch.add(new MiruWALEntry(eventId, timestamp, partitionedActivity));
-            lastEventId.setValue(eventId);
-            return batch.size() < batchSize;
-        });
-
-        GetReadCursor nextCursor;
-        if (batch.size() < batchSize || lastEventId.longValue() == Long.MAX_VALUE) {
-            nextCursor = null;
-        } else {
-            nextCursor = new GetReadCursor(lastEventId.longValue() + 1);
         }
         return new StreamBatch<>(batch, nextCursor);
     }
