@@ -18,7 +18,7 @@
         <rcvs-version>0.15</rcvs-version>
         <filer-version>0.72</filer-version>
         <upena-version>0.117</upena-version>
-        <amza-version>0.70</amza-version>
+        <amza-version>0.71</amza-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <test.excludedGroups>blocked-by-jira,slow</test.excludedGroups>
         <maven.build.timestamp.format>yyyy-MM-dd-HH:mm:ss.S</maven.build.timestamp.format>
