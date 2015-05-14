@@ -134,8 +134,8 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
             amzaService.createRegionIfAbsent(activityRegionName, new RegionProperties(activityWALStorageDescriptor, replicationFactor, takeFromFactor, false));
             amzaService.createRegionIfAbsent(sipRegionName, new RegionProperties(sipWALStorageDescriptor, replicationFactor, takeFromFactor, false));
 
-            if (amzaService.replicate(activityRegionName, new MemoryWALUpdates(activityMap), replicateToNHosts, requireNReplicas)) {
-                if (amzaService.replicate(sipRegionName, new MemoryWALUpdates(sipMap), replicateToNHosts, requireNReplicas)) {
+            if (amzaService.replicate(activityRegionName, new MemoryWALUpdates(activityMap), requireNReplicas)) {
+                if (amzaService.replicate(sipRegionName, new MemoryWALUpdates(sipMap), requireNReplicas)) {
                     // success
                 } else {
                     throw new RuntimeException("Failed to write to amza sip WAL because it's under-replicated for tenant:" + tenantId +
