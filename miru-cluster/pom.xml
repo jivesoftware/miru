@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.463-SNAPSHOT</version>
+        <version>0.470-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-cluster</artifactId>
-    <version>0.463-SNAPSHOT</version>
+    <version>0.470-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -34,10 +34,6 @@
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
@@ -45,7 +41,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
@@ -115,7 +111,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster-client</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>

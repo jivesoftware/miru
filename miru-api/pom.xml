@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.463-SNAPSHOT</version>
+        <version>0.470-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-api</artifactId>
-    <version>0.463-SNAPSHOT</version>
+    <version>0.470-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -47,10 +47,6 @@
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>merlin-config</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.rcvs</groupId>
-            <artifactId>row-column-value-store-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>

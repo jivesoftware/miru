@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.463-SNAPSHOT</version>
+        <version>0.470-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-service</artifactId>
-    <version>0.463-SNAPSHOT</version>
+    <version>0.470-SNAPSHOT</version>
     <properties>
         <module.type>service_lib</module.type>
     </properties>
@@ -48,12 +48,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.googlecode.javaewah</groupId>
@@ -86,10 +86,6 @@
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>jaxrs-util</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>http-client-rest</artifactId>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -134,23 +130,34 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.rcvs</groupId>
-            <artifactId>row-column-value-store-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>health</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.upena</groupId>
+            <artifactId>upena-main</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-shared</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-service</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.463-SNAPSHOT</version>
+        <version>0.470-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-plugin-test</artifactId>
-    <version>0.463-SNAPSHOT</version>
+    <version>0.470-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -30,17 +30,17 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
@@ -51,13 +51,17 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-shared</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-service</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -72,10 +76,6 @@
             <artifactId>ordered-id</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.rcvs</groupId>
-            <artifactId>row-column-value-store-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.upena</groupId>
             <artifactId>upena-main</artifactId>
         </dependency>
@@ -86,13 +86,13 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster-client</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.463-SNAPSHOT</version>
+            <version>0.470-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
     </dependencies>

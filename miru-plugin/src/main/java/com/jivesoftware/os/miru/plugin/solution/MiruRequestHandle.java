@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -21,5 +21,5 @@ public interface MiruRequestHandle<BM, S extends MiruSipCursor<S>> extends AutoC
 
     MiruPartitionCoord getCoord();
 
-    RequestHelper getRequestHelper();
+    HttpClient getClient();
 }

@@ -1,9 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -19,28 +17,24 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MiruRemoteQueryablePartitionFactory {
 
     private final HttpClientFactory httpClientFactory;
-    private final ObjectMapper objectMapper;
-    private final Map<MiruHost, RequestHelper> hostHelpers = new ConcurrentHashMap<>();
+    private final Map<MiruHost, HttpClient> hostClients = new ConcurrentHashMap<>();
 
-    public MiruRemoteQueryablePartitionFactory(HttpClientFactory httpClientFactory,
-        ObjectMapper objectMapper) {
+    public MiruRemoteQueryablePartitionFactory(HttpClientFactory httpClientFactory) {
         this.httpClientFactory = httpClientFactory;
-        this.objectMapper = objectMapper;
     }
 
-    private RequestHelper hostHelper(final MiruPartitionCoord coord) {
-        RequestHelper helper = hostHelpers.get(coord.host);
-        if (helper == null) {
-            HttpClient httpClient = httpClientFactory.createClient(coord.host.getLogicalName(), coord.host.getPort());
-            helper = new RequestHelper(httpClient, objectMapper);
-            hostHelpers.put(coord.host, helper);
+    private HttpClient hostHelper(final MiruPartitionCoord coord) {
+        HttpClient client = hostClients.get(coord.host);
+        if (client == null) {
+            client = httpClientFactory.createClient(coord.host.getLogicalName(), coord.host.getPort());
+            hostClients.put(coord.host, client);
         }
-        return helper;
+        return client;
     }
 
     public <BM, S extends MiruSipCursor<S>> MiruQueryablePartition<BM> create(final MiruPartitionCoord coord, final MiruPartitionCoordInfo info) {
 
-        final RequestHelper requestHelper = hostHelper(coord);
+        final HttpClient client = hostHelper(coord);
 
         return new MiruQueryablePartition<BM>() {
 
@@ -84,8 +78,8 @@ public class MiruRemoteQueryablePartitionFactory {
                     }
 
                     @Override
-                    public RequestHelper getRequestHelper() {
-                        return requestHelper;
+                    public HttpClient getClient() {
+                        return client;
                     }
 
                     @Override

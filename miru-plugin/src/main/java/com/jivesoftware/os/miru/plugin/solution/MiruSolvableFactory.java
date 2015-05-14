@@ -11,23 +11,25 @@ import java.util.concurrent.Callable;
 /**
  * @param <Q> query type
  * @param <A> answer type
- * @param <P> report type
+ * @param <R> report type
  */
-public class MiruSolvableFactory<Q, A, P> {
+public class MiruSolvableFactory<Q, A, R> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruStats miruStats;
     private final String queryKey;
-    private final Question<Q, A, P> question;
+    private final Question<Q, A, R> question;
+    private final MiruSolutionMarshaller<Q, A, R> marshaller;
 
-    public MiruSolvableFactory(MiruStats miruStats, String queryKey, Question<Q, A, P> question) {
+    public MiruSolvableFactory(MiruStats miruStats, String queryKey, Question<Q, A, R> question, MiruSolutionMarshaller<Q, A, R> marshaller) {
         this.miruStats = miruStats;
         this.queryKey = queryKey;
         this.question = question;
+        this.marshaller = marshaller;
     }
 
-    public <BM> MiruSolvable<A> create(final MiruQueryablePartition<BM> replica, final Optional<P> report) {
+    public <BM> MiruSolvable<A> create(final MiruQueryablePartition<BM> replica, final Optional<R> report) {
         Callable<MiruPartitionResponse<A>> callable = () -> {
             try (MiruRequestHandle<BM, ?> handle = replica.acquireQueryHandle()) {
                 if (handle.isLocal()) {
@@ -40,8 +42,8 @@ public class MiruSolvableFactory<Q, A, P> {
                     return response;
                 } else {
                     long start = System.currentTimeMillis();
-                    MiruRemotePartitionReader<Q, A, P> remotePartitionReader = new MiruRemotePartitionReader<>(question.getRemotePartition(),
-                        handle.getRequestHelper());
+                    MiruRemotePartitionReader<Q, A, R> remotePartitionReader = new MiruRemotePartitionReader<>(question.getRemotePartition(),
+                        handle.getClient(), marshaller);
                     MiruPartitionResponse<A> response = remotePartitionReader.read(handle.getCoord().partitionId, question.getRequest(), report);
                     long latency = System.currentTimeMillis() - start;
                     miruStats.egressed(queryKey + ">remote", 1, latency);
@@ -61,11 +63,11 @@ public class MiruSolvableFactory<Q, A, P> {
         return new MiruSolvable<>(replica.getCoord(), callable);
     }
 
-    public Question<Q, A, P> getQuestion() {
+    public Question<Q, A, R> getQuestion() {
         return question;
     }
 
-    public Optional<P> getReport(Optional<A> answer) {
+    public Optional<R> getReport(Optional<A> answer) {
         return question.createReport(answer);
     }
 
