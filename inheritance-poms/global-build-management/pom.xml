@@ -14,11 +14,11 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mlogger-version>0.9</mlogger-version>
-        <jive-utils-version>0.89</jive-utils-version>
+        <jive-utils-version>0.90</jive-utils-version>
         <rcvs-version>0.15</rcvs-version>
         <filer-version>0.72</filer-version>
-        <upena-version>0.116</upena-version>
-        <amza-version>0.67</amza-version>
+        <upena-version>0.117</upena-version>
+        <amza-version>0.70</amza-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <test.excludedGroups>blocked-by-jira,slow</test.excludedGroups>
         <maven.build.timestamp.format>yyyy-MM-dd-HH:mm:ss.S</maven.build.timestamp.format>
