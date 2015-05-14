@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientException;
@@ -21,6 +23,7 @@ import org.apache.commons.httpclient.HttpStatus;
 public class MiruRemotePartitionReader<Q, A, R> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+    private static final ObjectMapper mapper = new ObjectMapper(); // HACK
 
     private final MiruRemotePartition<Q, A, R> remotePartition;
     private final HttpClient client;
@@ -43,13 +46,22 @@ public class MiruRemotePartitionReader<Q, A, R> {
 //                MiruPartitionResponse.class, new Class[] { remotePartition.getAnswerClass() },
 //                new MiruPartitionResponse<>(remotePartition.getEmptyResults(), null));
 
-            byte[] requestAsBytes = marshaller.requestAndReportToBytes(params);
-            HttpResponse response = client.postBytes(remotePartition.getEndpoint(partitionId), requestAsBytes);
+            String requestJsonString = mapper.writeValueAsString(params);
+            HttpResponse response = client.postJson(remotePartition.getEndpoint(partitionId), requestJsonString);
             int statusCode = response.getStatusCode();
             if (statusCode < 200 || statusCode >= 300) {
                 return null;
             }
-            return marshaller.responseFromStream(new ByteArrayInputStream(response.getResponseBody()));
+            JavaType responseType = mapper.getTypeFactory().constructParametricType(MiruPartitionResponse.class, remotePartition.getAnswerClass());
+            return mapper.readValue(new ByteArrayInputStream(response.getResponseBody()), responseType);
+            /*
+             byte[] requestAsBytes = marshaller.requestAndReportToBytes(params);
+             HttpResponse response = client.postBytes(remotePartition.getEndpoint(partitionId), requestAsBytes);
+             int statusCode = response.getStatusCode();
+             if (statusCode < 200 || statusCode >= 300) {
+             return null;
+             }
+             return marshaller.responseFromStream(new ByteArrayInputStream(response.getResponseBody()));*/
 
         } catch (NonSuccessStatusCodeException e) {
             if (e.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
