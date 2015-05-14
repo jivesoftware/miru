@@ -110,6 +110,8 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                 solutionLog.log(MiruSolutionLogLevel.ERROR, "Unmatched future.");
                             }
                             break;
+                        } else {
+                            solversFailed++;
                         }
                     } catch (ExecutionException e) {
                         log.debug("Solver failed to execute", e.getCause());
