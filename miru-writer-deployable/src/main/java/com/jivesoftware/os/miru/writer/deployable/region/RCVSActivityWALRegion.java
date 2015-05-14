@@ -50,7 +50,9 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
         Optional<MiruTenantId> optionalTenantId = RCVSActivityWALRegionInput.getTenantId();
         Optional<MiruPartitionId> optionalPartitionId = RCVSActivityWALRegionInput.getPartitionId();
 
-        if (optionalTenantId.isPresent()) {
+        if (miruWALDirector == null) {
+            data.put("error", "No RCVS WAL");
+        } else if (optionalTenantId.isPresent()) {
             MiruTenantId tenantId = optionalTenantId.get();
             data.put("tenant", new String(tenantId.getBytes(), Charsets.UTF_8));
 
@@ -126,6 +128,6 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
 
     @Override
     public String getTitle() {
-        return "Activity WAL";
+        return "RCVS Activity WAL";
     }
 }

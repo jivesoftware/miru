@@ -62,6 +62,7 @@ import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
 import com.jivesoftware.os.miru.wal.lookup.AmzaWALLookup;
+import com.jivesoftware.os.miru.wal.lookup.ForkingWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
@@ -228,6 +229,8 @@ public class MiruWriterMain {
             MiruActivityWALReader<?, ?> activityWALReader;
             MiruPartitionIdProvider miruPartitionIdProvider;
             MiruWALLookup walLookup;
+            MiruWALDirector<RCVSCursor, RCVSSipCursor> rcvsWALDirector = null;
+            MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector = null;
             MiruWALDirector<?, ?> miruWALDirector;
             Class<?> walEndpointsClass;
 
@@ -239,20 +242,17 @@ public class MiruWriterMain {
                     clientConfig.getTotalCapacity(),
                     rcvsActivityWALReader);
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
-                MiruWALDirector<RCVSCursor, RCVSSipCursor> amzaWALDirector = new MiruWALDirector<>(rcvsWALLookup,
+                rcvsWALDirector = new MiruWALDirector<>(rcvsWALLookup,
                     rcvsActivityWALReader,
                     rcvsActivityWALWriter,
                     amzaPartitionIdProvider,
-                    readTrackingWALReader,
-                    RCVSCursor.class,
-                    RCVSSipCursor.class,
-                    mapper);
+                    readTrackingWALReader);
 
                 activityWALWriter = rcvsActivityWALWriter;
                 activityWALReader = rcvsActivityWALReader;
                 miruPartitionIdProvider = amzaPartitionIdProvider;
                 walLookup = rcvsWALLookup;
-                miruWALDirector = amzaWALDirector;
+                miruWALDirector = rcvsWALDirector;
                 walEndpointsClass = RCVSWALEndpoints.class;
             } else if (walConfig.getActivityWALType().equals("amza")) {
                 AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
@@ -262,14 +262,11 @@ public class MiruWriterMain {
                     clientConfig.getTotalCapacity(),
                     amzaActivityWALReader);
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
-                MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
+                amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
                     amzaActivityWALReader,
                     amzaActivityWALWriter,
                     amzaPartitionIdProvider,
-                    readTrackingWALReader,
-                    AmzaCursor.class,
-                    AmzaSipCursor.class,
-                    mapper);
+                    readTrackingWALReader);
 
                 activityWALWriter = amzaActivityWALWriter;
                 activityWALReader = amzaActivityWALReader;
@@ -286,20 +283,19 @@ public class MiruWriterMain {
                     storageDescriptor,
                     clientConfig.getTotalCapacity(),
                     amzaActivityWALReader);
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
-                MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
+                ForkingWALLookup forkingWALLookup = new ForkingWALLookup(rcvsWALLookup, amzaWALLookup);
+                amzaWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     amzaActivityWALReader,
                     forkingActivityWALWriter,
                     amzaPartitionIdProvider,
-                    readTrackingWALReader,
-                    AmzaCursor.class,
-                    AmzaSipCursor.class,
-                    mapper);
+                    readTrackingWALReader);
 
                 activityWALWriter = forkingActivityWALWriter;
                 activityWALReader = amzaActivityWALReader;
                 miruPartitionIdProvider = amzaPartitionIdProvider;
-                walLookup = amzaWALLookup;
+                walLookup = forkingWALLookup;
                 miruWALDirector = amzaWALDirector;
                 walEndpointsClass = AmzaWALEndpoints.class;
             } else {
@@ -335,7 +331,7 @@ public class MiruWriterMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer()
-                .initialize(renderer, miruWALDirector, activityWALReader, miruStats);
+                .initialize(renderer, rcvsWALDirector, amzaWALDirector, activityWALReader, miruStats);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);

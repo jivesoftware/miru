@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.wal;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -27,7 +26,6 @@ import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -49,9 +47,6 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruPartitionIdProvider partitionIdProvider;
     private final MiruReadTrackingWALReader readTrackingWALReader;
-    private final Class<C> cursorClass;
-    private final Class<S> sipCursorClass;
-    private final ObjectMapper objectMapper;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
@@ -59,26 +54,12 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         MiruActivityWALReader<C, S> activityWALReader,
         MiruActivityWALWriter activityWALWriter,
         MiruPartitionIdProvider partitionIdProvider,
-        MiruReadTrackingWALReader readTrackingWALReader,
-        Class<C> cursorClass,
-        Class<S> sipCursorClass,
-        ObjectMapper objectMapper) {
+        MiruReadTrackingWALReader readTrackingWALReader) {
         this.walLookup = walLookup;
         this.activityWALReader = activityWALReader;
         this.activityWALWriter = activityWALWriter;
         this.partitionIdProvider = partitionIdProvider;
         this.readTrackingWALReader = readTrackingWALReader;
-        this.cursorClass = cursorClass;
-        this.sipCursorClass = sipCursorClass;
-        this.objectMapper = objectMapper;
-    }
-
-    public C parseCursor(String json) throws IOException {
-        return objectMapper.readValue(json, cursorClass);
-    }
-
-    public S parseSipCursor(String json) throws IOException {
-        return objectMapper.readValue(json, sipCursorClass);
     }
 
     public void repairBoundaries() throws Exception {

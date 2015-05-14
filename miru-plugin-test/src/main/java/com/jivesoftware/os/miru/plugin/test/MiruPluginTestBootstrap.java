@@ -153,7 +153,7 @@ public class MiruPluginTestBootstrap {
             activityWALReader);
 
         MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
-            readTrackingWALReader, RCVSCursor.class, RCVSSipCursor.class, mapper);
+            readTrackingWALReader);
 
         clusterRegistry = new AmzaClusterRegistry(amzaService,
             new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),

@@ -38,8 +38,8 @@ import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
-import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
+import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
@@ -97,7 +97,7 @@ public class MiruWriterUIServiceNGTest {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
         WALIndexProviderRegistry indexProviderRegistry = new WALIndexProviderRegistry();
-        String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
+        String[] walIndexDirs = new String[] { amzaIndexDir.getAbsolutePath() };
         indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
@@ -106,7 +106,7 @@ public class MiruWriterUIServiceNGTest {
 
         final com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig amzaServiceConfig =
             new com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig();
-        amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
+        amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
         amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfApplierThreads = 1;
         amzaServiceConfig.numberOfReplicatorThreads = 1;
@@ -149,10 +149,10 @@ public class MiruWriterUIServiceNGTest {
             activityWALReader);
 
         MiruWALDirector<RCVSCursor, RCVSSipCursor> director = new MiruWALDirector<>(walLookup,
-            activityWALReader, activityWALWriter, miruPartitionIdProvider, readTrackingWALReader, RCVSCursor.class, RCVSSipCursor.class, mapper);
+            activityWALReader, activityWALWriter, miruPartitionIdProvider, readTrackingWALReader);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        service = new MiruWriterUIServiceInitializer().initialize(renderer, director, activityWALReader, new MiruStats());
+        service = new MiruWriterUIServiceInitializer().initialize(renderer, director, null, activityWALReader, new MiruStats());
     }
 
     @Test

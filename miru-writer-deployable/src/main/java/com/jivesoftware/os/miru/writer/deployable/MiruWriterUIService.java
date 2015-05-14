@@ -9,9 +9,9 @@ import com.jivesoftware.os.miru.writer.deployable.region.MiruFrameRegion;
 import com.jivesoftware.os.miru.writer.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.writer.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.writer.deployable.region.MiruPageRegion;
-import com.jivesoftware.os.miru.writer.deployable.region.input.RCVSActivityWALRegionInput;
 import com.jivesoftware.os.miru.writer.deployable.region.input.MiruLookupRegionInput;
 import com.jivesoftware.os.miru.writer.deployable.region.input.MiruReadWALRegionInput;
+import com.jivesoftware.os.miru.writer.deployable.region.input.RCVSActivityWALRegionInput;
 import java.util.List;
 
 /**

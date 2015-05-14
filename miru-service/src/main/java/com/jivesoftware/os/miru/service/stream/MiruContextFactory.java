@@ -79,8 +79,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[]{0};
-    private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[]{1};
+    private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[] { 0 };
+    private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[] { 1 };
 
     private final TxCogs cogs;
     private final MiruSchemaProvider schemaProvider;
@@ -249,7 +249,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             bitmaps,
             fieldIndexCache,
             removalIndexId,
-            new byte[]{0},
+            new byte[] { 0 },
             new MiruFilerRemovalIndex<>(
                 bitmaps,
                 removalIndexId,
@@ -258,7 +258,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[]{0},
+                new byte[] { 0 },
                 -1,
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<BM>());
@@ -310,7 +310,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             chunkStores);
     }
 
-    public <BM> MiruContext<BM, S> copy(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruContext<BM, S> from, MiruBackingStorage toStorage) throws Exception {
+    public <BM> MiruContext<BM, S> copy(MiruBitmaps<BM> bitmaps,
+        MiruPartitionCoord coord,
+        MiruContext<BM, S> from,
+        MiruBackingStorage toStorage) throws Exception {
 
         ChunkStore[] fromChunks = from.chunkStores;
         ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord);

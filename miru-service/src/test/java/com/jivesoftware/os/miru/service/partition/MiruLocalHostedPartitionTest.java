@@ -70,8 +70,8 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
-import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
+import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
@@ -243,8 +243,7 @@ public class MiruLocalHostedPartitionTest {
         MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000,
             activityWALReader);
 
-        walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider,
-            readTrackingWALReader, RCVSCursor.class, RCVSSipCursor.class, mapper);
+        walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, miruPartitionIdProvider, readTrackingWALReader);
 
         clusterRegistry = new AmzaClusterRegistry(amzaService,
             new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
@@ -443,7 +442,8 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
-    private MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> getEwahCompressedBitmapMiruLocalHostedPartition(boolean wakeOnIndex) throws Exception {
+    private MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> getEwahCompressedBitmapMiruLocalHostedPartition(boolean wakeOnIndex)
+        throws Exception {
         return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, coord, -1, contextFactory, sipTrackerFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
             scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
