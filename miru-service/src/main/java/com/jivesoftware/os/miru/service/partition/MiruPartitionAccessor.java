@@ -149,6 +149,11 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         return info.state == MiruPartitionState.online;
     }
 
+    void notifyBoundaries(List<Integer> begins, List<Integer> ends) {
+        this.beginWriters.addAll(begins);
+        this.endWriters.addAll(ends);
+    }
+
     boolean hasOpenWriters() {
         return beginWriters.isEmpty() || !endWriters.containsAll(beginWriters);
     }

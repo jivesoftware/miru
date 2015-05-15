@@ -24,11 +24,11 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.api.marshall.RCVSSipCursorMarshaller;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
@@ -89,7 +89,7 @@ public class IndexTestUtil {
                 .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
                 .put(MiruBackingStorage.disk, onDiskChunkAllocator)
                 .build(),
-            new RCVSSipCursorMarshaller(),
+            new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
             1024,

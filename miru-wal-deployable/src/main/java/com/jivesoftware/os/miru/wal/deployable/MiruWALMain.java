@@ -47,7 +47,6 @@ import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.ForkingActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
@@ -56,7 +55,6 @@ import com.jivesoftware.os.miru.wal.deployable.endpoints.AmzaWALEndpoints;
 import com.jivesoftware.os.miru.wal.deployable.endpoints.RCVSWALEndpoints;
 import com.jivesoftware.os.miru.wal.lookup.AmzaWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.ForkingWALLookup;
-import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
@@ -176,9 +174,7 @@ public class MiruWALMain {
             MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
             MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
-            MiruActivityWALWriter activityWALWriter;
             MiruActivityWALReader<?, ?> activityWALReader;
-            MiruWALLookup walLookup;
             MiruWALDirector<RCVSCursor, RCVSSipCursor> rcvsWALDirector = null;
             MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector = null;
             MiruWALDirector<?, ?> miruWALDirector;
@@ -191,11 +187,10 @@ public class MiruWALMain {
                 rcvsWALDirector = new MiruWALDirector<>(rcvsWALLookup,
                     rcvsActivityWALReader,
                     rcvsActivityWALWriter,
-                    readTrackingWALReader, readTrackingWALWriter);
+                    readTrackingWALReader,
+                    readTrackingWALWriter);
 
-                activityWALWriter = rcvsActivityWALWriter;
                 activityWALReader = rcvsActivityWALReader;
-                walLookup = rcvsWALLookup;
                 miruWALDirector = rcvsWALDirector;
                 walEndpointsClass = RCVSWALEndpoints.class;
             } else if (walConfig.getActivityWALType().equals("amza")) {
@@ -205,29 +200,44 @@ public class MiruWALMain {
                 amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
                     amzaActivityWALReader,
                     amzaActivityWALWriter,
-                    readTrackingWALReader, readTrackingWALWriter);
+                    readTrackingWALReader,
+                    readTrackingWALWriter);
 
-                activityWALWriter = amzaActivityWALWriter;
                 activityWALReader = amzaActivityWALReader;
-                walLookup = amzaWALLookup;
                 miruWALDirector = amzaWALDirector;
                 walEndpointsClass = AmzaWALEndpoints.class;
-            } else if (walConfig.getActivityWALType().equals("fork")) {
+            } else if (walConfig.getActivityWALType().equals("rcvs_amza")) {
                 RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper);
+                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(rcvsActivityWALWriter, amzaActivityWALWriter);
-                AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
+                RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
                 ForkingWALLookup forkingWALLookup = new ForkingWALLookup(rcvsWALLookup, amzaWALLookup);
+                rcvsWALDirector = new MiruWALDirector<>(forkingWALLookup,
+                    rcvsActivityWALReader,
+                    forkingActivityWALWriter,
+                    readTrackingWALReader,
+                    readTrackingWALWriter);
+
+                activityWALReader = rcvsActivityWALReader;
+                miruWALDirector = rcvsWALDirector;
+                walEndpointsClass = RCVSWALEndpoints.class;
+            } else if (walConfig.getActivityWALType().equals("amza_rcvs")) {
+                RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
+                ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(amzaActivityWALWriter, rcvsActivityWALWriter);
+                AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+                AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
+                ForkingWALLookup forkingWALLookup = new ForkingWALLookup(amzaWALLookup, rcvsWALLookup);
                 amzaWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     amzaActivityWALReader,
                     forkingActivityWALWriter,
-                    readTrackingWALReader, readTrackingWALWriter);
+                    readTrackingWALReader,
+                    readTrackingWALWriter);
 
-                activityWALWriter = forkingActivityWALWriter;
                 activityWALReader = amzaActivityWALReader;
-                walLookup = forkingWALLookup;
                 miruWALDirector = amzaWALDirector;
                 walEndpointsClass = AmzaWALEndpoints.class;
             } else {

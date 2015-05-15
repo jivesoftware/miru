@@ -32,7 +32,6 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
-import com.jivesoftware.os.miru.api.marshall.RCVSSipCursorMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
@@ -49,6 +48,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
@@ -201,7 +201,7 @@ public class MiruPluginTestBootstrap {
             new SingleSchemaProvider(miruSchema),
             walClient,
             new RCVSSipTrackerFactory(),
-            new RCVSSipCursorMarshaller(),
+            new RCVSSipIndexMarshaller(),
             httpClientFactory,
             new MiruTempDirectoryResourceLocator(),
             termComposer,

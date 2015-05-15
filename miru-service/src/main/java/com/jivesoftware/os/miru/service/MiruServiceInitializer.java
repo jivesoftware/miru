@@ -31,6 +31,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
@@ -54,7 +55,6 @@ import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -77,7 +77,7 @@ public class MiruServiceInitializer {
         MiruSchemaProvider schemaProvider,
         MiruWALClient<C, S> walClient,
         MiruSipTrackerFactory<S> sipTrackerFactory,
-        TypeMarshaller<S> sipMarshaller,
+        MiruSipIndexMarshaller<S> sipIndexMarshaller,
         HttpClientFactory httpClientFactory,
         MiruResourceLocator resourceLocator,
         MiruTermComposer termComposer,
@@ -165,7 +165,7 @@ public class MiruServiceInitializer {
                 .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
                 .put(MiruBackingStorage.disk, onDiskChunkAllocator)
                 .build(),
-            sipMarshaller,
+            sipIndexMarshaller,
             resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),

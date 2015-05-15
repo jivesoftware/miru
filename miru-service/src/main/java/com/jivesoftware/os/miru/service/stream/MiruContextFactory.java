@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.context.MiruContextConstants;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -34,6 +35,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
@@ -65,7 +67,6 @@ import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -79,15 +80,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[] { 0 };
-    private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[] { 1 };
-
     private final TxCogs cogs;
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
     private final Map<MiruBackingStorage, MiruChunkAllocator> allocators;
-    private final TypeMarshaller<S> sipMarshaller;
+    private final MiruSipIndexMarshaller<S> sipMarshaller;
     private final MiruResourceLocator diskResourceLocator;
     private final MiruBackingStorage defaultStorage;
     private final int partitionAuthzCacheSize;
@@ -102,7 +100,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
         Map<MiruBackingStorage, MiruChunkAllocator> allocators,
-        TypeMarshaller<S> sipMarshaller,
+        MiruSipIndexMarshaller<S> sipMarshaller,
         MiruResourceLocator diskResourceLocator,
         MiruBackingStorage defaultStorage,
         int partitionAuthzCacheSize,
@@ -168,7 +166,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new MiruFilerTimeIndex(
             Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
-            new KeyedFilerProvider<>(genericFilerStore, GENERIC_FILER_TIME_INDEX_KEY),
+            new KeyedFilerProvider<>(genericFilerStore, MiruContextConstants.GENERIC_FILER_TIME_INDEX_KEY),
             new TxKeyValueStore<>(skyhookCog, cogs.getSkyHookKeySemaphores(), seed, chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
@@ -217,7 +215,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
-        MiruSipIndex<S> sipIndex = new MiruDeltaSipIndex<>(new MiruFilerSipIndex<>(new KeyedFilerProvider<>(genericFilerStore, GENERIC_FILER_SIP_INDEX_KEY),
+        MiruSipIndex<S> sipIndex = new MiruDeltaSipIndex<>(new MiruFilerSipIndex<>(
+            new KeyedFilerProvider<>(genericFilerStore, sipMarshaller.getSipIndexKey()),
             sipMarshaller));
 
         MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);

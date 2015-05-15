@@ -1,20 +1,40 @@
-package com.jivesoftware.os.miru.api.marshall;
+package com.jivesoftware.os.miru.plugin.marshaller;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.miru.api.context.MiruContextConstants;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
-import com.jivesoftware.os.rcvs.marshall.api.TypeMarshaller;
+import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
  *
  */
-public class AmzaSipCursorMarshaller implements TypeMarshaller<AmzaSipCursor> {
+public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCursor> {
 
     @Override
-    public AmzaSipCursor fromBytes(byte[] bytes) throws Exception {
+    public byte[] getSipIndexKey() {
+        return MiruContextConstants.GENERIC_FILER_AMZA_SIP_INDEX_KEY;
+    }
+
+    @Override
+    public long expectedCapacity(AmzaSipCursor cursor) {
+        int length = 4;
+        for (NamedCursor namedCursor : cursor.cursors) {
+            byte[] nameBytes = namedCursor.name.getBytes(Charsets.UTF_8);
+            length += 8 + 4 + nameBytes.length;
+        }
+        return length;
+    }
+
+    @Override
+    public AmzaSipCursor fromFiler(Filer filer) throws IOException {
+        byte[] bytes = FilerIO.readByteArray(filer, "bytes");
         ByteBuffer buf = ByteBuffer.wrap(bytes);
         List<NamedCursor> namedCursors = Lists.newArrayList();
         int numCursors = buf.getInt();
@@ -29,13 +49,9 @@ public class AmzaSipCursorMarshaller implements TypeMarshaller<AmzaSipCursor> {
     }
 
     @Override
-    public byte[] toBytes(AmzaSipCursor cursor) throws Exception {
+    public void toFiler(Filer filer, AmzaSipCursor cursor) throws IOException {
 
-        int length = 4;
-        for (NamedCursor namedCursor : cursor.cursors) {
-            byte[] nameBytes = namedCursor.name.getBytes(Charsets.UTF_8);
-            length += 8 + 4 + nameBytes.length;
-        }
+        int length = (int) expectedCapacity(cursor);
 
         ByteBuffer buf = ByteBuffer.allocate(length);
 
@@ -47,16 +63,6 @@ public class AmzaSipCursorMarshaller implements TypeMarshaller<AmzaSipCursor> {
             buf.put(nameBytes);
         }
 
-        return buf.array();
-    }
-
-    @Override
-    public AmzaSipCursor fromLexBytes(byte[] bytes) throws Exception {
-        return fromBytes(bytes);
-    }
-
-    @Override
-    public byte[] toLexBytes(AmzaSipCursor cursor) throws Exception {
-        return toBytes(cursor);
+        FilerIO.writeByteArray(filer, buf.array(), "bytes");
     }
 }

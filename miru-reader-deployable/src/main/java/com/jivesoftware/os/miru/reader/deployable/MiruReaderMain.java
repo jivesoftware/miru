@@ -36,8 +36,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.api.marshall.AmzaSipCursorMarshaller;
-import com.jivesoftware.os.miru.api.marshall.RCVSSipCursorMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
@@ -59,6 +57,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.marshaller.AmzaSipIndexMarshaller;
+import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.service.MiruService;
@@ -207,7 +207,7 @@ public class MiruReaderMain {
                     miruSchemaProvider,
                     rcvsWALClient,
                     new RCVSSipTrackerFactory(),
-                    new RCVSSipCursorMarshaller(),
+                    new RCVSSipIndexMarshaller(),
                     httpClientFactory,
                     miruResourceLocator,
                     termComposer,
@@ -225,7 +225,7 @@ public class MiruReaderMain {
                     miruSchemaProvider,
                     amzaWALClient,
                     new AmzaSipTrackerFactory(),
-                    new AmzaSipCursorMarshaller(),
+                    new AmzaSipIndexMarshaller(),
                     httpClientFactory,
                     miruResourceLocator,
                     termComposer,

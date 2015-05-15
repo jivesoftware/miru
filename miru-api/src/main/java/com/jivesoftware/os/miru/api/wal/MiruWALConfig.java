@@ -9,6 +9,6 @@ import org.merlin.config.defaults.StringDefault;
 public interface MiruWALConfig extends Config {
 
     @StringDefault("rcvs")
-    String getActivityWALType(); // rcvs or amza or fork
+    String getActivityWALType(); // one of: rcvs, rcvs_amza, amza_rcvs, amza
 
 }

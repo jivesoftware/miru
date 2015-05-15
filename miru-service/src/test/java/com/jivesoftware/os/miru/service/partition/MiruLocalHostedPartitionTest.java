@@ -37,7 +37,6 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
-import com.jivesoftware.os.miru.api.marshall.RCVSSipCursorMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
@@ -49,6 +48,7 @@ import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
@@ -211,7 +211,7 @@ public class MiruLocalHostedPartitionTest {
                 .put(MiruBackingStorage.memory, hybridContextAllocator)
                 .put(MiruBackingStorage.disk, diskContextAllocator)
                 .build(),
-            new RCVSSipCursorMarshaller(),
+            new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             defaultStorage,
             config.getPartitionAuthzCacheSize(),

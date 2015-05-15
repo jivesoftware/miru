@@ -763,11 +763,15 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     } else if (firstSip.get()) {
                         List<MiruActivityWALStatus> partitionStatus = walClient.getPartitionStatus(coord.tenantId,
                             Collections.singletonList(coord.partitionId));
-                        long currentCount = accessor.context.isPresent() ? accessor.context.get().activityIndex.lastId() : 0;
-                        long behindByCount = partitionStatus.get(0).count - currentCount;
-                        if (behindByCount > partitionRebuildIfBehindByCount) {
-                            log.info("Forcing rebuild because partition is behind by {} for {}", behindByCount, coord);
-                            forceRebuild = true;
+                        if (!partitionStatus.isEmpty()) {
+                            MiruActivityWALStatus status = partitionStatus.get(0);
+                            accessor.notifyBoundaries(status.begins, status.ends);
+                            long currentCount = accessor.context.get().activityIndex.lastId();
+                            long behindByCount = status.count - currentCount;
+                            if (behindByCount > partitionRebuildIfBehindByCount) {
+                                log.info("Forcing rebuild because partition is behind by {} for {}", behindByCount, coord);
+                                forceRebuild = true;
+                            }
                         }
                     }
 
