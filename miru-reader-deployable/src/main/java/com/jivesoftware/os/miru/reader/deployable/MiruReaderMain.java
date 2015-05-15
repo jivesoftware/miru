@@ -61,7 +61,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
-import com.jivesoftware.os.miru.reader.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
@@ -72,6 +71,9 @@ import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorInitializer;
 import com.jivesoftware.os.miru.service.partition.AmzaSipTrackerFactory;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
+import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -178,23 +180,23 @@ public class MiruReaderMain {
             final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
+            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main")); // TODO expose to conf
+                .getConnections("miru-wal", "main")); // TODO expose to conf
 
-            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
+            TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
                 .getConnections("miru-manage", "main"));  // TODO expose to conf
 
             // TODO add fall back to config
             final MiruStats miruStats = new MiruStats();
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", miruManageClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
             MiruWALClient<?, ?> walClient;
             MiruLifecyle<MiruService> miruServiceLifecyle;
             if (walConfig.getActivityWALType().equals("rcvs")) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", miruWriterClient, mapper, 10_000,
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
 
                 walClient = rcvsWALClient;
@@ -212,7 +214,7 @@ public class MiruReaderMain {
                     internExtern,
                     new SingleBitmapsProvider<>(bitmaps));
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("fork")) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", miruWriterClient, mapper, 10_000,
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
 
                 walClient = amzaWALClient;

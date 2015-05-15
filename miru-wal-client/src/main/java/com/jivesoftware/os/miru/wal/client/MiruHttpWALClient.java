@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.jive.utils.http.client.HttpResponse;
 import com.jivesoftware.os.jive.utils.http.client.rest.ResponseMapper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -67,10 +69,36 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public MiruPartitionId getLargestPartitionIdAcrossAllWriters(final MiruTenantId tenantId) throws Exception {
+    public void writeActivityAndLookup(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
+        send(client -> {
+            HttpResponse response = client.postJson(routingTenantId, pathPrefix + "/write/activities/" + tenantId.toString(), jsonActivities);
+            return responseMapper.extractResultFromResponse(response, String.class, null);
+        });
+    }
+
+    @Override
+    public void writeReadTracking(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
+        send(client -> {
+            HttpResponse response = client.postJson(routingTenantId, pathPrefix + "/write/reads/" + tenantId.toString(), jsonActivities);
+            return responseMapper.extractResultFromResponse(response, String.class, null);
+        });
+    }
+
+    @Override
+    public MiruPartitionId getLargestPartitionId(final MiruTenantId tenantId) throws Exception {
         return send(client -> {
             HttpResponse response = client.get(routingTenantId, pathPrefix + "/largestPartitionId/" + tenantId.toString());
             return responseMapper.extractResultFromResponse(response, MiruPartitionId.class, null);
+        });
+    }
+
+    @Override
+    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) {
+        return send(client -> {
+            HttpResponse response = client.get(routingTenantId, pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + writerId);
+            return responseMapper.extractResultFromResponse(response, WriterCursor.class, null);
         });
     }
 
@@ -81,6 +109,23 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             HttpResponse response = client.postJson(routingTenantId, pathPrefix + "/partition/status/" + tenantId.toString(), jsonPartitionIds);
             return (List<MiruActivityWALStatus>) responseMapper.extractResultFromResponse(response, List.class, new Class[] { MiruActivityWALStatus.class },
                 null);
+        });
+    }
+
+    @Override
+    public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return send(client -> {
+            HttpResponse response = client.get(routingTenantId, pathPrefix + "/oldest/activity/" + tenantId.toString() + "/" + partitionId.getId());
+            return responseMapper.extractResultFromResponse(response, Long.class, null);
+        });
+    }
+
+    @Override
+    public MiruVersionedActivityLookupEntry[] getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception {
+        final String jsonTimestamps = requestMapper.writeValueAsString(timestamps);
+        return send(client -> {
+            HttpResponse response = client.postJson(routingTenantId, pathPrefix + "/versioned/entries/" + tenantId.toString(), jsonTimestamps);
+            return responseMapper.extractResultFromResponse(response, MiruVersionedActivityLookupEntry[].class, null);
         });
     }
 

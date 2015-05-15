@@ -2,9 +2,10 @@ package com.jivesoftware.os.miru.sea.anomaly.deployable.region;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SampleTrawl;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.ServiceId;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  */
 // soy.sea.anomaly.page.seaAnomalyStatusPluginRegion
-public class SeaAnomalyStatusPluginRegion implements PageRegion<Optional<SeaAnomalyStatusPluginRegion.SeaAnomalyStatusPluginRegionInput>> {
+public class SeaAnomalyStatusPluginRegion implements MiruPageRegion<Optional<SeaAnomalyStatusPluginRegion.SeaAnomalyStatusPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 

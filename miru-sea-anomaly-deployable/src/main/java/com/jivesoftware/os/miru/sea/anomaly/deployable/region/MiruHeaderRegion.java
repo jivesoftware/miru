@@ -1,10 +1,11 @@
 package com.jivesoftware.os.miru.sea.anomaly.deployable.region;
 
-import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.Map;
 
 // soy.sea.anomaly.chrome.headerRegion
-public class MiruHeaderRegion implements Region<Map<String, Object>> {
+public class MiruHeaderRegion implements MiruRegion<Map<String, Object>> {
 
     private final String template;
     private final MiruSoyRenderer renderer;

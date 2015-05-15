@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
+import com.jivesoftware.os.miru.ui.MiruRegion;
+
 /**
  *
  */

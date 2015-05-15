@@ -1,10 +1,7 @@
 package com.jivesoftware.os.miru.writer.deployable;
 
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
-import org.merlin.config.defaults.ClassDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 
@@ -35,7 +32,4 @@ public interface MiruClientConfig extends Config {
     @BooleanDefault(true)
     Boolean getLiveIngress();
 
-    @ClassDefault(IllegalStateException.class)
-    <C extends Config, I extends RowColumnValueStoreInitializer<E>, E extends Exception> Class<RowColumnValueStoreProvider<C, I, E>>
-    getRowColumnValueStoreProviderClass();
 }

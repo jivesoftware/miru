@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.writer.deployable.region;
 
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.writer.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.Map;
 
 /**

@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
+import com.jivesoftware.os.miru.ui.MiruRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.Collections;
 
 // soy.miru.chrome.headerRegion

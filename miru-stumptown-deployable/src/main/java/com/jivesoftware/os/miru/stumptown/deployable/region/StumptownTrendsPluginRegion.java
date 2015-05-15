@@ -26,9 +26,10 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
-import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.stumptown.deployable.StumptownSchemaConstants;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.MinMaxDouble;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
@@ -42,7 +43,7 @@ import java.util.concurrent.TimeUnit;
  *
  */
 // soy.stumptown.page.trends§PluginRegion
-public class StumptownTrendsPluginRegion implements PageRegion<Optional<StumptownTrendsPluginRegion.TrendingPluginRegionInput>> {
+public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<StumptownTrendsPluginRegion.TrendingPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 

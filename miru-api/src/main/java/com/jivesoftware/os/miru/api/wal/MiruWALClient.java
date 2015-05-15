@@ -1,22 +1,46 @@
 package com.jivesoftware.os.miru.api.wal;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.util.Collection;
 import java.util.List;
 
 /**
- *
  * @author jonathan.colt
  */
 public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
     List<MiruTenantId> getAllTenantIds() throws Exception;
 
-    MiruPartitionId getLargestPartitionIdAcrossAllWriters(MiruTenantId tenantId) throws Exception;
+    void writeActivityAndLookup(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
+
+    void writeReadTracking(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
+
+    MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception;
+
+    WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) throws Exception;
+
+    class WriterCursor {
+
+        public int partitionId;
+        public int index;
+
+        public WriterCursor() {
+        }
+
+        public WriterCursor(int partitionId, int index) {
+            this.partitionId = partitionId;
+            this.index = index;
+        }
+    }
 
     List<MiruActivityWALStatus> getPartitionStatus(MiruTenantId tenantId, List<MiruPartitionId> partitionIds) throws Exception;
+
+    long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    MiruVersionedActivityLookupEntry[] getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception;
 
     List<MiruLookupEntry> lookupActivity(MiruTenantId tenantId, long afterTimestamp, int batchSize) throws Exception;
 

@@ -27,9 +27,10 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SeaAnomalySchemaConstants;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.MinMaxDouble;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
@@ -42,7 +43,7 @@ import java.util.concurrent.TimeUnit;
  *
  */
 // soy.sea.anomaly.page.trendsPluginRegion
-public class SeaAnomalyTrendsPluginRegion implements PageRegion<Optional<SeaAnomalyTrendsPluginRegion.TrendingPluginRegionInput>> {
+public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<SeaAnomalyTrendsPluginRegion.TrendingPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 

@@ -5,6 +5,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
+import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -20,12 +22,11 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
 import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
-import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistryInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
-import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
-import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer;
-import com.jivesoftware.os.miru.manage.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
+import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import com.jivesoftware.os.upena.main.Deployable;
 import java.io.File;
@@ -48,15 +49,15 @@ public class MiruManageServiceTest {
     private MiruPartitionId partitionId;
 
     private MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
+        .setFieldDefinitions(new MiruFieldDefinition[] {
             new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
         })
         .setPairedLatest(ImmutableMap.of(
-                "user", Arrays.asList("doc"),
-                "doc", Arrays.asList("user")))
+            "user", Arrays.asList("doc"),
+            "doc", Arrays.asList("user")))
         .setBloom(ImmutableMap.of(
-                "doc", Arrays.asList("user")))
+            "doc", Arrays.asList("user")))
         .build();
 
     @BeforeClass
@@ -77,12 +78,12 @@ public class MiruManageServiceTest {
         MiruWALClient walClient = Mockito.mock(MiruWALClient.class);
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();
-        AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig acrc = BindInterfaceToConfiguration.bindDefault(
-            AmzaClusterRegistryInitializer.AmzaClusterRegistryConfig.class);
+        MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new AmzaClusterRegistryInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc);
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc, rowsChanged -> {
+        });
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
             new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
@@ -97,7 +98,7 @@ public class MiruManageServiceTest {
 
         MiruWALClient miruWALClient = Mockito.mock(MiruWALClient.class);
         Mockito.when(miruWALClient.getAllTenantIds()).thenReturn(Arrays.asList(tenantId));
-        Mockito.when(miruWALClient.getLargestPartitionIdAcrossAllWriters(Mockito.<MiruTenantId>any())).thenReturn(partitionId);
+        Mockito.when(miruWALClient.getLargestPartitionId(Mockito.<MiruTenantId>any())).thenReturn(partitionId);
 
         Mockito.when(miruWALClient.getPartitionStatus(Mockito.<MiruTenantId>any(), Mockito.anyList()))
             .thenReturn(Arrays.asList(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0))));

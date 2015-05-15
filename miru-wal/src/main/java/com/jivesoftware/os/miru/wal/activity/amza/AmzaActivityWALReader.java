@@ -17,18 +17,17 @@ import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
-import com.jivesoftware.os.miru.wal.partition.MiruPartitionCursor;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
@@ -51,6 +50,12 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         String walName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
         RegionName activityRegionName = new RegionName(false, walName, walName);
         return amzaWALUtil.getRegion(activityRegionName);
+    }
+
+    private boolean hasWALRegion(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        String walName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
+        RegionName activityRegionName = new RegionName(false, walName, walName);
+        return amzaWALUtil.hasRegion(activityRegionName);
     }
 
     private void mergeCursors(Map<String, NamedCursor> cursorsByName, TakeCursors takeCursors) {
@@ -129,7 +134,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     @Override
-    public MiruPartitionCursor getCursorForWriterId(MiruTenantId tenantId, int writerId, int desiredPartitionCapacity) throws Exception {
+    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) throws Exception {
         LOG.inc("getCursorForWriterId");
         LOG.inc("getCursorForWriterId>" + writerId, tenantId.toString());
         MiruPartitionId partitionId = MiruPartitionId.of(0);
@@ -160,14 +165,34 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         }
 
         if (latestBoundaryActivity == null) {
-            return new MiruPartitionCursor(MiruPartitionId.of(0),
-                new AtomicInteger(0),
-                desiredPartitionCapacity);
+            return new WriterCursor(0, 0);
         } else {
-            return new MiruPartitionCursor(MiruPartitionId.of(latestBoundaryActivity.getPartitionId()),
-                new AtomicInteger(latestBoundaryActivity.index),
-                desiredPartitionCapacity);
+            return new WriterCursor(latestBoundaryActivity.getPartitionId(), latestBoundaryActivity.index);
         }
+    }
+
+    @Override
+    public MiruPartitionId largestPartitionId(MiruTenantId tenantId) throws Exception {
+        LOG.inc("largestPartitionId");
+        MiruPartitionId partitionId = MiruPartitionId.of(0);
+        int largestRunOfGaps = 10; // TODO expose to config?
+        MiruPartitionId latestPartitionId = partitionId;
+        int gaps = 0;
+        while (true) {
+            boolean got = hasWALRegion(tenantId, partitionId);
+            if (got) {
+                gaps = 0;
+                latestPartitionId = partitionId;
+            } else {
+                gaps++;
+                if (gaps > largestRunOfGaps) {
+                    break;
+                }
+            }
+            partitionId = partitionId.next();
+        }
+
+        return latestPartitionId;
     }
 
     @Override

@@ -15,14 +15,18 @@
         <module>inheritance-poms</module>
         <module>miru-service</module>
         <module>miru-api</module>
+        <module>miru-amza</module>
+        <module>miru-ui</module>
         <module>miru-reader</module>
         <module>miru-logappender</module>
         <module>miru-cluster-client</module>
         <module>miru-cluster</module>
         <module>miru-wal</module>
+        <module>miru-writer</module>
         <module>miru-plugin</module>
         <module>miru-reco</module>
         <module>miru-reader-deployable</module>
+        <module>miru-wal-deployable</module>
         <module>miru-writer-deployable</module>
         <module>miru-manage-deployable</module>
         <module>miru-tools-deployable</module>

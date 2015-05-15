@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruHostsRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 
 public class MiruManageInitializer {
 

@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
@@ -22,8 +23,8 @@ import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.RangeMinMax;
-import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
+import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -45,27 +46,27 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final MiruWALLookup walLookup;
     private final MiruActivityWALReader<C, S> activityWALReader;
     private final MiruActivityWALWriter activityWALWriter;
-    private final MiruPartitionIdProvider partitionIdProvider;
     private final MiruReadTrackingWALReader readTrackingWALReader;
+    private final MiruReadTrackingWALWriter readTrackingWALWriter;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
     public MiruWALDirector(MiruWALLookup walLookup,
         MiruActivityWALReader<C, S> activityWALReader,
         MiruActivityWALWriter activityWALWriter,
-        MiruPartitionIdProvider partitionIdProvider,
-        MiruReadTrackingWALReader readTrackingWALReader) {
+        MiruReadTrackingWALReader readTrackingWALReader,
+        MiruReadTrackingWALWriter readTrackingWALWriter) {
         this.walLookup = walLookup;
         this.activityWALReader = activityWALReader;
         this.activityWALWriter = activityWALWriter;
-        this.partitionIdProvider = partitionIdProvider;
         this.readTrackingWALReader = readTrackingWALReader;
+        this.readTrackingWALWriter = readTrackingWALWriter;
     }
 
     public void repairBoundaries() throws Exception {
         List<MiruTenantId> tenantIds = walLookup.allTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
-            MiruPartitionId latestPartitionId = partitionIdProvider.getLargestPartitionIdAcrossAllWriters(tenantId);
+            MiruPartitionId latestPartitionId = getLargestPartitionId(tenantId);
             if (latestPartitionId != null) {
                 for (MiruPartitionId partitionId = latestPartitionId.prev(); partitionId != null; partitionId = partitionId.prev()) {
                     MiruActivityWALStatus status = activityWALReader.getStatus(tenantId, partitionId);
@@ -102,7 +103,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             });
 
             int count = 0;
-            MiruPartitionId latestPartitionId = partitionIdProvider.getLargestPartitionIdAcrossAllWriters(tenantId);
+            MiruPartitionId latestPartitionId = getLargestPartitionId(tenantId);
             for (MiruPartitionId checkPartitionId = latestPartitionId; checkPartitionId != null; checkPartitionId = checkPartitionId.prev()) {
                 if (!found.contains(checkPartitionId) || broken.contains(checkPartitionId)) {
                     count++;
@@ -136,13 +137,13 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         long afterTimestamp = packTimestamp(TimeUnit.DAYS.toMillis(1));
         final List<MiruActivityWALColumnKey> badKeys = Lists.newArrayList();
         activityWALReader.stream(tenantId, partitionId, null, 10_000, (collisionId, partitionedActivity, timestamp) -> {
-                if (partitionedActivity.timestamp > afterTimestamp && partitionedActivity.type.isActivityType()) {
-                    LOG.warn("Sanitizer is removing activity " + collisionId + "/" + partitionedActivity.timestamp + " from "
-                        + tenantId + "/" + partitionId);
-                    badKeys.add(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(), collisionId));
-                }
-                return partitionedActivity.type.isActivityType();
-            });
+            if (partitionedActivity.timestamp > afterTimestamp && partitionedActivity.type.isActivityType()) {
+                LOG.warn("Sanitizer is removing activity " + collisionId + "/" + partitionedActivity.timestamp + " from "
+                    + tenantId + "/" + partitionId);
+                badKeys.add(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(), collisionId));
+            }
+            return partitionedActivity.type.isActivityType();
+        });
         activityWALReader.delete(tenantId, partitionId, badKeys);
     }
 
@@ -167,8 +168,24 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     @Override
-    public MiruPartitionId getLargestPartitionIdAcrossAllWriters(MiruTenantId tenantId) throws Exception {
-        return partitionIdProvider.getLargestPartitionIdAcrossAllWriters(tenantId);
+    public void writeActivityAndLookup(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        activityWALWriter.write(tenantId, partitionedActivities);
+        walLookup.add(tenantId, partitionedActivities);
+    }
+
+    @Override
+    public void writeReadTracking(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        readTrackingWALWriter.write(tenantId, partitionedActivities);
+    }
+
+    @Override
+    public MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception {
+        return activityWALReader.largestPartitionId(tenantId);
+    }
+
+    @Override
+    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) throws Exception {
+        return activityWALReader.getCursorForWriterId(tenantId, writerId);
     }
 
     @Override
@@ -178,6 +195,16 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             statuses.add(activityWALReader.getStatus(tenantId, partitionId));
         }
         return statuses;
+    }
+
+    @Override
+    public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return activityWALReader.oldestActivityClockTimestamp(tenantId, partitionId);
+    }
+
+    @Override
+    public MiruVersionedActivityLookupEntry[] getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception {
+        return walLookup.getVersionedEntries(tenantId, timestamps);
     }
 
     @Override

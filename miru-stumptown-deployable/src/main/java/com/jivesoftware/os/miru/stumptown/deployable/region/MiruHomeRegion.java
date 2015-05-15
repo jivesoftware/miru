@@ -1,14 +1,15 @@
 package com.jivesoftware.os.miru.stumptown.deployable.region;
 
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruHomeRegion.HomeInput;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.Map;
 
 /**
  *
  */
-public class MiruHomeRegion implements PageRegion<HomeInput> {
+public class MiruHomeRegion implements MiruPageRegion<HomeInput> {
 
     private final String template;
     private final MiruSoyRenderer renderer;

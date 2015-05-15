@@ -34,10 +34,6 @@
             <artifactId>jackson-datatype-guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.rcvs</groupId>
-            <artifactId>row-column-value-store-api</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>base</artifactId>
         </dependency>
@@ -53,12 +49,33 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-ui</artifactId>
+            <version>0.470-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-amza</artifactId>
+            <version>0.470-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-logappender</artifactId>
             <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-writer</artifactId>
+            <version>0.470-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
+            <version>0.470-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-wal-client</artifactId>
             <version>0.470-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -125,20 +142,8 @@
             <artifactId>http-client</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.template</groupId>
-            <artifactId>soy</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>server-http-jetty-jersey</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
@@ -151,6 +156,11 @@
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
             <artifactId>amza-shared</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.rcvs</groupId>
+            <artifactId>row-column-value-store-api</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>

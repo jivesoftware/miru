@@ -50,6 +50,10 @@ public class AmzaWALUtil {
         return amzaService.getRegion(regionName);
     }
 
+    public boolean hasRegion(RegionName regionName) throws Exception {
+        return amzaService.hasRegion(regionName);
+    }
+
     public boolean replicate(RegionName regionName, MemoryWALUpdates updates, int requireNReplicas) throws Exception {
         return amzaService.replicate(regionName, updates, requireNReplicas);
     }

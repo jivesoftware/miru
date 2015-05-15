@@ -1,10 +1,11 @@
 package com.jivesoftware.os.miru.stumptown.deployable.region;
 
-import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.Map;
 
 // soy.stumptown.chrome.headerRegion
-public class MiruHeaderRegion implements Region<Map<String, ?>> {
+public class MiruHeaderRegion implements MiruRegion<Map<String, ?>> {
 
     private final String template;
     private final MiruSoyRenderer renderer;

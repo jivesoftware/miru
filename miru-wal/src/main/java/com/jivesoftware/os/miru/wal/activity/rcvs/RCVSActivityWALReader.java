@@ -7,17 +7,16 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.partition.MiruPartitionCursor;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /** @author jonathan */
@@ -267,38 +266,70 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     }
 
     @Override
-    public MiruPartitionCursor getCursorForWriterId(MiruTenantId tenantId, final int writerId, int desiredPartitionCapacity) throws Exception {
+    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, final int writerId) throws Exception {
         LOG.inc("getCursorForWriterId");
         LOG.inc("getCursorForWriterId>" + writerId, tenantId.toString());
         int partitionId = 0;
-        int largestRunOfGaps = 10; // TODO expose to config?
+        int partitionsPerBatch = 100; //TODO config?
         MiruPartitionedActivity latestBoundaryActivity = null;
-        int gaps = 0;
         while (true) {
-            MiruPartitionedActivity got = activityWAL.get(tenantId,
-                new MiruActivityWALRow(partitionId),
-                new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId),
-                null, null);
-            if (got != null) {
-                gaps = 0;
-                latestBoundaryActivity = got;
-            } else {
-                gaps++;
-                if (gaps > largestRunOfGaps) {
-                    break;
+            List<MiruActivityWALRow> rows = Lists.newArrayListWithCapacity(partitionsPerBatch);
+            for (int i = partitionId; i < partitionId + partitionsPerBatch; i++) {
+                rows.add(new MiruActivityWALRow(i));
+            }
+            List<MiruPartitionedActivity> batch = activityWAL.multiRowGet(tenantId, rows,
+                new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId), null, null);
+            boolean found = false;
+            for (MiruPartitionedActivity got : batch) {
+                if (got != null) {
+                    latestBoundaryActivity = got;
+                    found = true;
                 }
             }
-            partitionId++;
+            if (!found) {
+                break;
+            }
+            partitionId += partitionsPerBatch;
         }
 
         if (latestBoundaryActivity == null) {
-            return new MiruPartitionCursor(MiruPartitionId.of(0),
-                new AtomicInteger(0),
-                desiredPartitionCapacity);
+            return new WriterCursor(0, 0);
         } else {
-            return new MiruPartitionCursor(MiruPartitionId.of(latestBoundaryActivity.getPartitionId()),
-                new AtomicInteger(latestBoundaryActivity.index),
-                desiredPartitionCapacity);
+            return new WriterCursor(latestBoundaryActivity.getPartitionId(), latestBoundaryActivity.index);
+        }
+    }
+
+    @Override
+    public MiruPartitionId largestPartitionId(MiruTenantId tenantId) throws Exception {
+        LOG.inc("largestPartitionId");
+        long writerId = 1L; //TODO this is so bogus
+        int partitionId = 0;
+        int partitionsPerBatch = 100; //TODO config?
+        MiruPartitionedActivity latestBoundaryActivity = null;
+        while (true) {
+            List<MiruActivityWALRow> rows = Lists.newArrayListWithCapacity(partitionsPerBatch);
+            for (int i = partitionId; i < partitionId + partitionsPerBatch; i++) {
+                rows.add(new MiruActivityWALRow(i));
+            }
+            List<MiruPartitionedActivity> batch = activityWAL.multiRowGet(tenantId, rows,
+                new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), writerId), null, null);
+            boolean found = false;
+            for (MiruPartitionedActivity got : batch) {
+                if (got != null) {
+                    latestBoundaryActivity = got;
+                    found = true;
+                }
+            }
+            if (!found) {
+                break;
+            }
+            partitionId += partitionsPerBatch;
+        }
+
+        if (latestBoundaryActivity == null) {
+            return MiruPartitionId.of(0);
+        } else {
+            return latestBoundaryActivity.partitionId;
         }
     }
 

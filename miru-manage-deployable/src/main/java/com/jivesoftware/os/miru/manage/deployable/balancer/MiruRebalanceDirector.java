@@ -78,7 +78,7 @@ public class MiruRebalanceDirector {
         for (MiruTenantId tenantId : tenantIds) {
             int numberOfReplicas = clusterRegistry.getNumberOfReplicas(tenantId);
             List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
-            MiruPartitionId currentPartitionId = miruWALClient.getLargestPartitionIdAcrossAllWriters(tenantId);
+            MiruPartitionId currentPartitionId = miruWALClient.getLargestPartitionId(tenantId);
             Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> replicaTable = extractPartitions(
                 selectHostsStrategy.isCurrentPartitionOnly(), tenantId, partitionsForTenant, currentPartitionId);
             for (Table.Cell<MiruTenantId, MiruPartitionId, List<MiruPartition>> cell : replicaTable.cellSet()) {

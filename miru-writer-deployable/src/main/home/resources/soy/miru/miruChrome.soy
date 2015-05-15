@@ -86,26 +86,16 @@
 {/template}
 
 /**
- *
+ * @param plugins
  */
 {template .nav}
     <div style="margin-bottom:20px;">
-        <a class="list-group-item" href="/miru/writer/lookup">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            Activity Lookup
-        </a>
-        <a class="list-group-item" href="/miru/writer/wal/activity">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            Activity WAL
-        </a>
-        <a class="list-group-item" href="/miru/writer/wal/read">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            Read WAL
-        </a>
-        <a class="list-group-item" href="/miru/writer/repair">
-            <span class="glyphicon glyphicon-wrench"></span>{sp}
-            Repair
-        </a>
+        {foreach $plugin in $plugins}
+            <a class="list-group-item" href="{$plugin.path}">
+                <span class="glyphicon glyphicon-{$plugin.glyphicon}"></span>{sp}
+                {$plugin.name}
+            </a>
+        {/foreach}
     </div>
 {/template}
 
