@@ -34,7 +34,7 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
-    private final MiruWALClient miruWALClient;
+    private final MiruWALClient<?, ?> miruWALClient;
 
     public MiruBalancerRegion(String template,
         MiruSoyRenderer renderer,
