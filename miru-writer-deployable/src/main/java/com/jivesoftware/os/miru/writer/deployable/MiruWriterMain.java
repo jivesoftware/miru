@@ -207,11 +207,11 @@ public class MiruWriterMain {
 
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruWALClient<?, ?> walClient;
-            if (walConfig.getActivityWALType().equals("rcvs")) {
+            if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
                 walClient = rcvsWALClient;
-            } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("fork")) {
+            } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
                 walClient = amzaWALClient;
