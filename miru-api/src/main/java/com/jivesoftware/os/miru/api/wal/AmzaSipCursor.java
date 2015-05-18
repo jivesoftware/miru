@@ -14,8 +14,6 @@ import java.util.List;
  */
 public class AmzaSipCursor implements MiruSipCursor<AmzaSipCursor> {
 
-    public static final AmzaSipCursor INITIAL = new AmzaSipCursor(Collections.emptyList());
-
     public final List<NamedCursor> cursors;
 
     @JsonCreator

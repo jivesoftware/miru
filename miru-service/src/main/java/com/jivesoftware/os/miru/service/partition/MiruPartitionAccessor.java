@@ -179,6 +179,9 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
     }
 
     boolean setSip(S sip) throws IOException {
+        if (sip == null) {
+            throw new IllegalArgumentException("Sip cannot be null");
+        }
         return (context.isPresent() && context.get().sipIndex.setSip(sip));
     }
 

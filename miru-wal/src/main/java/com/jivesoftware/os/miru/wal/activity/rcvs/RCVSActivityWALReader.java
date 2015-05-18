@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -123,7 +122,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
             sipCursor = new RCVSSipCursor(lastActivity.type.getSort(), lastActivity.clockTimestamp, lastActivity.timestamp, false);
         }
 
-        return new RCVSCursor(nextSort, nextTimestamp, endOfStream, Optional.fromNullable(sipCursor));
+        return new RCVSCursor(nextSort, nextTimestamp, endOfStream, sipCursor);
     }
 
     @Override

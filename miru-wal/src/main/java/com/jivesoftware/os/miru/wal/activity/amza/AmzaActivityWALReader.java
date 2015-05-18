@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.wal.activity.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.service.AmzaRegion;
@@ -101,15 +100,15 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         }
 
         Map<String, NamedCursor> cursorsByName = cursor != null ? extractCursors(cursor.cursors) : Maps.newHashMap();
-        Map<String, NamedCursor> sipCursorsByName = cursor != null && cursor.sipCursor.isPresent()
-            ? extractCursors(cursor.sipCursor.get().cursors) : Maps.newHashMap();
+        Map<String, NamedCursor> sipCursorsByName = cursor != null && cursor.sipCursor != null
+            ? extractCursors(cursor.sipCursor.cursors) : Maps.newHashMap();
 
         TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, region, cursorsByName);
 
         mergeCursors(cursorsByName, takeCursors);
         mergeCursors(sipCursorsByName, takeCursors);
 
-        return new AmzaCursor(cursorsByName.values(), Optional.of(new AmzaSipCursor(sipCursorsByName.values())));
+        return new AmzaCursor(cursorsByName.values(), new AmzaSipCursor(sipCursorsByName.values()));
     }
 
     @Override

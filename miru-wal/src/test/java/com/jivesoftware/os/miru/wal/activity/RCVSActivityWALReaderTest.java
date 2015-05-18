@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.wal.activity;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -48,7 +47,7 @@ public class RCVSActivityWALReaderTest {
         }
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
-        RCVSCursor cursor = new RCVSCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), startingTimestamp, false, Optional.<RCVSSipCursor>absent());
+        RCVSCursor cursor = new RCVSCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), startingTimestamp, false, null);
         activityWALReader.stream(tenantId, partitionId, cursor, batchSize,
             (collisionId, partitionedActivity, timestamp) -> {
                 timestamps.add(collisionId);

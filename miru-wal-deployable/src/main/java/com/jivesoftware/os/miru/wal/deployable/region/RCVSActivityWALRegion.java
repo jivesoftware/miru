@@ -101,7 +101,7 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                         } else {
                             MiruWALClient.StreamBatch<MiruWALEntry, RCVSCursor> gopped = miruWALDirector.getActivity(tenantId,
                                 partitionId,
-                                new RCVSCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, false, Optional.<RCVSSipCursor>absent()),
+                                new RCVSCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, false, null),
                                 limit);
                             walActivities = Lists.transform(gopped.batch,
                                 input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));

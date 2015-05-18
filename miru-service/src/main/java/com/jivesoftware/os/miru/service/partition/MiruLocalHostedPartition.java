@@ -691,8 +691,8 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         rebuildIndexExecutor, mergeExecutor);
                     accessor.merge(mergeChits, mergeExecutor);
                     accessor.setRebuildCursor(nextCursor);
-                    if (nextCursor.getSipCursor().isPresent()) {
-                        accessor.setSip(nextCursor.getSipCursor().get());
+                    if (nextCursor.getSipCursor() != null) {
+                        accessor.setSip(nextCursor.getSipCursor());
                     }
 
                     log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
