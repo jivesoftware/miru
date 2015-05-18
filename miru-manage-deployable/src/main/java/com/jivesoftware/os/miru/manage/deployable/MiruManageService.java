@@ -8,7 +8,8 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruFrameRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
-import com.jivesoftware.os.miru.manage.deployable.region.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.List;
 
 /**

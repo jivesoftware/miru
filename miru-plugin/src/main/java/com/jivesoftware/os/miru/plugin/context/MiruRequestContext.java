@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.plugin.context;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
@@ -16,7 +17,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 /**
  * @author jonathan
  */
-public interface MiruRequestContext<BM> {
+public interface MiruRequestContext<BM, S extends MiruSipCursor<S>> {
 
     MiruSchema getSchema();
 
@@ -28,7 +29,7 @@ public interface MiruRequestContext<BM> {
 
     MiruFieldIndexProvider<BM> getFieldIndexProvider();
 
-    MiruSipIndex getSipIndex();
+    MiruSipIndex<S> getSipIndex();
 
     MiruAuthzIndex<BM> getAuthzIndex();
 

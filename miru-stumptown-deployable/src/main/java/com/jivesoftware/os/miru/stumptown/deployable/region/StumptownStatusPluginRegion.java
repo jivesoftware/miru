@@ -3,8 +3,9 @@ package com.jivesoftware.os.miru.stumptown.deployable.region;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.stumptown.deployable.LogMill;
-import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.stumptown.deployable.ServiceId;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  */
 // soy.stumptown.page.stumptownStatusPluginRegion
-public class StumptownStatusPluginRegion implements PageRegion<Optional<StumptownStatusPluginRegion.StumptownStatusPluginRegionInput>> {
+public class StumptownStatusPluginRegion implements MiruPageRegion<Optional<StumptownStatusPluginRegion.StumptownStatusPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 

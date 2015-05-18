@@ -7,9 +7,9 @@ import com.jivesoftware.os.miru.service.partition.cluster.MiruTenantTopology;
 
 /**
  * To expect a tenant is to consider it active, meaning its partitions are eligible to wake and serve activity.
- * <p/>
+ * <p>
  * To host a tenant means at least one partition for the tenant is expected to be replicated.
- * <p/>
+ * <p>
  * The topology for a tenant is the complete breakdown of hosts and partitions.
  */
 public interface MiruExpectedTenants {

@@ -4,6 +4,7 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
@@ -23,14 +24,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @param <BM>
  * @author jonathan
  */
-public class MiruContext<BM> implements MiruRequestContext<BM> {
+public class MiruContext<BM, S extends MiruSipCursor<S>> implements MiruRequestContext<BM, S> {
 
     public final MiruSchema schema;
     public final MiruTermComposer termComposer;
     public final MiruTimeIndex timeIndex;
     public final MiruActivityIndex activityIndex;
     public final MiruFieldIndexProvider<BM> fieldIndexProvider;
-    public final MiruSipIndex sipIndex;
+    public final MiruSipIndex<S> sipIndex;
     public final MiruAuthzIndex<BM> authzIndex;
     public final MiruRemovalIndex<BM> removalIndex;
     public final MiruUnreadTrackingIndex<BM> unreadTrackingIndex;
@@ -46,7 +47,8 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
         MiruTimeIndex timeIndex,
         MiruActivityIndex activityIndex,
         MiruFieldIndexProvider<BM> fieldIndexProvider,
-        MiruSipIndex sipIndex, MiruAuthzIndex<BM> authzIndex,
+        MiruSipIndex<S> sipIndex,
+        MiruAuthzIndex<BM> authzIndex,
         MiruRemovalIndex<BM> removalIndex,
         MiruUnreadTrackingIndex<BM> unreadTrackingIndex,
         MiruInboxIndex<BM> inboxIndex,
@@ -94,7 +96,7 @@ public class MiruContext<BM> implements MiruRequestContext<BM> {
     }
 
     @Override
-    public MiruSipIndex getSipIndex() {
+    public MiruSipIndex<S> getSipIndex() {
         return sipIndex;
     }
 

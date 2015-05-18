@@ -43,9 +43,9 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
     }
 
     @Override
-    public <BM> MiruPartitionResponse<StumptownAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<StumptownReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<StumptownAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<StumptownReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM> context = handle.getRequestContext();
+        MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run

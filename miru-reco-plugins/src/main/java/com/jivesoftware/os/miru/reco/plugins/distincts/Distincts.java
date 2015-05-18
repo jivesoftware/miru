@@ -35,7 +35,7 @@ public class Distincts {
     }
 
     public <BM> DistinctsAnswer gather(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> requestContext,
+        MiruRequestContext<BM, ?> requestContext,
         final MiruRequest<DistinctsQuery> request,
         final Optional<DistinctsReport> lastReport,
         MiruSolutionLog solutionLog)

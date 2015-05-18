@@ -47,9 +47,9 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
     }
 
     @Override
-    public <BM> MiruPartitionResponse<MetricsAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<MetricsReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<MetricsAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<MetricsReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM> context = handle.getRequestContext();
+        MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run

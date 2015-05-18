@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.hash.Hashing;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.wal.MiruCursor;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
@@ -21,12 +23,13 @@ import java.util.concurrent.ScheduledExecutorService;
 /**
  * @author jonathan
  */
-public class MiruLocalPartitionFactory {
+public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
     private final MiruStats miruStats;
     private final MiruServiceConfig config;
-    private final MiruContextFactory miruContextFactory;
-    private final MiruWALClient walClient;
+    private final MiruContextFactory<S> miruContextFactory;
+    private final MiruSipTrackerFactory<S> sipTrackerFactory;
+    private final MiruWALClient<C, S> walClient;
     private final MiruPartitionHeartbeatHandler partitionEventHandler;
     private final MiruRebuildDirector rebuildDirector;
     private final ScheduledExecutorService scheduledBoostrapExecutor;
@@ -41,8 +44,9 @@ public class MiruLocalPartitionFactory {
 
     public MiruLocalPartitionFactory(MiruStats miruStats,
         MiruServiceConfig config,
-        MiruContextFactory miruContextFactory,
-        MiruWALClient walClient,
+        MiruContextFactory<S> miruContextFactory,
+        MiruSipTrackerFactory<S> sipTrackerFactory,
+        MiruWALClient<C, S> walClient,
         MiruPartitionHeartbeatHandler partitionEventHandler,
         MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBoostrapExecutor,
@@ -58,6 +62,7 @@ public class MiruLocalPartitionFactory {
         this.miruStats = miruStats;
         this.config = config;
         this.miruContextFactory = miruContextFactory;
+        this.sipTrackerFactory = sipTrackerFactory;
         this.walClient = walClient;
         this.partitionEventHandler = partitionEventHandler;
         this.rebuildDirector = rebuildDirector;
@@ -72,12 +77,13 @@ public class MiruLocalPartitionFactory {
         this.mergeChits = mergeChits;
     }
 
-    public <BM> MiruLocalHostedPartition<BM> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, long expireAfterMillis) throws Exception {
+    public <BM> MiruLocalHostedPartition<BM, C, S> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, long expireAfterMillis) throws Exception {
         return new MiruLocalHostedPartition<>(miruStats,
             bitmaps,
             coord,
             expireAfterMillis > 0 ? System.currentTimeMillis() + expireAfterMillis : -1,
             miruContextFactory,
+            sipTrackerFactory,
             walClient,
             partitionEventHandler,
             rebuildDirector,
@@ -90,11 +96,11 @@ public class MiruLocalPartitionFactory {
             rebuildIndexerThreads,
             indexRepairs,
             new MiruIndexer<>(
-                new MiruIndexAuthz<BM>(),
-                new MiruIndexFieldValues<BM>(),
+                new MiruIndexAuthz<>(),
+                new MiruIndexFieldValues<>(),
                 new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
-                new MiruIndexLatest<BM>(),
-                new MiruIndexPairedLatest<BM>()),
+                new MiruIndexLatest<>(),
+                new MiruIndexPairedLatest<>()),
             config.getPartitionWakeOnIndex(),
             config.getPartitionRebuildIfBehindByCount(),
             config.getPartitionRebuildBatchSize(),
@@ -108,7 +114,7 @@ public class MiruLocalPartitionFactory {
                 config.getPartitionMigrationWaitInMillis()));
     }
 
-    public void prioritizeRebuild(MiruLocalHostedPartition<?> partition) {
+    public void prioritizeRebuild(MiruLocalHostedPartition<?, ?, ?> partition) {
         rebuildDirector.prioritize(partition);
     }
 }

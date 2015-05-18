@@ -41,7 +41,7 @@ public class AggregateCounts {
     }
 
     public <BM> AggregateCountsAnswer getAggregateCounts(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> requestContext,
+        MiruRequestContext<BM, ?> requestContext,
         MiruRequest<AggregateCountsQuery> request,
         Optional<AggregateCountsReport> lastReport,
         BM answer,

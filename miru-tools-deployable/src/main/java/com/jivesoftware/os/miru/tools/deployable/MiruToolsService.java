@@ -4,8 +4,9 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruFrameRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruHeaderRegion;
-import com.jivesoftware.os.miru.tools.deployable.region.MiruPageRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruToolsPlugin;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.List;
 
 /**

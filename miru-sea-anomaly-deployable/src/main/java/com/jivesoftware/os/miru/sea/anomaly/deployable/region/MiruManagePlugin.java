@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.sea.anomaly.deployable.region;
 
+import com.jivesoftware.os.miru.ui.MiruRegion;
+
 /**
  *
  */
@@ -9,9 +11,9 @@ public class MiruManagePlugin {
     public final String name;
     public final String path;
     public final Class<?> endpointsClass;
-    public final Region<?> region;
+    public final MiruRegion<?> region;
 
-    public MiruManagePlugin(String glyphicon, String name, String path, Class<?> endpointsClass, Region<?> region) {
+    public MiruManagePlugin(String glyphicon, String name, String path, Class<?> endpointsClass, MiruRegion<?> region) {
         this.glyphicon = glyphicon;
         this.name = name;
         this.path = path;

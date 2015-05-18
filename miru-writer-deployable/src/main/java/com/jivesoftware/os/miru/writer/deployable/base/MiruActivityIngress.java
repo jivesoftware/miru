@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
@@ -43,7 +44,7 @@ public class MiruActivityIngress {
     private final MiruPartitioner miruPartitioner;
 
     private final Map<MiruTenantId, Boolean> latestAlignmentCache;
-    private final Cache<TenantAndPartitionKey, MiruReplicaHosts> replicaCache;
+    private final Cache<TenantAndPartition, MiruReplicaHosts> replicaCache;
 
     public MiruActivityIngress(
         ExecutorService sendActivitiesToHostsThreadPool,
@@ -86,7 +87,7 @@ public class MiruActivityIngress {
             }
 
             for (final MiruPartitionId partitionId : activitiesPerPartition.keySet()) {
-                TenantAndPartitionKey key = new TenantAndPartitionKey(tenantId, partitionId);
+                TenantAndPartition key = new TenantAndPartition(tenantId, partitionId);
                 MiruReplicaHosts replicaHosts = replicaCache.getIfPresent(key);
 
                 if (replicaHosts == null) {
@@ -186,7 +187,7 @@ public class MiruActivityIngress {
 
                         // invalidate the replica cache since this host might be sick
                         //TODO also need a blacklist
-                        replicaCache.invalidate(new TenantAndPartitionKey(tenantId, coord.partitionId));
+                        replicaCache.invalidate(new TenantAndPartition(tenantId, coord.partitionId));
                     }
                 });
                 futures.add(future);
@@ -225,41 +226,6 @@ public class MiruActivityIngress {
             }
         } else {
             LOG.inc("alignWriters>skipped", tenantId.toString());
-        }
-    }
-
-    private static class TenantAndPartitionKey {
-
-        private final MiruTenantId tenantId;
-        private final MiruPartitionId partitionId;
-
-        private TenantAndPartitionKey(MiruTenantId tenantId, MiruPartitionId partitionId) {
-            this.tenantId = tenantId;
-            this.partitionId = partitionId;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            TenantAndPartitionKey that = (TenantAndPartitionKey) o;
-
-            if (partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null) {
-                return false;
-            }
-            return !(tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = tenantId != null ? tenantId.hashCode() : 0;
-            result = 31 * result + (partitionId != null ? partitionId.hashCode() : 0);
-            return result;
         }
     }
 }

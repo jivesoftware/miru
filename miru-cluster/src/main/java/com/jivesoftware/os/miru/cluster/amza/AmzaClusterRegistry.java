@@ -17,7 +17,6 @@ import com.jivesoftware.os.amza.service.storage.RegionProvider;
 import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.RegionName;
 import com.jivesoftware.os.amza.shared.RegionProperties;
-import com.jivesoftware.os.amza.shared.RingHost;
 import com.jivesoftware.os.amza.shared.RowChanges;
 import com.jivesoftware.os.amza.shared.RowsChanged;
 import com.jivesoftware.os.amza.shared.TakeCursors;
@@ -201,15 +200,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     private AmzaRegion createRegionIfAbsent(String regionName) throws Exception {
-        if (!ringInitialized.get()) {
-            List<RingHost> ring = amzaService.getAmzaRing().getRing(AMZA_RING_NAME);
-            int desiredRingSize = amzaService.getAmzaRing().getRing("system").size();
-            if (ring.size() < desiredRingSize) {
-                amzaService.getAmzaRing().buildRandomSubRing(AMZA_RING_NAME, desiredRingSize);
-            }
-            ringInitialized.set(true);
-        }
-
+        amzaService.getAmzaRing().ensureMaximalSubRing(AMZA_RING_NAME);
         return amzaService.createRegionIfAbsent(new RegionName(false, AMZA_RING_NAME, regionName),
             new RegionProperties(amzaStorageDescriptor, replicationFactor, takeFromFactor, false)
         );

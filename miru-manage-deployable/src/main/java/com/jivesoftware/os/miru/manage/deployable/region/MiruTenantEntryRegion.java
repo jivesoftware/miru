@@ -11,9 +11,10 @@ import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruTenantConfigFields;
-import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionBean;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionCoordBean;
+import com.jivesoftware.os.miru.ui.MiruRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
-    private final MiruWALClient miruWALClient;
+    private final MiruWALClient<?, ?> miruWALClient;
 
     public MiruTenantEntryRegion(String template,
         MiruSoyRenderer renderer,
@@ -64,7 +65,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         try {
             List<MiruTopologyStatus> statusForTenant = clusterRegistry.getTopologyStatusForTenant(tenant);
 
-            MiruPartitionId latestPartitionId = miruWALClient.getLargestPartitionIdAcrossAllWriters(tenant);
+            MiruPartitionId latestPartitionId = miruWALClient.getLargestPartitionId(tenant);
 
             if (latestPartitionId != null) {
                 List<MiruPartitionId> partitionIds = new ArrayList<>();

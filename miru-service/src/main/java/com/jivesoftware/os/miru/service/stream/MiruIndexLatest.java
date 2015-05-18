@@ -22,7 +22,7 @@ public class MiruIndexLatest<BM> {
 
     private final MiruTermId fieldAggregateTermId = new MiruIndexUtil().makeLatestTerm();
 
-    public List<Future<?>> index(final MiruContext<BM> context,
+    public List<Future<?>> index(final MiruContext<BM, ?> context,
         List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         final boolean repair,
         ExecutorService indexExecutor)

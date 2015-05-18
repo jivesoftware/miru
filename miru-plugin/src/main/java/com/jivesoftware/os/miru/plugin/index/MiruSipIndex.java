@@ -6,16 +6,17 @@
 
 package com.jivesoftware.os.miru.plugin.index;
 
-import com.jivesoftware.os.miru.api.wal.Sip;
+import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import java.io.IOException;
 
 /**
  * @author jonathan
  */
-public interface MiruSipIndex {
+public interface MiruSipIndex<S extends MiruSipCursor<S>> {
 
-    Sip getSip() throws IOException;
+    Optional<S> getSip() throws IOException;
 
-    boolean setSip(Sip sip) throws IOException;
+    boolean setSip(S sip) throws IOException;
 
 }

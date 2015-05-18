@@ -24,7 +24,6 @@ import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.WALKey;
 import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
@@ -36,9 +35,17 @@ import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
 import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
+import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.wal.AmzaCursor;
+import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
+import com.jivesoftware.os.miru.api.wal.RCVSCursor;
+import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
@@ -46,37 +53,19 @@ import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
-import com.jivesoftware.os.miru.wal.MiruWALDirector;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer;
-import com.jivesoftware.os.miru.wal.activity.ForkingActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruRCVSActivityWALWriter;
-import com.jivesoftware.os.miru.wal.lookup.MiruRCVSWALLookup;
-import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
-import com.jivesoftware.os.miru.wal.partition.AmzaPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.partition.AmzaServiceInitializer;
-import com.jivesoftware.os.miru.wal.partition.AmzaServiceInitializer.AmzaServiceConfig;
-import com.jivesoftware.os.miru.wal.partition.MiruPartitionIdProvider;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReaderImpl;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
-import com.jivesoftware.os.miru.wal.readtracking.MiruWriteToReadTrackingAndSipWAL;
-import com.jivesoftware.os.miru.writer.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
+import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruLiveIngressActivitySenderProvider;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruWarmActivitySenderProvider;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruIngressEndpoints;
-import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruWALEndpoints;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
+import com.jivesoftware.os.miru.writer.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
-import com.jivesoftware.os.upena.routing.shared.TenantsServiceConnectionDescriptorProvider;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.io.File;
@@ -85,7 +74,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.merlin.config.Config;
+import org.merlin.config.defaults.StringDefault;
 
 public class MiruWriterMain {
 
@@ -93,28 +82,35 @@ public class MiruWriterMain {
         new MiruWriterMain().run(args);
     }
 
+    public interface WriterAmzaServiceConfig extends MiruAmzaServiceConfig {
+
+        @StringDefault("./var/amza/writer/data/")
+        @Override
+        String getWorkingDirectories();
+
+        @StringDefault("./var/amza/writer/index/")
+        @Override
+        String getIndexDirectories();
+
+    }
+
     public void run(String[] args) throws Exception {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
-            HealthFactory.initialize(new HealthCheckConfigBinder() {
+            HealthFactory.initialize(deployable::config,
+                new HealthCheckRegistry() {
 
-                @Override
-                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                    return deployable.config(configurationInterfaceClass);
-                }
-            }, new HealthCheckRegistry() {
+                    @Override
+                    public void register(HealthChecker healthChecker) {
+                        deployable.addHealthCheck(healthChecker);
+                    }
 
-                @Override
-                public void register(HealthChecker healthChecker) {
-                    deployable.addHealthCheck(healthChecker);
-                }
-
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                    throw new UnsupportedOperationException("Not supported yet.");
-                }
-            });
+                    @Override
+                    public void unregister(HealthChecker healthChecker) {
+                        throw new UnsupportedOperationException("Not supported yet.");
+                    }
+                });
 
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
                 new HasUI.UI("Tail", "manage", "/manage/tail"),
@@ -156,27 +152,23 @@ public class MiruWriterMain {
 
             MiruClientConfig clientConfig = deployable.config(MiruClientConfig.class);
 
-            RowColumnValueStoreProvider rowColumnValueStoreProvider = clientConfig.getRowColumnValueStoreProviderClass()
-                .newInstance();
-            @SuppressWarnings("unchecked")
-            RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-                .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-
-            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-manage", // TODO expose to conf
-                "main");
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(connections);
+            TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                .getTenantRoutingProvider()
+                .getConnections("miru-manage", "main")); // TODO expose to conf
+
+            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                .getTenantRoutingProvider()
+                .getConnections("miru-wal", "main")); // TODO expose to conf
 
             // TODO add fall back to config
             //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
             MiruStats miruStats = new MiruStats();
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", miruManageClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
 
             MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(
                 new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
                 clusterClient);
-
-            MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
 
             ExecutorService sendActivitiesToHostsThreadPool = Executors.newFixedThreadPool(clientConfig.getSendActivitiesThreadPoolSize());
 
@@ -197,13 +189,13 @@ public class MiruWriterMain {
 
             final Map<MiruTenantId, Boolean> latestAlignmentCache = Maps.newConcurrentMap();
 
-            AmzaServiceConfig amzaServiceConfig = deployable.config(AmzaServiceConfig.class);
-            AmzaService amzaService = new AmzaServiceInitializer().initialize(deployable,
+            WriterAmzaServiceConfig miruAmzaServiceConfig = deployable.config(WriterAmzaServiceConfig.class);
+            AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 "miru-wal-" + instanceConfig.getClusterName(),
-                amzaServiceConfig,
+                miruAmzaServiceConfig,
                 changes -> {
                     if (changes.getRegionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_REGION_NAME)) {
                         for (WALKey key : changes.getApply().columnKeySet()) {
@@ -213,43 +205,31 @@ public class MiruWriterMain {
                     }
                 });
 
-            MiruActivityWALWriter activityWALWriter;
-            if (clientConfig.getActivityWALType().equals("rcvs")) {
-                activityWALWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-            } else if (clientConfig.getActivityWALType().equals("amza")) {
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-                    null, 1000, 1000);
-                activityWALWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper,
-                    amzaServiceConfig.getReplicationFactor(), amzaServiceConfig.getTakeFromFactor());
-            } else if (clientConfig.getActivityWALType().equals("fork")) {
-                MiruRCVSActivityWALWriter rcvsWriter = new MiruRCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-                WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-                    null, 1000, 1000);
-                AmzaActivityWALWriter amzaWriter = new AmzaActivityWALWriter(amzaService, storageDescriptor, storageDescriptor, 2, 1, mapper,
-                    amzaServiceConfig.getReplicationFactor(), amzaServiceConfig.getTakeFromFactor());
-                activityWALWriter = new ForkingActivityWALWriter(rcvsWriter, amzaWriter);
+            MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
+            MiruWALClient<?, ?> walClient;
+            if (walConfig.getActivityWALType().equals("rcvs")) {
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
+                    "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
+                walClient = rcvsWALClient;
+            } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("fork")) {
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
+                    "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
+                walClient = amzaWALClient;
             } else {
-                throw new IllegalStateException("Invalid activity WAL type: " + clientConfig.getActivityWALType());
+                throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
-
-            MiruActivityWALReader activityWALReader = new MiruRCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
-            MiruReadTrackingWALWriter readTrackingWALWriter = new MiruWriteToReadTrackingAndSipWAL(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-            MiruReadTrackingWALReader readTrackingWALReader = new MiruReadTrackingWALReaderImpl(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-            MiruWALLookup walLookup = new MiruRCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
 
             WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                 null, 1000, 1000);
-            MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
+
+            AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
                 storageDescriptor,
                 clientConfig.getTotalCapacity(),
-                activityWALReader);
+                walClient);
 
             MiruPartitioner miruPartitioner = new MiruPartitioner(instanceConfig.getInstanceName(),
-                miruPartitionIdProvider,
-                activityWALWriter,
-                activityWALReader,
-                readTrackingWALWriter,
-                walLookup,
+                amzaPartitionIdProvider,
+                walClient,
                 clientConfig.getPartitionMaximumAgeInMillis());
 
             MiruActivityIngress activityIngress = new MiruActivityIngress(sendActivitiesToHostsThreadPool,
@@ -262,11 +242,6 @@ public class MiruWriterMain {
                 clientConfig.getTopologyCacheExpiresInMillis());
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
-            MiruWALDirector miruWALDirector = new MiruWALDirector(walLookup,
-                activityWALReader,
-                activityWALWriter,
-                miruPartitionIdProvider,
-                readTrackingWALReader);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -278,16 +253,13 @@ public class MiruWriterMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer()
-                .initialize(renderer, miruWALDirector, activityWALReader, miruStats);
+                .initialize(renderer, miruStats);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);
-            deployable.addInjectables(MiruWALDirector.class, miruWALDirector);
-
-            deployable.addEndpoints(MiruWALEndpoints.class);
-            deployable.addInjectables(MiruStats.class, miruStats);
 
             deployable.addEndpoints(MiruIngressEndpoints.class);
+            deployable.addInjectables(MiruStats.class, miruStats);
             deployable.addInjectables(MiruActivityIngress.class, activityIngress);
             deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 

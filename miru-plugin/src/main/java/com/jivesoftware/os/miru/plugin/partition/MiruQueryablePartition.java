@@ -13,5 +13,5 @@ public interface MiruQueryablePartition<BM> {
 
     boolean isLocal();
 
-    MiruRequestHandle<BM> acquireQueryHandle() throws Exception;
+    MiruRequestHandle<BM, ?> acquireQueryHandle() throws Exception;
 }

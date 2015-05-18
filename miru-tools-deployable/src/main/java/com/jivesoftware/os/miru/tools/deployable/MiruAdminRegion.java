@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.tools.deployable;
 
-import com.jivesoftware.os.miru.tools.deployable.region.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.Collections;
 
 /**

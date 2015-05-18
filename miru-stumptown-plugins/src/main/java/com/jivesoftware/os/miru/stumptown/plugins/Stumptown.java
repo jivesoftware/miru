@@ -29,7 +29,7 @@ public class Stumptown {
     }
 
     public <BM> Waveform stumptowning(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> requestContext,
+        MiruRequestContext<BM, ?> requestContext,
         MiruTenantId tenantId,
         BM answer,
         int desiredNumberOfResults,

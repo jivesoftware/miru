@@ -38,14 +38,14 @@ public class MiruJustInTimeBackfillerizer {
     private final Map<MiruTenantPartitionAndStreamId, Long> userSipTimestamp = new ConcurrentHashMap<>();
 
     private final MiruHost localHost;
-    private final MiruWALClient walClient;
+    private final MiruWALClient<?, ?> walClient;
     private final Optional<String> readStreamIdsPropName;
     private final ExecutorService backfillExecutor;
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     private final MiruReadTracker readTracker = new MiruReadTracker(aggregateUtil);
 
     public MiruJustInTimeBackfillerizer(MiruHost localHost,
-        MiruWALClient walClient,
+        MiruWALClient<?, ?> walClient,
         Optional<String> readStreamIdsPropName,
         ExecutorService backfillExecutor) {
 
@@ -65,7 +65,7 @@ public class MiruJustInTimeBackfillerizer {
     }
 
     public <BM> void backfill(final MiruBitmaps<BM> bitmaps,
-        final MiruRequestContext<BM> requestContext,
+        final MiruRequestContext<BM, ?> requestContext,
         final MiruFilter streamFilter,
         final MiruSolutionLog solutionLog,
         final MiruTenantId tenantId,
@@ -149,7 +149,7 @@ public class MiruJustInTimeBackfillerizer {
     }
 
     private <BM> void sipAndApplyReadTracking(final MiruBitmaps<BM> bitmaps,
-        final MiruRequestContext<BM> requestContext,
+        final MiruRequestContext<BM, ?> requestContext,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruStreamId streamId,

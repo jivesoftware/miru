@@ -118,14 +118,14 @@ public class MiruActivityIndexTest {
     private MiruActivityIndex buildInMemoryActivityIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        MiruContext<RoaringBitmap> hybridContext = buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 
     private MiruActivityIndex buildOnDiskActivityIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
-        MiruContext<RoaringBitmap> hybridContext = buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<RoaringBitmap, ?> hybridContext = buildOnDiskContext(4, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 

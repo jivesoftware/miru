@@ -4,6 +4,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
+import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import java.util.List;
 
 /**

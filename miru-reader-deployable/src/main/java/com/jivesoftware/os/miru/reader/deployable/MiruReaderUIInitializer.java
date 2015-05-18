@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 
 public class MiruReaderUIInitializer {
 

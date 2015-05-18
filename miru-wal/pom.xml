@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.472</version>
+        <version>0.473</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-wal</artifactId>
-    <version>0.472</version>
+    <version>0.473</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -26,7 +26,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.472</version>
+            <version>0.473</version>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
@@ -80,32 +80,8 @@
             <artifactId>amza-shared</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-ui</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>ordered-id</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>server-http-jetty-jersey</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-berkeleydb-storage</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-transport</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.upena</groupId>
-            <artifactId>upena-main</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>merlin-config</artifactId>
         </dependency>
     </dependencies>
 </project>

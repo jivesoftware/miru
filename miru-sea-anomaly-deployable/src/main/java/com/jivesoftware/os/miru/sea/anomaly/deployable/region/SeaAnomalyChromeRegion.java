@@ -3,7 +3,9 @@ package com.jivesoftware.os.miru.sea.anomaly.deployable.region;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,7 +14,7 @@ import java.util.Map;
  *
  */
 // soy.sea.anomaly.chrome.chromeRegion
-public class SeaAnomalyChromeRegion<I, R extends PageRegion<I>> implements Region<I> {
+public class SeaAnomalyChromeRegion<I, R extends MiruPageRegion<I>> implements MiruRegion<I> {
 
     private final String template;
     private final MiruSoyRenderer renderer;

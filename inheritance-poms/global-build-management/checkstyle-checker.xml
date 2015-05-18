@@ -68,7 +68,7 @@
             <property name="max" value="160"/>
         </module>
         <module name="MethodLength">
-            <property name="max" value="200"/>
+            <property name="max" value="1000"/>
             <property name="countEmpty" value="false"/>
         </module>
         <module name="MethodParamPad"/>

@@ -21,12 +21,13 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.stumptown.deployable.StumptownSchemaConstants;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownQuery;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -45,7 +46,7 @@ import static com.google.common.base.Objects.firstNonNull;
  *
  */
 // soy.stumptown.page.stumptownQueryPluginRegion
-public class StumptownQueryPluginRegion implements PageRegion<Optional<StumptownQueryPluginRegion.StumptownPluginRegionInput>> {
+public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<StumptownQueryPluginRegion.StumptownPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 

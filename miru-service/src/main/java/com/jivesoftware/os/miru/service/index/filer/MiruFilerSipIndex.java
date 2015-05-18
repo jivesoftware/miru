@@ -1,62 +1,74 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
-import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.miru.api.wal.Sip;
+import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
  */
-public class MiruFilerSipIndex implements MiruSipIndex {
+public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruFilerProvider<Long, Void> sipFilerProvider;
-    private final AtomicReference<Sip> sipReference = new AtomicReference<>();
+    private final MiruSipIndexMarshaller<S> marshaller;
 
-    public MiruFilerSipIndex(MiruFilerProvider sipFilerProvider) {
+    private final AtomicReference<S> sipReference = new AtomicReference<>();
+    private final AtomicBoolean absent = new AtomicBoolean(false);
+
+    public MiruFilerSipIndex(MiruFilerProvider<Long, Void> sipFilerProvider, MiruSipIndexMarshaller<S> marshaller) {
         this.sipFilerProvider = sipFilerProvider;
+        this.marshaller = marshaller;
     }
 
     @Override
-    public Sip getSip() throws IOException {
-        Sip sip = sipReference.get();
-        if (sip == null) {
+    public Optional<S> getSip() throws IOException {
+        S sip = sipReference.get();
+        if (sip == null && !absent.get()) {
             sipFilerProvider.read(null, (monkey, filer, lock) -> {
                 if (filer != null) {
                     synchronized (lock) {
                         filer.seek(0);
-                        long clockTimestamp = 0;
-                        long activityTimestamp = 0;
-                        if (filer.length() >= 8) {
-                            clockTimestamp = FilerIO.readLong(filer, "clockTimestamp");
+                        try {
+                            sipReference.set(marshaller.fromFiler(filer));
+                        } catch (Exception e) {
+                            LOG.warn("Failed to deserialize sip, length={}", filer.getSize());
+                            sipReference.set(null);
+                            absent.set(true);
                         }
-                        if (filer.length() >= 16) {
-                            activityTimestamp = FilerIO.readLong(filer, "activityTimestamp");
-                        }
-                        sipReference.set(new Sip(clockTimestamp, activityTimestamp));
                     }
                 } else {
-                    sipReference.set(new Sip(0, 0));
+                    sipReference.set(null);
+                    absent.set(true);
                 }
                 return null;
             });
             sip = sipReference.get();
         }
-        return sip;
+        return Optional.fromNullable(sip);
     }
 
     @Override
-    public boolean setSip(final Sip sip) throws IOException {
-        return sipFilerProvider.readWriteAutoGrow(8L, (monkey, filer, lock) -> {
-            Sip existingSip = sipReference.get();
-            while (sip.compareTo(existingSip) > 0) {
+    public boolean setSip(final S sip) throws IOException {
+        return sipFilerProvider.readWriteAutoGrow(marshaller.expectedCapacity(sip), (monkey, filer, lock) -> {
+            S existingSip = getSip().orNull();
+            while (existingSip == null || sip.compareTo(existingSip) > 0) {
                 if (sipReference.compareAndSet(existingSip, sip)) {
                     synchronized (lock) {
                         filer.seek(0);
-                        FilerIO.writeLong(filer, sip.clockTimestamp, "clockTimestamp");
-                        FilerIO.writeLong(filer, sip.activityTimestamp, "activityTimestamp");
+                        try {
+                            marshaller.toFiler(filer, sip);
+                        } catch (Exception e) {
+                            throw new IOException("Failed to serialize sip");
+                        }
                     }
                     return true;
                 } else {

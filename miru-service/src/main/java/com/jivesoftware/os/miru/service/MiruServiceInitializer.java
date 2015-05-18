@@ -25,10 +25,13 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.wal.MiruCursor;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
@@ -40,6 +43,7 @@ import com.jivesoftware.os.miru.service.partition.MiruMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionAccessor.IndexStrategy;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionHeartbeatHandler;
 import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
+import com.jivesoftware.os.miru.service.partition.MiruSipTrackerFactory;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
@@ -66,12 +70,14 @@ public class MiruServiceInitializer {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    public MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
+    public <C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
         MiruStats miruStats,
         MiruClusterClient clusterClient,
         MiruHost miruHost,
         MiruSchemaProvider schemaProvider,
-        MiruWALClient walClient,
+        MiruWALClient<C, S> walClient,
+        MiruSipTrackerFactory<S> sipTrackerFactory,
+        MiruSipIndexMarshaller<S> sipIndexMarshaller,
         HttpClientFactory httpClientFactory,
         MiruResourceLocator resourceLocator,
         MiruTermComposer termComposer,
@@ -151,7 +157,7 @@ public class MiruServiceInitializer {
             new NullKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory());
 
-        MiruContextFactory streamFactory = new MiruContextFactory(cogs,
+        MiruContextFactory<S> contextFactory = new MiruContextFactory<>(cogs,
             schemaProvider,
             termComposer,
             internExtern,
@@ -159,6 +165,7 @@ public class MiruServiceInitializer {
                 .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
                 .put(MiruBackingStorage.disk, onDiskChunkAllocator)
                 .build(),
+            sipIndexMarshaller,
             resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
@@ -195,9 +202,10 @@ public class MiruServiceInitializer {
         };
 
         MiruMergeChits miruMergeChits = new MiruMergeChits(config.getMergeChitCount(), config.getMergeMaxOverage());
-        MiruLocalPartitionFactory localPartitionFactory = new MiruLocalPartitionFactory(miruStats,
+        MiruLocalPartitionFactory<C, S> localPartitionFactory = new MiruLocalPartitionFactory<>(miruStats,
             config,
-            streamFactory,
+            contextFactory,
+            sipTrackerFactory,
             walClient,
             heartbeatHandler,
             rebuildDirector,

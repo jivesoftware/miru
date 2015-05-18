@@ -34,7 +34,7 @@ public class MiruIndexerTest {
 
     @Test(dataProvider = "miruIndexContextDataProvider")
     public void testIndexData(MiruTenantId tenantId,
-        MiruContext<EWAHCompressedBitmap> context,
+        MiruContext<EWAHCompressedBitmap, ?> context,
         MiruIndexer<EWAHCompressedBitmap> miruIndexer,
         List<MiruActivityAndId<MiruActivity>> activityList)
         throws Exception {
@@ -77,7 +77,7 @@ public class MiruIndexerTest {
 
     @Test(dataProvider = "miruIndexContextDataProvider")
     public void testRepairData(MiruTenantId tenantId,
-        MiruContext<EWAHCompressedBitmap> context,
+        MiruContext<EWAHCompressedBitmap, ?> context,
         MiruIndexer<EWAHCompressedBitmap> miruIndexer,
         List<MiruActivityAndId<MiruActivity>> activityList)
         throws Exception {
@@ -128,7 +128,7 @@ public class MiruIndexerTest {
         verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, nextId).authz, nextId);
     }
 
-    private void verifyFieldValues(MiruTenantId tenantId, MiruContext<EWAHCompressedBitmap> context, int activityId, int fieldId) throws Exception {
+    private void verifyFieldValues(MiruTenantId tenantId, MiruContext<EWAHCompressedBitmap, ?> context, int activityId, int fieldId) throws Exception {
 
         MiruInternalActivity miruActivity = context.getActivityIndex().get(tenantId, activityId);
 
@@ -160,13 +160,13 @@ public class MiruIndexerTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
-        MiruIndexer<EWAHCompressedBitmap> miruIndexer = new MiruIndexer<>(new MiruIndexAuthz<EWAHCompressedBitmap>(),
-            new MiruIndexFieldValues<EWAHCompressedBitmap>(),
+        MiruIndexer<EWAHCompressedBitmap> miruIndexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
+            new MiruIndexFieldValues<>(),
             new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
-            new MiruIndexLatest<EWAHCompressedBitmap>(),
-            new MiruIndexPairedLatest<EWAHCompressedBitmap>());
+            new MiruIndexLatest<>(),
+            new MiruIndexPairedLatest<>());
 
-        MiruContext<EWAHCompressedBitmap> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
 
         // Build in-memory index stream object
         MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[] { "abcde" },
@@ -180,7 +180,7 @@ public class MiruIndexerTest {
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2));
 
-        MiruContext<EWAHCompressedBitmap> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<EWAHCompressedBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
 
         // Index initial activities
         miruIndexer.index(inMemoryContext,

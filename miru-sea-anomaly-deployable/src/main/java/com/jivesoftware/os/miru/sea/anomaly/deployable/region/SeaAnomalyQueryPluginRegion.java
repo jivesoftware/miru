@@ -23,12 +23,13 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSoyRenderer;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SeaAnomalySchemaConstants;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.MinMaxDouble;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyConstants;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyQuery;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.awt.Color;
@@ -47,7 +48,7 @@ import java.util.concurrent.TimeUnit;
  *
  */
 // soy.sea.anomaly.page.seaAnomalyQueryPluginRegion
-public class SeaAnomalyQueryPluginRegion implements PageRegion<Optional<SeaAnomalyQueryPluginRegion.SeaAnomalyPluginRegionInput>> {
+public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaAnomalyQueryPluginRegion.SeaAnomalyPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 

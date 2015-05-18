@@ -14,7 +14,7 @@ import java.util.concurrent.Future;
  */
 public class MiruIndexAuthz<BM> {
 
-    public List<Future<?>> index(final MiruContext<BM> context,
+    public List<Future<?>> index(final MiruContext<BM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         final boolean repair,
         ExecutorService indexExecutor)
@@ -39,7 +39,7 @@ public class MiruIndexAuthz<BM> {
     }
 
     //TODO move this behavior into index()
-    private List<Future<?>> repair(final MiruContext<BM> context,
+    private List<Future<?>> repair(final MiruContext<BM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         final List<MiruInternalActivity> existingActivities,
         ExecutorService indexExecutor)

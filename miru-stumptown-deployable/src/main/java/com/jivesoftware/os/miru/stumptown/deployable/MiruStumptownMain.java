@@ -33,7 +33,6 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
-import com.jivesoftware.os.miru.stumptown.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownIntakeInitializer.MiruStumptownIntakeConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownQueryPluginEndpoints;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownStatusPluginEndpoints;
@@ -44,6 +43,9 @@ import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPlugi
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsIntializer;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
+import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;

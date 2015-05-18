@@ -5,10 +5,13 @@ package com.jivesoftware.os.miru.api.wal;
  */
 public class MiruActivityLookupEntry {
 
-    public final int partitionId;
-    public final int index;
-    public final int writerId;
-    public final boolean removed;
+    public int partitionId;
+    public int index;
+    public int writerId;
+    public boolean removed;
+
+    public MiruActivityLookupEntry() {
+    }
 
     public MiruActivityLookupEntry(int partitionId, int index, int writerId, boolean removed) {
         this.partitionId = partitionId;

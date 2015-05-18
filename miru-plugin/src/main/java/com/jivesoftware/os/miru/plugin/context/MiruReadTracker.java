@@ -18,7 +18,7 @@ public class MiruReadTracker {
     }
 
     public <BM> void read(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> context,
+        MiruRequestContext<BM, ?> context,
         MiruStreamId streamId,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
@@ -41,7 +41,7 @@ public class MiruReadTracker {
     }
 
     public <BM> void unread(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> context,
+        MiruRequestContext<BM, ?> context,
         MiruStreamId streamId,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
@@ -64,7 +64,7 @@ public class MiruReadTracker {
     }
 
     public <BM> void markAllRead(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> context,
+        MiruRequestContext<BM, ?> context,
         MiruStreamId streamId,
         long timestamp)
         throws Exception {

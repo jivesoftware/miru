@@ -43,10 +43,10 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
     }
 
     @Override
-    public <BM> MiruPartitionResponse<RecoAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<RecoReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<RecoAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<RecoReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
 
-        MiruRequestContext<BM> context = handle.getRequestContext();
+        MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run

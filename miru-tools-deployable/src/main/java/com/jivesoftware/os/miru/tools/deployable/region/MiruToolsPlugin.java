@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.tools.deployable.region;
 
+import com.jivesoftware.os.miru.ui.MiruRegion;
+
 /**
  *
  */

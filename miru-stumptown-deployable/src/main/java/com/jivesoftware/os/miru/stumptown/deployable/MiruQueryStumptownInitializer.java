@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stumptown.deployable;
 
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.MiruHomeRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 
 public class MiruQueryStumptownInitializer {
 

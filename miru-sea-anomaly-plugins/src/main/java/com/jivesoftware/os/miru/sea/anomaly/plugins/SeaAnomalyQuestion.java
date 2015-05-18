@@ -53,9 +53,9 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
     }
 
     @Override
-    public <BM> MiruPartitionResponse<SeaAnomalyAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<SeaAnomalyReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<SeaAnomalyAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<SeaAnomalyReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM> context = handle.getRequestContext();
+        MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run

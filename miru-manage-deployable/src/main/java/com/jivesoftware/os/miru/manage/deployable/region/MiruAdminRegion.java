@@ -2,7 +2,8 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruStats;
-import com.jivesoftware.os.miru.manage.deployable.MiruSoyRenderer;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.LoggerSummary;
 import java.util.ArrayList;
 import java.util.Collections;

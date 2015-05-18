@@ -10,7 +10,7 @@ import com.google.common.base.Optional;
  */
 public interface Question<Q, A, P> {
 
-    <BM> MiruPartitionResponse<A> askLocal(MiruRequestHandle<BM> queryHandle, Optional<P> report) throws Exception;
+    <BM> MiruPartitionResponse<A> askLocal(MiruRequestHandle<BM, ?> queryHandle, Optional<P> report) throws Exception;
 
     MiruRemotePartition<Q, A, P> getRemotePartition();
 
