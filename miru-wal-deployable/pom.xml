@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>upena-deployable-management</artifactId>
-        <version>0.477</version>
+        <version>0.478</version>
         <relativePath>../inheritance-poms/upena-deployable-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-wal-deployable</artifactId>
-    <version>0.477</version>
+    <version>0.478</version>
     <properties>
         <java.main>com.jivesoftware.os.miru.wal.deployable.MiruWALMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
@@ -49,32 +49,32 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-ui</artifactId>
-            <version>0.477</version>
+            <version>0.478</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.477</version>
+            <version>0.478</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-amza</artifactId>
-            <version>0.477</version>
+            <version>0.478</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-logappender</artifactId>
-            <version>0.477</version>
+            <version>0.478</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
-            <version>0.477</version>
+            <version>0.478</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-writer</artifactId>
-            <version>0.477</version>
+            <version>0.478</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -111,13 +111,13 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-metric-sampler</artifactId>
-            <version>0.477</version>
+            <version>0.478</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster-client</artifactId>
-            <version>0.477</version>
+            <version>0.478</version>
             <type>jar</type>
         </dependency>
         <dependency>
