@@ -230,7 +230,7 @@ public class AmzaWALEndpoints {
         }
     }
 
-    @GET
+    @POST
     @Path("/versioned/entries/{tenantId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
