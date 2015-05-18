@@ -1,9 +1,10 @@
 package com.jivesoftware.os.miru.api.wal;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 
 /**
- *
  * @author jonathan.colt
  */
 public class RCVSSipCursor implements MiruSipCursor<RCVSSipCursor> {
@@ -15,7 +16,11 @@ public class RCVSSipCursor implements MiruSipCursor<RCVSSipCursor> {
     public final long activityTimestamp;
     public final boolean endOfStream;
 
-    public RCVSSipCursor(byte sort, long clockTimestamp, long activityTimestamp, boolean endOfStream) {
+    @JsonCreator
+    public RCVSSipCursor(@JsonProperty("sort") byte sort,
+        @JsonProperty("clockTimestamp") long clockTimestamp,
+        @JsonProperty("activityTimestamp") long activityTimestamp,
+        @JsonProperty("endOfStream") boolean endOfStream) {
         this.sort = sort;
         this.clockTimestamp = clockTimestamp;
         this.activityTimestamp = activityTimestamp;

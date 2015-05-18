@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.api.wal;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
@@ -16,7 +18,8 @@ public class AmzaSipCursor implements MiruSipCursor<AmzaSipCursor> {
 
     public final List<NamedCursor> cursors;
 
-    public AmzaSipCursor(Collection<NamedCursor> cursors) {
+    @JsonCreator
+    public AmzaSipCursor(@JsonProperty("cursors") Collection<NamedCursor> cursors) {
         this.cursors = Lists.newArrayList(cursors);
         Collections.sort(this.cursors);
     }
