@@ -14,7 +14,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mlogger-version>0.9</mlogger-version>
-        <jive-utils-version>0.90</jive-utils-version>
+        <jive-utils-version>0.91</jive-utils-version>
         <rcvs-version>0.15</rcvs-version>
         <filer-version>0.72</filer-version>
         <upena-version>0.117</upena-version>

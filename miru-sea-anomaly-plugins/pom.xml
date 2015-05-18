@@ -42,11 +42,6 @@
             <version>0.474-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-reader</artifactId>
-            <version>0.474-SNAPSHOT</version>
-        </dependency>
-        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>

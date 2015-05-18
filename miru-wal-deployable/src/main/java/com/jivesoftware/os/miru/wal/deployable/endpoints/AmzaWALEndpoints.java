@@ -310,7 +310,7 @@ public class AmzaWALEndpoints {
             StreamBatch<MiruWALEntry, AmzaSipCursor> sipActivity = walDirector.sipActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), cursor, batchSize);
             stats.ingressed("/sip/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(sipActivity);
+            return responseHelper.jsonResponse(sipActivity, StreamBatch.class, new Class<?>[] { MiruWALEntry.class, AmzaSipCursor.class });
         } catch (Exception x) {
             log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -331,7 +331,7 @@ public class AmzaWALEndpoints {
             StreamBatch<MiruWALEntry, AmzaCursor> activity = walDirector.getActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), cursor, batchSize);
             stats.ingressed("/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(activity);
+            return responseHelper.jsonResponse(activity, StreamBatch.class, new Class<?>[] { MiruWALEntry.class, AmzaCursor.class });
         } catch (Exception x) {
             log.error("Failed calling getActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -351,7 +351,7 @@ public class AmzaWALEndpoints {
             StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead = walDirector.sipRead(
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
             stats.ingressed("/sip/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(sipRead);
+            return responseHelper.jsonResponse(sipRead, StreamBatch.class, new Class<?>[] { MiruReadSipEntry.class, SipReadCursor.class });
         } catch (Exception x) {
             log.error("Failed calling sipRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -371,7 +371,7 @@ public class AmzaWALEndpoints {
             StreamBatch<MiruWALEntry, GetReadCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
             stats.ingressed("/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(read);
+            return responseHelper.jsonResponse(read, StreamBatch.class, new Class<?>[] { MiruWALEntry.class, GetReadCursor.class });
         } catch (Exception x) {
             log.error("Failed calling getRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);

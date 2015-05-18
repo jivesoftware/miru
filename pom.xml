@@ -17,7 +17,6 @@
         <module>miru-api</module>
         <module>miru-amza</module>
         <module>miru-ui</module>
-        <module>miru-reader</module>
         <module>miru-logappender</module>
         <module>miru-cluster-client</module>
         <module>miru-cluster</module>
