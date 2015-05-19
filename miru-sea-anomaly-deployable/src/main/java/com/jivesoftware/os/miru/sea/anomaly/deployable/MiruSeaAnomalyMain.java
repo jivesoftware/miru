@@ -90,6 +90,7 @@ public class MiruSeaAnomalyMain {
                     throw new UnsupportedOperationException("Not supported yet.");
                 }
             });
+            deployable.addErrorHealthChecks();
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Tail", "manage", "/manage/tail"),

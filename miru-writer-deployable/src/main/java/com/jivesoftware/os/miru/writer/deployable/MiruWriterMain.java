@@ -111,7 +111,7 @@ public class MiruWriterMain {
                         throw new UnsupportedOperationException("Not supported yet.");
                     }
                 });
-
+            deployable.addErrorHealthChecks();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
                 new HasUI.UI("Tail", "manage", "/manage/tail"),
                 new HasUI.UI("Thead Dump", "manage", "/manage/threadDump"),
