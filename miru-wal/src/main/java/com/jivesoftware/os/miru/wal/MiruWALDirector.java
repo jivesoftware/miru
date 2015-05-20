@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.wal;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
@@ -10,6 +9,9 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
@@ -22,18 +24,18 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
-import com.jivesoftware.os.miru.wal.lookup.RangeMinMax;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
@@ -48,6 +50,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final MiruActivityWALWriter activityWALWriter;
     private final MiruReadTrackingWALReader readTrackingWALReader;
     private final MiruReadTrackingWALWriter readTrackingWALWriter;
+    private final MiruClusterClient clusterClient;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
@@ -55,12 +58,14 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         MiruActivityWALReader<C, S> activityWALReader,
         MiruActivityWALWriter activityWALWriter,
         MiruReadTrackingWALReader readTrackingWALReader,
-        MiruReadTrackingWALWriter readTrackingWALWriter) {
+        MiruReadTrackingWALWriter readTrackingWALWriter,
+        MiruClusterClient clusterClient) {
         this.walLookup = walLookup;
         this.activityWALReader = activityWALReader;
         this.activityWALWriter = activityWALWriter;
         this.readTrackingWALReader = readTrackingWALReader;
         this.readTrackingWALWriter = readTrackingWALWriter;
+        this.clusterClient = clusterClient;
     }
 
     public void repairBoundaries() throws Exception {
@@ -94,6 +99,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         for (MiruTenantId tenantId : tenantIds) {
             final Set<MiruPartitionId> found = Sets.newHashSet();
             final Set<MiruPartitionId> broken = Sets.newHashSet();
+            /*TODO ask clusterClient for partitionIds with broken/missing ranges
             walLookup.streamRanges(tenantId, null, (partitionId, type, timestamp) -> {
                 found.add(partitionId);
                 if (type == MiruWALLookup.RangeType.orderIdMax && timestamp == Long.MAX_VALUE) {
@@ -101,6 +107,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 }
                 return true;
             });
+            */
 
             int count = 0;
             MiruPartitionId latestPartitionId = getLargestPartitionId(tenantId);
@@ -115,7 +122,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                             }
                             return true;
                         });
-                    walLookup.putRange(tenantId, checkPartitionId, minMax);
+                    clusterClient.updateIngress(Collections.singletonList(new MiruIngressUpdate(tenantId, checkPartitionId, minMax, -1, true)));
                 }
             }
 
@@ -170,7 +177,14 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     @Override
     public void writeActivityAndLookup(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         activityWALWriter.write(tenantId, partitionedActivities);
-        walLookup.add(tenantId, partitionedActivities);
+        Map<MiruPartitionId, RangeMinMax> partitionMinMax = walLookup.add(tenantId, partitionedActivities);
+
+        Set<MiruPartitionId> partitionIds = partitionedActivities.stream()
+            .map(miruPartitionedActivity -> miruPartitionedActivity.partitionId)
+            .collect(Collectors.toSet());
+        clusterClient.updateIngress(partitionIds.stream()
+            .map(partitionId -> new MiruIngressUpdate(tenantId, partitionId, partitionMinMax.get(partitionId), System.currentTimeMillis(), false))
+            .collect(Collectors.toList()));
     }
 
     @Override
@@ -215,51 +229,6 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             return batch.size() < batchSize;
         });
         return batch;
-    }
-
-    @Override
-    public MiruLookupRange lookupRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        final MiruLookupRange lookupRange = new MiruLookupRange(partitionId.getId(), -1, -1, -1, -1); // ugly
-        walLookup.streamRanges(tenantId, partitionId, (streamPartitionId, type, timestamp) -> {
-            if (partitionId.equals(streamPartitionId)) {
-                if (type == MiruWALLookup.RangeType.clockMin) {
-                    lookupRange.minClock = timestamp;
-                } else if (type == MiruWALLookup.RangeType.clockMax) {
-                    lookupRange.maxClock = timestamp;
-                } else if (type == MiruWALLookup.RangeType.orderIdMin) {
-                    lookupRange.minOrderId = timestamp;
-                } else if (type == MiruWALLookup.RangeType.orderIdMax) {
-                    lookupRange.maxOrderId = timestamp;
-                }
-                return true;
-            } else {
-                return false;
-            }
-        });
-        return lookupRange;
-    }
-
-    @Override
-    public Collection<MiruLookupRange> lookupRanges(MiruTenantId tenantId) throws Exception {
-        final Map<MiruPartitionId, MiruLookupRange> partitionLookupRange = Maps.newHashMap();
-        walLookup.streamRanges(tenantId, null, (partitionId, type, timestamp) -> {
-            MiruLookupRange lookupRange = partitionLookupRange.get(partitionId);
-            if (lookupRange == null) {
-                lookupRange = new MiruLookupRange(partitionId.getId(), -1, -1, -1, -1); // ugly
-                partitionLookupRange.put(partitionId, lookupRange);
-            }
-            if (type == MiruWALLookup.RangeType.clockMin) {
-                lookupRange.minClock = timestamp;
-            } else if (type == MiruWALLookup.RangeType.clockMax) {
-                lookupRange.maxClock = timestamp;
-            } else if (type == MiruWALLookup.RangeType.orderIdMin) {
-                lookupRange.minOrderId = timestamp;
-            } else if (type == MiruWALLookup.RangeType.orderIdMax) {
-                lookupRange.maxOrderId = timestamp;
-            }
-            return true;
-        });
-        return partitionLookupRange.values();
     }
 
     @Override

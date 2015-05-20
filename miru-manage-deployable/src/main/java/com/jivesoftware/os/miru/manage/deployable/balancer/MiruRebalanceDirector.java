@@ -37,9 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 
-import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX;
-import static com.jivesoftware.os.miru.api.MiruConfigReader.PRIORITIZE_REBUILD_ENDPOINT;
-
 /**
  *
  */
@@ -182,7 +179,7 @@ public class MiruRebalanceDirector {
 
     public void rebuildTenantPartition(MiruHost miruHost, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         readerRequestHelpers.get(miruHost).executeRequest("",
-            CONFIG_SERVICE_ENDPOINT_PREFIX + PRIORITIZE_REBUILD_ENDPOINT + "/" + tenantId + "/" + partitionId,
+            "/miru/config/rebuild/prioritize/" + tenantId + "/" + partitionId,
             String.class, null);
     }
 

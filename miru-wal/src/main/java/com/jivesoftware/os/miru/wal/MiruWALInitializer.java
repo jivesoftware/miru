@@ -10,7 +10,6 @@ import com.jivesoftware.os.miru.api.marshall.MiruTenantIdMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByteMarshaller;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
-import com.jivesoftware.os.miru.api.wal.MiruRangeLookupColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKeyMarshaller;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
@@ -18,7 +17,6 @@ import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarsha
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRowMarshaller;
 import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupEntryMarshaller;
-import com.jivesoftware.os.miru.wal.lookup.MiruRangeLookupColumnKeyMarshaller;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingSipWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingSipWALColumnKeyMarshaller;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALColumnKey;
@@ -102,20 +100,6 @@ public class MiruWALInitializer {
                 new CurrentTimestamper()
             );
 
-        // Miru Range Lookup Table
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruRangeLookupColumnKey, Long, ? extends Exception> rangeLookupTable =
-            rowColumnValueStoreInitializer.initialize(
-                tableNameSpace,
-                "miru.ranges.t", // Tenant
-                "r",
-                new DefaultRowColumnValueStoreMarshaller<>(
-                    new MiruVoidByteMarshaller(),
-                    new SaltingDelegatingMarshaller<>(new MiruTenantIdMarshaller()),
-                    new MiruRangeLookupColumnKeyMarshaller(),
-                    new LongTypeMarshaller()),
-                new CurrentTimestamper()
-            );
-
         // Miru Writer + PartitionId Registry
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry =
             rowColumnValueStoreInitializer.initialize(
@@ -131,7 +115,7 @@ public class MiruWALInitializer {
                 new CurrentTimestamper()
             );
 
-        return new MiruWAL(activityWAL, activitySipWAL, readTrackingWAL, readTrackingSipWAL, activityLookupTable, rangeLookupTable, writerPartitionRegistry);
+        return new MiruWAL(activityWAL, activitySipWAL, readTrackingWAL, readTrackingSipWAL, activityLookupTable, writerPartitionRegistry);
     }
 
     static public class MiruWAL {
@@ -147,8 +131,6 @@ public class MiruWALInitializer {
         private final RowColumnValueStore<MiruVoidByte,
             MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
         private final RowColumnValueStore<MiruVoidByte,
-            MiruTenantId, MiruRangeLookupColumnKey, Long, ? extends Exception> rangeLookupTable;
-        private final RowColumnValueStore<MiruVoidByte,
             MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
 
         public MiruWAL(
@@ -163,15 +145,12 @@ public class MiruWALInitializer {
             RowColumnValueStore<MiruVoidByte,
                 MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable,
             RowColumnValueStore<MiruVoidByte,
-                MiruTenantId, MiruRangeLookupColumnKey, Long, ? extends Exception> rangeLookupTable,
-            RowColumnValueStore<MiruVoidByte,
                 MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry) {
             this.activityWAL = activityWAL;
             this.activitySipWAL = activitySipWAL;
             this.readTrackingWAL = readTrackingWAL;
             this.readTrackingSipWAL = readTrackingSipWAL;
             this.activityLookupTable = activityLookupTable;
-            this.rangeLookupTable = rangeLookupTable;
             this.writerPartitionRegistry = writerPartitionRegistry;
         }
 
@@ -198,11 +177,6 @@ public class MiruWALInitializer {
         public RowColumnValueStore<MiruVoidByte,
             MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> getActivityLookupTable() {
             return activityLookupTable;
-        }
-
-        public RowColumnValueStore<MiruVoidByte,
-            MiruTenantId, MiruRangeLookupColumnKey, Long, ? extends Exception> getRangeLookupTable() {
-            return rangeLookupTable;
         }
 
         public RowColumnValueStore<MiruVoidByte,

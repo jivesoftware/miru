@@ -7,10 +7,12 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatRequest;
+import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -49,6 +51,24 @@ public class MiruTopologyEndpoints {
             return r;
         } catch (Exception x) {
             String msg = "Failed to getRouting for " + tenantId;
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
+    @POST
+    @Path("/update/ingress")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateIngress(Collection<MiruIngressUpdate> updates) {
+        try {
+            long start = System.currentTimeMillis();
+            registry.updateIngress(updates);
+            Response r = ResponseHelper.INSTANCE.jsonResponse("ok");
+            stats.ingressed("/update/ingress", 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to update ingress";
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
@@ -109,50 +129,6 @@ public class MiruTopologyEndpoints {
     }
 
     @POST
-    @Path("/elect/{host}/{port}/{tenantId}/{partitionId}/{electionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response addToReplicaRegistry(@PathParam("host") String host,
-        @PathParam("port") int port,
-        @PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") int partitionId,
-        @PathParam("electionId") long electionId) {
-        try {
-            long start = System.currentTimeMillis();
-            MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
-            MiruPartitionId miruPartitionId = MiruPartitionId.of(partitionId);
-            MiruHost miruHost = new MiruHost(host, port);
-            registry.elect(miruHost, miruTenantId, miruPartitionId, electionId);
-            Response r = ResponseHelper.INSTANCE.jsonResponse("");
-            stats.ingressed("/elect/" + host + "/" + port + "/" + tenantId + "/" + partitionId + "/" + electionId, 1, System.currentTimeMillis() - start);
-            return r;
-        } catch (Exception x) {
-            String msg = "Failed to addToReplicaRegistry for " + tenantId;
-            LOG.error(msg, x);
-            return ResponseHelper.INSTANCE.errorResponse(msg, x);
-        }
-    }
-
-    @POST
-    @Path("/remove/replica/{tenantId}/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response removeTenantPartionReplicaSet(@PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") int partitionId) {
-        try {
-            long start = System.currentTimeMillis();
-            registry.removeReplica(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
-                MiruPartitionId.of(partitionId));
-            stats.ingressed("/remove/replica/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
-            return ResponseHelper.INSTANCE.jsonResponse("");
-        } catch (Exception x) {
-            String msg = "Failed to addToReplicaRegistry for " + tenantId;
-            LOG.error(msg, x);
-            return ResponseHelper.INSTANCE.errorResponse(msg, x);
-        }
-    }
-
-    @POST
     @Path("/partitions/{tenantId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -164,25 +140,6 @@ public class MiruTopologyEndpoints {
             return r;
         } catch (Exception x) {
             String msg = "Failed to getPartitionsForTenant for " + tenantId;
-            LOG.error(msg, x);
-            return ResponseHelper.INSTANCE.errorResponse(msg, x);
-        }
-    }
-
-    @GET
-    @Path("/replicas/{tenantId}/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getReplicaSets(@PathParam("tenantId") String tenantId, @PathParam("partitionId") int partitionId) {
-        try {
-            long start = System.currentTimeMillis();
-            MiruPartitionId miruPartitionId = MiruPartitionId.of(partitionId);
-            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.replicas(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
-                miruPartitionId));
-            stats.ingressed("/replicas/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
-            return r;
-        } catch (Exception x) {
-            String msg = "Failed to getReplicaSets for " + tenantId + "/" + partitionId;
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }

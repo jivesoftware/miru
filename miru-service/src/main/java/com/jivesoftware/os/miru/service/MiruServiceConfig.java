@@ -51,9 +51,6 @@ public interface MiruServiceConfig extends Config {
 
     void setDefaultFailAfterNMillis(long millis);
 
-    @BooleanDefault(true)
-    boolean getPartitionWakeOnIndex();
-
     @LongDefault(100_000)
     long getPartitionRebuildIfBehindByCount();
 

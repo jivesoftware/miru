@@ -5,6 +5,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -17,10 +22,9 @@ import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
 import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
@@ -85,7 +89,6 @@ public class MiruManageServiceTest {
         AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc, rowsChanged -> {
         });
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-            new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
             TimeUnit.HOURS.toMillis(1),
@@ -111,16 +114,18 @@ public class MiruManageServiceTest {
             miruWALClient,
             stats);
 
-        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
+        OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1), new SnowflakeIdPacker(), new JiveEpochTimestampProvider());
+        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(orderIdProvider, clusterRegistry);
 
         long electTime = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
         for (int i = 0; i < numberOfReplicas; i++) {
             MiruHost host = new MiruHost("host" + i, 10_000 + i);
-            clusterRegistry.sendHeartbeatForHost(host);
+            clusterRegistry.heartbeat(host);
             hosts.add(host);
-            clusterClient.elect(host, tenantId,
+            clusterRegistry.addToReplicaRegistry(tenantId,
                 partitionId,
-                electTime - i);
+                electTime - i,
+                host);
         }
 
     }

@@ -22,7 +22,6 @@ import java.util.Map;
  */
 public class AmzaWALUtil {
 
-    public static final RegionName LOOKUP_RANGES_REGION_NAME = new RegionName(false, "lookup-ranges", "lookup-ranges");
     public static final RegionName LOOKUP_TENANTS_REGION_NAME = new RegionName(false, "lookup-tenants", "lookup-tenants");
     public static final RegionName LOOKUP_PARTITIONS_REGION_NAME = new RegionName(false, "lookup-partitions", "lookup-partitions");
 

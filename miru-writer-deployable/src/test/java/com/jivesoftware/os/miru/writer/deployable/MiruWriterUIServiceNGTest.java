@@ -29,11 +29,17 @@ import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
+import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
+import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -52,6 +58,7 @@ import com.jivesoftware.os.miru.writer.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -86,7 +93,7 @@ public class MiruWriterUIServiceNGTest {
         RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+        MiruWALLookup walLookup = new RCVSWALLookup(wal.getActivityLookupTable());
 
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();
@@ -141,8 +148,17 @@ public class MiruWriterUIServiceNGTest {
 
         amzaService.start();
 
+        MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+            new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
+            3,
+            TimeUnit.HOURS.toMillis(1),
+            TimeUnit.HOURS.toMillis(1),
+            TimeUnit.DAYS.toMillis(365),
+            0,
+            0);
+        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry));
         MiruWALDirector<RCVSCursor, RCVSSipCursor> director = new MiruWALDirector<>(walLookup,
-            activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter);
+            activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
 
         WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
             null, 1000, 1000);

@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.GetReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupEntry;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupRange;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.SipReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
@@ -22,7 +21,6 @@ import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.Collection;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -261,37 +259,6 @@ public class RCVSWALEndpoints {
             return responseHelper.jsonResponse(lookupActivity);
         } catch (Exception x) {
             log.error("Failed calling lookupActivity({},{},{})", new Object[] { tenantId, afterTimestamp, batchSize }, x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @GET
-    @Path("/lookup/range/{tenantId}/{partitionId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response lookupRanges(@PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") int partitionId) throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            MiruLookupRange lookupRange = walDirector.lookupRange(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
-            stats.ingressed("/lookup/range/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(lookupRange);
-        } catch (Exception x) {
-            log.error("Failed calling lookupRange({}, {})", new Object[] { tenantId, partitionId }, x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @GET
-    @Path("/lookup/ranges/{tenantId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response lookupRanges(@PathParam("tenantId") String tenantId) throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            Collection<MiruLookupRange> lookupRanges = walDirector.lookupRanges(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
-            stats.ingressed("/lookup/ranges/" + tenantId, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(lookupRanges);
-        } catch (Exception x) {
-            log.error("Failed calling lookupRanges({})", new Object[] { tenantId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

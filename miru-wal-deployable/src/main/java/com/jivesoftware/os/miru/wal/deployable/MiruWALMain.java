@@ -30,10 +30,12 @@ import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
@@ -66,6 +68,8 @@ import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
 import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
 import com.jivesoftware.os.upena.main.Deployable;
 import com.jivesoftware.os.upena.main.InstanceConfig;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.io.File;
 import java.util.Arrays;
 import org.merlin.config.defaults.StringDefault;
@@ -175,6 +179,13 @@ public class MiruWALMain {
             MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
             MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
 
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                .getTenantRoutingProvider()
+                .getConnections("miru-manage", "main")); // TODO expose to conf
+
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
+
             MiruActivityWALReader<?, ?> activityWALReader;
             MiruWALDirector<RCVSCursor, RCVSSipCursor> rcvsWALDirector = null;
             MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector = null;
@@ -184,12 +195,13 @@ public class MiruWALMain {
             if (walConfig.getActivityWALType().equals("rcvs")) {
                 RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
                 rcvsWALDirector = new MiruWALDirector<>(rcvsWALLookup,
                     rcvsActivityWALReader,
                     rcvsActivityWALWriter,
                     readTrackingWALReader,
-                    readTrackingWALWriter);
+                    readTrackingWALWriter,
+                    clusterClient);
 
                 activityWALReader = rcvsActivityWALReader;
                 miruWALDirector = rcvsWALDirector;
@@ -202,7 +214,8 @@ public class MiruWALMain {
                     amzaActivityWALReader,
                     amzaActivityWALWriter,
                     readTrackingWALReader,
-                    readTrackingWALWriter);
+                    readTrackingWALWriter,
+                    clusterClient);
 
                 activityWALReader = amzaActivityWALReader;
                 miruWALDirector = amzaWALDirector;
@@ -212,14 +225,15 @@ public class MiruWALMain {
                 AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(rcvsActivityWALWriter, amzaActivityWALWriter);
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
                 ForkingWALLookup forkingWALLookup = new ForkingWALLookup(rcvsWALLookup, amzaWALLookup);
                 rcvsWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     rcvsActivityWALReader,
                     forkingActivityWALWriter,
                     readTrackingWALReader,
-                    readTrackingWALWriter);
+                    readTrackingWALWriter,
+                    clusterClient);
 
                 activityWALReader = rcvsActivityWALReader;
                 miruWALDirector = rcvsWALDirector;
@@ -229,14 +243,15 @@ public class MiruWALMain {
                 AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(amzaActivityWALWriter, rcvsActivityWALWriter);
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
                 ForkingWALLookup forkingWALLookup = new ForkingWALLookup(amzaWALLookup, rcvsWALLookup);
                 amzaWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     amzaActivityWALReader,
                     forkingActivityWALWriter,
                     readTrackingWALReader,
-                    readTrackingWALWriter);
+                    readTrackingWALWriter,
+                    clusterClient);
 
                 activityWALReader = amzaActivityWALReader;
                 miruWALDirector = amzaWALDirector;
@@ -265,8 +280,6 @@ public class MiruWALMain {
 
             deployable.addEndpoints(walEndpointsClass);
             deployable.addInjectables(MiruStats.class, miruStats);
-
-            deployable.addEndpoints(MiruWriterConfigEndpoints.class);
 
             deployable.addResource(sourceTree);
             deployable.buildServer().start();

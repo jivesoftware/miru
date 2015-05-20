@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.api.activity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 
 /**
@@ -10,9 +12,19 @@ public class TenantAndPartition {
     public final MiruTenantId tenantId;
     public final MiruPartitionId partitionId;
 
-    public TenantAndPartition(MiruTenantId tenantId, MiruPartitionId partitionId) {
+    @JsonCreator
+    public TenantAndPartition(@JsonProperty("tenantId") MiruTenantId tenantId,
+        @JsonProperty("partitionId") MiruPartitionId partitionId) {
         this.tenantId = tenantId;
         this.partitionId = partitionId;
+    }
+
+    @Override
+    public String toString() {
+        return "TenantAndPartition{" +
+            "tenantId=" + tenantId +
+            ", partitionId=" + partitionId +
+            '}';
     }
 
     @Override

@@ -30,11 +30,7 @@ public class MiruTopologyColumnValueMarshaller implements TypeMarshaller<MiruTop
 
         buffer.getLong(); // This is unused space from when we had sizeInMemory
         buffer.getLong(); // This is unused space from when we had sizeOnDisk
-
-        long lastIngressTimestamp = -1;
-        if (buffer.remaining() >= 8) {
-            lastIngressTimestamp = buffer.getLong();
-        }
+        buffer.getLong(); // This is unused space from when we had lastIngressTimestamp
 
         long lastQueryTimestamp = -1;
         if (buffer.remaining() >= 8) {
@@ -42,7 +38,7 @@ public class MiruTopologyColumnValueMarshaller implements TypeMarshaller<MiruTop
         }
 
         return new MiruTopologyColumnValue(MiruPartitionState.fromIndex(stateIndex), MiruBackingStorage.fromIndex(storageIndex),
-            lastIngressTimestamp, lastQueryTimestamp);
+            lastQueryTimestamp);
     }
 
     @Override
@@ -54,7 +50,7 @@ public class MiruTopologyColumnValueMarshaller implements TypeMarshaller<MiruTop
         buffer.putInt(miruTopologyColumnValue.storage.getIndex());
         buffer.putLong(-1); // This is unused space from when we had sizeInMemory
         buffer.putLong(-1); // This is unused space from when we had sizeOnDisk
-        buffer.putLong(miruTopologyColumnValue.lastIngressTimestamp);
+        buffer.putLong(-1); // This is unused space from when we had lastIngressTimestamp
         buffer.putLong(miruTopologyColumnValue.lastQueryTimestamp);
 
         return buffer.array();

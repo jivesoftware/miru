@@ -11,12 +11,13 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
-import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
+import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,7 +25,7 @@ import java.util.Map;
 
 public interface MiruClusterRegistry {
 
-    void sendHeartbeatForHost(MiruHost miruHost) throws Exception;
+    void heartbeat(MiruHost miruHost) throws Exception;
 
     LinkedHashSet<HostHeartbeat> getAllHosts() throws Exception;
 
@@ -48,7 +49,11 @@ public interface MiruClusterRegistry {
 
     List<MiruTopologyStatus> getTopologyStatusForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception;
 
+    MiruReplicaSet getReplicaSet(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     Map<MiruPartitionId, MiruReplicaSet> getReplicaSets(MiruTenantId tenantId, Collection<MiruPartitionId> requiredPartitionId) throws Exception;
+
+    void updateIngress(Collection<MiruIngressUpdate> ingressUpdates) throws Exception;
 
     void updateTopologies(MiruHost host, Collection<TopologyUpdate> topologyUpdates) throws Exception;
 
@@ -57,8 +62,6 @@ public interface MiruClusterRegistry {
 
     NamedCursorsResult<Collection<MiruPartitionActiveUpdate>> getPartitionActiveUpdatesForHost(MiruHost host,
         Collection<NamedCursor> sinceCursors) throws Exception;
-
-    MiruPartitionActive isPartitionActive(MiruPartitionCoord coord) throws Exception;
 
     void removeHost(MiruHost host) throws Exception;
 
@@ -70,19 +73,18 @@ public interface MiruClusterRegistry {
 
     void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception;
 
+    Map<MiruPartitionId, RangeMinMax> getIngressRanges(MiruTenantId tenantId) throws Exception;
+
     class TopologyUpdate {
         public final MiruPartitionCoord coord;
         public final Optional<MiruPartitionCoordInfo> optionalInfo;
-        public final Optional<Long> ingressTimestamp;
         public final Optional<Long> queryTimestamp;
 
         public TopologyUpdate(MiruPartitionCoord coord,
             Optional<MiruPartitionCoordInfo> optionalInfo,
-            Optional<Long> ingressTimestamp,
             Optional<Long> queryTimestamp) {
             this.coord = coord;
             this.optionalInfo = optionalInfo;
-            this.ingressTimestamp = ingressTimestamp;
             this.queryTimestamp = queryTimestamp;
         }
     }

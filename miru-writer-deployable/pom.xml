@@ -113,13 +113,17 @@
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-metric-sampler</artifactId>
             <version>0.484-SNAPSHOT</version>
-            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster-client</artifactId>
             <version>0.484-SNAPSHOT</version>
-            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-cluster</artifactId>
+            <version>0.484-SNAPSHOT</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.upena</groupId>
@@ -131,15 +135,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>http-client-rest</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>jaxrs-util</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>http-client</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>

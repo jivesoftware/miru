@@ -99,6 +99,8 @@ public class RCVSSipTracker implements MiruSipTracker<RCVSSipCursor> {
 
     @Override
     public void metrics(MiruPartitionCoord coord, RCVSSipCursor sip) {
+        LOG.set(ValueType.COUNT, "sipTimestamp>partition>" + coord.partitionId + ">sort",
+            sip.sort, coord.tenantId.toString());
         LOG.set(ValueType.COUNT, "sipTimestamp>partition>" + coord.partitionId + ">clock",
             sip.clockTimestamp, coord.tenantId.toString());
         LOG.set(ValueType.COUNT, "sipTimestamp>partition>" + coord.partitionId + ">activity",

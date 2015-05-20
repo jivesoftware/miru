@@ -95,12 +95,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-cluster-client</artifactId>
-            <version>0.484-SNAPSHOT</version>
-            <type>jar</type>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
             <version>0.484-SNAPSHOT</version>
             <type>jar</type>

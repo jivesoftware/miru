@@ -82,7 +82,7 @@ public class MiruPartitioner {
         }
     }
 
-    public List<MiruPartitionedActivity> writeActivities(MiruTenantId tenantId, List<MiruActivity> activities, boolean recoverFromRemoval)
+    public void writeActivities(MiruTenantId tenantId, List<MiruActivity> activities, boolean recoverFromRemoval)
         throws Exception {
 
         MiruPartitionId currentPartition;
@@ -130,8 +130,6 @@ public class MiruPartitioner {
         }
 
         flush(tenantId, currentPartition, partitionRolloverOccurred, partitionedActivities);
-
-        return partitionedActivities;
     }
 
     public void removeActivities(MiruTenantId tenantId, List<MiruActivity> activities) throws Exception {
