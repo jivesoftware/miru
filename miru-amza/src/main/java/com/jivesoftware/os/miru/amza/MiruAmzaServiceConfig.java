@@ -21,6 +21,11 @@ public interface MiruAmzaServiceConfig extends Config {
 
     void setIndexDirectories(String dir);
 
+    @IntDefault(-1)
+    int getAmzaDiscoveryPort();
+
+    void setAmzaDiscoveryPort(int amzaDiscoveryPort);
+
     @IntDefault(1000)
     int getApplyReplicasIntervalInMillis();
 
