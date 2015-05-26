@@ -162,7 +162,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         this.futures = Lists.newCopyOnWriteArrayList(); // rebuild, sip-migrate
 
         MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, contextFactory.findBackingStorage(coord));
-        MiruPartitionAccessor<BM, C, S> accessor = new MiruPartitionAccessor<>(miruStats,
+        MiruPartitionAccessor<BM, C, S> accessor = MiruPartitionAccessor.initialize(miruStats,
             bitmaps,
             coord,
             coordInfo,
@@ -192,7 +192,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     optionalContext = Optional.of(context);
                 }
             }
-            MiruPartitionAccessor<BM, C, S> opened = new MiruPartitionAccessor<>(miruStats, bitmaps, coord, coordInfo.copyToState(openingState),
+            MiruPartitionAccessor<BM, C, S> opened = MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, coordInfo.copyToState(openingState),
                 optionalContext,
                 indexRepairs, indexer);
             opened = updatePartition(accessor, opened);
@@ -214,12 +214,17 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
     @Override
     public MiruRequestHandle<BM, S> acquireQueryHandle() throws Exception {
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
+
+        if (removed.get()) {
+            throw new MiruPartitionUnavailableException("Partition has been removed");
+        }
+
         MiruPartitionAccessor<BM, C, S> accessor = accessorRef.get();
-        if (!removed.get() && accessor.canHotDeploy()) {
+        if (accessor.canHotDeploy()) {
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, accessor.info.copyToState(MiruPartitionState.online));
         }
-        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
         return accessor.getRequestHandle();
     }
 
@@ -235,7 +240,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             synchronized (factoryLock) {
                 MiruPartitionAccessor<BM, C, S> existing = accessorRef.get();
                 MiruPartitionCoordInfo coordInfo = existing.info.copyToState(MiruPartitionState.offline);
-                MiruPartitionAccessor<BM, C, S> closed = new MiruPartitionAccessor<>(miruStats, bitmaps, coord, coordInfo,
+                MiruPartitionAccessor<BM, C, S> closed = MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, coordInfo,
                     Optional.<MiruContext<BM, S>>absent(),
                     indexRepairs,
                     indexer);
@@ -490,7 +495,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         MiruPartitionCoordInfo coordInfo = existing.info
                             .copyToStorage(MiruBackingStorage.memory)
                             .copyToState(MiruPartitionState.offline);
-                        MiruPartitionAccessor<BM, C, S> cleaned = new MiruPartitionAccessor<>(miruStats, bitmaps, coord, coordInfo,
+                        MiruPartitionAccessor<BM, C, S> cleaned = MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, coordInfo,
                             Optional.<MiruContext<BM, S>>absent(),
                             indexRepairs, indexer);
                         cleaned = updatePartition(existing, cleaned);

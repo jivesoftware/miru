@@ -243,6 +243,7 @@ public class MiruLocalHostedPartitionTest {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
+        acrc.setAmzaDiscoveryPort(1226);
         Deployable deployable = new Deployable(new String[0]);
         AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, "test-cluster", acrc,
             rowsChanged -> {

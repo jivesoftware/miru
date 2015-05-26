@@ -70,7 +70,8 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
     public final Set<Integer> beginWriters;
     public final Set<Integer> endWriters;
 
-    public final Semaphore semaphore;
+    public final Semaphore readSemaphore;
+    public final Semaphore writeSemaphore;
     public final AtomicBoolean closed;
 
     private final AtomicReference<C> rebuildCursor;
@@ -88,7 +89,8 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         Set<TimeAndVersion> seenLastSip,
         Set<Integer> beginWriters,
         Set<Integer> endWriters,
-        Semaphore semaphore,
+        Semaphore readSemaphore,
+        Semaphore writeSemaphore,
         AtomicBoolean closed,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer,
@@ -103,36 +105,54 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         this.seenLastSip = new AtomicReference<>(seenLastSip);
         this.beginWriters = beginWriters;
         this.endWriters = endWriters;
-        this.semaphore = semaphore;
+        this.readSemaphore = readSemaphore;
+        this.writeSemaphore = writeSemaphore;
         this.closed = closed;
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
         this.timestampOfLastMerge = timestampOfLastMerge;
     }
 
-    MiruPartitionAccessor(MiruStats miruStats,
+    static <BM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruPartitionAccessor<BM, C, S> initialize(MiruStats miruStats,
         MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
         Optional<MiruContext<BM, S>> context,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer) {
-        this(miruStats, bitmaps, coord, info, context, new AtomicReference<>(),
-            Sets.<TimeAndVersion>newHashSet(), Sets.<Integer>newHashSet(), Sets.<Integer>newHashSet(), new Semaphore(PERMITS, true), new AtomicBoolean(),
-            indexRepairs, indexer, new AtomicLong(System.currentTimeMillis()));
+        return new MiruPartitionAccessor<BM, C, S>(miruStats,
+            bitmaps,
+            coord,
+            info,
+            context,
+            new AtomicReference<>(),
+            Sets.<TimeAndVersion>newHashSet(),
+            Sets.<Integer>newHashSet(),
+            Sets.<Integer>newHashSet(),
+            new Semaphore(PERMITS, true),
+            new Semaphore(PERMITS, true),
+            new AtomicBoolean(),
+            indexRepairs,
+            indexer,
+            new AtomicLong(System.currentTimeMillis()));
     }
 
     MiruPartitionAccessor<BM, C, S> copyToState(MiruPartitionState toState) {
         return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, info.copyToState(toState), context, rebuildCursor,
-            seenLastSip.get(), beginWriters, endWriters, semaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
+            seenLastSip.get(), beginWriters, endWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
     }
 
     Optional<MiruContext<BM, S>> close() throws InterruptedException {
-        semaphore.acquire(PERMITS);
+        writeSemaphore.acquire(PERMITS);
         try {
-            return closeImmediate();
+            readSemaphore.acquire(PERMITS);
+            try {
+                return closeImmediate();
+            } finally {
+                readSemaphore.release(PERMITS);
+            }
         } finally {
-            semaphore.release(PERMITS);
+            writeSemaphore.release(PERMITS);
         }
     }
 
@@ -143,6 +163,10 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
 
     boolean canHotDeploy() {
         return (info.state == MiruPartitionState.offline || info.state == MiruPartitionState.bootstrap) && info.storage == MiruBackingStorage.disk;
+    }
+
+    boolean canHandleQueries() {
+        return info.state == MiruPartitionState.online;
     }
 
     boolean isOpenForWrites() {
@@ -263,7 +287,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         MiruContext<BM, S> got = context.get();
 
         int consumedCount = 0;
-        semaphore.acquire();
+        writeSemaphore.acquire();
         try {
             if (closed.get()) {
                 return -1;
@@ -314,7 +338,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             checkCorruption(got, e);
             throw e;
         } finally {
-            semaphore.release();
+            writeSemaphore.release();
         }
 
         if (Thread.interrupted()) {
@@ -508,14 +532,21 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
     MiruRequestHandle<BM, S> getRequestHandle() {
         log.debug("Request handle requested for {}", coord);
 
+        if (closed.get()) {
+            throw new MiruPartitionUnavailableException("Partition is closed");
+        }
+        if (!canHandleQueries()) {
+            throw new MiruPartitionUnavailableException("Partition is not online");
+        }
+
         try {
-            semaphore.acquire();
+            readSemaphore.acquire();
         } catch (InterruptedException e) {
             throw new MiruPartitionUnavailableException(e);
         }
 
         if (closed.get()) {
-            semaphore.release();
+            readSemaphore.release();
             throw new MiruPartitionUnavailableException("Partition is closed");
         }
 
@@ -560,20 +591,20 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
 
             @Override
             public void close() throws Exception {
-                semaphore.release();
+                readSemaphore.release();
             }
         };
     }
 
     MiruMigrationHandle<BM, C, S> getMigrationHandle(long millis) {
         try {
-            semaphore.tryAcquire(PERMITS, millis, TimeUnit.MILLISECONDS);
+            writeSemaphore.tryAcquire(PERMITS, millis, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             throw new MiruPartitionUnavailableException(e);
         }
 
         if (closed.get()) {
-            semaphore.release(PERMITS);
+            writeSemaphore.release(PERMITS);
             throw new MiruPartitionUnavailableException("Partition is closed");
         }
 
@@ -615,12 +646,12 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
                 if (state.isPresent()) {
                     migratedInfo = migratedInfo.copyToState(state.get());
                 }
-                return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, migratedInfo, Optional.of(context), indexRepairs, indexer);
+                return MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, migratedInfo, Optional.of(context), indexRepairs, indexer);
             }
 
             @Override
             public void close() throws Exception {
-                semaphore.release(PERMITS);
+                writeSemaphore.release(PERMITS);
             }
         };
     }

@@ -48,7 +48,7 @@ public class MiruAmzaServiceInitializer {
         RowChanges allRowChanges) throws Exception {
 
         String multicastGroup = System.getProperty("amza.discovery.group", "225.4.5.7");
-        int multicastPort = Integer.parseInt(System.getProperty("amza.discovery.port", "1225")); //TODO expose to config
+        int multicastPort = Integer.parseInt(System.getProperty("amza.discovery.port", String.valueOf(config.getAmzaDiscoveryPort())));
 
         RingMember ringMember = new RingMember(
             Strings.padStart(String.valueOf(instanceId), 5, '0') + "_" + instanceKey);
@@ -144,7 +144,7 @@ public class MiruAmzaServiceInitializer {
             .setContext("/static/amza");
         deployable.addResource(staticResource);
 
-        if (clusterName != null) {
+        if (clusterName != null && multicastPort > 0) {
             AmzaDiscovery amzaDiscovery = new AmzaDiscovery(amzaService.getAmzaRing(), clusterName, multicastGroup, multicastPort);
             amzaDiscovery.start();
             System.out.println("-----------------------------------------------------------------------");
@@ -152,7 +152,7 @@ public class MiruAmzaServiceInitializer {
             System.out.println("-----------------------------------------------------------------------");
         } else {
             System.out.println("-----------------------------------------------------------------------");
-            System.out.println("|     Amza Service is in manual Discovery mode.  No cluster name was specified");
+            System.out.println("|     Amza Service is in manual Discovery mode.  No cluster name was specified or discovery port not set");
             System.out.println("-----------------------------------------------------------------------");
         }
         return amzaService;

@@ -72,6 +72,7 @@ import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClien
 import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
 import java.io.File;
 import java.util.Arrays;
+import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.StringDefault;
 
 public class MiruWALMain {
@@ -90,6 +91,9 @@ public class MiruWALMain {
         @Override
         String getIndexDirectories();
 
+        @IntDefault(1223)
+        @Override
+        int getAmzaDiscoveryPort();
     }
 
     public void run(String[] args) throws Exception {

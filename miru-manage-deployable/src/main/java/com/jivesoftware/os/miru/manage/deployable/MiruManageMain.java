@@ -68,6 +68,7 @@ import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpCli
 import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.StringDefault;
 
 public class MiruManageMain {
@@ -86,6 +87,9 @@ public class MiruManageMain {
         @Override
         String getIndexDirectories();
 
+        @IntDefault(1225)
+        @Override
+        int getAmzaDiscoveryPort();
     }
 
     public void run(String[] args) throws Exception {
