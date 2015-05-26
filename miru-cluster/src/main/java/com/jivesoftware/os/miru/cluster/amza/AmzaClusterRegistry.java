@@ -338,8 +338,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         Collection<NamedCursor> cursors = sinceCursors;
         if (takeCursors != null) {
             cursors = Lists.newArrayList();
-            for (TakeCursors.RingHostCursor cursor : takeCursors.ringHostCursors) {
-                cursors.add(new NamedCursor(cursor.ringHost.toCanonicalString(), cursor.transactionId));
+            for (TakeCursors.RingMemberCursor cursor : takeCursors.ringMemberCursors) {
+                cursors.add(new NamedCursor(cursor.ringMember.getMember(), cursor.transactionId));
             }
         }
 
@@ -433,11 +433,11 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     private void extractCursors(String cursorName, Map<String, NamedCursor> cursors, TakeCursors registryTakeCursors) {
-        for (TakeCursors.RingHostCursor hostCursor : registryTakeCursors.ringHostCursors) {
-            String name = hostCursor.ringHost.toCanonicalString() + '/' + cursorName;
+        for (TakeCursors.RingMemberCursor memberCursor : registryTakeCursors.ringMemberCursors) {
+            String name = memberCursor.ringMember.getMember() + '/' + cursorName;
             NamedCursor existing = cursors.get(name);
-            if (existing == null || existing.id < hostCursor.transactionId) {
-                cursors.put(name, new NamedCursor(name, hostCursor.transactionId));
+            if (existing == null || existing.id < memberCursor.transactionId) {
+                cursors.put(name, new NamedCursor(name, memberCursor.transactionId));
             }
         }
     }

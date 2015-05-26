@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
@@ -14,9 +15,10 @@ import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.storage.RegionPropertyMarshaller;
 import com.jivesoftware.os.amza.shared.AmzaInstance;
 import com.jivesoftware.os.amza.shared.AmzaRing;
-import com.jivesoftware.os.amza.shared.HighwaterMarks;
+import com.jivesoftware.os.amza.shared.HighwaterStorage;
 import com.jivesoftware.os.amza.shared.RegionProperties;
 import com.jivesoftware.os.amza.shared.RingHost;
+import com.jivesoftware.os.amza.shared.RingMember;
 import com.jivesoftware.os.amza.shared.RowChanges;
 import com.jivesoftware.os.amza.shared.UpdatesSender;
 import com.jivesoftware.os.amza.shared.UpdatesTaker;
@@ -38,6 +40,7 @@ public class MiruAmzaServiceInitializer {
 
     public AmzaService initialize(final Deployable deployable,
         int instanceId,
+        String instanceKey,
         String hostName,
         int port,
         String clusterName,
@@ -47,6 +50,8 @@ public class MiruAmzaServiceInitializer {
         String multicastGroup = System.getProperty("amza.discovery.group", "225.4.5.7");
         int multicastPort = Integer.parseInt(System.getProperty("amza.discovery.port", "1225")); //TODO expose to config
 
+        RingMember ringMember = new RingMember(
+            Strings.padStart(String.valueOf(instanceId), 5, '0') + "_" + instanceKey);
         RingHost ringHost = new RingHost(hostName, port);
 
         final TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId));
@@ -97,6 +102,7 @@ public class MiruAmzaServiceInitializer {
 
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
             amzaStats,
+            ringMember,
             ringHost,
             orderIdProvider,
             regionPropertyMarshaller,
@@ -131,7 +137,7 @@ public class MiruAmzaServiceInitializer {
         deployable.addEndpoints(AmzaReplicationRestEndpoints.class);
         deployable.addInjectables(AmzaRing.class, amzaService.getAmzaRing());
         deployable.addInjectables(AmzaInstance.class, amzaService);
-        deployable.addInjectables(HighwaterMarks.class, amzaService.getHighwaterMarks());
+        deployable.addInjectables(HighwaterStorage.class, amzaService.getHighwaterMarks());
 
         Resource staticResource = new Resource(null)
             .addClasspathResource("resources/static/amza")
@@ -139,7 +145,7 @@ public class MiruAmzaServiceInitializer {
         deployable.addResource(staticResource);
 
         if (clusterName != null) {
-            AmzaDiscovery amzaDiscovery = new AmzaDiscovery(amzaService.getAmzaRing(), ringHost, clusterName, multicastGroup, multicastPort);
+            AmzaDiscovery amzaDiscovery = new AmzaDiscovery(amzaService.getAmzaRing(), clusterName, multicastGroup, multicastPort);
             amzaDiscovery.start();
             System.out.println("-----------------------------------------------------------------------");
             System.out.println("|      Amza Service Discovery Online");

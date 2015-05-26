@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable.balancer;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -31,7 +32,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -96,7 +96,7 @@ public class MiruRebalanceDirector {
                 if (fromHost.isPresent()) {
                     pivotHost = fromHost.get();
                 } else if (partitions.isEmpty()) {
-                    pivotHost = allHosts.get(new Random().nextInt(allHosts.size()));
+                    pivotHost = allHosts.get(Objects.hashCode(tenantId, partitionId) % allHosts.size());
                 } else {
                     pivotHost = partitions.get(0).coord.host;
                 }

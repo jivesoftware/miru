@@ -165,6 +165,7 @@ public class MiruWALMain {
             WALAmzaServiceConfig amzaServiceConfig = deployable.config(WALAmzaServiceConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 instanceConfig.getInstanceName(),
+                instanceConfig.getInstanceKey(),
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 "miru-wal-" + instanceConfig.getClusterName(),

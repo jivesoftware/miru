@@ -16,7 +16,7 @@ import com.jivesoftware.os.amza.service.storage.RegionPropertyMarshaller;
 import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.RegionProperties;
 import com.jivesoftware.os.amza.shared.RingHost;
-import com.jivesoftware.os.amza.shared.RowsChanged;
+import com.jivesoftware.os.amza.shared.RingMember;
 import com.jivesoftware.os.amza.shared.UpdatesSender;
 import com.jivesoftware.os.amza.shared.UpdatesTaker;
 import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
@@ -98,6 +98,7 @@ public class MiruWriterUIServiceNGTest {
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();
 
+        RingMember ringMember = new RingMember("testInstance");
         RingHost ringHost = new RingHost("localhost", 10000);
         final TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -135,6 +136,7 @@ public class MiruWriterUIServiceNGTest {
 
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
             amzaStats,
+            ringMember,
             ringHost,
             orderIdProvider,
             regionPropertyMarshaller,
@@ -143,7 +145,7 @@ public class MiruWriterUIServiceNGTest {
             tableTaker,
             Optional.<SendFailureListener>absent(),
             Optional.<TakeFailureListener>absent(),
-            (RowsChanged rc) -> {
+            rowsChanged -> {
             });
 
         amzaService.start();
