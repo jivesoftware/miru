@@ -15,11 +15,10 @@ public class MiruTopologyColumnValueMarshallerTest {
     @Test
     public void testFromLexBytes() throws Exception {
         MiruTopologyColumnValueMarshaller marshaller = new MiruTopologyColumnValueMarshaller();
-        MiruTopologyColumnValue expected = new MiruTopologyColumnValue(MiruPartitionState.online, MiruBackingStorage.memory, System.currentTimeMillis(),
-            System.currentTimeMillis());
+        MiruTopologyColumnValue expected = new MiruTopologyColumnValue(MiruPartitionState.online, MiruBackingStorage.memory, System.currentTimeMillis());
         MiruTopologyColumnValue actual = marshaller.fromLexBytes(marshaller.toLexBytes(expected));
         assertEquals(actual.state, expected.state);
         assertEquals(actual.storage, expected.storage);
-        assertEquals(actual.lastIngressTimestamp, expected.lastIngressTimestamp);
+        assertEquals(actual.lastQueryTimestamp, expected.lastQueryTimestamp);
     }
 }

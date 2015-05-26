@@ -58,11 +58,11 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     private void mergeCursors(Map<String, NamedCursor> cursorsByName, TakeCursors takeCursors) {
-        for (TakeCursors.RingHostCursor ringHostCursor : takeCursors.ringHostCursors) {
-            String ringHostName = ringHostCursor.ringHost.toCanonicalString();
-            NamedCursor existing = cursorsByName.get(ringHostName);
-            if (existing == null || ringHostCursor.transactionId > existing.id) {
-                cursorsByName.put(ringHostName, new NamedCursor(ringHostName, ringHostCursor.transactionId));
+        for (TakeCursors.RingMemberCursor memberCursor : takeCursors.ringMemberCursors) {
+            String memberName = memberCursor.ringMember.getMember();
+            NamedCursor existing = cursorsByName.get(memberName);
+            if (existing == null || memberCursor.transactionId > existing.id) {
+                cursorsByName.put(memberName, new NamedCursor(memberName, memberCursor.transactionId));
             }
         }
     }

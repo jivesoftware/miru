@@ -101,7 +101,6 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
                 new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
                 new MiruIndexLatest<>(),
                 new MiruIndexPairedLatest<>()),
-            config.getPartitionWakeOnIndex(),
             config.getPartitionRebuildIfBehindByCount(),
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),

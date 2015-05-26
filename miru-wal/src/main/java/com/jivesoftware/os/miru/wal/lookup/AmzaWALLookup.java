@@ -12,12 +12,10 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
-import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +55,7 @@ public class AmzaWALLookup implements MiruWALLookup {
     }
 
     @Override
-    public void add(MiruTenantId tenantId, List<MiruPartitionedActivity> activities) throws Exception {
+    public Map<MiruPartitionId, RangeMinMax> add(MiruTenantId tenantId, List<MiruPartitionedActivity> activities) throws Exception {
         if (!knownLookupTenants.contains(tenantId)) {
             AmzaRegion lookupTenantsRegion = amzaWALUtil.getOrCreateMaximalRegion(AmzaWALUtil.LOOKUP_TENANTS_REGION_NAME, Optional.<RegionProperties>absent());
             lookupTenantsRegion.setValue(new WALKey(tenantId.getBytes()), AmzaWALUtil.NULL_VALUE);
@@ -86,9 +84,7 @@ public class AmzaWALLookup implements MiruWALLookup {
             }
         }
 
-        for (Map.Entry<MiruPartitionId, RangeMinMax> entry : partitionMinMax.entrySet()) {
-            putRange(tenantId, entry.getKey(), entry.getValue());
-        }
+        return partitionMinMax;
     }
 
     @Override
@@ -126,70 +122,4 @@ public class AmzaWALLookup implements MiruWALLookup {
         return tenantIds;
     }
 
-    private WALKey tenantPartitionToKeyBytes(MiruTenantId tenantId, MiruPartitionId partitionId, RangeType rangeType) {
-        byte[] keyBytes;
-        byte[] tenantBytes = tenantId.getBytes();
-        if (partitionId != null) {
-            if (rangeType != null) {
-                keyBytes = new byte[4 + tenantBytes.length + 4 + 1];
-                FilerIO.intBytes(tenantBytes.length, keyBytes, 0);
-                System.arraycopy(tenantBytes, 0, keyBytes, 4, tenantBytes.length);
-                UtilLexMarshaller.intBytes(partitionId.getId(), keyBytes, 4 + tenantBytes.length);
-                keyBytes[keyBytes.length - 1] = rangeType.getType();
-            } else {
-                keyBytes = new byte[4 + tenantBytes.length + 4];
-                FilerIO.intBytes(tenantBytes.length, keyBytes, 0);
-                System.arraycopy(tenantBytes, 0, keyBytes, 4, tenantBytes.length);
-                UtilLexMarshaller.intBytes(partitionId.getId(), keyBytes, 4 + tenantBytes.length);
-            }
-        } else {
-            keyBytes = new byte[4 + tenantBytes.length];
-            FilerIO.intBytes(tenantBytes.length, keyBytes, 0);
-            System.arraycopy(tenantBytes, 0, keyBytes, 4, tenantBytes.length);
-        }
-        return new WALKey(keyBytes);
-    }
-
-    private MiruPartitionId keyBytesToPartitionId(byte[] keyBytes) {
-        return MiruPartitionId.of(FilerIO.bytesInt(keyBytes, keyBytes.length - 4 - 1));
-    }
-
-    private RangeType keyBytesToRangeType(byte[] keyBytes) {
-        return RangeType.fromType(keyBytes[keyBytes.length - 1]);
-    }
-
-    @Override
-    public void streamRanges(MiruTenantId tenantId, MiruPartitionId partitionId, StreamRangeLookup streamRangeLookup) throws Exception {
-        WALKey fromKey = tenantPartitionToKeyBytes(tenantId, partitionId, null);
-        WALKey toKey = fromKey.prefixUpperExclusive();
-        AmzaRegion region = amzaWALUtil.getRegion(AmzaWALUtil.LOOKUP_RANGES_REGION_NAME);
-        if (region != null) {
-            region.rangeScan(fromKey, toKey, (rowTxId, key, value) -> {
-                if (value != null) {
-                    MiruPartitionId streamPartitionId = keyBytesToPartitionId(key.getKey());
-                    if (partitionId == null || partitionId.equals(streamPartitionId)) {
-                        RangeType rangeType = keyBytesToRangeType(key.getKey());
-                        if (streamRangeLookup.stream(streamPartitionId, rangeType, value.getTimestampId())) {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            });
-        }
-    }
-
-    @Override
-    public void putRange(MiruTenantId tenantId, MiruPartitionId partitionId, RangeMinMax rangeMinMax) throws Exception {
-        AmzaRegion region = amzaWALUtil.getOrCreateMaximalRegion(AmzaWALUtil.LOOKUP_RANGES_REGION_NAME, Optional.<RegionProperties>absent());
-        region.setValues(Arrays.asList(
-            new SimpleEntry<>(tenantPartitionToKeyBytes(tenantId, partitionId, RangeType.clockMin),
-                new WALValue(null, Long.MAX_VALUE - rangeMinMax.getMinClock(), false)),
-            new SimpleEntry<>(tenantPartitionToKeyBytes(tenantId, partitionId, RangeType.clockMax),
-                new WALValue(null, rangeMinMax.getMaxClock(), false)),
-            new SimpleEntry<>(tenantPartitionToKeyBytes(tenantId, partitionId, RangeType.orderIdMin),
-                new WALValue(null, Long.MAX_VALUE - rangeMinMax.getMinOrderId(), false)),
-            new SimpleEntry<>(tenantPartitionToKeyBytes(tenantId, partitionId, RangeType.orderIdMax),
-                new WALValue(null, rangeMinMax.getMaxOrderId(), false))));
-    }
 }

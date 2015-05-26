@@ -4,7 +4,6 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -64,30 +63,6 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             return "MiruLookupEntry{" + "collisionId=" + collisionId + ", version=" + version + ", entry=" + entry + '}';
         }
 
-    }
-
-    MiruLookupRange lookupRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
-
-    Collection<MiruLookupRange> lookupRanges(MiruTenantId tenantId) throws Exception;
-
-    class MiruLookupRange {
-
-        public int partitionId;
-        public long minClock;
-        public long maxClock;
-        public long minOrderId;
-        public long maxOrderId;
-
-        public MiruLookupRange() {
-        }
-
-        public MiruLookupRange(int partitionId, long minClock, long maxClock, long minOrderId, long maxOrderId) {
-            this.partitionId = partitionId;
-            this.minClock = minClock;
-            this.maxClock = maxClock;
-            this.minOrderId = minOrderId;
-            this.maxOrderId = maxOrderId;
-        }
     }
 
     StreamBatch<MiruWALEntry, C> getActivity(MiruTenantId tenantId,

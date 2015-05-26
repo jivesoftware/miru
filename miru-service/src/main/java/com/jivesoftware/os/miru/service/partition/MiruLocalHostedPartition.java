@@ -79,7 +79,6 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM> indexer;
-    private final boolean partitionWakeOnIndex;
     private final long partitionRebuildIfBehindByCount;
     private final int partitionRebuildBatchSize;
     private final int partitionSipBatchSize;
@@ -131,7 +130,6 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM> indexer,
-        boolean partitionWakeOnIndex,
         long partitionRebuildIfBehindByCount,
         int partitionRebuildBatchSize,
         int partitionSipBatchSize,
@@ -156,7 +154,6 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
-        this.partitionWakeOnIndex = partitionWakeOnIndex;
         this.partitionRebuildIfBehindByCount = partitionRebuildIfBehindByCount;
         this.partitionRebuildBatchSize = partitionRebuildBatchSize;
         this.partitionSipBatchSize = partitionSipBatchSize;
@@ -172,7 +169,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             Optional.<MiruContext<BM, S>>absent(),
             indexRepairs,
             indexer);
-        heartbeatHandler.heartbeat(coord, Optional.of(coordInfo), Optional.<Long>absent(), Optional.<Long>absent());
+        heartbeatHandler.heartbeat(coord, Optional.of(coordInfo), Optional.<Long>absent());
         this.accessorRef.set(accessor);
         log.incAtomic("state>" + accessor.info.state.name());
         log.incAtomic("storage>" + accessor.info.storage.name());
@@ -222,7 +219,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, accessor.info.copyToState(MiruPartitionState.online));
         }
-        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.<Long>absent(), Optional.of(System.currentTimeMillis()));
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
         return accessor.getRequestHandle();
     }
 
@@ -330,16 +327,11 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             }
             log.inc("indexIngress>dropped", count);
         }
-
-        if (partitionWakeOnIndex) {
-            heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()), Optional.<Long>absent());
-        }
     }
 
     @Override
     public void warm() throws Exception {
-        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()), Optional.<Long>absent());
-
+        //TODO this should tell us to sip
         log.inc("warm", 1);
         log.inc("warm", 1, coord.tenantId.toString());
         log.inc("warm>partition>" + coord.partitionId, 1, coord.tenantId.toString());
@@ -436,7 +428,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                 return null;
             }
 
-            heartbeatHandler.heartbeat(coord, Optional.of(update.info), Optional.<Long>absent(), Optional.<Long>absent());
+            heartbeatHandler.heartbeat(coord, Optional.of(update.info), Optional.<Long>absent());
 
             accessorRef.set(update);
 

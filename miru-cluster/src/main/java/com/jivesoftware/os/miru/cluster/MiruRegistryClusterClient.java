@@ -1,21 +1,23 @@
 package com.jivesoftware.os.miru.cluster;
 
 import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatRequest;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
+import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
-import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyPartition;
@@ -25,9 +27,8 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -38,20 +39,17 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruClusterRegistry clusterRegistry;
+    private final MiruReplicaSetDirector replicaSetDirector;
+    private final Cache<TenantAndPartition, Boolean> replicationCache = CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.MINUTES).build();
 
-    public MiruRegistryClusterClient(MiruClusterRegistry clusterRegistry) {
+    public MiruRegistryClusterClient(MiruClusterRegistry clusterRegistry, MiruReplicaSetDirector replicaSetDirector) {
         this.clusterRegistry = clusterRegistry;
+        this.replicaSetDirector = replicaSetDirector;
     }
 
     @Override
     public List<HostHeartbeat> allhosts() throws Exception {
         return new ArrayList<>(clusterRegistry.getAllHosts());
-    }
-
-    @Override
-    public void elect(MiruHost host, MiruTenantId tenantId, MiruPartitionId partitionId, long electionId) throws Exception {
-        clusterRegistry.ensurePartitionCoord(new MiruPartitionCoord(tenantId, partitionId, host));
-        clusterRegistry.addToReplicaRegistry(tenantId, partitionId, electionId, host);
     }
 
     @Override
@@ -80,40 +78,41 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
-    public void removeReplica(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        clusterRegistry.removeTenantPartionReplicaSet(tenantId, partitionId);
-    }
-
-    @Override
-    public MiruReplicaHosts replicas(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        Map<MiruPartitionId, MiruReplicaSet> replicaSets = clusterRegistry.getReplicaSets(tenantId,
-            Collections.singletonList(partitionId));
-        MiruReplicaSet replicaSet = replicaSets.get(partitionId);
-
-        return new MiruReplicaHosts(!replicaSet.get(MiruPartitionState.online).isEmpty(),
-            replicaSet.getHostsWithReplica(),
-            replicaSet.getCountOfMissingReplicas());
-    }
-
-    @Override
     public MiruTenantConfig tenantConfig(MiruTenantId tenantId) throws Exception {
         return clusterRegistry.getTenantConfig(tenantId);
     }
 
     @Override
+    public void updateIngress(Collection<MiruIngressUpdate> ingressUpdates) throws Exception {
+        //TODO call this from WAL, DUH!!!!
+        clusterRegistry.updateIngress(ingressUpdates);
+
+        for (MiruIngressUpdate ingressUpdate : ingressUpdates) {
+            TenantAndPartition tenantAndPartition = new TenantAndPartition(ingressUpdate.tenantId, ingressUpdate.partitionId);
+            if (replicationCache.getIfPresent(tenantAndPartition) == null) {
+                MiruTenantId tenantId = ingressUpdate.tenantId;
+                MiruPartitionId partitionId = ingressUpdate.partitionId;
+                MiruReplicaSet replicaSet = clusterRegistry.getReplicaSet(tenantId, partitionId);
+                if (replicaSet.getCountOfMissingReplicas() > 0) {
+                    LOG.debug("Electing {} replicas for {} {}", replicaSet.getCountOfMissingReplicas(), tenantId, partitionId);
+                    replicaSetDirector.electHostsForTenantPartition(tenantId, partitionId, replicaSet);
+                    replicationCache.put(tenantAndPartition, true);
+                }
+            }
+        }
+    }
+
+    @Override
     public MiruHeartbeatResponse thumpthump(final MiruHost miruHost, MiruHeartbeatRequest heartbeatRequest) throws Exception {
-        clusterRegistry.sendHeartbeatForHost(miruHost);
+        clusterRegistry.heartbeat(miruHost);
         clusterRegistry.updateTopologies(miruHost, heartbeatRequest.active.stream()
             .map(partitionInfo -> {
                 Optional<MiruPartitionCoordInfo> info = Optional.fromNullable(partitionInfo.info);
-                Optional<Long> ingressTimestamp = (partitionInfo.ingressTimestamp > -1) ?
-                    Optional.of(partitionInfo.ingressTimestamp) : Optional.<Long>absent();
                 Optional<Long> queryTimestamp = (partitionInfo.queryTimestamp > -1) ?
                     Optional.of(partitionInfo.queryTimestamp) : Optional.<Long>absent();
                 return new MiruClusterRegistry.TopologyUpdate(
                     new MiruPartitionCoord(partitionInfo.tenantId, MiruPartitionId.of(partitionInfo.partitionId), miruHost),
                     info,
-                    ingressTimestamp,
                     queryTimestamp);
             })
             .collect(Collectors.toList()));

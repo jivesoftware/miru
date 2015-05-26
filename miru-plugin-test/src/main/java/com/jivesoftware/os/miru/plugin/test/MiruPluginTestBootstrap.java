@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.plugin.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.google.common.base.Optional;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.service.AmzaService;
@@ -21,7 +21,6 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
-import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -32,15 +31,16 @@ import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
-import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
+import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
-import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
-import com.jivesoftware.os.miru.cluster.client.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
@@ -138,7 +138,7 @@ public class MiruPluginTestBootstrap {
         MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
         MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new RCVSWALLookup(wal.getActivityLookupTable(), wal.getRangeLookupTable());
+        MiruWALLookup walLookup = new RCVSWALLookup(wal.getActivityLookupTable());
 
         MiruClusterRegistry clusterRegistry;
 
@@ -148,17 +148,11 @@ public class MiruPluginTestBootstrap {
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "localhost", 10000, "test-cluster", acrc, rowsChanged -> {
-        });
-
-        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-            null, 1000, 1000);
-        MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
-            readTrackingWALWriter);
-        MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000, walClient);
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, "test-cluster", acrc,
+            rowsChanged -> {
+            });
 
         clusterRegistry = new AmzaClusterRegistry(amzaService,
-            new MiruTenantPartitionRangeProvider(walClient, acrc.getMinimumRangeCheckIntervalInMillis()),
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
             TimeUnit.HOURS.toMillis(1),
@@ -167,19 +161,18 @@ public class MiruPluginTestBootstrap {
             0,
             0);
 
-        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
-        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterClient);
+        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
+            null, 1000, 1000);
+        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
+        MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
+            readTrackingWALWriter, new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector));
+        MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000, walClient);
 
-        clusterRegistry.sendHeartbeatForHost(miruHost);
-        replicaSetDirector.electToReplicaSetForTenantPartition(tenantId, partitionId,
-            new MiruReplicaHosts(false, new HashSet<>(), 3),
-            System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1));
-        clusterRegistry.updateTopologies(miruHost, Arrays.asList(
-            new MiruClusterRegistry.TopologyUpdate(
-                new MiruPartitionCoord(tenantId, partitionId, miruHost),
-                Optional.<MiruPartitionCoordInfo>absent(),
-                Optional.of(System.currentTimeMillis()),
-                Optional.<Long>absent())));
+        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector);
+
+        clusterRegistry.heartbeat(miruHost);
+        replicaSetDirector.electHostsForTenantPartition(tenantId, partitionId, new MiruReplicaSet(ArrayListMultimap.create(), new HashSet<>(), 3));
+        clusterRegistry.updateIngress(Arrays.asList(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false)));
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
             .initialize(config.getReadStreamIdsPropName(), miruHost, walClient);

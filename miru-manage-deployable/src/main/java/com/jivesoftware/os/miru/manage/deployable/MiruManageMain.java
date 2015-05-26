@@ -26,7 +26,10 @@ import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -42,7 +45,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
-import com.jivesoftware.os.miru.cluster.MiruTenantPartitionRangeProvider;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
@@ -166,6 +169,7 @@ public class MiruManageMain {
             AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 instanceConfig.getInstanceName(),
+                instanceConfig.getInstanceKey(),
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 "amza-topology-" + instanceConfig.getClusterName(),
@@ -173,7 +177,6 @@ public class MiruManageMain {
                 rowsChanged -> {
                 });
             AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-                new MiruTenantPartitionRangeProvider(miruWALClient, amzaClusterRegistryConfig.getMinimumRangeCheckIntervalInMillis()),
                 new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                 registryConfig.getDefaultNumberOfReplicas(),
                 registryConfig.getDefaultTopologyIsStaleAfterMillis(),
@@ -192,7 +195,9 @@ public class MiruManageMain {
                 miruWALClient,
                 stats);
 
-            MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry);
+            OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
+                new JiveEpochTimestampProvider());
+            MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry));
             //TODO expose to config TimeUnit.MINUTES.toMillis(10)
             ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
 
@@ -212,7 +217,7 @@ public class MiruManageMain {
             deployable.addInjectables(MiruWALClient.class, miruWALClient);
             deployable.addEndpoints(MiruTopologyEndpoints.class);
             deployable.addInjectables(MiruStats.class, stats);
-            deployable.addInjectables(MiruRegistryClusterClient.class, new MiruRegistryClusterClient(clusterRegistry));
+            deployable.addInjectables(MiruRegistryClusterClient.class, clusterClient);
 
             deployable.addResource(sourceTree);
             deployable.buildServer().start();

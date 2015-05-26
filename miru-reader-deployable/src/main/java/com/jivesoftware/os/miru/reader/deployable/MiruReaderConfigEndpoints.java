@@ -21,11 +21,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import static com.jivesoftware.os.miru.api.MiruConfigReader.CONFIG_SERVICE_ENDPOINT_PREFIX;
-import static com.jivesoftware.os.miru.api.MiruConfigReader.PRIORITIZE_REBUILD_ENDPOINT;
-
 @Singleton
-@Path(CONFIG_SERVICE_ENDPOINT_PREFIX)
+@Path("/miru/config")
 public class MiruReaderConfigEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -54,7 +51,7 @@ public class MiruReaderConfigEndpoints {
             stats.ingressed("POST:/storage/" + tenantId + "/" + partitionId + "/" + storage, 1, System.currentTimeMillis() - start);
             return Response.ok(storage).build();
         } catch (Throwable t) {
-            log.error("Failed to set storage to {} for tenant {} partition {}", new Object[]{storage, tenantId, partitionId}, t);
+            log.error("Failed to set storage to {} for tenant {} partition {}", new Object[] { storage, tenantId, partitionId }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -73,7 +70,7 @@ public class MiruReaderConfigEndpoints {
             stats.ingressed("DELETE:/hosts/" + logicalName + "/" + port, 1, System.currentTimeMillis() - start);
             return Response.ok(host.toStringForm()).build();
         } catch (Throwable t) {
-            log.error("Failed to remove host {}", new Object[]{host}, t);
+            log.error("Failed to remove host {}", new Object[] { host }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -97,7 +94,7 @@ public class MiruReaderConfigEndpoints {
             stats.ingressed("DELETE:/topology/" + tenantId + "/" + partitionId + "/" + logicalName + "/" + port, 1, System.currentTimeMillis() - start);
             return Response.ok(host.toStringForm()).build();
         } catch (Throwable t) {
-            log.error("Failed to remove topology for tenant {} partition {} host {}", new Object[]{tenantId, partitionId, host}, t);
+            log.error("Failed to remove topology for tenant {} partition {} host {}", new Object[] { tenantId, partitionId, host }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -122,13 +119,13 @@ public class MiruReaderConfigEndpoints {
             stats.ingressed("POST:/check/" + tenantId + "/" + partitionId + "/" + state + "/" + storage, 1, System.currentTimeMillis() - start);
             return response;
         } catch (Throwable t) {
-            log.error("Failed to check state for tenant {} partition {}", new Object[]{tenantId, partitionId}, t);
+            log.error("Failed to check state for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
             return Response.serverError().build();
         }
     }
 
     @POST
-    @Path(PRIORITIZE_REBUILD_ENDPOINT + "/{tenantId}/{partitionId}")
+    @Path("/rebuild/prioritize/{tenantId}/{partitionId}")
     public Response check(
         @PathParam("tenantId") String tenantId,
         @PathParam("partitionId") Integer partitionId) {
@@ -142,10 +139,10 @@ public class MiruReaderConfigEndpoints {
             } else {
                 response = Response.status(Response.Status.NOT_FOUND).build();
             }
-            stats.ingressed("DELETE:" + PRIORITIZE_REBUILD_ENDPOINT + "/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("DELETE:" + "/rebuild/prioritize/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return response;
         } catch (Throwable t) {
-            log.error("Failed to prioritize rebuild for tenant {} partition {}", new Object[]{tenantId, partitionId}, t);
+            log.error("Failed to prioritize rebuild for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
             return Response.serverError().build();
         }
     }

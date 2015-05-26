@@ -10,17 +10,15 @@ public class PartitionInfo {
 
     public MiruTenantId tenantId;
     public int partitionId;
-    public long ingressTimestamp; // -1 means unchanged
     public long queryTimestamp; // -1 means unchanged
     public MiruPartitionCoordInfo info;
 
     public PartitionInfo() {
     }
 
-    public PartitionInfo(MiruTenantId tenantId, int partitionId, long ingressTimestamp, long queryTimestamp, MiruPartitionCoordInfo info) {
+    public PartitionInfo(MiruTenantId tenantId, int partitionId, long queryTimestamp, MiruPartitionCoordInfo info) {
         this.tenantId = tenantId;
         this.partitionId = partitionId;
-        this.ingressTimestamp = ingressTimestamp;
         this.queryTimestamp = queryTimestamp;
         this.info = info;
     }

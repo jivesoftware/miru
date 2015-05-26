@@ -49,22 +49,19 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         this.replicateRequireNReplicas = replicateRequireNReplicas;
 
         this.partitionedActivityMarshaller = new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, mapper);
-        this.activityWALKeyFunction = new Function<MiruPartitionedActivity, WALKey>() {
-            @Override
-            public WALKey apply(MiruPartitionedActivity partitionedActivity) {
-                long activityCollisionId;
-                if (partitionedActivity.type != MiruPartitionedActivity.Type.BEGIN && partitionedActivity.type != MiruPartitionedActivity.Type.END) {
-                    activityCollisionId = partitionedActivity.timestamp;
-                } else {
-                    activityCollisionId = partitionedActivity.writerId;
-                }
+        this.activityWALKeyFunction = (partitionedActivity) -> {
+            long activityCollisionId;
+            if (partitionedActivity.type != MiruPartitionedActivity.Type.BEGIN && partitionedActivity.type != MiruPartitionedActivity.Type.END) {
+                activityCollisionId = partitionedActivity.timestamp;
+            } else {
+                activityCollisionId = partitionedActivity.writerId;
+            }
 
-                try {
-                    return new WALKey(columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(),
-                        activityCollisionId)));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+            try {
+                return new WALKey(columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(),
+                    activityCollisionId)));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         };
         this.activitySerializerFunction = partitionedActivity -> {
@@ -92,7 +89,7 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
             RegionName activityRegionName = new RegionName(false, walName, walName);
             amzaWALUtil.getOrCreateRegion(activityRegionName, ringSize, Optional.<RegionProperties>absent());
 
-            if (!amzaWALUtil.replicate(activityRegionName, new MemoryWALUpdates(activityMap), replicateRequireNReplicas)) {
+            if (!amzaWALUtil.replicate(activityRegionName, new MemoryWALUpdates(activityMap, null), replicateRequireNReplicas)) {
                 throw new RuntimeException("Failed to write to amza activity WAL because it's under-replicated for tenant:" + tenantId +
                     " partition:" + partitionId);
             }

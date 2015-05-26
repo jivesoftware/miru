@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
@@ -18,7 +19,6 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -99,16 +99,15 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                 }
             }
 
-            Collection<MiruWALClient.MiruLookupRange> lookupRanges = miruWALClient.lookupRanges(tenant);
-            if (lookupRanges != null) {
-                for (MiruWALClient.MiruLookupRange lookupRange : lookupRanges) {
-                    MiruPartitionId partitionId = MiruPartitionId.of(lookupRange.partitionId);
-                    PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
-                    partitionBean.setMinClock(String.valueOf(lookupRange.minClock));
-                    partitionBean.setMaxClock(String.valueOf(lookupRange.maxClock));
-                    partitionBean.setMinOrderId(String.valueOf(lookupRange.minOrderId));
-                    partitionBean.setMaxOrderId(String.valueOf(lookupRange.maxOrderId));
-                }
+            Map<MiruPartitionId, RangeMinMax> lookupRanges = clusterRegistry.getIngressRanges(tenant);
+            for (Map.Entry<MiruPartitionId, RangeMinMax> entry : lookupRanges.entrySet()) {
+                MiruPartitionId partitionId = entry.getKey();
+                RangeMinMax lookupRange = entry.getValue();
+                PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
+                partitionBean.setMinClock(String.valueOf(lookupRange.clockMin));
+                partitionBean.setMaxClock(String.valueOf(lookupRange.clockMax));
+                partitionBean.setMinOrderId(String.valueOf(lookupRange.orderIdMin));
+                partitionBean.setMaxOrderId(String.valueOf(lookupRange.orderIdMax));
             }
         } catch (Exception e) {
             log.error("Unable to get partitions for tenant: " + tenant);
