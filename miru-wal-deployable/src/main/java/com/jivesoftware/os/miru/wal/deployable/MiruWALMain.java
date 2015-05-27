@@ -91,6 +91,10 @@ public class MiruWALMain {
         @Override
         String getIndexDirectories();
 
+        @StringDefault("225.5.6.23")
+        @Override
+        String getAmzaDiscoveryGroup();
+
         @IntDefault(1223)
         @Override
         int getAmzaDiscoveryPort();

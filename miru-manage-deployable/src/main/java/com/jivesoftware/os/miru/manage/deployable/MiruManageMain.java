@@ -87,6 +87,10 @@ public class MiruManageMain {
         @Override
         String getIndexDirectories();
 
+        @StringDefault("225.5.6.25")
+        @Override
+        String getAmzaDiscoveryGroup();
+
         @IntDefault(1225)
         @Override
         int getAmzaDiscoveryPort();
