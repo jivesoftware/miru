@@ -47,7 +47,7 @@ public class MiruAmzaServiceInitializer {
         MiruAmzaServiceConfig config,
         RowChanges allRowChanges) throws Exception {
 
-        String multicastGroup = System.getProperty("amza.discovery.group", "225.4.5.7");
+        String multicastGroup = System.getProperty("amza.discovery.group", config.getAmzaDiscoveryGroup());
         int multicastPort = Integer.parseInt(System.getProperty("amza.discovery.port", String.valueOf(config.getAmzaDiscoveryPort())));
 
         RingMember ringMember = new RingMember(

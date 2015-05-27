@@ -78,6 +78,10 @@ public class MiruWriterMain {
         @Override
         String getIndexDirectories();
 
+        @StringDefault("225.5.6.24")
+        @Override
+        String getAmzaDiscoveryGroup();
+
         @IntDefault(1224)
         @Override
         int getAmzaDiscoveryPort();

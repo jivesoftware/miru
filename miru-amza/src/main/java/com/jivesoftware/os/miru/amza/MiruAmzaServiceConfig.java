@@ -21,6 +21,11 @@ public interface MiruAmzaServiceConfig extends Config {
 
     void setIndexDirectories(String dir);
 
+    @StringDefault("225.4.5.7")
+    String getAmzaDiscoveryGroup();
+
+    void setAmzaDiscoveryGroup(String amzaDiscoveryGroup);
+
     @IntDefault(-1)
     int getAmzaDiscoveryPort();
 
