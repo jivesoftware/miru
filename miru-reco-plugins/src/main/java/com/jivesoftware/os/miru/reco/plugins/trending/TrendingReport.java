@@ -1,19 +1,19 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.io.Serializable;
 
 /**
- *
+ * Requires mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
  */
 public class TrendingReport implements Serializable {
 
-    public final MiruTimeRange combinedTimeRange;
-
     @JsonCreator
-    public TrendingReport(@JsonProperty("combinedTimeRange") MiruTimeRange combinedTimeRange) {
-        this.combinedTimeRange = combinedTimeRange;
+    public TrendingReport() {
+    }
+
+    @Override
+    public String toString() {
+        return "TrendingReport{}";
     }
 }
