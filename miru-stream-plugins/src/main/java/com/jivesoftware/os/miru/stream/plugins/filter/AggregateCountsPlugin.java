@@ -4,6 +4,9 @@ import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.solution.JsonRemotePartitionReader;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -21,8 +24,16 @@ public class AggregateCountsPlugin implements MiruPlugin<AggregateCountsEndpoint
     public Collection<MiruEndpointInjectable<AggregateCountsInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
         AggregateCounts aggregateCounts = new AggregateCounts(miruProvider);
         return Collections.singletonList(new MiruEndpointInjectable<>(
-                AggregateCountsInjectable.class,
-                new AggregateCountsInjectable(miruProvider, aggregateCounts)
+            AggregateCountsInjectable.class,
+            new AggregateCountsInjectable(miruProvider, aggregateCounts)
         ));
+    }
+
+    @Override
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
+        JsonRemotePartitionReader remotePartitionReader = new JsonRemotePartitionReader();
+        return Arrays.asList(new AggregateCountsCustomRemotePartition(remotePartitionReader),
+            new AggregateCountsInboxAllRemotePartition(remotePartitionReader),
+            new AggregateCountsInboxUnreadRemotePartition(remotePartitionReader));
     }
 }

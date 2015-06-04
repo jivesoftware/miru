@@ -36,7 +36,9 @@ public class SeaAnomalyInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new SeaAnomalyQuestion(seaAnomaly, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new SeaAnomalyQuestion(seaAnomaly,
+                    request,
+                    provider.getRemotePartition(SeaAnomalyRemotePartition.class))),
                 new SeaAnomalyAnswerEvaluator(),
                 new SeaAnomalyAnswerMerger(),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
@@ -58,7 +60,9 @@ public class SeaAnomalyInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new SeaAnomalyQuestion(seaAnomaly, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new SeaAnomalyQuestion(seaAnomaly,
+                    requestAndReport.request,
+                    provider.getRemotePartition(SeaAnomalyRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

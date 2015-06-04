@@ -2,6 +2,9 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -30,12 +33,11 @@ import java.util.List;
 public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-    private static final DistinctCountInboxAllRemotePartition REMOTE_ALL = new DistinctCountInboxAllRemotePartition();
-    private static final DistinctCountInboxUnreadRemotePartition REMOTE_UNREAD = new DistinctCountInboxUnreadRemotePartition();
 
     private final DistinctCount distinctCount;
     private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<DistinctCountQuery> request;
+    private final MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition;
     private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -43,12 +45,14 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
     public DistinctCountInboxQuestion(DistinctCount distinctCount,
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<DistinctCountQuery> request,
+        MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition,
         boolean unreadOnly) {
 
         Preconditions.checkArgument(!MiruStreamId.NULL.equals(request.query.streamId), "Inbox queries require a streamId");
         this.distinctCount = distinctCount;
         this.backfillerizer = backfillerizer;
         this.request = request;
+        this.remotePartition = remotePartition;
         this.unreadOnly = unreadOnly;
     }
 
@@ -110,13 +114,10 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
     }
 
     @Override
-    public MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> getRemotePartition() {
-        return unreadOnly ? REMOTE_UNREAD : REMOTE_ALL;
-    }
-
-    @Override
-    public MiruRequest<DistinctCountQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<DistinctCountAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<DistinctCountReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

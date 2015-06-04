@@ -4,6 +4,8 @@ import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.solution.JsonRemotePartitionReader;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -24,5 +26,10 @@ public class StumptownPlugin implements MiruPlugin<StumptownEndpoints, Stumptown
             StumptownInjectable.class,
             new StumptownInjectable(miruProvider, stumptown)
         ));
+    }
+
+    @Override
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
+        return Collections.singletonList(new StumptownRemotePartition(new JsonRemotePartitionReader()));
     }
 }

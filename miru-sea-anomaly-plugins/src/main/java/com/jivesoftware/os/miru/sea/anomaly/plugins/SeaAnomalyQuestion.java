@@ -4,6 +4,9 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.KeyRange;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -39,17 +42,18 @@ import java.util.Map.Entry;
  */
 public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> {
 
-    private static final SeaAnomalyRemotePartition REMOTE = new SeaAnomalyRemotePartition();
-
     private final SeaAnomaly seaAnomaly;
     private final MiruRequest<SeaAnomalyQuery> request;
+    private final MiruRemotePartition<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public SeaAnomalyQuestion(SeaAnomaly stumptown,
-        MiruRequest<SeaAnomalyQuery> request) {
+        MiruRequest<SeaAnomalyQuery> request,
+        MiruRemotePartition<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> remotePartition) {
         this.seaAnomaly = stumptown;
         this.request = request;
+        this.remotePartition = remotePartition;
     }
 
     @Override
@@ -243,13 +247,10 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
     }
 
     @Override
-    public MiruRemotePartition<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> getRemotePartition() {
-        return REMOTE;
-    }
-
-    @Override
-    public MiruRequest<SeaAnomalyQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<SeaAnomalyAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<SeaAnomalyReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

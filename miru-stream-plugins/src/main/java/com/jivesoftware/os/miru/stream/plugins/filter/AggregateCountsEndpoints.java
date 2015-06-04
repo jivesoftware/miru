@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -24,6 +25,7 @@ import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsCons
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.INBOX_UNREAD_QUERY_ENDPOINT;
 
 @Path(FILTER_PREFIX)
+@Singleton
 public class AggregateCountsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -130,7 +132,7 @@ public class AggregateCountsEndpoints {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response filterInboxStreamUnread(@PathParam("partitionId") int id,
-            MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport) {
+        MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
             MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamUnread(partitionId, requestAndReport);

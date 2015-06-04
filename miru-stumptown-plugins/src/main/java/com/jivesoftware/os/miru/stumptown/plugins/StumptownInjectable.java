@@ -36,7 +36,9 @@ public class StumptownInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new StumptownQuestion(trending, request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new StumptownQuestion(trending,
+                    request,
+                    provider.getRemotePartition(StumptownRemotePartition.class))),
                 new StumptownAnswerEvaluator(),
                 new StumptownAnswerMerger(request.query.desiredNumberOfResultsPerWaveform),
                 StumptownAnswer.EMPTY_RESULTS,
@@ -58,7 +60,9 @@ public class StumptownInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new StumptownQuestion(trending, requestAndReport.request)),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new StumptownQuestion(trending,
+                    requestAndReport.request,
+                    provider.getRemotePartition(StumptownRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 StumptownAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

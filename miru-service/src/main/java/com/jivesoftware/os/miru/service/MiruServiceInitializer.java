@@ -211,9 +211,7 @@ public class MiruServiceInitializer {
             indexRepairs,
             miruMergeChits);
 
-        MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory(
-            httpClientFactory,
-            objectMapper);
+        MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory(httpClientFactory);
 
         MiruTenantTopologyFactory tenantTopologyFactory = new MiruTenantTopologyFactory(config,
             bitmapsProvider,

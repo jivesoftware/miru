@@ -5,6 +5,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 
 /**
  *
@@ -21,4 +22,5 @@ public interface MiruProvider<T extends Miru> {
 
     MiruTermComposer getTermComposer();
 
+    <R extends MiruRemotePartition<?, ?, ?>> R getRemotePartition(Class<R> remotePartitionClass);
 }

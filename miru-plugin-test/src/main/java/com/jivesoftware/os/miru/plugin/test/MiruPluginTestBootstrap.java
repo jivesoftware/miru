@@ -48,6 +48,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
@@ -243,6 +244,11 @@ public class MiruPluginTestBootstrap {
             @Override
             public MiruStats getStats() {
                 return miruStats;
+            }
+
+            @Override
+            public <R extends MiruRemotePartition<?, ?, ?>> R getRemotePartition(Class<R> remotePartitionClass) {
+                return null;
             }
         };
     }

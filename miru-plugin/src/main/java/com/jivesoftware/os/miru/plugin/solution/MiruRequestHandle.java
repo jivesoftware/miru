@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -20,5 +20,5 @@ public interface MiruRequestHandle<BM> extends AutoCloseable {
 
     MiruPartitionCoord getCoord();
 
-    RequestHelper getRequestHelper();
+    HttpClient getHttpClient();
 }

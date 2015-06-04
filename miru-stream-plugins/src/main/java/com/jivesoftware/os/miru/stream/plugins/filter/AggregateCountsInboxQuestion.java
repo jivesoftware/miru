@@ -2,6 +2,9 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -29,12 +32,11 @@ import java.util.List;
 public class AggregateCountsInboxQuestion implements Question<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-    private static final AggregateCountsInboxAllRemotePartition REMOTE_ALL = new AggregateCountsInboxAllRemotePartition();
-    private static final AggregateCountsInboxUnreadRemotePartition REMOTE_UNREAD = new AggregateCountsInboxUnreadRemotePartition();
 
     private final AggregateCounts aggregateCounts;
     private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<AggregateCountsQuery> request;
+    private final MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition;
     private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -42,12 +44,14 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     public AggregateCountsInboxQuestion(AggregateCounts aggregateCounts,
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<AggregateCountsQuery> request,
+        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition,
         boolean unreadOnly) {
 
         Preconditions.checkArgument(!MiruStreamId.NULL.equals(request.query.streamId), "Inbox queries require a streamId");
         this.aggregateCounts = aggregateCounts;
         this.backfillerizer = backfillerizer;
         this.request = request;
+        this.remotePartition = remotePartition;
         this.unreadOnly = unreadOnly;
     }
 
@@ -134,13 +138,10 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     }
 
     @Override
-    public MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> getRemotePartition() {
-        return unreadOnly ? REMOTE_UNREAD : REMOTE_ALL;
-    }
-
-    @Override
-    public MiruRequest<AggregateCountsQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<AggregateCountsReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

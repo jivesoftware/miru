@@ -40,9 +40,7 @@ public class MiruSolvableFactory<Q, A, P> {
                     return response;
                 } else {
                     long start = System.currentTimeMillis();
-                    MiruRemotePartitionReader<Q, A, P> remotePartitionReader = new MiruRemotePartitionReader<>(question.getRemotePartition(),
-                        handle.getRequestHelper());
-                    MiruPartitionResponse<A> response = remotePartitionReader.read(handle.getCoord().partitionId, question.getRequest(), report);
+                    MiruPartitionResponse<A> response = question.askRemote(handle.getHttpClient(), handle.getCoord().partitionId, report);
                     long latency = System.currentTimeMillis() - start;
                     miruStats.egressed(queryKey + ">remote", 1, latency);
                     miruStats.egressed(queryKey + ">remote>" + replica.getCoord().host.toStringForm(), 1, latency);
