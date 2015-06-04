@@ -33,7 +33,7 @@ public class Distincts {
     }
 
     public <BM> DistinctsAnswer gather(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM> requestContext,
+        MiruRequestContext<BM, ?> requestContext,
         final DistinctsQuery query,
         MiruSolutionLog solutionLog)
         throws Exception {

@@ -53,7 +53,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
     }
 
     @Override
-    public <BM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM> handle, Optional<TrendingReport> report) throws Exception {
+    public <BM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<TrendingReport> report) throws Exception {
         DistinctsQuestion distinctsQuestion = new DistinctsQuestion(distincts, new MiruRequest<>(
             request.tenantId,
             request.actorId,
@@ -103,7 +103,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
     public Optional<TrendingReport> createReport(Optional<AnalyticsAnswer> answer) {
         Optional<TrendingReport> report = Optional.absent();
         if (answer.isPresent()) {
-            report = Optional.of(new TrendingReport(combinedTimeRange));
+            report = Optional.of(new TrendingReport());
         }
         return report;
     }
