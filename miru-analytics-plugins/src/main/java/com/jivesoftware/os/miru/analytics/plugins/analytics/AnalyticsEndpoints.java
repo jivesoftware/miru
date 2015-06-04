@@ -41,7 +41,7 @@ public class AnalyticsEndpoints {
         @Context ObjectMapper objectMapper) {
         this.injectable = injectable;
         this.objectMapper = objectMapper;
-        this.resultType = objectMapper.getTypeFactory().constructParametricType(MiruPartitionResponse.class, AnalyticsAnswer.class);
+        this.resultType = objectMapper.getTypeFactory().constructParametricType(MiruRequestAndReport.class, AnalyticsQuery.class, AnalyticsReport.class);
     }
 
     @POST
