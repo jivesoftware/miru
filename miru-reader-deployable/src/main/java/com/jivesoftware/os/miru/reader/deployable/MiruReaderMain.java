@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interners;
+import com.google.common.collect.Maps;
+import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
 import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
 import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
@@ -61,6 +63,8 @@ import com.jivesoftware.os.miru.plugin.marshaller.AmzaSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
+import com.jivesoftware.os.miru.reader.deployable.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
@@ -87,6 +91,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -264,6 +269,10 @@ public class MiruReaderMain {
             deployable.addEndpoints(MiruReaderEndpoints.class);
             deployable.addInjectables(MiruService.class, miruService);
 
+            deployable.addInjectables(ObjectMapper.class, mapper);
+
+            Map<Class<?>, MiruRemotePartition<?, ?, ?>> pluginRemotesMap = Maps.newConcurrentMap();
+
             MiruProvider<Miru> miruProvider = new MiruProvider<Miru>() {
                 @Override
                 public Miru getMiru(MiruTenantId tenantId) {
@@ -289,6 +298,11 @@ public class MiruReaderMain {
                 public MiruStats getStats() {
                     return miruStats;
                 }
+
+                @Override
+                public <R extends MiruRemotePartition<?, ?, ?>> R getRemotePartition(Class<R> remotePartitionClass) {
+                    return (R) pluginRemotesMap.get(remotePartitionClass);
+                }
             };
 
             for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {
@@ -298,7 +312,7 @@ public class MiruReaderMain {
                 Set<Class<? extends MiruPlugin>> pluginTypes = reflections.getSubTypesOf(MiruPlugin.class);
                 for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
                     LOG.info("Loading plugin {}", pluginType.getSimpleName());
-                    add(miruProvider, deployable, pluginType.newInstance());
+                    add(miruProvider, deployable, pluginType.newInstance(), pluginRemotesMap);
                 }
             }
 
@@ -312,12 +326,18 @@ public class MiruReaderMain {
         }
     }
 
-    private <E, I> void add(MiruProvider<? extends Miru> miruProvider, Deployable deployable, MiruPlugin<E, I> plugin) {
+    private <E, I> void add(MiruProvider<? extends Miru> miruProvider,
+        Deployable deployable,
+        MiruPlugin<E, I> plugin,
+        Map<Class<?>, MiruRemotePartition<?, ?, ?>> pluginRemotesMap) {
         Class<E> endpointsClass = plugin.getEndpointsClass();
         deployable.addEndpoints(endpointsClass);
         Collection<MiruEndpointInjectable<I>> injectables = plugin.getInjectables(miruProvider);
         for (MiruEndpointInjectable<?> miruEndpointInjectable : injectables) {
             deployable.addInjectables(miruEndpointInjectable.getInjectableClass(), miruEndpointInjectable.getInjectable());
+        }
+        for (MiruRemotePartition<?, ?, ?> remotePartition : plugin.getRemotePartitions()) {
+            pluginRemotesMap.put(remotePartition.getClass(), remotePartition);
         }
     }
 }

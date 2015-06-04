@@ -2,7 +2,10 @@ package com.jivesoftware.os.miru.stumptown.plugins;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -29,17 +32,18 @@ import java.util.Map;
  */
 public class StumptownQuestion implements Question<StumptownQuery, StumptownAnswer, StumptownReport> {
 
-    private static final StumptownRemotePartition REMOTE = new StumptownRemotePartition();
-
     private final Stumptown stumptown;
     private final MiruRequest<StumptownQuery> request;
+    private final MiruRemotePartition<StumptownQuery, StumptownAnswer, StumptownReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public StumptownQuestion(Stumptown stumptown,
-        MiruRequest<StumptownQuery> request) {
+        MiruRequest<StumptownQuery> request,
+        MiruRemotePartition<StumptownQuery, StumptownAnswer, StumptownReport> remotePartition) {
         this.stumptown = stumptown;
         this.request = request;
+        this.remotePartition = remotePartition;
     }
 
     @Override
@@ -150,13 +154,10 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
     }
 
     @Override
-    public MiruRemotePartition<StumptownQuery, StumptownAnswer, StumptownReport> getRemotePartition() {
-        return REMOTE;
-    }
-
-    @Override
-    public MiruRequest<StumptownQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<StumptownAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<StumptownReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

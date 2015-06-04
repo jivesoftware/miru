@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -25,13 +24,10 @@ public class StumptownInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final Stumptown stumptown;
-    private final MiruSolutionMarshaller<StumptownQuery, StumptownAnswer, StumptownReport> marshaller;
 
-    public StumptownInjectable(MiruProvider<? extends Miru> provider, Stumptown stumptown,
-        MiruSolutionMarshaller<StumptownQuery, StumptownAnswer, StumptownReport> marshaller) {
+    public StumptownInjectable(MiruProvider<? extends Miru> provider, Stumptown stumptown) {
         this.provider = provider;
         this.stumptown = stumptown;
-        this.marshaller = marshaller;
     }
 
     public MiruResponse<StumptownAnswer> score(MiruRequest<StumptownQuery> request) throws MiruQueryServiceException {
@@ -40,7 +36,9 @@ public class StumptownInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new StumptownQuestion(stumptown, request), marshaller),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new StumptownQuestion(stumptown,
+                    request,
+                    provider.getRemotePartition(StumptownRemotePartition.class))),
                 new StumptownAnswerEvaluator(),
                 new StumptownAnswerMerger(request.query.desiredNumberOfResultsPerWaveform),
                 StumptownAnswer.EMPTY_RESULTS,
@@ -62,7 +60,9 @@ public class StumptownInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new StumptownQuestion(stumptown, requestAndReport.request), marshaller),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new StumptownQuestion(stumptown,
+                    requestAndReport.request,
+                    provider.getRemotePartition(StumptownRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 StumptownAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

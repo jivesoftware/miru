@@ -21,5 +21,5 @@ public interface MiruRequestHandle<BM, S extends MiruSipCursor<S>> extends AutoC
 
     MiruPartitionCoord getCoord();
 
-    HttpClient getClient();
+    HttpClient getHttpClient();
 }

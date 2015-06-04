@@ -1,6 +1,9 @@
 package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
@@ -27,17 +30,19 @@ import java.util.List;
 public class DistinctCountCustomQuestion implements Question<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-    private static final DistinctCountCustomRemotePartition REMOTE = new DistinctCountCustomRemotePartition();
 
     private final DistinctCount distinctCount;
     private final MiruRequest<DistinctCountQuery> request;
+    private final MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public DistinctCountCustomQuestion(DistinctCount distinctCount,
-        MiruRequest<DistinctCountQuery> request) {
+        MiruRequest<DistinctCountQuery> request,
+        MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition) {
         this.distinctCount = distinctCount;
         this.request = request;
+        this.remotePartition = remotePartition;
     }
 
     @Override
@@ -87,13 +92,10 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
     }
 
     @Override
-    public MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> getRemotePartition() {
-        return REMOTE;
-    }
-
-    @Override
-    public MiruRequest<DistinctCountQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<DistinctCountAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<DistinctCountReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 
 /**
@@ -22,14 +21,11 @@ public class AggregateCountsInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final AggregateCounts aggregateCounts;
-    private final MiruSolutionMarshaller<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> marshaller;
 
     public AggregateCountsInjectable(MiruProvider<? extends Miru> provider,
-        AggregateCounts aggregateCounts,
-        MiruSolutionMarshaller<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> marshaller) {
+        AggregateCounts aggregateCounts) {
         this.provider = provider;
         this.aggregateCounts = aggregateCounts;
-        this.marshaller = marshaller;
     }
 
     public MiruResponse<AggregateCountsAnswer> filterCustomStream(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
@@ -37,7 +33,8 @@ public class AggregateCountsInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "filterCustomStream", new AggregateCountsCustomQuestion(aggregateCounts, request), marshaller),
+                new MiruSolvableFactory<>(provider.getStats(), "filterCustomStream", new AggregateCountsCustomQuestion(aggregateCounts, request,
+                    provider.getRemotePartition(AggregateCountsCustomRemotePartition.class))),
                 new AggregateCountsAnswerEvaluator(request.query),
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
@@ -56,7 +53,9 @@ public class AggregateCountsInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(provider.getStats(), "filterInboxStreamAll", new AggregateCountsInboxQuestion(aggregateCounts,
-                        provider.getBackfillerizer(tenantId), request, false), marshaller),
+                    provider.getBackfillerizer(tenantId), request,
+                    provider.getRemotePartition(AggregateCountsInboxAllRemotePartition.class),
+                    false)),
                 new AggregateCountsAnswerEvaluator(request.query),
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
@@ -75,7 +74,9 @@ public class AggregateCountsInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(provider.getStats(), "filterInboxStreamUnread", new AggregateCountsInboxQuestion(aggregateCounts,
-                        provider.getBackfillerizer(tenantId), request, true), marshaller),
+                    provider.getBackfillerizer(tenantId), request,
+                    provider.getRemotePartition(AggregateCountsInboxUnreadRemotePartition.class),
+                    true)),
                 new AggregateCountsAnswerEvaluator(request.query),
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
@@ -98,7 +99,9 @@ public class AggregateCountsInjectable {
                 partitionId,
                 new MiruSolvableFactory<>(provider.getStats(),
                     "filterCustomStream",
-                    new AggregateCountsCustomQuestion(aggregateCounts, requestAndReport.request), marshaller),
+                    new AggregateCountsCustomQuestion(aggregateCounts,
+                        requestAndReport.request,
+                        provider.getRemotePartition(AggregateCountsCustomRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -119,7 +122,10 @@ public class AggregateCountsInjectable {
             return miru.askImmediate(tenantId,
                 partitionId,
                 new MiruSolvableFactory<>(provider.getStats(), "filterInboxStreamAll", new AggregateCountsInboxQuestion(aggregateCounts,
-                        provider.getBackfillerizer(tenantId), requestAndReport.request, false), marshaller),
+                    provider.getBackfillerizer(tenantId),
+                    requestAndReport.request,
+                    provider.getRemotePartition(AggregateCountsInboxAllRemotePartition.class),
+                    false)),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -140,7 +146,10 @@ public class AggregateCountsInjectable {
             return miru.askImmediate(tenantId,
                 partitionId,
                 new MiruSolvableFactory<>(provider.getStats(), "filterInboxStreamUnread", new AggregateCountsInboxQuestion(aggregateCounts,
-                        provider.getBackfillerizer(tenantId), requestAndReport.request, true), marshaller),
+                    provider.getBackfillerizer(tenantId),
+                    requestAndReport.request,
+                    provider.getRemotePartition(AggregateCountsInboxUnreadRemotePartition.class),
+                    true)),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
