@@ -103,7 +103,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
     public Optional<TrendingReport> createReport(Optional<AnalyticsAnswer> answer) {
         Optional<TrendingReport> report = Optional.absent();
         if (answer.isPresent()) {
-            report = Optional.of(new TrendingReport(combinedTimeRange));
+            report = Optional.of(new TrendingReport());
         }
         return report;
     }

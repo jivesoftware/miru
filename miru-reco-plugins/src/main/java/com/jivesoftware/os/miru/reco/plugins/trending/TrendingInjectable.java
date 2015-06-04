@@ -234,18 +234,27 @@ public class TrendingInjectable {
         MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport)
         throws MiruQueryServiceException {
         try {
-            LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
+            MiruRequest<TrendingQuery> request = requestAndReport.request;
+            LOG.debug("askImmediate: partitionId={} request={}", partitionId, request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
-            MiruTenantId tenantId = requestAndReport.request.tenantId;
+            MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
+
+            MiruTimeRange combinedTimeRange = request.query.timeRange;
+            if (request.query.relativeChangeTimeRange != null) {
+                combinedTimeRange = new MiruTimeRange(
+                    Math.min(request.query.timeRange.smallestTimestamp, request.query.relativeChangeTimeRange.smallestTimestamp),
+                    Math.max(request.query.timeRange.largestTimestamp, request.query.relativeChangeTimeRange.largestTimestamp));
+            }
+
             return miru.askImmediate(tenantId,
                 partitionId,
                 new MiruSolvableFactory<>(provider.getStats(),
                     "scoreTrending",
                     new TrendingQuestion(distincts,
                         analytics,
-                        requestAndReport.report.combinedTimeRange,
-                        requestAndReport.request,
+                        combinedTimeRange,
+                        request,
                         provider.getRemotePartition(TrendingRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 AnalyticsAnswer.EMPTY_RESULTS,
