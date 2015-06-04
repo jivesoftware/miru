@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
@@ -11,9 +10,6 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsReport;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -33,7 +29,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
-import com.jivesoftware.os.miru.plugin.solution.JacksonMiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -41,14 +36,10 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
-import com.jivesoftware.os.miru.reco.plugins.reco.RecoReport;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -80,7 +71,7 @@ public class RecoCorrectnessTest {
     final MiruFieldDefinition.Prefix TYPED_PREFIX = new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' ');
 
     MiruSchema miruSchema = new MiruSchema.Builder("reco", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
+        .setFieldDefinitions(new MiruFieldDefinition[] {
             new MiruFieldDefinition(0, "locale", singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "mode", singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(2, "activityType", singleTerm, MiruFieldDefinition.Prefix.NONE),
@@ -94,12 +85,12 @@ public class RecoCorrectnessTest {
             new MiruFieldDefinition(10, "authors", multiTerm, MiruFieldDefinition.Prefix.NONE)
         })
         .setPairedLatest(ImmutableMap.of(
-                "parent", Arrays.asList("user"),
-                "user", Arrays.asList("parent", "context", "user")))
+            "parent", Arrays.asList("user"),
+            "user", Arrays.asList("parent", "context", "user")))
         .setBloom(ImmutableMap.of(
-                "context", Arrays.asList("user"),
-                "parent", Arrays.asList("user"),
-                "user", Arrays.asList("user")))
+            "context", Arrays.asList("user"),
+            "parent", Arrays.asList("user"),
+            "user", Arrays.asList("user")))
         .build();
 
     MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
@@ -136,19 +127,8 @@ public class RecoCorrectnessTest {
 
         this.service = miruProvider.getMiru(tenant1);
 
-        ObjectMapper mapper = new ObjectMapper();
-        JacksonMiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> distinctsMarshaller = new JacksonMiruSolutionMarshaller<>(mapper,
-            DistinctsQuery.class, DistinctsAnswer.class, DistinctsReport.class);
-
-        JacksonMiruSolutionMarshaller<RecoQuery, RecoAnswer, RecoReport> recoMarshaller = new JacksonMiruSolutionMarshaller<>(mapper,
-            RecoQuery.class, RecoAnswer.class, RecoReport.class);
-
-        JacksonMiruSolutionMarshaller<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> analyticsMarshaller = new JacksonMiruSolutionMarshaller<>(mapper,
-            AnalyticsQuery.class, AnalyticsAnswer.class, AnalyticsReport.class);
-
-        this.recoInjectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(aggregateUtil, indexUtil), new Distincts(termComposer),
-            distinctsMarshaller, recoMarshaller);
-        this.trendingInjectable = new TrendingInjectable(miruProvider, new Distincts(termComposer), new Analytics(), distinctsMarshaller, analyticsMarshaller);
+        this.recoInjectable = new RecoInjectable(miruProvider, new CollaborativeFiltering(aggregateUtil, indexUtil), new Distincts(termComposer));
+        this.trendingInjectable = new TrendingInjectable(miruProvider, new Distincts(termComposer), new Analytics());
     }
 
     @Test(enabled = false)

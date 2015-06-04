@@ -22,7 +22,7 @@ public class MiruRemoteQueryablePartitionFactory {
         this.httpClientFactory = httpClientFactory;
     }
 
-    private HttpClient hostHelper(final MiruPartitionCoord coord) {
+    private HttpClient hostClient(final MiruPartitionCoord coord) {
         HttpClient client = hostClients.get(coord.host);
         if (client == null) {
             client = httpClientFactory.createClient(coord.host.getLogicalName(), coord.host.getPort());
@@ -33,7 +33,7 @@ public class MiruRemoteQueryablePartitionFactory {
 
     public <BM> MiruQueryablePartition<BM> create(final MiruPartitionCoord coord, final MiruPartitionCoordInfo info) {
 
-        final HttpClient client = hostHelper(coord);
+        final HttpClient httpClient = hostClient(coord);
 
         return new MiruQueryablePartition<BM>() {
 
@@ -77,8 +77,8 @@ public class MiruRemoteQueryablePartitionFactory {
                     }
 
                     @Override
-                    public HttpClient getClient() {
-                        return client;
+                    public HttpClient getHttpClient() {
+                        return httpClient;
                     }
 
                     @Override

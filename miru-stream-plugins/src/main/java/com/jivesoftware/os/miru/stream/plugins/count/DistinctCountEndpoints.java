@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -24,6 +25,7 @@ import static com.jivesoftware.os.miru.stream.plugins.count.DistinctCountConstan
 import static com.jivesoftware.os.miru.stream.plugins.count.DistinctCountConstants.INBOX_UNREAD_QUERY_ENDPOINT;
 
 @Path(COUNT_PREFIX)
+@Singleton
 public class DistinctCountEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

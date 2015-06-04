@@ -1,7 +1,8 @@
-package com.jivesoftware.os.miru.reco.plugins.reco;
+package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -12,33 +13,36 @@ import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 
-import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.CUSTOM_QUERY_ENDPOINT;
-import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.RECO_PREFIX;
-
 /**
  *
  */
-public class RecoRemotePartition implements MiruRemotePartition<RecoQuery, RecoAnswer, RecoReport> {
+public class TrendingRemotePartition implements MiruRemotePartition<TrendingQuery, AnalyticsAnswer, TrendingReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
     private static final EndPointMetrics endPointMetrics = new EndPointMetrics("process", LOG);
 
     private final MiruRemotePartitionReader remotePartitionReader;
 
-    public RecoRemotePartition(MiruRemotePartitionReader remotePartitionReader) {
+    public TrendingRemotePartition(MiruRemotePartitionReader remotePartitionReader) {
         this.remotePartitionReader = remotePartitionReader;
     }
 
     private String getEndpoint(MiruPartitionId partitionId) {
-        return RECO_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId();
+        return TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId();
     }
 
     @Override
-    public MiruPartitionResponse<RecoAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<AnalyticsAnswer> askRemote(HttpClient httpClient,
         MiruPartitionId partitionId,
-        MiruRequest<RecoQuery> request,
-        Optional<RecoReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient, getEndpoint(partitionId), request, RecoAnswer.class, report, endPointMetrics, RecoAnswer.EMPTY_RESULTS);
+        MiruRequest<TrendingQuery> request,
+        Optional<TrendingReport> report) throws MiruQueryServiceException {
+        return remotePartitionReader.read(httpClient,
+            getEndpoint(partitionId),
+            request,
+            AnalyticsAnswer.class,
+            report,
+            endPointMetrics,
+            AnalyticsAnswer.EMPTY_RESULTS);
     }
 
 }

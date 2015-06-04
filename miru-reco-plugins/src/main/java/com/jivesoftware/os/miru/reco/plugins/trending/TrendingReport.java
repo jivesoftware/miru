@@ -2,36 +2,18 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.io.Serializable;
-import java.util.Set;
 
 /**
  *
  */
 public class TrendingReport implements Serializable {
 
-    public final Set<MiruTermId> aggregateTerms;
-    public final int collectedDistincts;
-
-    public TrendingReport(Set<MiruTermId> aggregateTerms, int collectedDistincts) {
-        this.aggregateTerms = aggregateTerms;
-        this.collectedDistincts = collectedDistincts;
-    }
+    public final MiruTimeRange combinedTimeRange;
 
     @JsonCreator
-    public static TrendingReport fromJson(
-            @JsonProperty("aggregateTerms") Set<MiruTermId> aggregateTerms,
-            @JsonProperty("collectedDistincts") int collectedDistincts) {
-        return new TrendingReport(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
-    }
-
-    @Override
-    public String toString() {
-        return "TrendingReport{" +
-            ", collectedDistincts=" + collectedDistincts +
-            ", aggregateTerms=" + aggregateTerms +
-            '}';
+    public TrendingReport(@JsonProperty("combinedTimeRange") MiruTimeRange combinedTimeRange) {
+        this.combinedTimeRange = combinedTimeRange;
     }
 }

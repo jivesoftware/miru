@@ -20,5 +20,5 @@ public interface MiruRequestHandle<BM> extends AutoCloseable {
 
     MiruPartitionCoord getCoord();
 
-    HttpClient getClient();
+    HttpClient getHttpClient();
 }

@@ -1,7 +1,13 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
+import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartitionReader;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -17,24 +23,27 @@ public class DistinctsRemotePartition implements MiruRemotePartition<DistinctsQu
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
     private static final EndPointMetrics endPointMetrics = new EndPointMetrics("process", LOG);
 
-    @Override
-    public String getEndpoint(MiruPartitionId partitionId) {
+    private final MiruRemotePartitionReader remotePartitionReader;
+
+    public DistinctsRemotePartition(MiruRemotePartitionReader remotePartitionReader) {
+        this.remotePartitionReader = remotePartitionReader;
+    }
+
+    private String getEndpoint(MiruPartitionId partitionId) {
         return DISTINCTS_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId();
     }
 
     @Override
-    public Class<DistinctsAnswer> getAnswerClass() {
-        return DistinctsAnswer.class;
+    public MiruPartitionResponse<DistinctsAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        MiruRequest<DistinctsQuery> request,
+        Optional<DistinctsReport> report) throws MiruQueryServiceException {
+        return remotePartitionReader.read(httpClient,
+            getEndpoint(partitionId),
+            request,
+            DistinctsAnswer.class,
+            report,
+            endPointMetrics,
+            DistinctsAnswer.EMPTY_RESULTS);
     }
-
-    @Override
-    public DistinctsAnswer getEmptyResults() {
-        return DistinctsAnswer.EMPTY_RESULTS;
-    }
-
-    @Override
-    public EndPointMetrics getEndpointMetrics() {
-        return endPointMetrics;
-    }
-
 }

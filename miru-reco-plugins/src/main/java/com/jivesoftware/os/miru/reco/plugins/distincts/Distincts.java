@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -13,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
-import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -36,22 +34,21 @@ public class Distincts {
 
     public <BM> DistinctsAnswer gather(MiruBitmaps<BM> bitmaps,
         MiruRequestContext<BM> requestContext,
-        final MiruRequest<DistinctsQuery> request,
-        final Optional<DistinctsReport> lastReport,
+        final DistinctsQuery query,
         MiruSolutionLog solutionLog)
         throws Exception {
 
-        log.debug("Gather distincts for query={}", request);
+        log.debug("Gather distincts for query={}", query);
 
-        int fieldId = requestContext.getSchema().getFieldId(request.query.gatherDistinctsForField);
+        int fieldId = requestContext.getSchema().getFieldId(query.gatherDistinctsForField);
         final MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
 
         final List<String> results = Lists.newArrayList();
-        if (MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
+        if (MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
             List<KeyRange> ranges = null;
-            if (request.query.prefixes != null && !request.query.prefixes.isEmpty()) {
-                ranges = Lists.newArrayListWithCapacity(request.query.prefixes.size());
-                for (String prefix : request.query.prefixes) {
+            if (query.prefixes != null && !query.prefixes.isEmpty()) {
+                ranges = Lists.newArrayListWithCapacity(query.prefixes.size());
+                for (String prefix : query.prefixes) {
                     ranges.add(new KeyRange(
                         termComposer.prefixLowerInclusive(fieldDefinition.prefix, prefix),
                         termComposer.prefixUpperExclusive(fieldDefinition.prefix, prefix)));
@@ -64,10 +61,10 @@ public class Distincts {
             });
         } else {
             final byte[][] prefixesAsBytes;
-            if (request.query.prefixes != null) {
-                prefixesAsBytes = new byte[request.query.prefixes.size()][];
+            if (query.prefixes != null) {
+                prefixesAsBytes = new byte[query.prefixes.size()][];
                 int i = 0;
-                for (String prefix : request.query.prefixes) {
+                for (String prefix : query.prefixes) {
                     prefixesAsBytes[i++] = termComposer.prefixLowerInclusive(fieldDefinition.prefix, prefix);
                 }
             } else {
@@ -75,7 +72,7 @@ public class Distincts {
             }
 
             BM result = bitmaps.create();
-            aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), request.query.constraintsFilter,
+            aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), query.constraintsFilter,
                 solutionLog, result, requestContext.getActivityIndex().lastId(), -1);
 
             Set<MiruTermId> termIds = Sets.newHashSet();
@@ -99,7 +96,7 @@ public class Distincts {
             results.addAll(Collections2.transform(termIds, input -> termComposer.decompose(fieldDefinition, input)));
         }
 
-        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        boolean resultsExhausted = query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         int collectedDistincts = results.size();
         DistinctsAnswer result = new DistinctsAnswer(results, collectedDistincts, resultsExhausted);
         log.debug("result={}", result);

@@ -2,6 +2,9 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -26,19 +29,21 @@ import java.util.List;
 public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-    private static final RecoRemotePartition REMOTE = new RecoRemotePartition();
 
     private final CollaborativeFiltering collaborativeFiltering;
     private final MiruRequest<RecoQuery> request;
+    private final MiruRemotePartition<RecoQuery, RecoAnswer, RecoReport> remotePartition;
     private final MiruFilter removeDistinctsFilter;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public RecoQuestion(CollaborativeFiltering collaborativeFiltering,
         MiruRequest<RecoQuery> query,
+        MiruRemotePartition<RecoQuery, RecoAnswer, RecoReport> remotePartition,
         MiruFilter removeDistinctsFilter) {
         this.collaborativeFiltering = Preconditions.checkNotNull(collaborativeFiltering);
         this.request = Preconditions.checkNotNull(query);
+        this.remotePartition = remotePartition;
         this.removeDistinctsFilter = Preconditions.checkNotNull(removeDistinctsFilter);
     }
 
@@ -105,13 +110,10 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
     }
 
     @Override
-    public MiruRemotePartition<RecoQuery, RecoAnswer, RecoReport> getRemotePartition() {
-        return REMOTE;
-    }
-
-    @Override
-    public MiruRequest<RecoQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<RecoAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<RecoReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

@@ -20,13 +20,11 @@ public class MiruSolvableFactory<Q, A, R> {
     private final MiruStats miruStats;
     private final String queryKey;
     private final Question<Q, A, R> question;
-    private final MiruSolutionMarshaller<Q, A, R> marshaller;
 
-    public MiruSolvableFactory(MiruStats miruStats, String queryKey, Question<Q, A, R> question, MiruSolutionMarshaller<Q, A, R> marshaller) {
+    public MiruSolvableFactory(MiruStats miruStats, String queryKey, Question<Q, A, R> question) {
         this.miruStats = miruStats;
         this.queryKey = queryKey;
         this.question = question;
-        this.marshaller = marshaller;
     }
 
     public <BM> MiruSolvable<A> create(final MiruQueryablePartition<BM> replica, final Optional<R> report) {
@@ -42,9 +40,7 @@ public class MiruSolvableFactory<Q, A, R> {
                     return response;
                 } else {
                     long start = System.currentTimeMillis();
-                    MiruRemotePartitionReader<Q, A, R> remotePartitionReader = new MiruRemotePartitionReader<>(question.getRemotePartition(),
-                        handle.getClient(), marshaller);
-                    MiruPartitionResponse<A> response = remotePartitionReader.read(handle.getCoord().partitionId, question.getRequest(), report);
+                    MiruPartitionResponse<A> response = question.askRemote(handle.getHttpClient(), handle.getCoord().partitionId, report);
                     long latency = System.currentTimeMillis() - start;
                     miruStats.egressed(queryKey + ">remote", 1, latency);
                     miruStats.egressed(queryKey + ">remote>" + replica.getCoord().host.toStringForm(), 1, latency);

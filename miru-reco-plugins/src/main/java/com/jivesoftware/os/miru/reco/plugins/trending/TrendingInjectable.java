@@ -1,38 +1,28 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswerEvaluator;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswerMerger;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuestion;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsReport;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.field.MiruFieldType;
-import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswerEvaluator;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswerMerger;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuestion;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
 import com.jivesoftware.os.miru.reco.trending.WaveformRegression;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -53,19 +43,13 @@ public class TrendingInjectable {
     private final MiruProvider<? extends Miru> provider;
     private final Distincts distincts;
     private final Analytics analytics;
-    private final MiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> distinctsMarshaller;
-    private final MiruSolutionMarshaller<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> marshaller;
 
     public TrendingInjectable(MiruProvider<? extends Miru> miruProvider,
         Distincts distincts,
-        Analytics analytics,
-        MiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> distinctsMarshaller,
-        MiruSolutionMarshaller<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> marshaller) {
+        Analytics analytics) {
         this.provider = miruProvider;
         this.distincts = distincts;
         this.analytics = analytics;
-        this.distinctsMarshaller = distinctsMarshaller;
-        this.marshaller = marshaller;
     }
 
     double zeroToOne(long _min, long _max, long _long) {
@@ -118,50 +102,16 @@ public class TrendingInjectable {
                 divideTimeRangeIntoNSegments = Math.max(lastBucket, lastRelativeBucket);
 
                 LOG.debug("BUCKETS: {} - {} {} - {} segs:{} newSegs:{}",
-                    new Object[]{firstBucket, lastBucket, firstRelativeBucket, lastRelativeBucket,
-                        request.query.divideTimeRangeIntoNSegments, divideTimeRangeIntoNSegments
-                    });
-
-            }
-
-            MiruResponse<DistinctsAnswer> distinctsResponse = miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "trendingDistincts", new DistinctsQuestion(distincts, new MiruRequest<>(
-                            request.tenantId,
-                            request.actorId,
-                            request.authzExpression,
-                            new DistinctsQuery(combinedTimeRange,
-                                request.query.aggregateCountAroundField,
-                                request.query.distinctsFilter,
-                                request.query.distinctPrefixes),
-                            request.logLevel)), distinctsMarshaller),
-                new DistinctsAnswerEvaluator(),
-                new DistinctsAnswerMerger(),
-                DistinctsAnswer.EMPTY_RESULTS,
-                request.logLevel);
-            List<String> distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
-                ? distinctsResponse.answer.results
-                : Collections.<String>emptyList();
-
-            Map<String, MiruFilter> constraintsFilters = Maps.newHashMap();
-            for (String term : distinctTerms) {
-                constraintsFilters.put(term,
-                    new MiruFilter(MiruFilterOperation.and,
-                        false,
-                        Collections.singletonList(new MiruFieldFilter(
-                                MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(term))),
-                        null));
+                    firstBucket, lastBucket, firstRelativeBucket, lastRelativeBucket,
+                    request.query.divideTimeRangeIntoNSegments, divideTimeRangeIntoNSegments);
             }
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "trendingAnalytics", new AnalyticsQuestion(analytics, new MiruRequest<>(
-                            request.tenantId,
-                            request.actorId,
-                            request.authzExpression,
-                            new AnalyticsQuery(combinedTimeRange,
-                                divideTimeRangeIntoNSegments,
-                                request.query.constraintsFilter,
-                                constraintsFilters),
-                            request.logLevel)), marshaller),
+                new MiruSolvableFactory<>(provider.getStats(), "trending", new TrendingQuestion(distincts,
+                    analytics,
+                    combinedTimeRange,
+                    request,
+                    provider.getRemotePartition(TrendingRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(combinedTimeRange),
                 AnalyticsAnswer.EMPTY_RESULTS,
@@ -184,7 +134,6 @@ public class TrendingInjectable {
                     }
                 }
                 if (hasCounts) {
-
                     if (request.query.strategy == TrendingQuery.Strategy.LINEAR_REGRESSION) {
                         if (request.query.relativeChangeTimeRange != null) {
                             SimpleRegression regression = WaveformRegression.getRegression(waveform, firstBucket, lastBucket);
@@ -259,22 +208,19 @@ public class TrendingInjectable {
             Collections.sort(sortedTrendies); // Ahhh what is the point of this should already be in sort order?
 
             ImmutableList<String> solutionLog = ImmutableList.<String>builder()
-                .addAll(distinctsResponse.log)
                 .addAll(analyticsResponse.log)
                 .build();
             LOG.debug("Solution:\n{}", solutionLog);
 
             return new MiruResponse<>(new TrendingAnswer(sortedTrendies),
                 ImmutableList.<MiruSolution>builder()
-                .addAll(firstNonNull(distinctsResponse.solutions, Collections.<MiruSolution>emptyList()))
-                .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
-                .build(),
-                distinctsResponse.totalElapsed + analyticsResponse.totalElapsed,
-                distinctsResponse.missingSchema || analyticsResponse.missingSchema,
+                    .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
+                    .build(),
+                analyticsResponse.totalElapsed,
+                analyticsResponse.missingSchema,
                 ImmutableList.<Integer>builder()
-                .addAll(firstNonNull(distinctsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
-                .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
-                .build(),
+                    .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
+                    .build(),
                 solutionLog);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
@@ -284,4 +230,31 @@ public class TrendingInjectable {
         }
     }
 
+    public MiruPartitionResponse<AnalyticsAnswer> scoreTrending(MiruPartitionId partitionId,
+        MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport)
+        throws MiruQueryServiceException {
+        try {
+            LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
+            LOG.trace("askImmediate: report={}", requestAndReport.report);
+            MiruTenantId tenantId = requestAndReport.request.tenantId;
+            Miru miru = provider.getMiru(tenantId);
+            return miru.askImmediate(tenantId,
+                partitionId,
+                new MiruSolvableFactory<>(provider.getStats(),
+                    "scoreTrending",
+                    new TrendingQuestion(distincts,
+                        analytics,
+                        requestAndReport.report.combinedTimeRange,
+                        requestAndReport.request,
+                        provider.getRemotePartition(TrendingRemotePartition.class))),
+                Optional.fromNullable(requestAndReport.report),
+                AnalyticsAnswer.EMPTY_RESULTS,
+                MiruSolutionLogLevel.NONE);
+        } catch (MiruPartitionUnavailableException e) {
+            throw e;
+        } catch (Exception e) {
+            //TODO throw http error codes
+            throw new MiruQueryServiceException("Failed to score trending stream for partition: " + partitionId.getId(), e);
+        }
+    }
 }

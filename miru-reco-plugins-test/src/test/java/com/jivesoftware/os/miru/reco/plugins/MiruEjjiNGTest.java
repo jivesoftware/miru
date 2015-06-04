@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -22,7 +21,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
-import com.jivesoftware.os.miru.plugin.solution.JacksonMiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -32,7 +30,6 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsInjectable;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Arrays;
@@ -53,7 +50,7 @@ import org.testng.annotations.Test;
 public class MiruEjjiNGTest {
 
     MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
+        .setFieldDefinitions(new MiruFieldDefinition[] {
             new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(2, "docType", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
@@ -88,10 +85,7 @@ public class MiruEjjiNGTest {
 
         this.service = miruProvider.getMiru(tenant1);
 
-        ObjectMapper mapper = new ObjectMapper();
-        JacksonMiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> distinctsMarshaller = new JacksonMiruSolutionMarshaller<>(mapper,
-            DistinctsQuery.class, DistinctsAnswer.class, DistinctsReport.class);
-        this.injectable = new DistinctsInjectable(miruProvider, new Distincts(miruProvider.getTermComposer()), distinctsMarshaller);
+        this.injectable = new DistinctsInjectable(miruProvider, new Distincts(miruProvider.getTermComposer()));
     }
 
     @Test(enabled = false)

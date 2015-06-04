@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -25,14 +24,11 @@ public class AnalyticsInjectable {
 
     private final MiruProvider<? extends Miru> miruProvider;
     private final Analytics trending;
-    private final MiruSolutionMarshaller<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> marshaller;
 
     public AnalyticsInjectable(MiruProvider<? extends Miru> miruProvider,
-        Analytics trending,
-        MiruSolutionMarshaller<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> marshaller) {
+        Analytics trending) {
         this.miruProvider = miruProvider;
         this.trending = trending;
-        this.marshaller = marshaller;
     }
 
     public MiruResponse<AnalyticsAnswer> score(MiruRequest<AnalyticsQuery> request) throws MiruQueryServiceException {
@@ -41,7 +37,9 @@ public class AnalyticsInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending, request), marshaller),
+                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending,
+                    request,
+                    miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(request.query.timeRange),
                 AnalyticsAnswer.EMPTY_RESULTS,
@@ -63,7 +61,9 @@ public class AnalyticsInjectable {
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreTrending", new AnalyticsQuestion(trending, requestAndReport.request), marshaller),
+                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreTrending", new AnalyticsQuestion(trending,
+                    requestAndReport.request,
+                    miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

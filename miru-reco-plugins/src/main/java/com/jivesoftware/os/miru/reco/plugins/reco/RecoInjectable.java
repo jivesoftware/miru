@@ -15,15 +15,13 @@ import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswerEvaluator;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswerMerger;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuestion;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsRemotePartition;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
@@ -36,22 +34,16 @@ public class RecoInjectable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider provider;
+    private final MiruProvider<? extends Miru> provider;
     private final CollaborativeFiltering collaborativeFiltering;
     private final Distincts distincts;
-    private final MiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> distinctsMarshaller;
-    private final MiruSolutionMarshaller<RecoQuery, RecoAnswer, RecoReport> marshaller;
 
     public RecoInjectable(MiruProvider<? extends Miru> provider,
         CollaborativeFiltering collaborativeFiltering,
-        Distincts distincts,
-        MiruSolutionMarshaller<DistinctsQuery, DistinctsAnswer, DistinctsReport> distinctsMarshaller,
-        MiruSolutionMarshaller<RecoQuery, RecoAnswer, RecoReport> marshaller) {
+        Distincts distincts) {
         this.provider = provider;
         this.collaborativeFiltering = collaborativeFiltering;
         this.distincts = distincts;
-        this.distinctsMarshaller = distinctsMarshaller;
-        this.marshaller = marshaller;
     }
 
     public MiruResponse<RecoAnswer> collaborativeFilteringRecommendations(MiruRequest<RecoQuery> request) throws MiruQueryServiceException {
@@ -62,12 +54,15 @@ public class RecoInjectable {
             MiruFilter removeDistinctsFilter = MiruFilter.NO_FILTER;
             if (request.query.removeDistinctsQuery != null) {
                 MiruResponse<DistinctsAnswer> distinctsResponse = miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>(provider.getStats(), "recoDistincts", new DistinctsQuestion(distincts, new MiruRequest<>(
+                    new MiruSolvableFactory<>(provider.getStats(), "recoDistincts",
+                        new DistinctsQuestion(distincts,
+                            new MiruRequest<>(
                                 request.tenantId,
                                 request.actorId,
                                 request.authzExpression,
                                 request.query.removeDistinctsQuery,
-                                request.logLevel)), distinctsMarshaller),
+                                request.logLevel),
+                            provider.getRemotePartition(DistinctsRemotePartition.class))),
                     new DistinctsAnswerEvaluator(),
                     new DistinctsAnswerMerger(),
                     DistinctsAnswer.EMPTY_RESULTS,
@@ -80,15 +75,16 @@ public class RecoInjectable {
                     removeDistinctsFilter = new MiruFilter(MiruFilterOperation.and,
                         false,
                         Collections.singletonList(new MiruFieldFilter(
-                                MiruFieldType.primary, request.query.removeDistinctsQuery.gatherDistinctsForField, distinctTerms)),
+                            MiruFieldType.primary, request.query.removeDistinctsQuery.gatherDistinctsForField, distinctTerms)),
                         null);
                 }
             }
 
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
-                        request,
-                        removeDistinctsFilter), marshaller),
+                    request,
+                    provider.getRemotePartition(RecoRemotePartition.class),
+                    removeDistinctsFilter)),
                 new RecoAnswerEvaluator(request.query),
                 new RecoAnswerMerger(request.query.desiredNumberOfDistincts),
                 RecoAnswer.EMPTY_RESULTS,
@@ -110,8 +106,9 @@ public class RecoInjectable {
             return miru.askImmediate(tenantId,
                 partitionId,
                 new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
-                        requestAndReport.request,
-                        requestAndReport.report.removeDistinctsFilter), marshaller),
+                    requestAndReport.request,
+                    provider.getRemotePartition(RecoRemotePartition.class),
+                    requestAndReport.report.removeDistinctsFilter)),
                 Optional.fromNullable(requestAndReport.report),
                 RecoAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

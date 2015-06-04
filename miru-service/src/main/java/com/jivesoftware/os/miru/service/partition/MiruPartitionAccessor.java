@@ -545,7 +545,7 @@ public class MiruPartitionAccessor<BM> {
             }
 
             @Override
-            public HttpClient getClient() {
+            public HttpClient getHttpClient() {
                 return null; // never talk to a local partition via reader
             }
 
