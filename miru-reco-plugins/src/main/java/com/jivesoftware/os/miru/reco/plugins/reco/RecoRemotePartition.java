@@ -1,7 +1,13 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
+import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
+import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartitionReader;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -17,24 +23,22 @@ public class RecoRemotePartition implements MiruRemotePartition<RecoQuery, RecoA
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
     private static final EndPointMetrics endPointMetrics = new EndPointMetrics("process", LOG);
 
-    @Override
-    public String getEndpoint(MiruPartitionId partitionId) {
+    private final MiruRemotePartitionReader remotePartitionReader;
+
+    public RecoRemotePartition(MiruRemotePartitionReader remotePartitionReader) {
+        this.remotePartitionReader = remotePartitionReader;
+    }
+
+    private String getEndpoint(MiruPartitionId partitionId) {
         return RECO_PREFIX + CUSTOM_QUERY_ENDPOINT + "/" + partitionId.getId();
     }
 
     @Override
-    public Class<RecoAnswer> getAnswerClass() {
-        return RecoAnswer.class;
-    }
-
-    @Override
-    public RecoAnswer getEmptyResults() {
-        return RecoAnswer.EMPTY_RESULTS;
-    }
-
-    @Override
-    public EndPointMetrics getEndpointMetrics() {
-        return endPointMetrics;
+    public MiruPartitionResponse<RecoAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        MiruRequest<RecoQuery> request,
+        Optional<RecoReport> report) throws MiruQueryServiceException {
+        return remotePartitionReader.read(httpClient, getEndpoint(partitionId), request, RecoAnswer.class, report, endPointMetrics, RecoAnswer.EMPTY_RESULTS);
     }
 
 }

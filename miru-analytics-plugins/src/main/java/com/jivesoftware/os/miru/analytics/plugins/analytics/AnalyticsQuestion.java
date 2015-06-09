@@ -2,6 +2,9 @@ package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -27,17 +30,18 @@ import java.util.Map;
  */
 public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> {
 
-    private static final AnalyticsRemotePartition REMOTE = new AnalyticsRemotePartition();
-
     private final Analytics analytics;
     private final MiruRequest<AnalyticsQuery> request;
+    private final MiruRemotePartition<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public AnalyticsQuestion(Analytics analytics,
-        MiruRequest<AnalyticsQuery> request) {
+        MiruRequest<AnalyticsQuery> request,
+        MiruRemotePartition<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> remotePartition) {
         this.analytics = analytics;
         this.request = request;
+        this.remotePartition = remotePartition;
     }
 
     @Override
@@ -148,13 +152,10 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
     }
 
     @Override
-    public MiruRemotePartition<AnalyticsQuery, AnalyticsAnswer, AnalyticsReport> getRemotePartition() {
-        return REMOTE;
-    }
-
-    @Override
-    public MiruRequest<AnalyticsQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<AnalyticsAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<AnalyticsReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -25,14 +24,11 @@ public class MetricsInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final Metrics metrics;
-    private final MiruSolutionMarshaller<MetricsQuery, MetricsAnswer, MetricsReport> marshaller;
 
     public MetricsInjectable(MiruProvider<? extends Miru> miruProvider,
-        Metrics trending,
-        MiruSolutionMarshaller<MetricsQuery, MetricsAnswer, MetricsReport> marshaller) {
+        Metrics trending) {
         this.provider = miruProvider;
         this.metrics = trending;
-        this.marshaller = marshaller;
     }
 
     public MiruResponse<MetricsAnswer> score(MiruRequest<MetricsQuery> request) throws MiruQueryServiceException {
@@ -41,7 +37,9 @@ public class MetricsInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "score", new MetricsQuestion(metrics, request), marshaller),
+                new MiruSolvableFactory<>(provider.getStats(), "score", new MetricsQuestion(metrics,
+                    request,
+                    provider.getRemotePartition(MetricsRemotePartition.class))),
                 new MetricsAnswerEvaluator(),
                 new MetricsAnswerMerger(request.query.timeRange),
                 MetricsAnswer.EMPTY_RESULTS,
@@ -63,7 +61,9 @@ public class MetricsInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new MetricsQuestion(metrics, requestAndReport.request), marshaller),
+                new MiruSolvableFactory<>(provider.getStats(), "scoreTrending", new MetricsQuestion(metrics,
+                    requestAndReport.request,
+                    provider.getRemotePartition(MetricsRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 MetricsAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);

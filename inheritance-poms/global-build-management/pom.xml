@@ -4,12 +4,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.488</version>
+        <version>0.489</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.488</version>
+    <version>0.489</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -30,6 +30,11 @@
                 <groupId>de.ruedigermoeller</groupId>
                 <artifactId>fst</artifactId>
                 <version>1.28</version>
+            </dependency>
+            <dependency>
+                <groupId>org.xerial.snappy</groupId>
+                <artifactId>snappy-java</artifactId>
+                <version>1.1.1.7</version>
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.amza</groupId>
@@ -89,7 +94,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.488</version>
+                <version>0.489</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>

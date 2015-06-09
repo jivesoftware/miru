@@ -1,6 +1,9 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -15,34 +18,32 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
  */
 public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnswer, DistinctsReport> {
 
-    private static final DistinctsRemotePartition REMOTE = new DistinctsRemotePartition();
-
     private final Distincts distincts;
     private final MiruRequest<DistinctsQuery> request;
+    private final MiruRemotePartition<DistinctsQuery, DistinctsAnswer, DistinctsReport> remotePartition;
 
     public DistinctsQuestion(Distincts distincts,
-        MiruRequest<DistinctsQuery> request) {
+        MiruRequest<DistinctsQuery> request,
+        MiruRemotePartition<DistinctsQuery, DistinctsAnswer, DistinctsReport> remotePartition) {
         this.distincts = distincts;
         this.request = request;
+        this.remotePartition = remotePartition;
     }
 
     @Override
     public <BM> MiruPartitionResponse<DistinctsAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctsReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> stream = handle.getRequestContext();
+        MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
-        return new MiruPartitionResponse<>(distincts.gather(bitmaps, stream, request, report, solutionLog), solutionLog.asList());
+        return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, solutionLog), solutionLog.asList());
     }
 
     @Override
-    public MiruRemotePartition<DistinctsQuery, DistinctsAnswer, DistinctsReport> getRemotePartition() {
-        return REMOTE;
-    }
-
-    @Override
-    public MiruRequest<DistinctsQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<DistinctsAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<DistinctsReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

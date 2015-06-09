@@ -23,7 +23,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
-import com.jivesoftware.os.miru.plugin.solution.JacksonMiruSolutionMarshaller;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -37,7 +36,6 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsEndpoints;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
-import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsReport;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -77,13 +75,7 @@ public class InMemoryEndpointsTest {
 
         MiruService miruService = miruProvider.getMiru(tenantId);
 
-        ObjectMapper mapper = new ObjectMapper();
-        JacksonMiruSolutionMarshaller<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> marshaller = new JacksonMiruSolutionMarshaller<>(
-            mapper,
-            AggregateCountsQuery.class, AggregateCountsAnswer.class, AggregateCountsReport.class);
-
-        this.aggregateCountsEndpoints = new AggregateCountsEndpoints(
-            new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider), marshaller));
+        this.aggregateCountsEndpoints = new AggregateCountsEndpoints(new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider)));
         this.miruWriterEndpoints = new MiruWriterEndpoints(miruService, new MiruStats());
     }
 
@@ -94,22 +86,22 @@ public class InMemoryEndpointsTest {
 
         List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                    .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                    .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value2")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value2")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
+                    .build()
             )
         );
         Response addResponse = miruWriterEndpoints.addActivities(partitionedActivities);

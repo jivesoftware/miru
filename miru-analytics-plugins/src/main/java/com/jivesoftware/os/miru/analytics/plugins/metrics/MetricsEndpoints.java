@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -22,6 +23,7 @@ import static com.jivesoftware.os.miru.analytics.plugins.metrics.MetricsConstant
 import static com.jivesoftware.os.miru.analytics.plugins.metrics.MetricsConstants.METRICS_PREFIX;
 
 @Path(METRICS_PREFIX)
+@Singleton
 public class MetricsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

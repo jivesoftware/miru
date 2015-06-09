@@ -1,6 +1,9 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
@@ -27,16 +30,19 @@ import java.util.List;
 public class AggregateCountsCustomQuestion implements Question<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-    private static final AggregateCountsCustomRemotePartition REMOTE = new AggregateCountsCustomRemotePartition();
 
     private final AggregateCounts aggregateCounts;
     private final MiruRequest<AggregateCountsQuery> request;
+    private final MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
-    public AggregateCountsCustomQuestion(AggregateCounts aggregateCounts, MiruRequest<AggregateCountsQuery> request) {
+    public AggregateCountsCustomQuestion(AggregateCounts aggregateCounts,
+        MiruRequest<AggregateCountsQuery> request,
+        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition) {
         this.aggregateCounts = aggregateCounts;
         this.request = request;
+        this.remotePartition = remotePartition;
     }
 
     @Override
@@ -88,13 +94,10 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
     }
 
     @Override
-    public MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> getRemotePartition() {
-        return REMOTE;
-    }
-
-    @Override
-    public MiruRequest<AggregateCountsQuery> getRequest() {
-        return request;
+    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<AggregateCountsReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override

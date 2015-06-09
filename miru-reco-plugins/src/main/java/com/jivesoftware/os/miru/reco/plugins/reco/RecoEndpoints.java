@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -22,6 +23,7 @@ import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.CUSTOM_QU
 import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.RECO_PREFIX;
 
 @Path(RECO_PREFIX)
+@Singleton
 public class RecoEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
@@ -42,7 +44,8 @@ public class RecoEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(query);
 
-            log.info("collaborativeFiltering: " + response.answer.results.size() + " in " + (System.currentTimeMillis() - t) + " ms");
+            log.info("collaborativeFiltering: " + (response != null && response.answer != null ? response.answer.results.size() : -1) +
+                " in " + (System.currentTimeMillis() - t) + " ms");
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
@@ -62,7 +65,7 @@ public class RecoEndpoints {
             MiruPartitionResponse<RecoAnswer> result = injectable.collaborativeFilteringRecommendations(partitionId, queryAndReport);
 
             //log.info("collaborativeFiltering: " + answer.results.size());
-            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse(RecoAnswer.EMPTY_RESULTS, null));
+            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(RecoAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {

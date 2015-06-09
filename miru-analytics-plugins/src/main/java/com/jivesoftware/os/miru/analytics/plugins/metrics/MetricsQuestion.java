@@ -3,6 +3,9 @@ package com.jivesoftware.os.miru.analytics.plugins.metrics;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.jive.utils.http.client.HttpClient;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -33,17 +36,18 @@ import java.util.Map;
  */
 public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, MetricsReport> {
 
-    private static final MetricsRemotePartition REMOTE = new MetricsRemotePartition();
-
     private final Metrics metrics;
     private final MiruRequest<MetricsQuery> request;
+    private final MiruRemotePartition<MetricsQuery, MetricsAnswer, MetricsReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public MetricsQuestion(Metrics metrics,
-        MiruRequest<MetricsQuery> request) {
+        MiruRequest<MetricsQuery> request,
+        MiruRemotePartition<MetricsQuery, MetricsAnswer, MetricsReport> remotePartition) {
         this.metrics = metrics;
         this.request = request;
+        this.remotePartition = remotePartition;
     }
 
     @Override
@@ -183,13 +187,10 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
     }
 
     @Override
-    public MiruRequest<MetricsQuery> getRequest() {
-        return request;
-    }
-
-    @Override
-    public MiruRemotePartition<MetricsQuery, MetricsAnswer, MetricsReport> getRemotePartition() {
-        return REMOTE;
+    public MiruPartitionResponse<MetricsAnswer> askRemote(HttpClient httpClient,
+        MiruPartitionId partitionId,
+        Optional<MetricsReport> report) throws MiruQueryServiceException {
+        return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override
