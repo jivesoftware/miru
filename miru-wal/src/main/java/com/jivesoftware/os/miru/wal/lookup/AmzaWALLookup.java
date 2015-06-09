@@ -68,12 +68,12 @@ public class AmzaWALLookup implements MiruWALLookup {
 
         Map<MiruPartitionId, RangeMinMax> partitionMinMax = Maps.newHashMap();
         for (MiruPartitionedActivity activity : activities) {
+            RangeMinMax rangeMinMax = partitionMinMax.get(activity.partitionId);
+            if (rangeMinMax == null) {
+                rangeMinMax = new RangeMinMax();
+                partitionMinMax.put(activity.partitionId, rangeMinMax);
+            }
             if (activity.type.isActivityType()) {
-                RangeMinMax rangeMinMax = partitionMinMax.get(activity.partitionId);
-                if (rangeMinMax == null) {
-                    rangeMinMax = new RangeMinMax();
-                    partitionMinMax.put(activity.partitionId, rangeMinMax);
-                }
                 rangeMinMax.put(activity.clockTimestamp, activity.timestamp);
 
                 boolean removed = MiruPartitionedActivity.Type.REMOVE.equals(activity.type);
