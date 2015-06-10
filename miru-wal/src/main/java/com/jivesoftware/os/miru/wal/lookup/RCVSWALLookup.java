@@ -48,14 +48,13 @@ public class RCVSWALLookup implements MiruWALLookup {
     public Map<MiruPartitionId, RangeMinMax> add(MiruTenantId tenantId, List<MiruPartitionedActivity> activities) throws Exception {
         Map<MiruPartitionId, RangeMinMax> partitionMinMax = Maps.newHashMap();
         for (MiruPartitionedActivity activity : activities) {
+            RangeMinMax rangeMinMax = partitionMinMax.get(activity.partitionId);
+            if (rangeMinMax == null) {
+                rangeMinMax = new RangeMinMax();
+                partitionMinMax.put(activity.partitionId, rangeMinMax);
+            }
+            rangeMinMax.put(activity.clockTimestamp, activity.timestamp);
             if (activity.type.isActivityType()) {
-                RangeMinMax rangeMinMax = partitionMinMax.get(activity.partitionId);
-                if (rangeMinMax == null) {
-                    rangeMinMax = new RangeMinMax();
-                    partitionMinMax.put(activity.partitionId, rangeMinMax);
-                }
-                rangeMinMax.put(activity.clockTimestamp, activity.timestamp);
-
                 boolean removed = MiruPartitionedActivity.Type.REMOVE.equals(activity.type);
                 MiruActivityLookupEntry entry = new MiruActivityLookupEntry(activity.partitionId.getId(), activity.index, activity.writerId, removed);
                 long version = activity.activity.get().version;
