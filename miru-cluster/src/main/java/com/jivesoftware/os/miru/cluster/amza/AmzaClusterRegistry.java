@@ -223,19 +223,24 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
 
             IngressUpdate existing = ingressUpdate.absolute ? null : lookupIngress(tenantId, partitionId);
 
-            if (ingressUpdate.ingressTimestamp != -1 && (existing == null || ingressUpdate.ingressTimestamp > existing.ingressTimestamp)) {
+            if (ingressUpdate.ingressTimestamp != -1 &&
+                (existing == null || existing.ingressTimestamp == -1 || ingressUpdate.ingressTimestamp > existing.ingressTimestamp)) {
                 keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.ingressTimestamp), FilerIO.longBytes(ingressUpdate.ingressTimestamp));
             }
-            if (ingressUpdate.minMax.clockMin != -1 && (existing == null || ingressUpdate.minMax.clockMin < existing.clockMin)) {
+            if (ingressUpdate.minMax.clockMin != -1 &&
+                (existing == null || existing.clockMin == -1 || ingressUpdate.minMax.clockMin < existing.clockMin)) {
                 keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.clockMin), FilerIO.longBytes(ingressUpdate.minMax.clockMin));
             }
-            if (ingressUpdate.minMax.clockMax != -1 && (existing == null || ingressUpdate.minMax.clockMax > existing.clockMax)) {
+            if (ingressUpdate.minMax.clockMax != -1 &&
+                (existing == null || existing.clockMax == -1 || ingressUpdate.minMax.clockMax > existing.clockMax)) {
                 keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.clockMax), FilerIO.longBytes(ingressUpdate.minMax.clockMax));
             }
-            if (ingressUpdate.minMax.orderIdMin != -1 && (existing == null || ingressUpdate.minMax.orderIdMin < existing.orderIdMin)) {
+            if (ingressUpdate.minMax.orderIdMin != -1 &&
+                (existing == null || existing.orderIdMin == -1 || ingressUpdate.minMax.orderIdMin < existing.orderIdMin)) {
                 keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.orderIdMin), FilerIO.longBytes(ingressUpdate.minMax.orderIdMin));
             }
-            if (ingressUpdate.minMax.orderIdMax != -1 && (existing == null || ingressUpdate.minMax.orderIdMax > existing.orderIdMax)) {
+            if (ingressUpdate.minMax.orderIdMax != -1 &&
+                (existing == null || existing.orderIdMax == -1 || ingressUpdate.minMax.orderIdMax > existing.orderIdMax)) {
                 keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.orderIdMax), FilerIO.longBytes(ingressUpdate.minMax.orderIdMax));
             }
         }
@@ -646,7 +651,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 AmzaRegion topologyInfo = getTopologyInfoRegion(hat.host);
                 byte[] rawInfo = topologyInfo.get(topologyKey(tenantId, partitionId));
                 MiruPartitionCoordInfo info;
-                long lastIngressTimestampMillis = 0;
+                long lastIngressTimestampMillis = getIngressUpdate(tenantId, partitionId, IngressType.ingressTimestamp, 0);
                 long lastQueryTimestampMillis = 0;
                 if (rawInfo == null) {
                     info = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
@@ -674,7 +679,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     AmzaRegion topologyInfo = getTopologyInfoRegion(hat.host);
                     byte[] rawInfo = topologyInfo.get(topologyKey(tenantId, partitionId));
                     MiruPartitionCoordInfo info;
-                    long lastIngressTimestampMillis = 0;
+                    long lastIngressTimestampMillis = getIngressUpdate(tenantId, partitionId, IngressType.ingressTimestamp, 0);
                     long lastQueryTimestampMillis = 0;
                     if (rawInfo == null) {
                         info = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
@@ -756,7 +761,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     private MiruPartitionActive isPartitionActive(MiruPartitionCoord coord) throws Exception {
-        long lastIngressTimestamp = getIngressUpdate(coord, IngressType.ingressTimestamp, -1L);
+        long lastIngressTimestamp = getIngressUpdate(coord.tenantId, coord.partitionId, IngressType.ingressTimestamp, -1L);
         long lastQueryTimestamp = -1;
 
         WALKey key = topologyKey(coord.tenantId, coord.partitionId);
@@ -780,7 +785,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
 
     private long getDestroyAfterTimestamp(MiruPartitionCoord coord) throws Exception {
         long destroyAfterTimestamp = -1;
-        long clockMax = getIngressUpdate(coord, IngressType.clockMax, -1);
+        long clockMax = getIngressUpdate(coord.tenantId, coord.partitionId, IngressType.clockMax, -1);
         if (clockMax > 0) {
             destroyAfterTimestamp = clockMax + defaultTopologyDestroyAfterMillis;
         }
@@ -854,11 +859,11 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return partitionLookupRange;
     }
 
-    private long getIngressUpdate(MiruPartitionCoord coord, IngressType type, long defaultValue) throws Exception {
+    private long getIngressUpdate(MiruTenantId tenantId, MiruPartitionId partitionId, IngressType type, long defaultValue) throws Exception {
         long value = defaultValue;
         AmzaRegion region = getIngressRegion();
         if (region != null) {
-            byte[] clockMaxBytes = region.get(toIngressKey(coord.tenantId, coord.partitionId, type));
+            byte[] clockMaxBytes = region.get(toIngressKey(tenantId, partitionId, type));
             if (clockMaxBytes != null) {
                 value = FilerIO.bytesLong(clockMaxBytes);
             }
