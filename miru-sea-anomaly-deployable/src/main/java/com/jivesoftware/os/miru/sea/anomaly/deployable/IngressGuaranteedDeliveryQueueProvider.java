@@ -6,17 +6,17 @@ import com.jivesoftware.os.filer.queue.guaranteed.delivery.FileQueueBackGuarante
 import com.jivesoftware.os.filer.queue.guaranteed.delivery.GuaranteedDeliveryService;
 import com.jivesoftware.os.filer.queue.guaranteed.delivery.GuaranteedDeliveryServiceStatus;
 import com.jivesoftware.os.filer.queue.processor.PhasedQueueProcessorConfig;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckUtil;
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.api.MinMaxHealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.ScheduledHealthCheck;
-import com.jivesoftware.os.jive.utils.health.api.ScheduledMinMaxHealthCheckConfig;
-import com.jivesoftware.os.jive.utils.health.checkers.DiskFreeHealthChecker;
 import com.jivesoftware.os.mlogger.core.Counter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckUtil;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.ScheduledHealthCheck;
+import com.jivesoftware.os.routing.bird.health.api.ScheduledMinMaxHealthCheckConfig;
+import com.jivesoftware.os.routing.bird.health.checkers.DiskFreeHealthChecker;
 import java.io.File;
 import java.io.IOException;
 import org.merlin.config.defaults.LongDefault;
@@ -29,27 +29,27 @@ public class IngressGuaranteedDeliveryQueueProvider {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    static interface IngressDiskCheck extends ScheduledMinMaxHealthCheckConfig {
+    interface IngressDiskCheck extends ScheduledMinMaxHealthCheckConfig {
 
         @StringDefault("ingress>disk")
         @Override
-        public String getName();
+        String getName();
 
         @LongDefault(80)
         @Override
-        public Long getMax();
+        Long getMax();
 
     }
 
-    static interface IngressPendingCheck extends ScheduledMinMaxHealthCheckConfig {
+    interface IngressPendingCheck extends ScheduledMinMaxHealthCheckConfig {
 
         @StringDefault("ingress>pending")
         @Override
-        public String getName();
+        String getName();
 
         @LongDefault(100000)
         @Override
-        public Long getMax();
+        Long getMax();
 
     }
 

@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -140,7 +139,7 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     private Object[][] generateUnreadIndexes(MiruTenantId tenantId, int[] data) throws Exception {
-        final MiruStreamId streamId = new MiruStreamId(new Id(12_345).toBytes());
+        final MiruStreamId streamId = new MiruStreamId(new byte[] { 2 });
 
         assertTrue(data.length % 2 == 0, "Need an even number of data");
 

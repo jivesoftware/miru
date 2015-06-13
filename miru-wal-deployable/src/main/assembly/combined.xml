@@ -8,6 +8,6 @@
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
     <componentDescriptors>
-        <componentDescriptor>upena-deployable.xml</componentDescriptor>
+        <componentDescriptor>routing-bird-deployable.xml</componentDescriptor>
     </componentDescriptors>
 </assembly>

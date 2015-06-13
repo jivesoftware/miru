@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
@@ -22,17 +23,13 @@ import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStore;
-import com.jivesoftware.os.miru.cluster.MiruRegistryStoreInitializer;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
-import com.jivesoftware.os.upena.main.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -75,11 +72,8 @@ public class MiruManageServiceTest {
         MiruSoyRendererConfig config = BindInterfaceToConfiguration.bindDefault(MiruSoyRendererConfig.class);
         config.setPathToSoyResources("src/main/home/resources/soy");
 
-        InMemoryRowColumnValueStoreInitializer rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         ObjectMapper mapper = new ObjectMapper();
-        MiruRegistryStore registryStore = new MiruRegistryStoreInitializer().initialize("test", rowColumnValueStoreInitializer, mapper);
 
-        MiruWALClient walClient = Mockito.mock(MiruWALClient.class);
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
@@ -90,6 +84,9 @@ public class MiruManageServiceTest {
             rowsChanged -> {
             });
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+            new AmzaKretrProvider(amzaService),
+            0,
+            10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
             TimeUnit.HOURS.toMillis(1),
@@ -104,8 +101,8 @@ public class MiruManageServiceTest {
         Mockito.when(miruWALClient.getAllTenantIds()).thenReturn(Arrays.asList(tenantId));
         Mockito.when(miruWALClient.getLargestPartitionId(Mockito.<MiruTenantId>any())).thenReturn(partitionId);
 
-        Mockito.when(miruWALClient.getPartitionStatus(Mockito.<MiruTenantId>any(), Mockito.anyList()))
-            .thenReturn(Arrays.asList(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0))));
+        Mockito.when(miruWALClient.getPartitionStatus(Mockito.<MiruTenantId>any(), Mockito.any(MiruPartitionId.class)))
+            .thenReturn(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0)));
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         MiruStats stats = new MiruStats();
@@ -116,7 +113,6 @@ public class MiruManageServiceTest {
             stats);
 
         OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1), new SnowflakeIdPacker(), new JiveEpochTimestampProvider());
-        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(orderIdProvider, clusterRegistry);
 
         long electTime = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
         for (int i = 0; i < numberOfReplicas; i++) {

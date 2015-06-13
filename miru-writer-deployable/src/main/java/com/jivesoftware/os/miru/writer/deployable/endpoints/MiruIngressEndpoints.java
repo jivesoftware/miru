@@ -15,11 +15,6 @@
  */
 package com.jivesoftware.os.miru.writer.deployable.endpoints;
 
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.api.HealthTimer;
-import com.jivesoftware.os.jive.utils.health.api.TimerHealthCheckConfig;
-import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
-import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -27,6 +22,11 @@ import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.api.HealthTimer;
+import com.jivesoftware.os.routing.bird.health.api.TimerHealthCheckConfig;
+import com.jivesoftware.os.routing.bird.health.checkers.TimerHealthChecker;
+import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;

@@ -8,7 +8,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -214,7 +213,7 @@ public class RecoCorrectnessTest {
             long s = System.currentTimeMillis();
             MiruResponse<RecoAnswer> response = recoInjectable.collaborativeFilteringRecommendations(new MiruRequest<>(
                 tenant1,
-                new MiruActorId(new Id(1)),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new RecoQuery(
                     null,
@@ -270,7 +269,7 @@ public class RecoCorrectnessTest {
             long s = System.currentTimeMillis();
             MiruResponse<TrendingAnswer> response = trendingInjectable.scoreTrending(new MiruRequest<>(
                 tenant1,
-                new MiruActorId(new Id(1)),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
                     timeRange,

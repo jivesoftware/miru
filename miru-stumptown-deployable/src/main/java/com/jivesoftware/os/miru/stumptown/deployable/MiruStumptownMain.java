@@ -19,12 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.queue.guaranteed.delivery.DeliveryCallback;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
-import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -50,12 +44,18 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
-import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
-import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
-import com.jivesoftware.os.upena.main.Deployable;
-import com.jivesoftware.os.upena.main.InstanceConfig;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfigBinder;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.server.util.Resource;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -132,7 +132,7 @@ public class MiruStumptownMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
 
-            TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
+            TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
                 .getConnections("miru-writer", "main"));  // TODO expose to conf
 
@@ -152,7 +152,7 @@ public class MiruStumptownMain {
                 stumptownSchemaService,
                 logMill,
                 mapper,
-                miruWriteClient,
+                miruWriterClient,
                 payloads);
 
             DeliveryCallback deliveryCallback = new JacksonSerializedDeliveryCallback<MiruLogEvent>(intakeConfig.getMaxDrainSize(),

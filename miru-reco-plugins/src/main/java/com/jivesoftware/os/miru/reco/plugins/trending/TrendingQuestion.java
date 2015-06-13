@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
@@ -25,6 +24,7 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuestion;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

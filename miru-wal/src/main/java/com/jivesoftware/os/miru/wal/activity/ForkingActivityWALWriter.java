@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.wal.activity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -23,10 +24,11 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
     }
 
     @Override
-    public void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+    public RangeMinMax write(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         LOG.startTimer("forking>write>primary");
+        RangeMinMax partitionMinMax;
         try {
-            primaryWAL.write(tenantId, partitionedActivities);
+            partitionMinMax = primaryWAL.write(tenantId, partitionId, partitionedActivities);
         } finally {
             LOG.startTimer("forking>write>primary");
         }
@@ -36,7 +38,7 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
             try {
                 while (true) {
                     try {
-                        secondaryWAL.write(tenantId, partitionedActivities);
+                        secondaryWAL.write(tenantId, partitionId, partitionedActivities);
                         break;
                     } catch (Exception x) {
                         LOG.warn("Failed to write:{} activities for tenant:{} to secondary WAL.", new Object[] { partitionedActivities.size(), tenantId }, x);
@@ -47,6 +49,7 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
                 LOG.stopTimer("forking>write>secondary");
             }
         }
+        return partitionMinMax;
     }
 
     @Override

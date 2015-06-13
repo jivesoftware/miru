@@ -18,13 +18,9 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.service.storage.RegionProvider;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
-import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.amza.service.storage.PartitionProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -59,16 +55,22 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
-import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
-import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
-import com.jivesoftware.os.upena.main.Deployable;
-import com.jivesoftware.os.upena.main.InstanceConfig;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.server.util.Resource;
 import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.defaults.IntDefault;
+import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
 public class MiruManageMain {
@@ -94,6 +96,12 @@ public class MiruManageMain {
         @IntDefault(1225)
         @Override
         int getAmzaDiscoveryPort();
+
+        @IntDefault(1)
+        int getReplicateTakeQuorum();
+
+        @LongDefault(60_000L)
+        long getReplicateTimeoutMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -184,7 +192,11 @@ public class MiruManageMain {
                 amzaClusterRegistryConfig,
                 rowsChanged -> {
                 });
+            AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
             AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+                amzaKretrProvider,
+                amzaClusterRegistryConfig.getReplicateTakeQuorum(),
+                amzaClusterRegistryConfig.getReplicateTimeoutMillis(),
                 new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                 registryConfig.getDefaultNumberOfReplicas(),
                 registryConfig.getDefaultTopologyIsStaleAfterMillis(),
@@ -192,7 +204,7 @@ public class MiruManageMain {
                 registryConfig.getDefaultTopologyDestroyAfterMillis(),
                 amzaClusterRegistryConfig.getReplicationFactor(),
                 amzaClusterRegistryConfig.getTakeFromFactor());
-            amzaService.watch(RegionProvider.RING_INDEX, clusterRegistry);
+            amzaService.watch(PartitionProvider.RING_INDEX.getPartitionName(), clusterRegistry);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 

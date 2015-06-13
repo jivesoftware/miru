@@ -4,13 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.http.client.HttpClient;
-import com.jivesoftware.os.jive.utils.http.client.rest.NonSuccessStatusCodeException;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
-import org.apache.commons.httpclient.HttpStatus;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.NonSuccessStatusCodeException;
+import org.apache.http.HttpStatus;
 
 /**
  *
@@ -37,7 +37,7 @@ public class JsonRemotePartitionReader implements MiruRemotePartitionReader {
         endPointMetrics.start();
         try {
             MiruRequestAndReport<Q, P> params = new MiruRequestAndReport<>(request, report.orNull());
-            RequestHelper requestHelper = new RequestHelper(httpClient, MAPPER);
+            HttpRequestHelper requestHelper = new HttpRequestHelper(httpClient, MAPPER);
             return requestHelper.executeRequest(params, endpoint,
                 MiruPartitionResponse.class, new Class[] { answerClass },
                 new MiruPartitionResponse<>(emptyResults, null));

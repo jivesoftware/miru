@@ -68,6 +68,11 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception {
+        return clusterRegistry.copySchema(fromTenantId, toTenantIds);
+    }
+
+    @Override
     public void remove(MiruHost host) throws Exception {
         clusterRegistry.removeHost(host);
     }
@@ -83,21 +88,19 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
-    public void updateIngress(Collection<MiruIngressUpdate> ingressUpdates) throws Exception {
+    public void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception {
         //TODO call this from WAL, DUH!!!!
-        clusterRegistry.updateIngress(ingressUpdates);
+        clusterRegistry.updateIngress(ingressUpdate);
 
-        for (MiruIngressUpdate ingressUpdate : ingressUpdates) {
-            TenantAndPartition tenantAndPartition = new TenantAndPartition(ingressUpdate.tenantId, ingressUpdate.partitionId);
-            if (replicationCache.getIfPresent(tenantAndPartition) == null) {
-                MiruTenantId tenantId = ingressUpdate.tenantId;
-                MiruPartitionId partitionId = ingressUpdate.partitionId;
-                MiruReplicaSet replicaSet = clusterRegistry.getReplicaSet(tenantId, partitionId);
-                if (replicaSet.getCountOfMissingReplicas() > 0) {
-                    LOG.debug("Electing {} replicas for {} {}", replicaSet.getCountOfMissingReplicas(), tenantId, partitionId);
-                    replicaSetDirector.electHostsForTenantPartition(tenantId, partitionId, replicaSet);
-                    replicationCache.put(tenantAndPartition, true);
-                }
+        TenantAndPartition tenantAndPartition = new TenantAndPartition(ingressUpdate.tenantId, ingressUpdate.partitionId);
+        if (replicationCache.getIfPresent(tenantAndPartition) == null) {
+            MiruTenantId tenantId = ingressUpdate.tenantId;
+            MiruPartitionId partitionId = ingressUpdate.partitionId;
+            MiruReplicaSet replicaSet = clusterRegistry.getReplicaSet(tenantId, partitionId);
+            if (replicaSet.getCountOfMissingReplicas() > 0) {
+                LOG.debug("Electing {} replicas for {} {}", replicaSet.getCountOfMissingReplicas(), tenantId, partitionId);
+                replicaSetDirector.electHostsForTenantPartition(tenantId, partitionId, replicaSet);
+                replicationCache.put(tenantAndPartition, true);
             }
         }
     }

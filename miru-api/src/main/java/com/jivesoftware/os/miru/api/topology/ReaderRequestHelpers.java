@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -23,7 +23,7 @@ public class ReaderRequestHelpers {
     private final ObjectMapper objectMapper;
 
     private final Random random = new Random();
-    private final ConcurrentMap<MiruHost, RequestHelper> hostToHelper = Maps.newConcurrentMap();
+    private final ConcurrentMap<MiruHost, HttpRequestHelper> hostToHelper = Maps.newConcurrentMap();
     private final HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
         .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
     private final long ignoreHostThatHaveNotHeartBeatedInMillis;
@@ -34,11 +34,11 @@ public class ReaderRequestHelpers {
         this.ignoreHostThatHaveNotHeartBeatedInMillis = ignoreHostThatHaveNotHeartBeatedInMillis;
     }
 
-    public RequestHelper get(MiruHost host) throws Exception {
-        RequestHelper requestHelper = hostToHelper.get(host);
+    public HttpRequestHelper get(MiruHost host) throws Exception {
+        HttpRequestHelper requestHelper = hostToHelper.get(host);
         if (requestHelper == null) {
-            requestHelper = new RequestHelper(httpClientFactory.createClient(host.getLogicalName(), host.getPort()), objectMapper);
-            RequestHelper existing = hostToHelper.putIfAbsent(host, requestHelper);
+            requestHelper = new HttpRequestHelper(httpClientFactory.createClient(host.getLogicalName(), host.getPort()), objectMapper);
+            HttpRequestHelper existing = hostToHelper.putIfAbsent(host, requestHelper);
             if (existing != null) {
                 requestHelper = existing;
             }
@@ -46,7 +46,7 @@ public class ReaderRequestHelpers {
         return requestHelper;
     }
 
-    public List<RequestHelper> get(Optional<MiruHost> excludingHost) throws Exception {
+    public List<HttpRequestHelper> get(Optional<MiruHost> excludingHost) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
         List<HostHeartbeat> allhosts = clusterClient.allhosts();
         if (allhosts != null) {
@@ -64,7 +64,7 @@ public class ReaderRequestHelpers {
             throw new RuntimeException("No hosts to complete request");
         }
 
-        List<RequestHelper> requestHelpers = Lists.newArrayListWithCapacity(hosts.size());
+        List<HttpRequestHelper> requestHelpers = Lists.newArrayListWithCapacity(hosts.size());
         for (MiruHost host : hosts) {
             requestHelpers.add(get(host));
         }

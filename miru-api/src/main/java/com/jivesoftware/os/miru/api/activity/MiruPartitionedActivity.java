@@ -27,7 +27,7 @@ public class MiruPartitionedActivity {
         private final boolean activityType;
         private final boolean readType;
 
-        private Type(byte sort, boolean boundaryType, boolean activityType, boolean readType) {
+        Type(byte sort, boolean boundaryType, boolean activityType, boolean readType) {
             this.sort = sort;
             this.boundaryType = boundaryType;
             this.activityType = activityType;

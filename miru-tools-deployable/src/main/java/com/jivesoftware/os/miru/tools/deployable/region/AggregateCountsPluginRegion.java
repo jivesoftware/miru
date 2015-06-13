@@ -9,8 +9,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.base.util.ISO8601DateFormat;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -30,8 +28,10 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
+import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -116,7 +116,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                 MiruFilter streamFilter = filterStringUtil.parse(input.streamFilters);
                 MiruFilter constraintsFilter = filterStringUtil.parse(input.constraintsFilters);
 
-                List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
+                List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 List<MiruResponse<AggregateCountsAnswer>> responses = Lists.newArrayList();
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
@@ -141,7 +141,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                         if (timeRange == null) {
                             break;
                         }
-                        for (RequestHelper requestHelper : requestHelpers) {
+                        for (HttpRequestHelper requestHelper : requestHelpers) {
                             try {
                                 @SuppressWarnings("unchecked")
                                 MiruResponse<AggregateCountsAnswer> aggregatesResponse = requestHelper.executeRequest(

@@ -9,7 +9,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -163,7 +162,7 @@ public class MiruStreamServiceNGTest {
                 MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, fieldFilters, null);
                 MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
                     tenant1,
-                    new MiruActorId(Id.NULL),
+                    MiruActorId.NOT_PROVIDED,
                     MiruAuthzExpression.NOT_PROVIDED,
                     new AggregateCountsQuery(
                         streamId,
@@ -270,7 +269,7 @@ public class MiruStreamServiceNGTest {
         {
             MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
                 tenant1,
-                new MiruActorId(Id.NULL),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
                 streamId,
                 new MiruTimeRange(0, 1_000),
@@ -291,7 +290,7 @@ public class MiruStreamServiceNGTest {
         {
             MiruRequest<DistinctCountQuery> query = new MiruRequest<>(
                 tenant1,
-                new MiruActorId(Id.NULL),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctCountQuery(
                     streamId,
@@ -313,7 +312,7 @@ public class MiruStreamServiceNGTest {
         {
             MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
                 tenant1,
-                new MiruActorId(Id.NULL),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
                 streamId,
                 new MiruTimeRange(0, 1_000),
@@ -334,7 +333,7 @@ public class MiruStreamServiceNGTest {
         {
             MiruRequest<DistinctCountQuery> query = new MiruRequest<>(
                 tenant1,
-                new MiruActorId(Id.NULL),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctCountQuery(
                     streamId,

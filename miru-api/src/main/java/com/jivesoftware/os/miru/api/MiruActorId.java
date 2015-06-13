@@ -17,51 +17,18 @@ package com.jivesoftware.os.miru.api;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.jivesoftware.os.jive.utils.id.Id;
-import java.util.Objects;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 
 /**
  * Represents the full context of a user, including both the user itself, and the set of groups the user belongs to. This full context is passed along with
  * write and read requests to allow authorization checks.
  */
-public class MiruActorId {
+public class MiruActorId extends MiruIBA {
 
-    public static final MiruActorId NOT_PROVIDED = new MiruActorId(new Id(Long.MAX_VALUE));
-
-    private final Id actorId;
+    public static final MiruActorId NOT_PROVIDED = new MiruActorId(new byte[0]);
 
     @JsonCreator
-    public MiruActorId(@JsonProperty("actorId") Id actorId) {
-        Preconditions.checkNotNull(actorId);
-        this.actorId = actorId;
-    }
-
-    public Id getActorId() {
-        return actorId;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final MiruActorId other = (MiruActorId) obj;
-        return Objects.equals(this.actorId, other.actorId);
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 79 * hash + Objects.hashCode(this.actorId);
-        return hash;
-    }
-
-    @Override
-    public String toString() {
-        return "MiruActorId{" + "actorId=" + actorId + '}';
+    public MiruActorId(@JsonProperty("bytes") byte[] _bytes) {
+        super(_bytes);
     }
 }

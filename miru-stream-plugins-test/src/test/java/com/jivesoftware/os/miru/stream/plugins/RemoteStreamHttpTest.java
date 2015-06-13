@@ -4,11 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -23,6 +18,10 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.util.Arrays;
 import java.util.Collections;
 import org.apache.commons.io.Charsets;
@@ -48,7 +47,7 @@ public class RemoteStreamHttpTest {
             .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
-        RequestHelper requestHelper = new RequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
+        HttpRequestHelper requestHelper = new HttpRequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
 
         int queries = 100;
         for (int i = 0; i < queries; i++) {
@@ -56,10 +55,10 @@ public class RemoteStreamHttpTest {
         }
     }
 
-    private void query(RequestHelper requestHelper, MiruTenantId tenantId) throws Exception {
+    private void query(HttpRequestHelper requestHelper, MiruTenantId tenantId) throws Exception {
         MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
             tenantId,
-            new MiruActorId(Id.NULL),
+            MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new AggregateCountsQuery(
                 MiruStreamId.NULL,

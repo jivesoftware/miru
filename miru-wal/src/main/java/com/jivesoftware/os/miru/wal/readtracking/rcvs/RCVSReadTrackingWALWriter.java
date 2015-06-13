@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.wal.readtracking.rcvs;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.api.MultiAdd;
@@ -26,16 +27,16 @@ public class RCVSReadTrackingWALWriter implements MiruReadTrackingWALWriter {
     }
 
     @Override
-    public void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        writeReadTracking(tenantId, partitionedActivities);
-        writeReadTrackingSip(tenantId, partitionedActivities);
+    public void write(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        writeReadTracking(tenantId, streamId, partitionedActivities);
+        writeReadTrackingSip(tenantId, streamId, partitionedActivities);
     }
 
-    private void writeReadTracking(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+    private void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         MultiAdd<MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity> rawAdds = new MultiAdd<>();
         for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
             MiruReadEvent readEventNullable = partitionedActivity.getReadEventNullable();
-            if (readEventNullable != null) {
+            if (readEventNullable != null && readEventNullable.streamId.equals(streamId)) {
                 rawAdds.add(
                     new MiruReadTrackingWALRow(readEventNullable.streamId),
                     new MiruReadTrackingWALColumnKey(partitionedActivity.timestamp),
@@ -49,11 +50,11 @@ public class RCVSReadTrackingWALWriter implements MiruReadTrackingWALWriter {
         readTrackingWAL.multiRowsMultiAdd(tenantId, took);
     }
 
-    private void writeReadTrackingSip(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+    private void writeReadTrackingSip(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         MultiAdd<MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long> rawAdds = new MultiAdd<>();
         for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
             MiruReadEvent readEventNullable = partitionedActivity.getReadEventNullable();
-            if (readEventNullable != null) {
+            if (readEventNullable != null && readEventNullable.streamId.equals(streamId)) {
                 rawAdds.add(
                     new MiruReadTrackingWALRow(readEventNullable.streamId),
                     new MiruReadTrackingSipWALColumnKey(System.currentTimeMillis(), partitionedActivity.timestamp),

@@ -3,10 +3,6 @@ package com.jivesoftware.os.miru.service.partition.cluster;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckConfigBinder;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -21,10 +17,12 @@ import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsEWAH;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
 import com.jivesoftware.os.miru.service.partition.MiruLocalPartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import java.util.Iterator;
 import java.util.Map;
 import org.merlin.config.BindInterfaceToConfiguration;
-import org.merlin.config.Config;
 import org.mockito.Matchers;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.BeforeMethod;
@@ -53,12 +51,7 @@ public class MiruTenantTopologyTest {
     @BeforeMethod
     public void setUp() throws Exception {
         HealthFactory.initialize(
-            new HealthCheckConfigBinder() {
-                @Override
-                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                    return BindInterfaceToConfiguration.bindDefault(configurationInterfaceClass);
-                }
-            },
+            BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
                 @Override
                 public void register(HealthChecker healthChecker) {

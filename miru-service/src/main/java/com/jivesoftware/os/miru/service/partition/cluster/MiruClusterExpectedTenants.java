@@ -9,7 +9,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -147,7 +147,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     private void expect(ListMultimap<MiruTenantId, MiruPartitionActiveUpdate> expected) throws Exception {
 
         for (MiruTenantId tenantId : expected.keys()) {
-            synchronized (tenantLocks.lock(tenantId)) {
+            synchronized (tenantLocks.lock(tenantId, 0)) {
                 MiruTenantTopology<?> tenantTopology = localTopologies.get(tenantId);
                 if (tenantTopology == null) {
                     tenantTopology = tenantTopologyFactory.create(tenantId);

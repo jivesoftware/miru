@@ -15,13 +15,14 @@
  */
 package com.jivesoftware.os.miru.api;
 
-import com.jivesoftware.os.jive.utils.base.service.ServiceHandle;
-
 /**
- *
  * @author jonathan
  */
-public interface MiruLifecyle<S> extends ServiceHandle {
+public interface MiruLifecyle<S> {
 
     S getService();
+
+    void start() throws Exception;
+
+    void stop() throws Exception;
 }

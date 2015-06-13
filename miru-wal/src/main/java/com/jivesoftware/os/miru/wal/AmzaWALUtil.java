@@ -1,19 +1,21 @@
 package com.jivesoftware.os.miru.wal;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.amza.service.AmzaRegion;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider.AmzaKretr;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.MemoryWALUpdates;
-import com.jivesoftware.os.amza.shared.RegionName;
-import com.jivesoftware.os.amza.shared.RegionProperties;
-import com.jivesoftware.os.amza.shared.Scan;
-import com.jivesoftware.os.amza.shared.TakeCursors;
-import com.jivesoftware.os.amza.shared.WALKey;
-import com.jivesoftware.os.amza.shared.WALValue;
+import com.jivesoftware.os.amza.shared.AmzaPartitionAPI.TimestampedValue;
+import com.jivesoftware.os.amza.shared.partition.PartitionName;
+import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
+import com.jivesoftware.os.amza.shared.scan.Scan;
+import com.jivesoftware.os.amza.shared.take.TakeCursors;
+import com.jivesoftware.os.amza.shared.wal.WALKey;
+import com.jivesoftware.os.amza.shared.wal.WALValue;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -22,47 +24,93 @@ import java.util.Map;
  */
 public class AmzaWALUtil {
 
-    public static final RegionName LOOKUP_TENANTS_REGION_NAME = new RegionName(false, "lookup-tenants", "lookup-tenants");
-    public static final RegionName LOOKUP_PARTITIONS_REGION_NAME = new RegionName(false, "lookup-partitions", "lookup-partitions");
+    private static final PartitionName LOOKUP_TENANTS_PARTITION_NAME = new PartitionName(false, "lookup-tenants", "lookup-tenants");
+    private static final PartitionName LOOKUP_PARTITIONS_REGION_NAME = new PartitionName(false, "lookup-partitions", "lookup-partitions");
 
     public static final WALValue NULL_VALUE = new WALValue(null, 0L, false);
 
     private final AmzaService amzaService;
-    private final RegionProperties defaultProperties;
+    private final AmzaKretrProvider amzaKretrProvider;
+    private final PartitionProperties defaultProperties;
 
-    public AmzaWALUtil(AmzaService amzaService, RegionProperties defaultProperties) {
+    public AmzaWALUtil(AmzaService amzaService,
+        AmzaKretrProvider amzaKretrProvider,
+        PartitionProperties defaultProperties) {
         this.amzaService = amzaService;
+        this.amzaKretrProvider = amzaKretrProvider;
         this.defaultProperties = defaultProperties;
     }
 
-    public AmzaRegion getOrCreateRegion(RegionName regionName, int ringSize, Optional<RegionProperties> regionProperties) throws Exception {
-        amzaService.getAmzaRing().ensureSubRing(regionName.getRingName(), ringSize);
-        return amzaService.createRegionIfAbsent(regionName, regionProperties.or(defaultProperties));
+    public HostPort[] getActivityRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return amzaService.getPartitionRoute(getActivityPartitionName(tenantId, partitionId)).orderedPartitionHosts.stream()
+            .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))
+            .toArray(HostPort[]::new);
     }
 
-    public AmzaRegion getOrCreateMaximalRegion(RegionName regionName, Optional<RegionProperties> regionProperties) throws Exception {
-        amzaService.getAmzaRing().ensureMaximalSubRing(regionName.getRingName());
-        return amzaService.createRegionIfAbsent(regionName, regionProperties.or(defaultProperties));
+    public HostPort[] getLookupRoutingGroup(MiruTenantId tenantId) throws Exception {
+        return amzaService.getPartitionRoute(getLookupPartitionName(tenantId)).orderedPartitionHosts.stream()
+            .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))
+            .toArray(HostPort[]::new);
     }
 
-    public AmzaRegion getRegion(RegionName regionName) throws Exception {
-        return amzaService.getRegion(regionName);
+    private PartitionName getActivityPartitionName(MiruTenantId tenantId, MiruPartitionId partitionId) {
+        String walName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
+        return new PartitionName(false, walName, walName);
     }
 
-    public boolean hasRegion(RegionName regionName) throws Exception {
-        return amzaService.hasRegion(regionName);
+    private PartitionName getLookupPartitionName(MiruTenantId tenantId) {
+        String lookupName = "lookup-activity-" + tenantId.toString();
+        return new PartitionName(false, lookupName, lookupName);
     }
 
-    public boolean replicate(RegionName regionName, MemoryWALUpdates updates, int requireNReplicas) throws Exception {
-        return amzaService.replicate(regionName, updates, requireNReplicas);
+    /* TODO should be done by the remote client looking up ordered hosts
+    public AmzaKretr getOrCreateClient(PartitionName partitionName, int ringSize, Optional<PartitionProperties> regionProperties) throws Exception {
+        amzaService.getAmzaHostRing().ensureSubRing(partitionName.getRingName(), ringSize);
+        amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
+        return amzaKretrProvider.getClient(partitionName);
+    }
+    */
+
+    private AmzaKretr getClient(PartitionName partitionName) throws Exception {
+        return amzaKretrProvider.getClient(partitionName);
     }
 
-    public TakeCursors take(AmzaRegion region, Map<String, NamedCursor> cursorsByName, Scan<WALValue> scan) throws Exception {
-        String localRingHostName = amzaService.getAmzaRing().getRingHost().toCanonicalString();
-        NamedCursor localNamedCursor = cursorsByName.get(localRingHostName);
+    public AmzaKretr getActivityClient(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return getClient(getActivityPartitionName(tenantId, partitionId));
+    }
+
+    public AmzaKretr getLookupClient(MiruTenantId tenantId) throws Exception {
+        return getClient(getLookupPartitionName(tenantId));
+    }
+
+    public AmzaKretr getLookupTenantsClient() throws Exception {
+        return getOrCreateMaximalClient(LOOKUP_TENANTS_PARTITION_NAME, Optional.<PartitionProperties>absent());
+    }
+
+    public AmzaKretr getLookupPartitionsClient() throws Exception {
+        return getOrCreateMaximalClient(LOOKUP_TENANTS_PARTITION_NAME, Optional.<PartitionProperties>absent());
+    }
+
+    private AmzaKretr getOrCreateMaximalClient(PartitionName partitionName, Optional<PartitionProperties> regionProperties) throws Exception {
+        amzaService.getAmzaHostRing().ensureMaximalSubRing(partitionName.getRingName());
+        amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
+        return amzaKretrProvider.getClient(partitionName);
+    }
+
+    public boolean hasActivityPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return amzaService.hasPartition(getActivityPartitionName(tenantId, partitionId));
+    }
+
+    public void destroyActivityPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        amzaService.destroyPartition(getActivityPartitionName(tenantId, partitionId));
+    }
+
+    public TakeCursors take(AmzaKretr client, Map<String, NamedCursor> cursorsByName, Scan<TimestampedValue> scan) throws Exception {
+        String localRingMemberName = amzaService.getAmzaRingReader().getRingMember().getMember();
+        NamedCursor localNamedCursor = cursorsByName.get(localRingMemberName);
         long transactionId = (localNamedCursor != null) ? localNamedCursor.id : 0;
 
-        return amzaService.takeFromTransactionId(region, transactionId, scan);
+        return client.takeFromTransactionId(transactionId, scan);
     }
 
     public WALKey toPartitionsKey(MiruTenantId tenantId, MiruPartitionId partitionId) {

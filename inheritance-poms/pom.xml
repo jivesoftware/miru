@@ -14,6 +14,6 @@
     <modules>
         <module>global-build-management</module>
         <module>global-repo-management</module>
-        <module>upena-deployable-management</module>
+        <module>routing-bird-deployable-management</module>
     </modules>
 </project>

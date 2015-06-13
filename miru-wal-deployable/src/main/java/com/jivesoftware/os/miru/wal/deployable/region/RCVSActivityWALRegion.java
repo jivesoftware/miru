@@ -59,15 +59,14 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
 
             try {
                 MiruPartitionId latestPartitionId = miruWALDirector.getLargestPartitionId(tenantId);
-                List<MiruPartitionId> partitionIds = Lists.newArrayList();
+                List<MiruActivityWALStatus> partitionStatuses = Lists.newArrayList();
                 if (latestPartitionId != null) {
                     for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
-                        partitionIds.add(latest);
+                        partitionStatuses.add(miruWALDirector.getPartitionStatus(tenantId, latest));
                     }
-                    Collections.reverse(partitionIds);
                 }
+                Collections.reverse(partitionStatuses);
 
-                List<MiruActivityWALStatus> partitionStatuses = miruWALDirector.getPartitionStatus(tenantId, partitionIds);
                 List<Map<String, String>> partitions = Lists.newArrayList();
                 for (MiruActivityWALStatus status : partitionStatuses) {
                     partitions.add(ImmutableMap.<String, String>of(

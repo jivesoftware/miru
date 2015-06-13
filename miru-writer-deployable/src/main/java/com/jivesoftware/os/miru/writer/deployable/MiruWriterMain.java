@@ -19,15 +19,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.shared.WALKey;
-import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
-import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.amza.shared.partition.PrimaryIndexDescriptor;
+import com.jivesoftware.os.amza.shared.wal.WALKey;
+import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -50,16 +46,22 @@ import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruIngressEndpoints;
 import com.jivesoftware.os.miru.writer.partition.AmzaPartitionIdProvider;
-import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
-import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
-import com.jivesoftware.os.upena.main.Deployable;
-import com.jivesoftware.os.upena.main.InstanceConfig;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.server.util.Resource;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Map;
 import org.merlin.config.defaults.IntDefault;
+import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
 public class MiruWriterMain {
@@ -85,6 +87,12 @@ public class MiruWriterMain {
         @IntDefault(1224)
         @Override
         int getAmzaDiscoveryPort();
+
+        @IntDefault(1)
+        int getReplicateCursorQuorum();
+
+        @LongDefault(60_000L)
+        long getReplicateCursorTimeoutMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -166,7 +174,7 @@ public class MiruWriterMain {
                 "miru-writer-" + instanceConfig.getClusterName(),
                 miruAmzaServiceConfig,
                 changes -> {
-                    if (changes.getRegionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_REGION_NAME)) {
+                    if (changes.getVersionedPartitionName().getPartitionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_PARTITION_NAME)) {
                         for (WALKey key : changes.getApply().columnKeySet()) {
                             MiruTenantId tenantId = AmzaPartitionIdProvider.extractTenantForLatestPartition(key);
                             latestAlignmentCache.remove(tenantId);
@@ -191,7 +199,11 @@ public class MiruWriterMain {
             WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                 null, 1000, 1000);
 
+            AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
             AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
+                amzaKretrProvider,
+                miruAmzaServiceConfig.getReplicateCursorQuorum(),
+                miruAmzaServiceConfig.getReplicateCursorTimeoutMillis(),
                 storageDescriptor,
                 clientConfig.getTotalCapacity(),
                 walClient);

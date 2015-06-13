@@ -7,21 +7,21 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.replication.SendFailureListener;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
-import com.jivesoftware.os.amza.service.storage.RegionPropertyMarshaller;
-import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.shared.RegionProperties;
-import com.jivesoftware.os.amza.shared.RingHost;
-import com.jivesoftware.os.amza.shared.RingMember;
-import com.jivesoftware.os.amza.shared.UpdatesSender;
-import com.jivesoftware.os.amza.shared.UpdatesTaker;
-import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
+import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
+import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
+import com.jivesoftware.os.amza.shared.partition.PrimaryIndexDescriptor;
+import com.jivesoftware.os.amza.shared.ring.RingHost;
+import com.jivesoftware.os.amza.shared.ring.RingMember;
 import com.jivesoftware.os.amza.shared.stats.AmzaStats;
-import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesSender;
+import com.jivesoftware.os.amza.shared.take.UpdatesTaker;
+import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
 import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesTaker;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -109,28 +109,23 @@ public class MiruWriterUIServiceNGTest {
         indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
-        UpdatesSender changeSetSender = new HttpUpdatesSender(amzaStats);
         UpdatesTaker tableTaker = new HttpUpdatesTaker(amzaStats);
 
-        final com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig amzaServiceConfig =
-            new com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig();
+        final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
         amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
-        amzaServiceConfig.numberOfApplierThreads = 1;
-        amzaServiceConfig.numberOfReplicatorThreads = 1;
-        amzaServiceConfig.numberOfResendThreads = 1;
         amzaServiceConfig.numberOfTakerThreads = 1;
 
-        RegionPropertyMarshaller regionPropertyMarshaller = new RegionPropertyMarshaller() {
+        PartitionPropertyMarshaller regionPropertyMarshaller = new PartitionPropertyMarshaller() {
 
             @Override
-            public RegionProperties fromBytes(byte[] bytes) throws Exception {
-                return mapper.readValue(bytes, RegionProperties.class);
+            public PartitionProperties fromBytes(byte[] bytes) throws Exception {
+                return mapper.readValue(bytes, PartitionProperties.class);
             }
 
             @Override
-            public byte[] toBytes(RegionProperties regionProperties) throws Exception {
-                return mapper.writeValueAsBytes(regionProperties);
+            public byte[] toBytes(PartitionProperties partitionProperties) throws Exception {
+                return mapper.writeValueAsBytes(partitionProperties);
             }
         };
 
@@ -141,7 +136,6 @@ public class MiruWriterUIServiceNGTest {
             orderIdProvider,
             regionPropertyMarshaller,
             indexProviderRegistry,
-            changeSetSender,
             tableTaker,
             Optional.<SendFailureListener>absent(),
             Optional.<TakeFailureListener>absent(),
@@ -150,7 +144,11 @@ public class MiruWriterUIServiceNGTest {
 
         amzaService.start();
 
+        AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+            amzaKretrProvider,
+            0,
+            10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
             TimeUnit.HOURS.toMillis(1),
@@ -165,6 +163,9 @@ public class MiruWriterUIServiceNGTest {
         WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
             null, 1000, 1000);
         MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
+            amzaKretrProvider,
+            0,
+            10_000L,
             storageDescriptor,
             100_000,
             director);

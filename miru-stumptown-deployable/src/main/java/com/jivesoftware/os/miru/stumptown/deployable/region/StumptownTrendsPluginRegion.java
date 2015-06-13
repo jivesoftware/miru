@@ -9,7 +9,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -32,6 +31,7 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -136,7 +136,7 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
 
                 MiruResponse<TrendingAnswer> response = null;
                 MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
-                for (RequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
+                for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
                     try {
                         @SuppressWarnings("unchecked")
                         MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
