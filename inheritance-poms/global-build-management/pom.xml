@@ -18,7 +18,7 @@
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.72</filer-version>
         <routing-bird-version>0.7</routing-bird-version>
-        <amza-version>0.84-SNAPSHOT</amza-version>
+        <amza-version>0.84</amza-version>
         <jackson-version>2.5.3</jackson-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <test.excludedGroups>blocked-by-jira,slow</test.excludedGroups>
