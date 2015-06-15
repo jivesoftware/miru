@@ -13,6 +13,8 @@ import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.topology.PartitionInfo;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -24,6 +26,8 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  */
 public class MiruPartitionHeartbeatHandler {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruClusterClient clusterClient;
 
@@ -70,9 +74,22 @@ public class MiruPartitionHeartbeatHandler {
             MiruHeartbeatResponse thumpthump = clusterClient.thumpthump(host,
                 new MiruHeartbeatRequest(heartbeats(), partitionActiveUpdatesSinceCursors.values(), topologyUpdatesSinceCursors.values()));
 
-            setActive(host, thumpthump.activeHasChanged.result);
-            handleCursors(partitionActiveUpdatesSinceCursors, thumpthump.activeHasChanged.cursors);
-            handleCursors(topologyUpdatesSinceCursors, thumpthump.topologyHasChanged.cursors);
+            if (thumpthump != null) {
+                if (thumpthump.activeHasChanged != null) {
+                    setActive(host, thumpthump.activeHasChanged.result);
+                    handleCursors(partitionActiveUpdatesSinceCursors, thumpthump.activeHasChanged.cursors);
+                } else {
+                    LOG.warn("Missing thumpthump active changes");
+                }
+
+                if (thumpthump.topologyHasChanged != null) {
+                    handleCursors(topologyUpdatesSinceCursors, thumpthump.topologyHasChanged.cursors);
+                } else {
+                    LOG.warn("Missing thumpthump topology changes");
+                }
+            } else {
+                LOG.warn("Missing thumpthump response");
+            }
 
             return thumpthump;
         }
