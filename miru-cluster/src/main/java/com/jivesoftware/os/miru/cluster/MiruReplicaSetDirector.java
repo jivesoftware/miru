@@ -9,12 +9,15 @@
 package com.jivesoftware.os.miru.cluster;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruReplicaHosts;
@@ -46,8 +49,10 @@ public class MiruReplicaSetDirector {
     }
 
     public void elect(MiruHost host, MiruTenantId tenantId, MiruPartitionId partitionId, long electionId) throws Exception {
-        clusterRegistry.ensurePartitionCoord(new MiruPartitionCoord(tenantId, partitionId, host));
-        clusterRegistry.addToReplicaRegistry(tenantId, partitionId, electionId, host);
+        ListMultimap<MiruHost, TenantAndPartition> coords = ArrayListMultimap.create();
+        coords.put(host, new TenantAndPartition(tenantId, partitionId));
+        clusterRegistry.ensurePartitionCoords(coords);
+        clusterRegistry.addToReplicaRegistry(coords, electionId);
     }
 
     public Set<MiruHost> electHostsForTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, MiruReplicaSet replicaSet) throws Exception {
