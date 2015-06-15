@@ -23,13 +23,16 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final int mainPort;
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activitySipWAL;
 
     public RCVSActivityWALReader(
+        int mainPort,
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
+        this.mainPort = mainPort;
         this.activityWAL = activityWAL;
         this.activitySipWAL = activitySipWAL;
     }
@@ -41,7 +44,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     @Override
     public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         RowColumnValueStore.HostAndPort hostAndPort = activityWAL.locate(tenantId, rowKey(partitionId));
-        return new HostPort[] { new HostPort(hostAndPort.host, hostAndPort.port) };
+        return new HostPort[] { new HostPort(hostAndPort.host, mainPort) };
     }
 
     @Override

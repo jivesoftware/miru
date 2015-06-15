@@ -214,7 +214,9 @@ public class MiruWALMain {
 
             if (walConfig.getActivityWALType().equals("rcvs")) {
                 RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-                RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
+                RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(instanceConfig.getMainPort(),
+                    wal.getActivityWAL(),
+                    wal.getActivitySipWAL());
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
                 rcvsWALDirector = new MiruWALDirector<>(rcvsWALLookup,
                     rcvsActivityWALReader,
@@ -246,7 +248,9 @@ public class MiruWALMain {
                 RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
                 AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(rcvsActivityWALWriter, amzaActivityWALWriter);
-                RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
+                RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(instanceConfig.getMainPort(),
+                    wal.getActivityWAL(),
+                    wal.getActivitySipWAL());
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
                     amzaServiceConfig.getReplicateLookupQuorum(),
