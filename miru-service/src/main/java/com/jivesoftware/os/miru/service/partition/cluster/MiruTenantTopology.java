@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.service.partition.cluster;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -133,7 +133,7 @@ public class MiruTenantTopology<BM> {
     public void remove() {
 
         for (MiruHostedPartition partition : topology.values()) {
-            synchronized (topologyLock.lock(partition.getPartitionId())) {
+            synchronized (topologyLock.lock(partition.getPartitionId(), 0)) {
                 try {
                     partition.remove();
                 } catch (Exception x) {
@@ -164,7 +164,7 @@ public class MiruTenantTopology<BM> {
     }
 
     private void ensureTopology(MiruPartitionId partitionId, boolean expires) throws Exception {
-        synchronized (topologyLock.lock(partitionId)) {
+        synchronized (topologyLock.lock(partitionId, 0)) {
             MiruLocalHostedPartition<BM, ?, ?> hostedPartition = topology.get(partitionId);
             if (hostedPartition != null) {
                 if (!expires) {
@@ -173,14 +173,15 @@ public class MiruTenantTopology<BM> {
             } else {
                 MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, localHost);
                 long expireAfterMillis = expires ? ensurePartitionsIntervalInMillis * 2 : -1;
-                MiruLocalHostedPartition<BM, ?, ?> partition = localPartitionFactory.create(bitmaps, coord, expireAfterMillis);
+                //TODO unnecessary cast, but the wildcards cause some IDE confusion
+                MiruLocalHostedPartition<BM, ?, ?> partition = localPartitionFactory.create((MiruBitmaps) bitmaps, coord, expireAfterMillis);
                 topology.put(partitionId, partition);
             }
         }
     }
 
     private void removeTopology(MiruPartitionId partitionId) throws Exception {
-        synchronized (topologyLock.lock(partitionId)) {
+        synchronized (topologyLock.lock(partitionId, 0)) {
             MiruHostedPartition partition = topology.remove(partitionId);
             if (partition != null) {
                 partition.remove();

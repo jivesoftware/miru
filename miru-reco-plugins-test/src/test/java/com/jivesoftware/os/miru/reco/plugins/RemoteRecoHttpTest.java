@@ -4,11 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
-import com.jivesoftware.os.jive.utils.id.Id;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -29,6 +25,10 @@ import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
@@ -94,10 +94,10 @@ public class RemoteRecoHttpTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
 
-        final RequestHelper[] requestHelpers = new RequestHelper[REMOTE_HOSTS.length];
+        final HttpRequestHelper[] requestHelpers = new HttpRequestHelper[REMOTE_HOSTS.length];
         for (int i = 0; i < REMOTE_HOSTS.length; i++) {
             String remoteHost = REMOTE_HOSTS[i];
-            requestHelpers[i] = new RequestHelper(httpClientFactory.createClient(remoteHost, REMOTE_PORT), objectMapper);
+            requestHelpers[i] = new HttpRequestHelper(httpClientFactory.createClient(remoteHost, REMOTE_PORT), objectMapper);
         }
 
         final MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
@@ -123,7 +123,7 @@ public class RemoteRecoHttpTest {
             final int index = i;
             executorService.submit(() -> {
                 MiruTenantId tenantId = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
-                MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new Id(3_765)),
+                MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new byte[] { 3 }),
                     MiruAuthzExpression.NOT_PROVIDED,
                     new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
                         new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
@@ -170,10 +170,10 @@ public class RemoteRecoHttpTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
 
-        final RequestHelper[] requestHelpers = new RequestHelper[REMOTE_HOSTS.length];
+        final HttpRequestHelper[] requestHelpers = new HttpRequestHelper[REMOTE_HOSTS.length];
         for (int i = 0; i < REMOTE_HOSTS.length; i++) {
             String remoteHost = REMOTE_HOSTS[i];
-            requestHelpers[i] = new RequestHelper(httpClientFactory.createClient(remoteHost, REMOTE_PORT), objectMapper);
+            requestHelpers[i] = new HttpRequestHelper(httpClientFactory.createClient(remoteHost, REMOTE_PORT), objectMapper);
         }
 
         ExecutorService executorService = Executors.newFixedThreadPool(16);
@@ -199,7 +199,7 @@ public class RemoteRecoHttpTest {
 
                 MiruTenantId tenantId1 = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
                 MiruRequest<RecoQuery> request = new MiruRequest<>(tenantId1,
-                    new MiruActorId(new Id(userId)),
+                    new MiruActorId(FilerIO.intBytes(userId)),
                     MiruAuthzExpression.NOT_PROVIDED,
                     new RecoQuery(
                         new DistinctsQuery(

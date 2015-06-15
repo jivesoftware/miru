@@ -14,14 +14,13 @@
             <filtered>false</filtered>
             <fileMode>755</fileMode>
         </fileSet>
-
     </fileSets>
     <dependencySets>
         <dependencySet>
             <outputDirectory>${project.name}/</outputDirectory>
             <unpack>true</unpack>
             <includes>
-                <include>com.jivesoftware.os.upena:upena-scripts:tar.gz:bin</include>
+                <include>com.jivesoftware.os.routing.bird:deployable-scripts:tar.gz:bin</include>
             </includes>
             <directoryMode>755</directoryMode>
         </dependencySet>

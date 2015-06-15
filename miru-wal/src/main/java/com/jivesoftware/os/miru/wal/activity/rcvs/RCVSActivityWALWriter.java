@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.wal.activity.rcvs;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.rcvs.api.MultiAdd;
 import com.jivesoftware.os.rcvs.api.RowColumValueTimestampAdd;
@@ -27,9 +28,10 @@ public class RCVSActivityWALWriter implements MiruActivityWALWriter {
     }
 
     @Override
-    public void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        writeActivity(tenantId, partitionedActivities);
-        writeSip(tenantId, partitionedActivities);
+    public RangeMinMax write(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        RangeMinMax partitionMinMax = writeActivity(tenantId, partitionId, partitionedActivities);
+        writeSip(tenantId, partitionId, partitionedActivities);
+        return partitionMinMax;
     }
 
     @Override
@@ -38,9 +40,19 @@ public class RCVSActivityWALWriter implements MiruActivityWALWriter {
         sipWAL.removeRow(tenantId, new MiruActivityWALRow(partitionId.getId()), null);
     }
 
-    private void writeActivity(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+    private RangeMinMax writeActivity(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+
         MultiAdd<MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity> rawActivities = new MultiAdd<>();
+        RangeMinMax rangeMinMax = new RangeMinMax();
         for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
+            if (!partitionedActivity.partitionId.equals(partitionId)) {
+                continue;
+            }
+
+            rangeMinMax.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
+
             long activityCollisionId;
             if (partitionedActivity.type != MiruPartitionedActivity.Type.BEGIN && partitionedActivity.type != MiruPartitionedActivity.Type.END) {
                 activityCollisionId = partitionedActivity.timestamp;
@@ -61,11 +73,16 @@ public class RCVSActivityWALWriter implements MiruActivityWALWriter {
 
         List<RowColumValueTimestampAdd<MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity>> tookActivities = rawActivities.take();
         activityWAL.multiRowsMultiAdd(tenantId, tookActivities);
+        return rangeMinMax;
     }
 
-    private void writeSip(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+    private void writeSip(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         MultiAdd<MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity> rawSips = new MultiAdd<>();
         for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
+            if (!partitionedActivity.partitionId.equals(partitionId)) {
+                continue;
+            }
+
             long sipCollisionId;
             if (partitionedActivity.type != MiruPartitionedActivity.Type.BEGIN && partitionedActivity.type != MiruPartitionedActivity.Type.END) {
                 sipCollisionId = partitionedActivity.clockTimestamp;

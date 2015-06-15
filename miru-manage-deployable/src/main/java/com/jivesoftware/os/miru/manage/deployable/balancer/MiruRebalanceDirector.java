@@ -8,8 +8,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
@@ -24,6 +23,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -112,8 +112,8 @@ public class MiruRebalanceDirector {
     }
 
     public void removeHost(MiruHost miruHost) throws Exception {
-        List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.of(miruHost));
-        for (RequestHelper requestHelper : requestHelpers) {
+        List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.of(miruHost));
+        for (HttpRequestHelper requestHelper : requestHelpers) {
             try {
                 String result = requestHelper.executeDeleteRequest("/miru/config/hosts/" + miruHost.getLogicalName() + "/" + miruHost.getPort(),
                     String.class, null);
@@ -204,7 +204,7 @@ public class MiruRebalanceDirector {
 
     public void visualizeTopologies(int width, final int split, int index, String token, OutputStream out) throws Exception {
         VisualizeContext context;
-        synchronized (tokenLocks.lock(token)) {
+        synchronized (tokenLocks.lock(token, 0)) {
             context = contextCache.get(token, () -> {
                 LinkedHashSet<HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
                 List<MiruHost> allHosts = Lists.newArrayList();

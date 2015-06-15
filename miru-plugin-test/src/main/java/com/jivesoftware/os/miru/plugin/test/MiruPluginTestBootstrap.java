@@ -5,15 +5,8 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
 import com.google.common.io.Files;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactory;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
@@ -68,12 +61,15 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
-import com.jivesoftware.os.miru.writer.partition.AmzaPartitionIdProvider;
-import com.jivesoftware.os.miru.writer.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
-import com.jivesoftware.os.upena.main.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
 import java.io.File;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -84,6 +80,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.merlin.config.BindInterfaceToConfiguration;
+import org.testng.Assert;
 
 /**
  *
@@ -132,7 +129,7 @@ public class MiruPluginTestBootstrap {
         MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
         if (!partitionedActivities.isEmpty()) {
             MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-            activityWALWriter.write(tenantId, partitionedActivities);
+            activityWALWriter.write(tenantId, partitionId, partitionedActivities);
         }
 
         MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
@@ -153,7 +150,11 @@ public class MiruPluginTestBootstrap {
             rowsChanged -> {
             });
 
+        AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
         clusterRegistry = new AmzaClusterRegistry(amzaService,
+            amzaKretrProvider,
+            0,
+            10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
             TimeUnit.HOURS.toMillis(1),
@@ -162,18 +163,15 @@ public class MiruPluginTestBootstrap {
             0,
             0);
 
-        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-            null, 1000, 1000);
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
         MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
             readTrackingWALWriter, new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector));
-        MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000, walClient);
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector);
 
         clusterRegistry.heartbeat(miruHost);
         replicaSetDirector.electHostsForTenantPartition(tenantId, partitionId, new MiruReplicaSet(ArrayListMultimap.create(), new HashSet<>(), 3));
-        clusterRegistry.updateIngress(Arrays.asList(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false)));
+        clusterRegistry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false));
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
             .initialize(config.getReadStreamIdsPropName(), miruHost, walClient);
@@ -210,7 +208,7 @@ public class MiruPluginTestBootstrap {
         while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
             Thread.sleep(10);
             if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(maxSecondsToComeOnline)) {
-                //Assert.fail("Partition failed to come online");
+                Assert.fail("Partition failed to come online");
             }
         }
 

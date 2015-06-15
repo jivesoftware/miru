@@ -4,10 +4,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.jive.utils.health.api.HealthCounter;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.api.MinMaxHealthCheckConfig;
-import com.jivesoftware.os.jive.utils.health.api.MinMaxHealthChecker;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -35,9 +31,12 @@ import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.health.api.HealthCounter;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthCheckConfig;
+import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthChecker;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -558,8 +557,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
-                    List<MiruActivityWALStatus> partitionStatus = walClient.getPartitionStatus(coord.tenantId, Collections.singletonList(coord.partitionId));
-                    MiruActivityWALStatus status = partitionStatus.get(0);
+                    MiruActivityWALStatus status = walClient.getPartitionStatus(coord.tenantId, coord.partitionId);
                     Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, status.count);
                     if (token.isPresent()) {
                         try {
@@ -758,10 +756,8 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         log.info("Forcing rebuild because context is corrupt for {}", coord);
                         forceRebuild = true;
                     } else if (firstSip.get()) {
-                        List<MiruActivityWALStatus> partitionStatus = walClient.getPartitionStatus(coord.tenantId,
-                            Collections.singletonList(coord.partitionId));
-                        if (!partitionStatus.isEmpty()) {
-                            MiruActivityWALStatus status = partitionStatus.get(0);
+                        MiruActivityWALStatus status = walClient.getPartitionStatus(coord.tenantId, coord.partitionId);
+                        if (status != null) {
                             accessor.notifyBoundaries(status.begins, status.ends);
                             long currentCount = accessor.context.get().activityIndex.lastId();
                             long behindByCount = status.count - currentCount;

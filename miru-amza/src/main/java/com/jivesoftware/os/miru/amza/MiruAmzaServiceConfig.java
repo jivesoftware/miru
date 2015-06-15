@@ -31,9 +31,6 @@ public interface MiruAmzaServiceConfig extends Config {
 
     void setAmzaDiscoveryPort(int amzaDiscoveryPort);
 
-    @IntDefault(1000)
-    int getApplyReplicasIntervalInMillis();
-
     @LongDefault(60_000)
     long getCheckIfCompactionIsNeededIntervalInMillis();
 
@@ -41,10 +38,9 @@ public interface MiruAmzaServiceConfig extends Config {
     int getDeltaStripeCompactionIntervalInMillis();
 
     @IntDefault(1000)
-    int getResendReplicasIntervalInMillis();
-
-    @IntDefault(1000)
     int getTakeFromNeighborsIntervalInMillis();
+
+    void setTakeFromNeighborsIntervalInMillis(int takeFromNeighborsIntervalInMillis);
 
     @LongDefault(1 * 24 * 60 * 60 * 1000L)
     long getCompactTombstoneIfOlderThanNMillis();
@@ -59,19 +55,13 @@ public interface MiruAmzaServiceConfig extends Config {
     int getMaxUpdatesBeforeDeltaStripeCompaction();
 
     @IntDefault(1)
-    int getNumberOfApplierThreads();
-
-    @IntDefault(1)
     int getNumberOfCompactorThreads();
 
     @IntDefault(24)
-    int getNumberOfReplicatorThreads();
-
-    @IntDefault(8)
-    int getNumberOfResendThreads();
+    int getNumberOfTakerThreads();
 
     @IntDefault(24)
-    int getNumberOfTakerThreads();
+    int getNumberOfAckerThreads();
 
     @IntDefault(1)
     int getReplicationFactor();

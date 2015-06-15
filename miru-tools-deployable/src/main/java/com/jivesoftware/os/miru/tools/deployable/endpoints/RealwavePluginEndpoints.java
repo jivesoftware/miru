@@ -1,12 +1,12 @@
 package com.jivesoftware.os.miru.tools.deployable.endpoints;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.miru.tools.deployable.MiruToolsService;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwaveFramePluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwavePluginRegion;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import java.util.Map;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;

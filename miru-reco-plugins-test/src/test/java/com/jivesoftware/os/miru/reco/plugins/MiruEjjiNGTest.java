@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.reco.plugins;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -155,7 +154,7 @@ public class MiruEjjiNGTest {
                 String.valueOf(rand.nextInt(numberOfStreamSources)),
                 String.valueOf(rand.nextInt(numberOfStreamSources)));
             MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
-                new MiruActorId(new Id(1)),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctsQuery(new MiruTimeRange(initialTime - 1, time.get() + 1),
                     "doc",

@@ -53,7 +53,7 @@ public interface MiruClusterRegistry {
 
     Map<MiruPartitionId, MiruReplicaSet> getReplicaSets(MiruTenantId tenantId, Collection<MiruPartitionId> requiredPartitionId) throws Exception;
 
-    void updateIngress(Collection<MiruIngressUpdate> ingressUpdates) throws Exception;
+    void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception;
 
     void updateTopologies(MiruHost host, Collection<TopologyUpdate> topologyUpdates) throws Exception;
 
@@ -72,6 +72,8 @@ public interface MiruClusterRegistry {
     MiruSchema getSchema(MiruTenantId tenantId) throws Exception;
 
     void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception;
+
+    boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception;
 
     Map<MiruPartitionId, RangeMinMax> getIngressRanges(MiruTenantId tenantId) throws Exception;
 

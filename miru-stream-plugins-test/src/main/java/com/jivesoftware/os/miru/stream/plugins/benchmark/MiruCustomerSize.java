@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -203,7 +202,7 @@ public enum MiruCustomerSize {
 
             MiruRequest<AggregateCountsQuery> aggregateCountsQuery = new MiruRequest<>(
                 miruTenantId,
-                new MiruActorId(Id.NULL),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, // TODO - include authz?
                 new AggregateCountsQuery(
                     streamId,

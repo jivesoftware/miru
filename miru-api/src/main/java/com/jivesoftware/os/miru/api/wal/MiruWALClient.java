@@ -4,6 +4,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.List;
 
 /**
@@ -11,11 +12,25 @@ import java.util.List;
  */
 public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
+    HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception;
+
+    HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruStreamId streamId) throws Exception;
+
+    enum RoutingGroupType {
+        activity,
+        lookup,
+        readTracking
+    }
+
     List<MiruTenantId> getAllTenantIds() throws Exception;
 
-    void writeActivityAndLookup(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
+    void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
 
-    void writeReadTracking(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
+    void writeLookup(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception;
+
+    void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
 
     MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception;
 
@@ -35,11 +50,11 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         }
     }
 
-    List<MiruActivityWALStatus> getPartitionStatus(MiruTenantId tenantId, List<MiruPartitionId> partitionIds) throws Exception;
+    MiruActivityWALStatus getPartitionStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    MiruVersionedActivityLookupEntry[] getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception;
+    List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception;
 
     List<MiruLookupEntry> lookupActivity(MiruTenantId tenantId, long afterTimestamp, int batchSize) throws Exception;
 

@@ -7,7 +7,6 @@ package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -167,7 +166,7 @@ public class MiruDistinctsNGTest {
         for (MiruFieldDefinition fieldDefinition : miruSchema.getFieldDefinitions()) {
             long s = System.currentTimeMillis();
             MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
-                new MiruActorId(new Id(1)),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, null),
                 MiruSolutionLogLevel.INFO);
@@ -202,7 +201,7 @@ public class MiruDistinctsNGTest {
         long s = System.currentTimeMillis();
         Set<String> types = Sets.newHashSet("0", "1", "2", "3", "8", "-1");
         MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
-            new MiruActorId(new Id(1)),
+            MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(types)),
             MiruSolutionLogLevel.INFO);
@@ -241,7 +240,7 @@ public class MiruDistinctsNGTest {
         long s = System.currentTimeMillis();
         Set<String> wildcards = Sets.newHashSet("ca", "do", "el", "mo");
         MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
-            new MiruActorId(new Id(1)),
+            MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(wildcards)),
             MiruSolutionLogLevel.INFO);

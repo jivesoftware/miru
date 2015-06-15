@@ -18,15 +18,11 @@ package com.jivesoftware.os.miru.wal.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.shared.RegionProperties;
-import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.checkers.GCLoadHealthChecker;
-import com.jivesoftware.os.jive.utils.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
+import com.jivesoftware.os.amza.shared.partition.PrimaryIndexDescriptor;
+import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -64,15 +60,21 @@ import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
-import com.jivesoftware.os.server.http.jetty.jersey.endpoints.base.HasUI;
-import com.jivesoftware.os.server.http.jetty.jersey.server.util.Resource;
-import com.jivesoftware.os.upena.main.Deployable;
-import com.jivesoftware.os.upena.main.InstanceConfig;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.server.util.Resource;
 import java.io.File;
 import java.util.Arrays;
 import org.merlin.config.defaults.IntDefault;
+import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
 public class MiruWALMain {
@@ -98,6 +100,12 @@ public class MiruWALMain {
         @IntDefault(1223)
         @Override
         int getAmzaDiscoveryPort();
+
+        @IntDefault(1)
+        int getReplicateLookupQuorum();
+
+        @LongDefault(60_000L)
+        long getReplicateTimeoutMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -182,8 +190,11 @@ public class MiruWALMain {
                 });
             WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                 null, 1000, 1000);
+
+            AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
             AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService,
-                new RegionProperties(storageDescriptor, amzaServiceConfig.getReplicationFactor(), amzaServiceConfig.getTakeFromFactor(), false));
+                amzaKretrProvider,
+                new PartitionProperties(storageDescriptor, amzaServiceConfig.getReplicationFactor(), amzaServiceConfig.getTakeFromFactor(), false));
 
             MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
             MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
@@ -218,7 +229,9 @@ public class MiruWALMain {
             } else if (walConfig.getActivityWALType().equals("amza")) {
                 AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
-                AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
+                AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
+                    amzaServiceConfig.getReplicateLookupQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis());
                 amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
                     amzaActivityWALReader,
                     amzaActivityWALWriter,
@@ -235,7 +248,9 @@ public class MiruWALMain {
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(rcvsActivityWALWriter, amzaActivityWALWriter);
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(wal.getActivityWAL(), wal.getActivitySipWAL());
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
-                AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
+                AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
+                    amzaServiceConfig.getReplicateLookupQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis());
                 ForkingWALLookup forkingWALLookup = new ForkingWALLookup(rcvsWALLookup, amzaWALLookup);
                 rcvsWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     rcvsActivityWALReader,
@@ -253,7 +268,9 @@ public class MiruWALMain {
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(amzaActivityWALWriter, rcvsActivityWALWriter);
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
-                AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil, 3);
+                AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
+                    amzaServiceConfig.getReplicateLookupQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis());
                 ForkingWALLookup forkingWALLookup = new ForkingWALLookup(amzaWALLookup, rcvsWALLookup);
                 amzaWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     amzaActivityWALReader,

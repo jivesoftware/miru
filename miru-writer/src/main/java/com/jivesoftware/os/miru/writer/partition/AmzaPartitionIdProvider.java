@@ -1,11 +1,13 @@
 package com.jivesoftware.os.miru.writer.partition;
 
-import com.jivesoftware.os.amza.service.AmzaRegion;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider.AmzaKretr;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.RegionName;
-import com.jivesoftware.os.amza.shared.RegionProperties;
-import com.jivesoftware.os.amza.shared.WALKey;
-import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
+import com.jivesoftware.os.amza.shared.AmzaPartitionUpdates;
+import com.jivesoftware.os.amza.shared.partition.PartitionName;
+import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
+import com.jivesoftware.os.amza.shared.wal.WALKey;
+import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -14,6 +16,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,21 +28,30 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private static final String AMZA_RING_NAME = "partitionIds";
-    public static final RegionName LATEST_PARTITIONS_REGION_NAME = new RegionName(false, AMZA_RING_NAME, "latestPartitions");
-    public static final RegionName CURSORS_REGION_NAME = new RegionName(false, AMZA_RING_NAME, "cursors");
+    public static final PartitionName LATEST_PARTITIONS_PARTITION_NAME = new PartitionName(false, AMZA_RING_NAME, "latestPartitions");
+    public static final PartitionName CURSORS_PARTITION_NAME = new PartitionName(false, AMZA_RING_NAME, "cursors");
 
     private final AmzaService amzaService;
+    private final AmzaKretrProvider amzaKretrProvider;
+    private final int replicateLatestPartitionQuorum;
+    private final long replicateLatestPartitionTimeoutMillis;
     private final WALStorageDescriptor amzaStorageDescriptor;
     private final int capacity;
     private final MiruWALClient<?, ?> walClient;
     private final AtomicBoolean ringInitialized = new AtomicBoolean(false);
 
     public AmzaPartitionIdProvider(AmzaService amzaService,
+        AmzaKretrProvider amzaKretrProvider,
+        int replicateLatestPartitionQuorum,
+        long replicateLatestPartitionTimeoutMillis,
         WALStorageDescriptor amzaStorageDescriptor,
         int capacity,
         MiruWALClient<?, ?> walClient)
         throws Exception {
         this.amzaService = amzaService;
+        this.amzaKretrProvider = amzaKretrProvider;
+        this.replicateLatestPartitionQuorum = replicateLatestPartitionQuorum;
+        this.replicateLatestPartitionTimeoutMillis = replicateLatestPartitionTimeoutMillis;
         this.amzaStorageDescriptor = amzaStorageDescriptor;
         this.capacity = capacity;
         this.walClient = walClient;
@@ -62,26 +74,25 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         return new MiruTenantId(tenantBytes);
     }
 
-    private AmzaRegion createRegionIfAbsent(RegionName regionName) throws Exception {
+    private AmzaKretr ensureClient(PartitionName partitionName) throws Exception {
         if (!ringInitialized.get()) {
-            int ringSize = amzaService.getAmzaRing().getRingSize(AMZA_RING_NAME);
-            int systemRingSize = amzaService.getAmzaRing().getRingSize("system");
+            int ringSize = amzaService.getAmzaHostRing().getRingSize(AMZA_RING_NAME);
+            int systemRingSize = amzaService.getAmzaHostRing().getRingSize("system");
             if (ringSize < systemRingSize) {
-                amzaService.getAmzaRing().buildRandomSubRing(AMZA_RING_NAME, systemRingSize);
+                amzaService.getAmzaHostRing().buildRandomSubRing(AMZA_RING_NAME, systemRingSize);
             }
             ringInitialized.set(true);
         }
 
-        return amzaService.createRegionIfAbsent(regionName,
-            new RegionProperties(amzaStorageDescriptor, 1, 1, false) //TODO config?
-        );
+        amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, 1, 1, false)); //TODO config?
+        return amzaKretrProvider.getClient(partitionName);
     }
 
     @Override
     public MiruPartitionCursor getCursor(MiruTenantId tenantId, int writerId) throws Exception {
         WALKey key = new WALKey(key(tenantId, writerId));
-        AmzaRegion latestPartitions = createRegionIfAbsent(LATEST_PARTITIONS_REGION_NAME);
-        byte[] rawPartitonId = latestPartitions.get(key);
+        AmzaKretr latestPartitions = ensureClient(LATEST_PARTITIONS_PARTITION_NAME);
+        byte[] rawPartitonId = latestPartitions.getValue(key);
         if (rawPartitonId == null) {
             WriterCursor cursor = walClient.getCursorForWriterId(tenantId, writerId);
             if (cursor == null) {
@@ -100,18 +111,19 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     @Override
     public void saveCursor(MiruTenantId tenantId, MiruPartitionCursor cursor, int writerId) throws Exception {
         WALKey cursorKey = new WALKey(key(tenantId, writerId, cursor.getPartitionId()));
-        createRegionIfAbsent(CURSORS_REGION_NAME).set(cursorKey, FilerIO.intBytes(cursor.last()));
+        ensureClient(CURSORS_PARTITION_NAME).commit(new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last())), 0, 0, TimeUnit.MILLISECONDS);
     }
 
     private MiruPartitionCursor setCursor(MiruTenantId tenantId, int writerId, MiruPartitionCursor cursor) throws Exception {
         WALKey latestPartitionKey = new WALKey(key(tenantId, writerId));
-        AmzaRegion latestPartitions = createRegionIfAbsent(LATEST_PARTITIONS_REGION_NAME);
-        byte[] latestPartitionBytes = latestPartitions.get(latestPartitionKey);
+        AmzaKretr latestPartitions = ensureClient(LATEST_PARTITIONS_PARTITION_NAME);
+        byte[] latestPartitionBytes = latestPartitions.getValue(latestPartitionKey);
         if (latestPartitionBytes == null || FilerIO.bytesInt(latestPartitionBytes) < cursor.getPartitionId().getId()) {
-            latestPartitions.set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId()));
+            latestPartitions.commit(new AmzaPartitionUpdates().set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId())),
+                replicateLatestPartitionQuorum, replicateLatestPartitionTimeoutMillis, TimeUnit.MILLISECONDS);
         }
         WALKey cursorKey = new WALKey(key(tenantId, writerId, cursor.getPartitionId()));
-        createRegionIfAbsent(CURSORS_REGION_NAME).set(cursorKey, FilerIO.intBytes(cursor.last()));
+        ensureClient(CURSORS_PARTITION_NAME).commit(new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last())), 0, 0, TimeUnit.MILLISECONDS);
         return cursor;
     }
 
@@ -139,10 +151,10 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     @Override
     public int getLatestIndex(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
         WALKey cursorKey = new WALKey(key(tenantId, writerId, partitionId));
-        AmzaRegion cursors = createRegionIfAbsent(CURSORS_REGION_NAME);
-        byte[] got = cursors.get(cursorKey);
+        AmzaKretr cursors = ensureClient(CURSORS_PARTITION_NAME);
+        byte[] got = cursors.getValue(cursorKey);
         if (got == null) {
-            cursors.set(cursorKey, FilerIO.intBytes(0));
+            cursors.commit(new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(0)), 0, 0, TimeUnit.MILLISECONDS);
             return 0;
         } else {
             return FilerIO.bytesInt(got);
@@ -160,7 +172,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] rawTenantBytes = tenantId.getBytes();
         final AtomicInteger largestPartitionId = new AtomicInteger(0);
         WALKey from = new WALKey(rawTenantBytes);
-        createRegionIfAbsent(LATEST_PARTITIONS_REGION_NAME).rangeScan(from, from.prefixUpperExclusive(), (rowTxId, key, value) -> {
+        ensureClient(LATEST_PARTITIONS_PARTITION_NAME).scan(from, from.prefixUpperExclusive(), (rowTxId, key, value) -> {
             int partitionId = FilerIO.bytesInt(value.getValue());
             if (largestPartitionId.get() < partitionId) {
                 largestPartitionId.set(partitionId);

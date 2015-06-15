@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.jive.utils.base.util.locks.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -40,7 +40,7 @@ public class MiruMergeChits {
         long chitsFree = numberOfChitsRemaining.addAndGet(-count);
         AtomicLong taken = mergeQueue.get(coord);
         if (taken == null) {
-            synchronized (stripingLocks.lock(coord)) {
+            synchronized (stripingLocks.lock(coord, 0)) {
                 taken = mergeQueue.get(coord);
                 if (taken == null) {
                     taken = new AtomicLong(0);

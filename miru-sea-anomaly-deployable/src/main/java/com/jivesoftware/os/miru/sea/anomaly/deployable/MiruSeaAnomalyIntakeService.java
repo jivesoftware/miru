@@ -18,19 +18,19 @@ package com.jivesoftware.os.miru.sea.anomaly.deployable;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.api.HealthTimer;
-import com.jivesoftware.os.jive.utils.health.api.TimerHealthCheckConfig;
-import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
-import com.jivesoftware.os.jive.utils.http.client.HttpResponse;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.api.HealthTimer;
+import com.jivesoftware.os.routing.bird.health.api.TimerHealthCheckConfig;
+import com.jivesoftware.os.routing.bird.health.checkers.TimerHealthChecker;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.List;
-import java.util.Random;
 import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.StringDefault;
 
@@ -57,12 +57,12 @@ public class MiruSeaAnomalyIntakeService {
     private static final HealthTimer ingressLatency = HealthFactory.getHealthTimer(IngressLatency.class, TimerHealthChecker.FACTORY);
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final Random rand = new Random();
     private final SeaAnomalySchemaService seaAnomalySchemaService;
     private final SampleTrawl logMill;
     private final String miruIngressEndpoint;
     private final ObjectMapper activityMapper;
     private final TenantAwareHttpClient<String> miruWriterClient;
+    private final RoundRobinStrategy roundRobinStrategy = new RoundRobinStrategy();
 
     public MiruSeaAnomalyIntakeService(SeaAnomalySchemaService seaAnomalySchemaService,
         SampleTrawl logMill,
@@ -100,10 +100,14 @@ public class MiruSeaAnomalyIntakeService {
             String jsonActivities = activityMapper.writeValueAsString(activities);
             while (true) {
                 try {
-                    HttpResponse postJson = miruWriterClient.postJson("", miruIngressEndpoint, jsonActivities); // TODO expose "" tenant to config?
-                    if (postJson.getStatusCode() < 200 || postJson.getStatusCode() >= 300) {
-                        throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
-                    }
+                    // TODO expose "" tenant to config?
+                    miruWriterClient.call("", roundRobinStrategy, client -> {
+                        HttpResponse response = client.postJson(miruIngressEndpoint, jsonActivities, null);
+                        if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
+                            throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
+                        }
+                        return null;
+                    });
                     log.inc("ingressed");
                     break;
                 } catch (Exception x) {

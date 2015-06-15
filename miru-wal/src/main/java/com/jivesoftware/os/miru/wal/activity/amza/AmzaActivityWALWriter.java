@@ -2,30 +2,23 @@ package com.jivesoftware.os.miru.wal.activity.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimaps;
-import com.jivesoftware.os.amza.service.AmzaRegion;
-import com.jivesoftware.os.amza.shared.MemoryWALUpdates;
-import com.jivesoftware.os.amza.shared.RegionName;
-import com.jivesoftware.os.amza.shared.RegionProperties;
-import com.jivesoftware.os.amza.shared.WALKey;
-import com.jivesoftware.os.amza.shared.WALValue;
+import com.jivesoftware.os.amza.shared.AmzaPartitionUpdates;
+import com.jivesoftware.os.amza.shared.scan.Commitable;
+import com.jivesoftware.os.amza.shared.scan.Scan;
+import com.jivesoftware.os.amza.shared.take.Highwaters;
+import com.jivesoftware.os.amza.shared.wal.WALKey;
+import com.jivesoftware.os.amza.shared.wal.WALValue;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
-import java.util.AbstractMap;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -33,20 +26,20 @@ import java.util.TreeMap;
 public class AmzaActivityWALWriter implements MiruActivityWALWriter {
 
     private final AmzaWALUtil amzaWALUtil;
-    private final int ringSize;
     private final int replicateRequireNReplicas;
+    private final long replicateTimeoutMillis;
     private final MiruActivityWALColumnKeyMarshaller columnKeyMarshaller = new MiruActivityWALColumnKeyMarshaller();
     private final JacksonJsonObjectTypeMarshaller<MiruPartitionedActivity> partitionedActivityMarshaller;
     private final Function<MiruPartitionedActivity, WALKey> activityWALKeyFunction;
     private final Function<MiruPartitionedActivity, WALValue> activitySerializerFunction;
 
     public AmzaActivityWALWriter(AmzaWALUtil amzaWALUtil,
-        int ringSize,
         int replicateRequireNReplicas,
+        long replicateTimeoutMillis,
         ObjectMapper mapper) {
         this.amzaWALUtil = amzaWALUtil;
-        this.ringSize = ringSize;
         this.replicateRequireNReplicas = replicateRequireNReplicas;
+        this.replicateTimeoutMillis = replicateTimeoutMillis;
 
         this.partitionedActivityMarshaller = new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, mapper);
         this.activityWALKeyFunction = (partitionedActivity) -> {
@@ -77,53 +70,63 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
     }
 
     @Override
-    public void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        ListMultimap<MiruPartitionId, MiruPartitionedActivity> partitions = Multimaps.index(partitionedActivities, input -> input.partitionId);
-        Set<MiruPartitionId> partitionIds = partitions.keySet();
-        recordTenantPartitions(tenantId, partitionIds);
-        for (MiruPartitionId partitionId : partitionIds) {
-            List<MiruPartitionedActivity> activities = partitions.get(partitionId);
-            NavigableMap<WALKey, WALValue> activityMap = buildMap(activities, activityWALKeyFunction, activitySerializerFunction);
+    public RangeMinMax write(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        List<MiruPartitionedActivity> partitionedActivities) throws Exception {
 
-            String walName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
-            RegionName activityRegionName = new RegionName(false, walName, walName);
-            amzaWALUtil.getOrCreateRegion(activityRegionName, ringSize, Optional.<RegionProperties>absent());
-
-            if (!amzaWALUtil.replicate(activityRegionName, new MemoryWALUpdates(activityMap, null), replicateRequireNReplicas)) {
-                throw new RuntimeException("Failed to write to amza activity WAL because it's under-replicated for tenant:" + tenantId +
-                    " partition:" + partitionId);
+        recordTenantPartition(tenantId, partitionId);
+        RangeMinMax partitionMinMax = new RangeMinMax();
+        for (MiruPartitionedActivity activity : partitionedActivities) {
+            if (partitionId.equals(activity.partitionId)) {
+                partitionMinMax.put(activity.clockTimestamp, activity.timestamp);
             }
         }
-    }
 
-    private void recordTenantPartitions(MiruTenantId tenantId, Set<MiruPartitionId> partitionIds) throws Exception {
-        List<Map.Entry<WALKey, WALValue>> partitionEntries = Lists.newArrayListWithCapacity(partitionIds.size());
-        for (MiruPartitionId partitionId : partitionIds) {
-            partitionEntries.add(new AbstractMap.SimpleEntry<>(amzaWALUtil.toPartitionsKey(tenantId, partitionId), AmzaWALUtil.NULL_VALUE));
-        }
+        amzaWALUtil.getActivityClient(tenantId, partitionId).commit(
+            new ActivityUpdates(partitionId, partitionedActivities, activityWALKeyFunction, activitySerializerFunction),
+            replicateRequireNReplicas,
+            replicateTimeoutMillis,
+            TimeUnit.MILLISECONDS);
 
-        AmzaRegion partitionsRegion = amzaWALUtil.getOrCreateMaximalRegion(AmzaWALUtil.LOOKUP_PARTITIONS_REGION_NAME, Optional.<RegionProperties>absent());
-        partitionsRegion.setValues(partitionEntries);
+        return partitionMinMax;
     }
 
     @Override
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        /*TODO
-        String ringName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
-        RegionName activityRegionName = new RegionName(false, ringName, "activityWAL-" + tenantId.toString() + "-" + partitionId.toString());
-        amzaWALUtil.destroyRegion(activityRegionName);
-        */
-        throw new UnsupportedOperationException("Doesn't work yet");
+        amzaWALUtil.destroyActivityPartition(tenantId, partitionId);
     }
 
-    private NavigableMap<WALKey, WALValue> buildMap(List<MiruPartitionedActivity> activities,
-        Function<MiruPartitionedActivity, WALKey> walKeyFunction,
-        Function<MiruPartitionedActivity, WALValue> walValueFunction)
-        throws Exception {
-        NavigableMap<WALKey, WALValue> activityMap = new TreeMap<>();
-        for (MiruPartitionedActivity partitionedActivity : activities) {
-            activityMap.put(walKeyFunction.apply(partitionedActivity), walValueFunction.apply(partitionedActivity));
+    private void recordTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        AmzaPartitionUpdates updates = new AmzaPartitionUpdates().set(amzaWALUtil.toPartitionsKey(tenantId, partitionId), null);
+        amzaWALUtil.getLookupPartitionsClient().commit(updates, 0, 0, TimeUnit.MILLISECONDS);
+    }
+
+    private static class ActivityUpdates implements Commitable<WALValue> {
+
+        private final MiruPartitionId partitionId;
+        private final List<MiruPartitionedActivity> activities;
+        private final Function<MiruPartitionedActivity, WALKey> walKeyFunction;
+        private final Function<MiruPartitionedActivity, WALValue> walValueFunction;
+
+        public ActivityUpdates(MiruPartitionId partitionId,
+            List<MiruPartitionedActivity> activities,
+            Function<MiruPartitionedActivity, WALKey> walKeyFunction,
+            Function<MiruPartitionedActivity, WALValue> walValueFunction) {
+            this.partitionId = partitionId;
+            this.activities = activities;
+            this.walKeyFunction = walKeyFunction;
+            this.walValueFunction = walValueFunction;
         }
-        return activityMap;
+
+        @Override
+        public void commitable(Highwaters highwaters, Scan<WALValue> scan) throws Exception {
+            for (MiruPartitionedActivity activity : activities) {
+                if (partitionId.equals(activity.partitionId)) {
+                    if (!scan.row(-1, walKeyFunction.apply(activity), walValueFunction.apply(activity))) {
+                        return;
+                    }
+                }
+            }
+        }
     }
 }

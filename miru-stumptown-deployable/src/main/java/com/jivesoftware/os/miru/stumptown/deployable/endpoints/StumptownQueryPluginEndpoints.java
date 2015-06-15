@@ -2,12 +2,12 @@ package com.jivesoftware.os.miru.stumptown.deployable.endpoints;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownService;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion.StumptownPluginRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Singleton;

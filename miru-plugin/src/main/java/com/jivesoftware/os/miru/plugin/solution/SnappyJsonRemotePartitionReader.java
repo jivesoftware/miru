@@ -6,14 +6,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.http.client.HttpClient;
-import com.jivesoftware.os.jive.utils.http.client.HttpClientException;
-import com.jivesoftware.os.jive.utils.http.client.HttpResponse;
-import com.jivesoftware.os.jive.utils.http.client.rest.NonSuccessStatusCodeException;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
-import org.apache.commons.httpclient.HttpStatus;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.NonSuccessStatusCodeException;
+import org.apache.http.HttpStatus;
 import org.xerial.snappy.Snappy;
 
 /**
@@ -79,7 +79,7 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
     private byte[] executePost(HttpClient httpClient, String endpointUrl, byte[] postEntity) {
         HttpResponse response;
         try {
-            response = httpClient.postBytes(endpointUrl, postEntity);
+            response = httpClient.postBytes(endpointUrl, postEntity, null);
         } catch (HttpClientException x) {
             throw new RuntimeException("Error posting query request to server for entity length=" + postEntity.length +
                 " at endpoint=\"" + endpointUrl + "\".", x);

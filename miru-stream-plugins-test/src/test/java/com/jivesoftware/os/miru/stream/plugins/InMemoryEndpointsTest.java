@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -112,7 +111,7 @@ public class InMemoryEndpointsTest {
 
         // Request 1
         Response getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>(tenantId,
-            new MiruActorId(Id.NULL),
+            MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new AggregateCountsQuery(
                 MiruStreamId.NULL,
@@ -134,7 +133,7 @@ public class InMemoryEndpointsTest {
 
         // Request 2
         getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>(tenantId,
-            new MiruActorId(Id.NULL),
+            MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new AggregateCountsQuery(
                 MiruStreamId.NULL,

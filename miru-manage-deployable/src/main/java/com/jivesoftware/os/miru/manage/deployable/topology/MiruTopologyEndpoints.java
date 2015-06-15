@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.manage.deployable.topology;
 
-import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -11,8 +10,9 @@ import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
+import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -60,10 +60,10 @@ public class MiruTopologyEndpoints {
     @Path("/update/ingress")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response updateIngress(Collection<MiruIngressUpdate> updates) {
+    public Response updateIngress(MiruIngressUpdate update) {
         try {
             long start = System.currentTimeMillis();
-            registry.updateIngress(updates);
+            registry.updateIngress(update);
             Response r = ResponseHelper.INSTANCE.jsonResponse("ok");
             stats.ingressed("/update/ingress", 1, System.currentTimeMillis() - start);
             return r;
@@ -212,10 +212,27 @@ public class MiruTopologyEndpoints {
         try {
             long start = System.currentTimeMillis();
             registry.registerSchema(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)), schema);
-            stats.ingressed("register/schema/" + tenantId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/schema/" + tenantId, 1, System.currentTimeMillis() - start);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
             String msg = "Failed to getSchema for " + tenantId;
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
+    @POST
+    @Path("/copyschema/{fromTenantId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response copySchema(@PathParam("fromTenantId") String fromTenantId, List<MiruTenantId> toTenantIds) {
+        try {
+            long start = System.currentTimeMillis();
+            boolean r = registry.copySchema(new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8)), toTenantIds);
+            stats.ingressed("/copyschema/" + fromTenantId, 1, System.currentTimeMillis() - start);
+            return ResponseHelper.INSTANCE.jsonResponse(r);
+        } catch (Exception x) {
+            String msg = "Failed to copySchema for " + fromTenantId;
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }

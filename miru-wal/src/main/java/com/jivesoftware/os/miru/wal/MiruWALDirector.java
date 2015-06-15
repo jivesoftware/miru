@@ -28,14 +28,12 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
@@ -78,13 +76,13 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                     if (!status.begins.equals(status.ends)) {
                         for (int begin : status.begins) {
                             if (!status.ends.contains(begin)) {
-                                activityWALWriter.write(tenantId, Arrays.asList(partitionedActivityFactory.end(begin, partitionId, tenantId, -1)));
+                                activityWALWriter.write(tenantId, partitionId, Arrays.asList(partitionedActivityFactory.end(begin, partitionId, tenantId, -1)));
                                 LOG.info("Added missing 'end' to WAL for {} {}", tenantId, partitionId);
                             }
                         }
                         for (int end : status.ends) {
                             if (!status.begins.contains(end)) {
-                                activityWALWriter.write(tenantId, Arrays.asList(partitionedActivityFactory.begin(end, partitionId, tenantId, -1)));
+                                activityWALWriter.write(tenantId, partitionId, Arrays.asList(partitionedActivityFactory.begin(end, partitionId, tenantId, -1)));
                                 LOG.info("Added missing 'begin' to WAL for {} {}", tenantId, partitionId);
                             }
                         }
@@ -122,7 +120,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                             }
                             return true;
                         });
-                    clusterClient.updateIngress(Collections.singletonList(new MiruIngressUpdate(tenantId, checkPartitionId, minMax, -1, true)));
+                    clusterClient.updateIngress(new MiruIngressUpdate(tenantId, checkPartitionId, minMax, -1, true));
                 }
             }
 
@@ -170,26 +168,51 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     @Override
+    public HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception {
+        if (routingGroupType == RoutingGroupType.lookup) {
+            return walLookup.getRoutingGroup(tenantId);
+        } else {
+            throw new IllegalArgumentException("Type is not have tenant routing: " + routingGroupType.name());
+        }
+    }
+
+    @Override
+    public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        if (routingGroupType == RoutingGroupType.activity) {
+            return activityWALReader.getRoutingGroup(tenantId, partitionId);
+        } else {
+            throw new IllegalArgumentException("Type is not have tenant-partition routing: " + routingGroupType.name());
+        }
+    }
+
+    @Override
+    public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruStreamId streamId) throws Exception {
+        if (routingGroupType == RoutingGroupType.readTracking) {
+            return readTrackingWALReader.getRoutingGroup(tenantId, streamId);
+        } else {
+            throw new IllegalArgumentException("Type is not have tenant-stream routing: " + routingGroupType.name());
+        }
+    }
+
+    @Override
     public List<MiruTenantId> getAllTenantIds() throws Exception {
         return walLookup.allTenantIds();
     }
 
     @Override
-    public void writeActivityAndLookup(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        activityWALWriter.write(tenantId, partitionedActivities);
-        Map<MiruPartitionId, RangeMinMax> partitionMinMax = walLookup.add(tenantId, partitionedActivities);
-
-        Set<MiruPartitionId> partitionIds = partitionedActivities.stream()
-            .map(miruPartitionedActivity -> miruPartitionedActivity.partitionId)
-            .collect(Collectors.toSet());
-        clusterClient.updateIngress(partitionIds.stream()
-            .map(partitionId -> new MiruIngressUpdate(tenantId, partitionId, partitionMinMax.get(partitionId), System.currentTimeMillis(), false))
-            .collect(Collectors.toList()));
+    public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        RangeMinMax partitionMinMax = activityWALWriter.write(tenantId, partitionId, partitionedActivities);
+        clusterClient.updateIngress(new MiruIngressUpdate(tenantId, partitionId, partitionMinMax, System.currentTimeMillis(), false));
     }
 
     @Override
-    public void writeReadTracking(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        readTrackingWALWriter.write(tenantId, partitionedActivities);
+    public void writeLookup(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception {
+        walLookup.add(tenantId, entries);
+    }
+
+    @Override
+    public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        readTrackingWALWriter.write(tenantId, streamId, partitionedActivities);
     }
 
     @Override
@@ -203,12 +226,8 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     @Override
-    public List<MiruActivityWALStatus> getPartitionStatus(MiruTenantId tenantId, List<MiruPartitionId> partitionIds) throws Exception {
-        List<MiruActivityWALStatus> statuses = new ArrayList<>();
-        for (MiruPartitionId partitionId : partitionIds) {
-            statuses.add(activityWALReader.getStatus(tenantId, partitionId));
-        }
-        return statuses;
+    public MiruActivityWALStatus getPartitionStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return activityWALReader.getStatus(tenantId, partitionId);
     }
 
     @Override
@@ -217,7 +236,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     @Override
-    public MiruVersionedActivityLookupEntry[] getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception {
+    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception {
         return walLookup.getVersionedEntries(tenantId, timestamps);
     }
 

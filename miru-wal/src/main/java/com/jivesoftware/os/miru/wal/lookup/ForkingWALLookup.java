@@ -1,12 +1,9 @@
 package com.jivesoftware.os.miru.wal.lookup;
 
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -22,20 +19,24 @@ public class ForkingWALLookup implements MiruWALLookup {
     }
 
     @Override
+    public HostPort[] getRoutingGroup(MiruTenantId tenantId) throws Exception {
+        return primaryLookup.getRoutingGroup(tenantId);
+    }
+
+    @Override
     public List<MiruTenantId> allTenantIds() throws Exception {
         return primaryLookup.allTenantIds();
     }
 
     @Override
-    public MiruVersionedActivityLookupEntry[] getVersionedEntries(MiruTenantId tenantId, Long[] activityTimestamp) throws Exception {
+    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] activityTimestamp) throws Exception {
         return primaryLookup.getVersionedEntries(tenantId, activityTimestamp);
     }
 
     @Override
-    public Map<MiruPartitionId, RangeMinMax> add(MiruTenantId tenantId, List<MiruPartitionedActivity> activities) throws Exception {
-        Map<MiruPartitionId, RangeMinMax> partitionMinMax = primaryLookup.add(tenantId, activities);
-        secondaryLookup.add(tenantId, activities);
-        return partitionMinMax;
+    public void add(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception {
+        primaryLookup.add(tenantId, entries);
+        secondaryLookup.add(tenantId, entries);
     }
 
     @Override

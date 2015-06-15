@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.stumptown.plugins;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -126,7 +125,7 @@ public class MiruSeaAnomalyNGTest {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             MiruRequest<SeaAnomalyQuery> request = new MiruRequest<>(tenant1,
-                new MiruActorId(new Id(1)),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new SeaAnomalyQuery(
                     timeRange,

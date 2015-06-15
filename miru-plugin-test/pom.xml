@@ -5,52 +5,61 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.493</version>
+        <version>0.494</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-plugin-test</artifactId>
-    <version>0.493</version>
+    <version>0.494</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
     <dependencies>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>merlin-config</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>http-client</artifactId>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-http-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-health</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>health</artifactId>
+            <artifactId>ordered-id</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.493</version>
+            <version>0.494</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-amza</artifactId>
-            <version>0.493</version>
+            <version>0.494</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.493</version>
+            <version>0.494</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
-            <version>0.493</version>
+            <version>0.494</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-writer</artifactId>
-            <version>0.493</version>
+            <artifactId>miru-cluster</artifactId>
+            <version>0.494</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-service</artifactId>
+            <version>0.494</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
@@ -62,16 +71,19 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
             <artifactId>amza-shared</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-client</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-service</artifactId>
-            <version>0.493</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -82,22 +94,12 @@
             <artifactId>log4j-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>ordered-id</artifactId>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>deployable</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.upena</groupId>
-            <artifactId>upena-main</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-service</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-cluster</artifactId>
-            <version>0.493</version>
-            <type>jar</type>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
         </dependency>
     </dependencies>
 </project>

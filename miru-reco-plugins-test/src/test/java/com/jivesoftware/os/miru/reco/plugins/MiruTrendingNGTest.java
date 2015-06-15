@@ -7,7 +7,6 @@ package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -172,7 +171,7 @@ public class MiruTrendingNGTest {
 
             long s = System.currentTimeMillis();
             MiruRequest<TrendingQuery> request = new MiruRequest<>(tenant1,
-                new MiruActorId(new Id(1)),
+                MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
                     timeRange,

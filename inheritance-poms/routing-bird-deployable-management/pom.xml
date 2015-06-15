@@ -1,18 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.493</version>
+        <version>0.494</version>
         <relativePath>../global-build-management/pom.xml</relativePath>
     </parent>
-    <artifactId>upena-deployable-management</artifactId>
+    <artifactId>routing-bird-deployable-management</artifactId>
     <packaging>pom</packaging>
+    <properties>
+        <assembly.home>${project.basedir}</assembly.home>
+    </properties>
     <dependencies>
         <dependency>
-            <groupId>com.jivesoftware.os.upena</groupId>
-            <artifactId>upena-scripts</artifactId>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>deployable-scripts</artifactId>
             <type>tar.gz</type>
             <classifier>bin</classifier>
             <scope>runtime</scope>
@@ -112,63 +116,6 @@
                         <configuration>
                             <file>${project.build.directory}/${project.name}-${project.version}.tar.gz</file>
                         </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>available-service</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.jivesoftware.os.upena</groupId>
-                        <artifactId>upena-deployer-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>status</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>decommission-service</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.jivesoftware.os.upena</groupId>
-                        <artifactId>upena-deployer-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>decommission</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>deploy-service</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.jivesoftware.os.upena</groupId>
-                        <artifactId>upena-deployer-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <phase>install</phase>
-                                <goals>
-                                    <goal>deployer</goal>
-                                </goals>
-                            </execution>
-                        </executions>
                     </plugin>
                 </plugins>
             </build>

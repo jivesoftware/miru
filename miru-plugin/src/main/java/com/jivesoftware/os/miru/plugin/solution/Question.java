@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.jive.utils.http.client.HttpClient;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 /**
  * @param <Q> query type

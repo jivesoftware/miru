@@ -18,8 +18,6 @@ import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -68,11 +66,8 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
             MiruPartitionId latestPartitionId = miruWALClient.getLargestPartitionId(tenant);
 
             if (latestPartitionId != null) {
-                List<MiruPartitionId> partitionIds = new ArrayList<>();
                 for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
-                    partitionIds.add(latest);
-                }
-                for (MiruActivityWALStatus status : miruWALClient.getPartitionStatus(tenant, partitionIds)) {
+                    MiruActivityWALStatus status = miruWALClient.getPartitionStatus(tenant, latest);
                     if (status != null) {
                         partitionsMap.put(status.partitionId,
                             new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size()));
@@ -124,12 +119,9 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         MiruPartitionId partitionId) throws Exception {
         PartitionBean partitionBean = partitionsMap.get(partitionId);
         if (partitionBean == null) {
-            List<MiruActivityWALStatus> partitionStatus = miruWALClient.getPartitionStatus(tenant, Collections.singletonList(partitionId));
-            for (MiruActivityWALStatus status : partitionStatus) {
-                if (status != null && status.partitionId.equals(partitionId)) {
-                    partitionBean = new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size());
-                    break;
-                }
+            MiruActivityWALStatus status = miruWALClient.getPartitionStatus(tenant, partitionId);
+            if (status != null && status.partitionId.equals(partitionId)) {
+                partitionBean = new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size());
             }
             if (partitionBean == null) {
                 partitionBean = new PartitionBean(partitionId.getId(), -1, -1, -1);

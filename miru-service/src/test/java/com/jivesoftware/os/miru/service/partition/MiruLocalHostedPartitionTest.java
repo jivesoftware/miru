@@ -8,15 +8,11 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.shared.WALStorageDescriptor;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.jive.utils.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -82,12 +78,12 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
-import com.jivesoftware.os.miru.writer.partition.AmzaPartitionIdProvider;
-import com.jivesoftware.os.miru.writer.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
-import com.jivesoftware.os.upena.main.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import java.io.File;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -250,11 +246,12 @@ public class MiruLocalHostedPartitionTest {
             rowsChanged -> {
             });
 
-        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-            null, 1000, 1000);
-        MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService, storageDescriptor, 1_000_000, walClient);
+        AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
 
         clusterRegistry = new AmzaClusterRegistry(amzaService,
+            amzaKretrProvider,
+            0,
+            10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
             TimeUnit.HOURS.toMillis(1),
@@ -444,7 +441,7 @@ public class MiruLocalHostedPartitionTest {
         if (!active) {
             refreshTimestamp -= topologyIsStaleAfterMillis * 2;
         }
-        clusterRegistry.updateIngress(Arrays.asList(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), refreshTimestamp, false)));
+        clusterRegistry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), refreshTimestamp, false));
         partitionEventHandler.thumpthump(host);
     }
 

@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -14,6 +13,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Collection;
 import java.util.List;
 import org.apache.commons.lang.mutable.MutableLong;
@@ -36,6 +36,12 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     private MiruActivityWALRow rowKey(MiruPartitionId partition) {
         return new MiruActivityWALRow(partition.getId());
+    }
+
+    @Override
+    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        RowColumnValueStore.HostAndPort hostAndPort = activityWAL.locate(tenantId, rowKey(partitionId));
+        return new HostPort[] { new HostPort(hostAndPort.host, hostAndPort.port) };
     }
 
     @Override
@@ -64,19 +70,14 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         while (streaming) {
             MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(nextSort, nextTimestamp);
             activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
-                new CallbackStream<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>>() {
-                    @Override
-                    public ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> callback(
-                        ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v) throws Exception {
-
-                        if (v != null) {
-                            cvats.add(v);
-                        }
-                        if (cvats.size() < batchSize) {
-                            return v;
-                        } else {
-                            return null;
-                        }
+                (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v) -> {
+                    if (v != null) {
+                        cvats.add(v);
+                    }
+                    if (cvats.size() < batchSize) {
+                        return v;
+                    } else {
+                        return null;
                     }
                 });
 
@@ -151,19 +152,14 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         while (streaming) {
             MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(nextSort, nextClockTimestamp, nextActivityTimestamp);
             activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
-                new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
-                    @Override
-                    public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback(
-                        ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v) throws Exception {
-
-                        if (v != null) {
-                            cvats.add(v);
-                        }
-                        if (cvats.size() < batchSize) {
-                            return v;
-                        } else {
-                            return null;
-                        }
+                (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v) -> {
+                    if (v != null) {
+                        cvats.add(v);
+                    }
+                    if (cvats.size() < batchSize) {
+                        return v;
+                    } else {
+                        return null;
                     }
                 });
 

@@ -7,10 +7,13 @@ import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Collection;
 
 /** @author jonathan */
 public interface MiruActivityWALReader<C, S> {
+
+    HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     C stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,

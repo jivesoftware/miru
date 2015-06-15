@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.analytics.plugins;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
@@ -121,7 +120,7 @@ public class MiruAnalyticsNGTest {
 
             long s = System.currentTimeMillis();
             MiruRequest<AnalyticsQuery> request = new MiruRequest<>(tenant1,
-                new MiruActorId(new Id(1)),
+                new MiruActorId(new byte[] { 1 }),
                 MiruAuthzExpression.NOT_PROVIDED,
                 new AnalyticsQuery(
                     timeRange,

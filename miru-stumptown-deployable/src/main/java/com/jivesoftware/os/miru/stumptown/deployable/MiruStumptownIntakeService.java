@@ -18,18 +18,19 @@ package com.jivesoftware.os.miru.stumptown.deployable;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.api.HealthTimer;
-import com.jivesoftware.os.jive.utils.health.api.TimerHealthCheckConfig;
-import com.jivesoftware.os.jive.utils.health.checkers.TimerHealthChecker;
-import com.jivesoftware.os.jive.utils.http.client.HttpResponse;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.api.HealthTimer;
+import com.jivesoftware.os.routing.bird.health.api.TimerHealthCheckConfig;
+import com.jivesoftware.os.routing.bird.health.checkers.TimerHealthChecker;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.List;
 import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -63,6 +64,7 @@ public class MiruStumptownIntakeService {
     private final ObjectMapper activityMapper;
     private final TenantAwareHttpClient<String> miruWriter;
     private final MiruStumptownPayloads payloads;
+    private final RoundRobinStrategy roundRobinStrategy = new RoundRobinStrategy();
 
     public MiruStumptownIntakeService(StumptownSchemaService stumptownSchemaService,
         LogMill logMill,
@@ -100,10 +102,14 @@ public class MiruStumptownIntakeService {
             String jsonActivities = activityMapper.writeValueAsString(activities);
             while (true) {
                 try {
-                    HttpResponse postJson = miruWriter.postJson("", miruIngressEndpoint, jsonActivities); // TODO expose "" tenant to config?
-                    if (postJson.getStatusCode() < 200 || postJson.getStatusCode() >= 300) {
-                        throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
-                    }
+                    // TODO expose "" tenant to config?
+                    miruWriter.call("", roundRobinStrategy, client -> {
+                        HttpResponse postJson = client.postJson(miruIngressEndpoint, jsonActivities, null);
+                        if (postJson.getStatusCode() < 200 || postJson.getStatusCode() >= 300) {
+                            throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
+                        }
+                        return null;
+                    });
                     log.inc("ingressed");
                     break;
                 } catch (Exception x) {

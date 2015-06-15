@@ -42,7 +42,7 @@ public class RCVSActivityWALReaderTest {
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
         for (int i = 0; i < totalActivities; i++) {
-            activityWALWriter.write(tenantId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
+            activityWALWriter.write(tenantId, partitionId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
                 new MiruActivity.Builder(tenantId, startingTimestamp + i, new String[0], 0).build())));
         }
 
@@ -79,7 +79,7 @@ public class RCVSActivityWALReaderTest {
 
         for (int i = 0; i < totalActivities; i++) {
             clockTimestamp.set(startingTimestamp + i);
-            activityWALWriter.write(tenantId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
+            activityWALWriter.write(tenantId, partitionId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
                 new MiruActivity.Builder(tenantId, startingTimestamp + i, new String[0], 0).build())));
         }
 
@@ -115,7 +115,7 @@ public class RCVSActivityWALReaderTest {
 
         clockTimestamp.set(startingTimestamp);
         for (int i = 0; i < totalActivities; i++) {
-            activityWALWriter.write(tenantId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
+            activityWALWriter.write(tenantId, partitionId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
                 new MiruActivity.Builder(tenantId, startingTimestamp + i, new String[0], 0).build())));
         }
 

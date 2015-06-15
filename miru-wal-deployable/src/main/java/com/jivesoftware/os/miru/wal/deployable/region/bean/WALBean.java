@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.wal.deployable.region.bean;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.jive.utils.id.Id;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
@@ -49,7 +48,7 @@ public class WALBean {
         if (partitionedActivity.isPresent() && partitionedActivity.get().readEvent.isPresent()) {
             MiruReadEvent miruReadEvent = partitionedActivity.get().readEvent.get();
             this.readTime = String.valueOf(miruReadEvent.time);
-            this.readStreamId = new Id(miruReadEvent.streamId.getBytes()).toStringForm();
+            this.readStreamId = miruReadEvent.streamId.toString();
             this.readFilter = miruReadEvent.filter.toString();
         }
     }

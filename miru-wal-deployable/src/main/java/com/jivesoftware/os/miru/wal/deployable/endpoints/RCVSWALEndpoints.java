@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.wal.deployable.endpoints;
 
 import com.google.common.base.Charsets;
-import com.jivesoftware.os.jive.utils.jaxrs.util.ResponseHelper;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -12,6 +11,7 @@ import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.GetReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupEntry;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.SipReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
@@ -21,6 +21,8 @@ import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
+import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -49,6 +51,58 @@ public class RCVSWALEndpoints {
     public RCVSWALEndpoints(@Context MiruWALDirector walDirector, @Context MiruStats stats) {
         this.walDirector = walDirector;
         this.stats = stats;
+    }
+
+    @GET
+    @Path("/routing/tenant/{type}/{tenantId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getTenantRoutingGroup(@PathParam("type") RoutingGroupType routingGroupType,
+        @PathParam("tenantId") String tenantId) {
+        try {
+            long start = System.currentTimeMillis();
+            HostPort[] routingGroup = walDirector.getTenantRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
+            stats.ingressed("/routing/tenant/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(routingGroup);
+        } catch (Exception x) {
+            log.error("Failed calling getTenantRoutingGroup({},{})", new Object[] { routingGroupType, tenantId }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @GET
+    @Path("/routing/tenantPartition/{type}/{tenantId}/{partitionId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getTenantPartitionRoutingGroup(@PathParam("type") RoutingGroupType routingGroupType,
+        @PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        try {
+            long start = System.currentTimeMillis();
+            HostPort[] routingGroup = walDirector.getTenantPartitionRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId));
+            stats.ingressed("/routing/tenantPartition/" + routingGroupType.name() + "/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(routingGroup);
+        } catch (Exception x) {
+            log.error("Failed calling getTenantPartitionRoutingGroup({},{},{})", new Object[] { routingGroupType, tenantId, partitionId }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @GET
+    @Path("/routing/tenantStream/{type}/{tenantId}/{streamId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getTenantStreamRoutingGroup(@PathParam("type") RoutingGroupType routingGroupType,
+        @PathParam("tenantId") String tenantId,
+        @PathParam("streamId") String streamId) {
+        try {
+            long start = System.currentTimeMillis();
+            HostPort[] routingGroup = walDirector.getTenantStreamRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)));
+            stats.ingressed("/routing/tenantStream/" + routingGroupType.name() + "/" + tenantId + "/" + streamId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(routingGroup);
+        } catch (Exception x) {
+            log.error("Failed calling getTenantStreamRoutingGroup({},{},{})", new Object[] { routingGroupType, tenantId, streamId }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
     }
 
     @POST
@@ -129,37 +183,58 @@ public class RCVSWALEndpoints {
     }
 
     @POST
-    @Path("/write/activities/{tenantId}")
+    @Path("/write/activities/{tenantId}/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response writeActivityAndLookup(@PathParam("tenantId") String tenantId,
+    public Response writeActivity(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
         List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            walDirector.writeActivityAndLookup(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), partitionedActivities);
+            walDirector.writeActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId), partitionedActivities);
             stats.ingressed("/write/activities/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
-            log.error("Failed calling writeActivityAndLookup({},count:{})",
+            log.error("Failed calling writeActivity({},count:{})",
                 new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
 
     @POST
-    @Path("/write/reads/{tenantId}")
+    @Path("/write/lookup/{tenantId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response writeLookup(@PathParam("tenantId") String tenantId,
+        List<MiruVersionedActivityLookupEntry> entries) throws Exception {
+        try {
+            long start = System.currentTimeMillis();
+            walDirector.writeLookup(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), entries);
+            stats.ingressed("/write/lookup/" + tenantId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse("ok");
+        } catch (Exception x) {
+            log.error("Failed calling writeLookup({},count:{})",
+                new Object[] { tenantId, entries != null ? entries.size() : null }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @POST
+    @Path("/write/reads/{tenantId}/{streamId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response writeReadTracking(@PathParam("tenantId") String tenantId,
+        @PathParam("streamId") String streamId,
         List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            walDirector.writeReadTracking(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), partitionedActivities);
+            walDirector.writeReadTracking(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), new MiruStreamId(streamId.getBytes(Charsets.UTF_8)),
+                partitionedActivities);
             stats.ingressed("/write/reads/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
-            log.error("Failed calling writeReadTracking({},count:{})",
-                new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+            log.error("Failed calling writeReadTracking({},{},count:{})",
+                new Object[] { tenantId, streamId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
@@ -195,19 +270,19 @@ public class RCVSWALEndpoints {
         }
     }
 
-    @POST
-    @Path("/partition/status/{tenantId}")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @GET
+    @Path("/partition/status/{tenantId}/{partitionId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPartitionStatus(@PathParam("tenantId") String tenantId,
-        List<MiruPartitionId> partitionIds) throws Exception {
+        @PathParam("partitionId") int partitionId) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            List<MiruActivityWALStatus> partitionStatus = walDirector.getPartitionStatus(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), partitionIds);
+            MiruActivityWALStatus partitionStatus = walDirector.getPartitionStatus(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId));
             stats.ingressed("/partition/status/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(partitionStatus);
         } catch (Exception x) {
-            log.error("Failed calling getPartitionStatus({},{})", new Object[] { tenantId, partitionIds }, x);
+            log.error("Failed calling getPartitionStatus({},{})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
@@ -236,7 +311,7 @@ public class RCVSWALEndpoints {
         Long[] timestamps) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            MiruVersionedActivityLookupEntry[] versionedEntries = walDirector.getVersionedEntries(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+            List<MiruVersionedActivityLookupEntry> versionedEntries = walDirector.getVersionedEntries(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 timestamps);
             stats.ingressed("/versioned/entries/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(versionedEntries);
@@ -277,7 +352,7 @@ public class RCVSWALEndpoints {
             StreamBatch<MiruWALEntry, RCVSSipCursor> sipActivity = walDirector.sipActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), cursor, batchSize);
             stats.ingressed("/sip/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(sipActivity, StreamBatch.class, new Class<?>[] { MiruWALEntry.class, RCVSSipCursor.class });
+            return responseHelper.jsonResponse(sipActivity);
         } catch (Exception x) {
             log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -298,7 +373,7 @@ public class RCVSWALEndpoints {
             StreamBatch<MiruWALEntry, RCVSCursor> activity = walDirector.getActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), cursor, batchSize);
             stats.ingressed("/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(activity, StreamBatch.class, new Class<?>[] { MiruWALEntry.class, RCVSCursor.class });
+            return responseHelper.jsonResponse(activity);
         } catch (Exception x) {
             log.error("Failed calling getActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -318,7 +393,7 @@ public class RCVSWALEndpoints {
             StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead = walDirector.sipRead(
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
             stats.ingressed("/sip/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(sipRead, StreamBatch.class, new Class<?>[] { MiruReadSipEntry.class, SipReadCursor.class });
+            return responseHelper.jsonResponse(sipRead);
         } catch (Exception x) {
             log.error("Failed calling sipRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -338,7 +413,7 @@ public class RCVSWALEndpoints {
             StreamBatch<MiruWALEntry, GetReadCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
             stats.ingressed("/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(read, StreamBatch.class, new Class<?>[] { MiruReadSipEntry.class, GetReadCursor.class });
+            return responseHelper.jsonResponse(read);
         } catch (Exception x) {
             log.error("Failed calling getRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);

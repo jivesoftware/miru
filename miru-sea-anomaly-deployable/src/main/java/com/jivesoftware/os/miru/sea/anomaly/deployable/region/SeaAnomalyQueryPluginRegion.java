@@ -7,7 +7,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -32,6 +31,7 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.awt.Color;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -170,7 +170,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
 
                 MiruTenantId tenantId = SeaAnomalySchemaConstants.TENANT_ID;
                 MiruResponse<SeaAnomalyAnswer> response = null;
-                for (RequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
+                for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
                     try {
                         List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                         List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
@@ -217,7 +217,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                                 MiruSolutionLogLevel.INFO),
                             SeaAnomalyConstants.SEA_ANOMALY_PREFIX + SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT,
                             MiruResponse.class,
-                            new Class[]{SeaAnomalyAnswer.class},
+                            new Class[] { SeaAnomalyAnswer.class },
                             null);
                         response = miruResponse;
                         if (response != null && response.answer != null) {
@@ -226,7 +226,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                             log.warn("Empty seaAnomaly response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed seaAnomaly request to {}, trying another", new Object[]{requestHelper}, e);
+                        log.warn("Failed seaAnomaly request to {}, trying another", new Object[] { requestHelper }, e);
                     }
                 }
 

@@ -7,7 +7,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -33,6 +32,7 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -99,7 +99,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 MiruResponse<TrendingAnswer> response = null;
                 MiruTenantId tenantId = SeaAnomalySchemaConstants.TENANT_ID;
                 try {
-                    for (RequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
+                    for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
                         try {
                             @SuppressWarnings("unchecked")
                             MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
@@ -117,7 +117,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                                         100),
                                     MiruSolutionLogLevel.INFO),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                                new Class[]{TrendingAnswer.class},
+                                new Class[] { TrendingAnswer.class },
                                 null);
                             response = trendingResponse;
                             if (response != null && response.answer != null) {
@@ -126,7 +126,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                                 log.warn("Empty trending response from {}, trying another", requestHelper);
                             }
                         } catch (Exception e) {
-                            log.warn("Failed trending request to {}, trying another", new Object[]{requestHelper}, e);
+                            log.warn("Failed trending request to {}, trying another", new Object[] { requestHelper }, e);
                         }
                     }
                 } catch (Exception x) {

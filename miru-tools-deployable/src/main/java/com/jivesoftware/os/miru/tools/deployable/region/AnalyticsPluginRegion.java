@@ -8,7 +8,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.jive.utils.http.client.rest.RequestHelper;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
@@ -34,6 +33,7 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -139,11 +139,11 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
                 MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
 
-                List<RequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
+                List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<AnalyticsAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
-                    for (RequestHelper requestHelper : requestHelpers) {
+                    for (HttpRequestHelper requestHelper : requestHelpers) {
                         try {
                             ImmutableMap.Builder<String, MiruFilter> analyticsFiltersBuilder = ImmutableMap.builder();
                             for (String term1 : terms1) {

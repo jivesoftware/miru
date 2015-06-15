@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.cluster.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jivesoftware.os.jive.utils.http.client.HttpResponse;
-import com.jivesoftware.os.jive.utils.http.client.rest.ResponseMapper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -18,8 +16,15 @@ import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.upena.tenant.routing.http.client.TenantAwareHttpClient;
-import java.util.Collection;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
+import java.util.Arrays;
 import java.util.List;
 
 public class MiruHttpClusterClient implements MiruClusterClient {
@@ -28,176 +33,166 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     private final MiruStats miruStats;
     private final String routingTenantId;
-    private final TenantAwareHttpClient<String> client;
+    private final TenantAwareHttpClient<String> clusterClient;
+    private final RoundRobinStrategy roundRobinStrategy;
     private final ObjectMapper requestMapper;
-    private final ResponseMapper responseMapper;
+    private final HttpResponseMapper responseMapper;
 
     public MiruHttpClusterClient(MiruStats miruStats,
         String routingTenantId,
-        TenantAwareHttpClient<String> client,
+        TenantAwareHttpClient<String> clusterClient,
+        RoundRobinStrategy roundRobinStrategy,
         ObjectMapper requestMapper,
-        ResponseMapper responseMapper) {
+        HttpResponseMapper responseMapper) {
 
         this.miruStats = miruStats;
         this.routingTenantId = routingTenantId;
-        this.client = client;
+        this.clusterClient = clusterClient;
+        this.roundRobinStrategy = roundRobinStrategy;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
     }
 
-    private <R> R send(HttpCallable<R> send) {
-        try {
-            return send.call(client);
-        } catch (Exception x) {
-            LOG.warn("Failed to send " + send, x);
-        }
-        throw new RuntimeException("Failed to send.");
-    }
-
-    static interface HttpCallable<R> {
-
-        R call(TenantAwareHttpClient<String> client) throws Exception;
-    }
-
     @Override
     public MiruTopologyResponse routingTopology(final MiruTenantId tenantId) throws Exception {
-        return send(client -> {
+        return sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.get(routingTenantId,
-                "/miru/topology/routing/" + tenantId.toString());
+            HttpResponse response = client.get("/miru/topology/routing/" + tenantId.toString(), null);
             MiruTopologyResponse miruTopologyResponse = responseMapper.extractResultFromResponse(response, MiruTopologyResponse.class, null);
             miruStats.egressed("/miru/topology/routing/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
-            return miruTopologyResponse;
+            return new ClientResponse<>(miruTopologyResponse, true);
         });
     }
 
     @Override
-    public void updateIngress(Collection<MiruIngressUpdate> ingressUpdates) throws Exception {
-        send(client -> {
+    public void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception {
+        String jsonWarmIngress = requestMapper.writeValueAsString(ingressUpdate);
+        sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            String jsonWarmIngress = requestMapper.writeValueAsString(ingressUpdates);
-            HttpResponse response = client.postJson(routingTenantId,
-                "/miru/topology/update/ingress",
-                jsonWarmIngress);
+            HttpResponse response = client.postJson("/miru/topology/update/ingress", jsonWarmIngress, null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/update/ingress", 1, System.currentTimeMillis() - start);
-            return r;
+            return new ClientResponse<>(r, true);
         });
     }
 
     @Override
-    public MiruHeartbeatResponse thumpthump(final MiruHost host, final MiruHeartbeatRequest heartbeatRequest) {
-        return send(client -> {
+    public MiruHeartbeatResponse thumpthump(final MiruHost host, final MiruHeartbeatRequest heartbeatRequest) throws Exception {
+        String jsonHeartbeatRequest = requestMapper.writeValueAsString(heartbeatRequest);
+        return sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            String jsonHeartbeatRequest = requestMapper.writeValueAsString(heartbeatRequest);
-            HttpResponse response = client.postJson(routingTenantId,
-                "/miru/topology/thumpthump/"
-                    + host.getLogicalName() + "/"
-                    + host.getPort(),
-                jsonHeartbeatRequest);
+            HttpResponse response = client.postJson("/miru/topology/thumpthump/" + host.getLogicalName() + "/" + host.getPort(), jsonHeartbeatRequest, null);
             MiruHeartbeatResponse heartbeatResponse = responseMapper.extractResultFromResponse(response, MiruHeartbeatResponse.class, null);
-            miruStats.egressed("/miru/topology/thumpthump/"
-                + host.getLogicalName() + "/"
-                + host.getPort(), 1, System.currentTimeMillis() - start);
-            return heartbeatResponse;
+            miruStats.egressed("/miru/topology/thumpthump/" + host.getLogicalName() + "/" + host.getPort(), 1, System.currentTimeMillis() - start);
+            return new ClientResponse<>(heartbeatResponse, true);
         });
     }
 
     @Override
     public List<HostHeartbeat> allhosts() {
-        return send(client -> {
+        return sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson(routingTenantId,
-                "/miru/topology/allHosts",
-                "null");
-            List<HostHeartbeat> heartBeats = responseMapper.extractResultFromResponse(response, List.class, new Class[] { HostHeartbeat.class }, null);
+            HttpResponse response = client.postJson("/miru/topology/allHosts", "null", null);
+            HostHeartbeat[] heartbeats = responseMapper.extractResultFromResponse(response, HostHeartbeat[].class, null);
             miruStats.egressed("/miru/topology/allHosts", 1, System.currentTimeMillis() - start);
-            return heartBeats;
+            return new ClientResponse<>(Arrays.asList(heartbeats), true);
         });
     }
 
     @Override
     public MiruTenantConfig tenantConfig(final MiruTenantId tenantId) {
-        return send(client -> {
+        return sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.get(routingTenantId,
-                "/miru/topology/tenantConfig/" + tenantId.toString());
+            HttpResponse response = client.get("/miru/topology/tenantConfig/" + tenantId.toString(), null);
             MiruTenantConfig tenantConfig = responseMapper.extractResultFromResponse(response, MiruTenantConfig.class, null);
             miruStats.egressed("/miru/topology/tenantConfig/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
-            return tenantConfig;
+            return new ClientResponse<>(tenantConfig, true);
         });
     }
 
     @Override
     public List<MiruPartition> partitions(final MiruTenantId tenantId) {
-        return send(client -> {
+        return sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson(routingTenantId,
-                "/miru/topology/partitions/" + tenantId.toString(), "null");
-            List<MiruPartition> partitions = responseMapper.extractResultFromResponse(response, List.class, new Class[] { MiruPartition.class }, null);
+            HttpResponse response = client.postJson("/miru/topology/partitions/" + tenantId.toString(), "null", null);
+            MiruPartition[] partitions = responseMapper.extractResultFromResponse(response, MiruPartition[].class, null);
             miruStats.egressed("/miru/topology/partitions/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
-            return partitions;
+            return new ClientResponse<>(Arrays.asList(partitions), true);
         });
     }
 
     @Override
     public void remove(final MiruHost host) {
-        send(client -> {
+        sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson(routingTenantId,
-                "/miru/topology/remove/"
-                    + host.getLogicalName() + "/"
-                    + host.getPort(), "null");
+            HttpResponse response = client.postJson("/miru/topology/remove/" + host.getLogicalName() + "/" + host.getPort(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/remove/"
                 + host.getLogicalName() + "/"
                 + host.getPort(), 1, System.currentTimeMillis() - start);
-            return r;
+            return new ClientResponse<>(r, true);
         });
     }
 
     @Override
     public void remove(final MiruHost host, final MiruTenantId tenantId, final MiruPartitionId partitionId) {
-        send(client -> {
+        sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson(routingTenantId,
-                "/miru/topology/remove/"
-                    + host.getLogicalName() + "/"
-                    + host.getPort() + "/"
-                    + tenantId + "/"
-                    + partitionId.getId(), "null");
+            HttpResponse response = client.postJson("/miru/topology/remove/"
+                + host.getLogicalName() + "/"
+                + host.getPort() + "/"
+                + tenantId + "/"
+                + partitionId.getId(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/remove/"
                 + host.getLogicalName() + "/"
                 + host.getPort() + "/"
                 + tenantId + "/"
                 + partitionId.getId(), 1, System.currentTimeMillis() - start);
-            return r;
+            return new ClientResponse<>(r, true);
         });
     }
 
     @Override
     public MiruSchema getSchema(final MiruTenantId tenantId) {
-        return send(client -> {
+        return sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.get(routingTenantId,
-                "/miru/topology/schema/" + tenantId.toString());
+            HttpResponse response = client.get("/miru/topology/schema/" + tenantId.toString(), null);
             MiruSchema schema = responseMapper.extractResultFromResponse(response, MiruSchema.class, null);
             miruStats.egressed("/miru/topology/schema/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
-            return schema;
+            return new ClientResponse<>(schema, true);
         });
     }
 
     @Override
-    public void registerSchema(final MiruTenantId tenantId, final MiruSchema schema) {
-        send(client -> {
+    public void registerSchema(final MiruTenantId tenantId, final MiruSchema schema) throws Exception {
+        String jsonSchema = requestMapper.writeValueAsString(schema);
+        sendRoundRobin(client -> {
             long start = System.currentTimeMillis();
-            String jsonSchema = requestMapper.writeValueAsString(schema);
-            HttpResponse response = client.postJson(routingTenantId,
-                "/miru/topology/schema/" + tenantId.toString(), jsonSchema);
+            HttpResponse response = client.postJson("/miru/topology/schema/" + tenantId.toString(), jsonSchema, null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/schema/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
-            return r;
+            return new ClientResponse<>(r, true);
         });
+    }
+
+    @Override
+    public boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception {
+        String jsonTenantIds = requestMapper.writeValueAsString(toTenantIds);
+        return sendRoundRobin(client -> {
+            long start = System.currentTimeMillis();
+            HttpResponse response = client.postJson("/miru/topology/copyschema/" + fromTenantId.toString(), jsonTenantIds, null);
+            Boolean r = responseMapper.extractResultFromResponse(response, Boolean.class, null);
+            miruStats.egressed("/miru/topology/copyschema/" + fromTenantId.toString(), 1, System.currentTimeMillis() - start);
+            return new ClientResponse<>(Boolean.TRUE.equals(r), true);
+        });
+    }
+
+    private <R> R sendRoundRobin(ClientCall<HttpClient, R, HttpClientException> call) {
+        try {
+            return clusterClient.call(routingTenantId, roundRobinStrategy, call);
+        } catch (Exception x) {
+            throw new RuntimeException("Failed to send.", x);
+        }
     }
 }

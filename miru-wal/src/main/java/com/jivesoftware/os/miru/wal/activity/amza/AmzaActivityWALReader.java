@@ -3,10 +3,9 @@ package com.jivesoftware.os.miru.wal.activity.amza;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.amza.service.AmzaRegion;
-import com.jivesoftware.os.amza.shared.RegionName;
-import com.jivesoftware.os.amza.shared.TakeCursors;
-import com.jivesoftware.os.amza.shared.WALKey;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider.AmzaKretr;
+import com.jivesoftware.os.amza.shared.take.TakeCursors;
+import com.jivesoftware.os.amza.shared.wal.WALKey;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
@@ -24,6 +23,7 @@ import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -45,18 +45,6 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         this.partitionedActivityMarshaller = new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, mapper);
     }
 
-    private AmzaRegion getWALRegion(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        String walName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
-        RegionName activityRegionName = new RegionName(false, walName, walName);
-        return amzaWALUtil.getRegion(activityRegionName);
-    }
-
-    private boolean hasWALRegion(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        String walName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
-        RegionName activityRegionName = new RegionName(false, walName, walName);
-        return amzaWALUtil.hasRegion(activityRegionName);
-    }
-
     private void mergeCursors(Map<String, NamedCursor> cursorsByName, TakeCursors takeCursors) {
         for (TakeCursors.RingMemberCursor memberCursor : takeCursors.ringMemberCursors) {
             String memberName = memberCursor.ringMember.getMember();
@@ -76,9 +64,9 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     private TakeCursors takeCursors(StreamMiruActivityWAL streamMiruActivityWAL,
-        AmzaRegion region,
+        AmzaKretr client,
         Map<String, NamedCursor> cursorsByName) throws Exception {
-        return amzaWALUtil.take(region, cursorsByName, (rowTxId, key, value) -> {
+        return amzaWALUtil.take(client, cursorsByName, (rowTxId, key, value) -> {
             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
             if (partitionedActivity != null) {
                 streamMiruActivityWAL.stream(partitionedActivity.timestamp, partitionedActivity, value.getTimestampId());
@@ -88,14 +76,19 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     @Override
+    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return amzaWALUtil.getActivityRoutingGroup(tenantId, partitionId);
+    }
+
+    @Override
     public AmzaCursor stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         AmzaCursor cursor,
         int batchSize,
         StreamMiruActivityWAL streamMiruActivityWAL) throws Exception {
 
-        AmzaRegion region = getWALRegion(tenantId, partitionId);
-        if (region == null) {
+        AmzaKretr client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        if (client == null) {
             return cursor;
         }
 
@@ -103,7 +96,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         Map<String, NamedCursor> sipCursorsByName = cursor != null && cursor.sipCursor != null
             ? extractCursors(cursor.sipCursor.cursors) : Maps.newHashMap();
 
-        TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, region, cursorsByName);
+        TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, client, cursorsByName);
 
         mergeCursors(cursorsByName, takeCursors);
         mergeCursors(sipCursorsByName, takeCursors);
@@ -118,14 +111,14 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         int batchSize,
         StreamMiruActivityWAL streamMiruActivityWAL) throws Exception {
 
-        AmzaRegion region = getWALRegion(tenantId, partitionId);
-        if (region == null) {
+        AmzaKretr client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        if (client == null) {
             return sipCursor;
         }
 
         Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? extractCursors(sipCursor.cursors) : Maps.newHashMap();
 
-        TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, region, sipCursorsByName);
+        TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, client, sipCursorsByName);
 
         mergeCursors(sipCursorsByName, takeCursors);
 
@@ -141,12 +134,12 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         MiruPartitionedActivity latestBoundaryActivity = null;
         int gaps = 0;
         while (true) {
-            AmzaRegion region = getWALRegion(tenantId, partitionId);
+            AmzaKretr client = amzaWALUtil.getActivityClient(tenantId, partitionId);
             MiruPartitionedActivity got = null;
-            if (region != null) {
+            if (client != null) {
                 WALKey key = new WALKey(
                     columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId)));
-                byte[] valueBytes = region.get(key);
+                byte[] valueBytes = client.getValue(key);
                 if (valueBytes != null) {
                     got = partitionedActivityMarshaller.fromBytes(valueBytes);
                 }
@@ -178,7 +171,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         MiruPartitionId latestPartitionId = partitionId;
         int gaps = 0;
         while (true) {
-            boolean got = hasWALRegion(tenantId, partitionId);
+            boolean got = amzaWALUtil.hasActivityPartition(tenantId, partitionId);
             if (got) {
                 gaps = 0;
                 latestPartitionId = partitionId;
@@ -199,13 +192,13 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         final MutableLong count = new MutableLong(0);
         final List<Integer> begins = Lists.newArrayList();
         final List<Integer> ends = Lists.newArrayList();
-        AmzaRegion region = getWALRegion(tenantId, partitionId);
-        if (region != null) {
+        AmzaKretr client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        if (client != null) {
             WALKey fromKey = new WALKey(
                 columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0)));
             WALKey toKey = new WALKey(
                 columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), Long.MAX_VALUE)));
-            region.rangeScan(fromKey, toKey, (rowTxId, key, value) -> {
+            client.scan(fromKey, toKey, (rowTxId, key, value) -> {
                 if (value != null) {
                     MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
                     if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
@@ -224,11 +217,11 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     @Override
     public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         final MutableLong oldestClockTimestamp = new MutableLong(-1);
-        AmzaRegion region = getWALRegion(tenantId, partitionId);
-        if (region != null) {
+        AmzaKretr client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        if (client != null) {
             WALKey fromKey = new WALKey(columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), 0L)));
             WALKey toKey = new WALKey(columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0L)));
-            region.rangeScan(fromKey, toKey, (rowTxId, key, value) -> {
+            client.scan(fromKey, toKey, (rowTxId, key, value) -> {
                 if (value != null) {
                     MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
                     if (partitionedActivity != null && partitionedActivity.type.isActivityType()) {
@@ -254,8 +247,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
 
     @Override
     public void allPartitions(PartitionsStream stream) throws Exception {
-        AmzaRegion partitionsRegion = amzaWALUtil.getRegion(AmzaWALUtil.LOOKUP_PARTITIONS_REGION_NAME);
-        partitionsRegion.scan((rowTxId, key, scanned) -> {
+        AmzaKretr partitionsClient = amzaWALUtil.getLookupPartitionsClient();
+        partitionsClient.scan(null, null, (rowTxId, key, scanned) -> {
             if (key != null) {
                 TenantAndPartition tenantAndPartition = amzaWALUtil.fromPartitionsKey(key);
                 if (!stream.stream(tenantAndPartition.tenantId, tenantAndPartition.partitionId)) {

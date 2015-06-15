@@ -15,11 +15,11 @@
  */
 package com.jivesoftware.os.miru.service.locator;
 
-import com.jivesoftware.os.jive.utils.health.api.HealthChecker;
-import com.jivesoftware.os.jive.utils.health.api.HealthFactory;
-import com.jivesoftware.os.jive.utils.health.api.ScheduledMinMaxHealthCheckConfig;
-import com.jivesoftware.os.jive.utils.health.checkers.DiskFreeHealthChecker;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.api.ScheduledMinMaxHealthCheckConfig;
+import com.jivesoftware.os.routing.bird.health.checkers.DiskFreeHealthChecker;
 import java.io.File;
 import java.io.IOException;
 import org.apache.commons.io.FileUtils;
