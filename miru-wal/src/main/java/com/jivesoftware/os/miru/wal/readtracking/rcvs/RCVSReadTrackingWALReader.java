@@ -10,14 +10,15 @@ import com.jivesoftware.os.routing.bird.shared.HostPort;
 
 public class RCVSReadTrackingWALReader implements MiruReadTrackingWALReader {
 
+    private final int mainPort;
     private final RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         readTrackingWAL;
     private final RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL;
 
-    public RCVSReadTrackingWALReader(
+    public RCVSReadTrackingWALReader(int mainPort,
         RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey, MiruPartitionedActivity, ? extends Exception> readTrackingWAL,
         RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL) {
-
+        this.mainPort = mainPort;
         this.readTrackingWAL = readTrackingWAL;
         this.readTrackingSipWAL = readTrackingSipWAL;
     }

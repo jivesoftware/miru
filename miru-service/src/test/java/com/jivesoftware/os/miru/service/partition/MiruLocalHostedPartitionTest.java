@@ -230,9 +230,9 @@ public class MiruLocalHostedPartitionTest {
 
         MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(10_000, wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+        MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(10_000, wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new RCVSWALLookup(wal.getActivityLookupTable());
+        MiruWALLookup walLookup = new RCVSWALLookup(10_000, wal.getActivityLookupTable());
 
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();
