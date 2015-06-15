@@ -437,10 +437,13 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> replicaSets = tenantPartitionsLatestTopologies(tenantId, partitionIds);
             for (MiruPartitionId partitionId : partitionIds) {
                 boolean hosted = false;
-                for (HostAndTimestamp hostAndTimestamp : replicaSets.get(partitionId)) {
-                    if (hostAndTimestamp.host.equals(host)) {
-                        hosted = true;
-                        break;
+                MinMaxPriorityQueue<HostAndTimestamp> replicaSet = replicaSets.get(partitionId);
+                if (replicaSet != null) {
+                    for (HostAndTimestamp hostAndTimestamp : replicaSet) {
+                        if (hostAndTimestamp.host.equals(host)) {
+                            hosted = true;
+                            break;
+                        }
                     }
                 }
                 MiruPartitionActive partitionActive = isPartitionActive(new MiruPartitionCoord(tenantId, partitionId, host));
