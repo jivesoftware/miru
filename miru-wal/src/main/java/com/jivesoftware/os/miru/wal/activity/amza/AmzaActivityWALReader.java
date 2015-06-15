@@ -1,9 +1,11 @@
 package com.jivesoftware.os.miru.wal.activity.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.client.AmzaKretrProvider.AmzaKretr;
+import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
 import com.jivesoftware.os.amza.shared.take.TakeCursors;
 import com.jivesoftware.os.amza.shared.wal.WALKey;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -77,7 +79,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
 
     @Override
     public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        return amzaWALUtil.getActivityRoutingGroup(tenantId, partitionId);
+        return amzaWALUtil.getActivityRoutingGroup(tenantId, partitionId, Optional.<PartitionProperties>absent());
     }
 
     @Override

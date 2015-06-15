@@ -41,8 +41,13 @@ public class AmzaWALUtil {
         this.defaultProperties = defaultProperties;
     }
 
-    public HostPort[] getActivityRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        return amzaService.getPartitionRoute(getActivityPartitionName(tenantId, partitionId)).orderedPartitionHosts.stream()
+    public HostPort[] getActivityRoutingGroup(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        Optional<PartitionProperties> regionProperties) throws Exception {
+        PartitionName partitionName = getActivityPartitionName(tenantId, partitionId);
+        amzaService.getAmzaHostRing().ensureMaximalSubRing(partitionName.getRingName());
+        amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
+        return amzaService.getPartitionRoute(partitionName).orderedPartitionHosts.stream()
             .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))
             .toArray(HostPort[]::new);
     }
