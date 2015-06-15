@@ -89,7 +89,6 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
 
     @Override
     public void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception {
-        //TODO call this from WAL, DUH!!!!
         clusterRegistry.updateIngress(ingressUpdate);
 
         TenantAndPartition tenantAndPartition = new TenantAndPartition(ingressUpdate.tenantId, ingressUpdate.partitionId);

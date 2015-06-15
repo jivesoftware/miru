@@ -17,8 +17,8 @@
         <jive-utils-version>0.93</jive-utils-version>
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.72</filer-version>
-        <routing-bird-version>0.8</routing-bird-version>
-        <amza-version>0.90</amza-version>
+        <routing-bird-version>0.13</routing-bird-version>
+        <amza-version>0.91</amza-version>
         <jackson-version>2.5.3</jackson-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <test.excludedGroups>blocked-by-jira,slow</test.excludedGroups>
