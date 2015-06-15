@@ -17,16 +17,19 @@ import java.util.List;
  */
 public class RCVSWALLookup implements MiruWALLookup {
 
+    private final int mainPort;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
 
-    public RCVSWALLookup(RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable) {
+    public RCVSWALLookup(int mainPort,
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable) {
+        this.mainPort = mainPort;
         this.activityLookupTable = activityLookupTable;
     }
 
     @Override
     public HostPort[] getRoutingGroup(MiruTenantId tenantId) throws Exception {
         RowColumnValueStore.HostAndPort hostAndPort = activityLookupTable.locate(MiruVoidByte.INSTANCE, tenantId);
-        return new HostPort[] { new HostPort(hostAndPort.host, hostAndPort.port) };
+        return new HostPort[] { new HostPort(hostAndPort.host, mainPort) };
     }
 
     @Override

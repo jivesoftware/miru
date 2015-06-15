@@ -197,7 +197,9 @@ public class MiruWALMain {
                 new PartitionProperties(storageDescriptor, amzaServiceConfig.getReplicationFactor(), amzaServiceConfig.getTakeFromFactor(), false));
 
             MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-            MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+            MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(instanceConfig.getMainPort(),
+                wal.getReadTrackingWAL(),
+                wal.getReadTrackingSipWAL());
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
@@ -217,7 +219,7 @@ public class MiruWALMain {
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(instanceConfig.getMainPort(),
                     wal.getActivityWAL(),
                     wal.getActivitySipWAL());
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(instanceConfig.getMainPort(), wal.getActivityLookupTable());
                 rcvsWALDirector = new MiruWALDirector<>(rcvsWALLookup,
                     rcvsActivityWALReader,
                     rcvsActivityWALWriter,
@@ -251,7 +253,7 @@ public class MiruWALMain {
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(instanceConfig.getMainPort(),
                     wal.getActivityWAL(),
                     wal.getActivitySipWAL());
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(instanceConfig.getMainPort(), wal.getActivityLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
                     amzaServiceConfig.getReplicateLookupQuorum(),
                     amzaServiceConfig.getReplicateTimeoutMillis());
@@ -271,7 +273,7 @@ public class MiruWALMain {
                 AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(amzaActivityWALWriter, rcvsActivityWALWriter);
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(wal.getActivityLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(instanceConfig.getMainPort(), wal.getActivityLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
                     amzaServiceConfig.getReplicateLookupQuorum(),
                     amzaServiceConfig.getReplicateTimeoutMillis());
