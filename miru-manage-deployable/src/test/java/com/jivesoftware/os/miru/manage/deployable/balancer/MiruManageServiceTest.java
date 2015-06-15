@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.manage.deployable.balancer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
@@ -16,6 +17,7 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -112,17 +114,15 @@ public class MiruManageServiceTest {
             miruWALClient,
             stats);
 
-        OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1), new SnowflakeIdPacker(), new JiveEpochTimestampProvider());
-
         long electTime = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
         for (int i = 0; i < numberOfReplicas; i++) {
             MiruHost host = new MiruHost("host" + i, 10_000 + i);
             clusterRegistry.heartbeat(host);
             hosts.add(host);
-            clusterRegistry.addToReplicaRegistry(tenantId,
-                partitionId,
-                electTime - i,
-                host);
+
+            clusterRegistry.addToReplicaRegistry(
+                ImmutableListMultimap.<MiruHost, TenantAndPartition>builder().put(host, new TenantAndPartition(tenantId, partitionId)).build(),
+                electTime - i);
         }
 
     }

@@ -4,7 +4,9 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
@@ -16,6 +18,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
@@ -45,7 +48,7 @@ public class MiruRebalanceDirector {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruClusterRegistry clusterRegistry;
-    private final MiruWALClient miruWALClient;
+    private final MiruWALClient<?, ?> miruWALClient;
     private final OrderIdProvider orderIdProvider;
     private final ReaderRequestHelpers readerRequestHelpers;
 
@@ -72,6 +75,8 @@ public class MiruRebalanceDirector {
         } else {
             tenantIds = miruWALClient.getAllTenantIds();
         }
+
+        Table<MiruTenantId, MiruPartitionId, Shift> shiftTable = HashBasedTable.create();
         for (MiruTenantId tenantId : tenantIds) {
             int numberOfReplicas = clusterRegistry.getNumberOfReplicas(tenantId);
             List<MiruPartition> partitionsForTenant = clusterRegistry.getPartitionsForTenant(tenantId);
@@ -96,19 +101,30 @@ public class MiruRebalanceDirector {
                 if (fromHost.isPresent()) {
                     pivotHost = fromHost.get();
                 } else if (partitions.isEmpty()) {
-                    pivotHost = allHosts.get(Objects.hashCode(tenantId, partitionId) % allHosts.size());
+                    pivotHost = allHosts.get(Math.abs(Objects.hashCode(tenantId, partitionId)) % allHosts.size());
                 } else {
                     pivotHost = partitions.get(0).coord.host;
                 }
                 List<MiruHost> hostsToElect = selectHostsStrategy.selectHosts(pivotHost, allHosts, partitions, numberOfReplicas);
-                electHosts(tenantId, partitionId, Lists.transform(partitions, input -> input.coord.host), hostsToElect);
+                shiftTable.put(tenantId, partitionId, new Shift(Lists.transform(partitions, input -> input.coord.host), hostsToElect));
                 moved++;
             }
         }
+        electHosts(shiftTable);
         LOG.info("Done shifting, moved={} skipped={} missed={}", moved, skipped, missed);
         LOG.inc("rebalance>moved", moved);
         LOG.inc("rebalance>skipped", skipped);
         LOG.inc("rebalance>missed", missed);
+    }
+
+    private static class Shift {
+        private final List<MiruHost> fromHosts;
+        private final List<MiruHost> hostsToElect;
+
+        public Shift(List<MiruHost> fromHosts, List<MiruHost> hostsToElect) {
+            this.fromHosts = fromHosts;
+            this.hostsToElect = hostsToElect;
+        }
     }
 
     public void removeHost(MiruHost miruHost) throws Exception {
@@ -128,13 +144,23 @@ public class MiruRebalanceDirector {
         }
     }
 
-    private void electHosts(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruHost> fromHosts, List<MiruHost> hostsToElect) throws Exception {
-        LOG.debug("Elect from {} to {} for {} {}", fromHosts, hostsToElect, tenantId, partitionId);
-        for (MiruHost hostToElect : hostsToElect) {
-            clusterRegistry.ensurePartitionCoord(new MiruPartitionCoord(tenantId, partitionId, hostToElect));
-            clusterRegistry.addToReplicaRegistry(tenantId, partitionId, Long.MAX_VALUE - orderIdProvider.nextId(), hostToElect);
+    private void electHosts(Table<MiruTenantId, MiruPartitionId, Shift> shiftTable) throws Exception {
+        ListMultimap<MiruHost, TenantAndPartition> elections = ArrayListMultimap.create();
+        int elected = 0;
+        for (Table.Cell<MiruTenantId, MiruPartitionId, Shift> cell : shiftTable.cellSet()) {
+            MiruTenantId tenantId = cell.getRowKey();
+            MiruPartitionId partitionId = cell.getColumnKey();
+            Shift shift = cell.getValue();
+            LOG.debug("Elect from {} to {} for {} {}", shift.fromHosts, shift.hostsToElect, tenantId, partitionId);
+            for (MiruHost host : shift.hostsToElect) {
+                elections.put(host, new TenantAndPartition(tenantId, partitionId));
+            }
+            elected += shift.hostsToElect.size();
         }
-        LOG.inc("rebalance>elect", hostsToElect.size());
+
+        clusterRegistry.ensurePartitionCoords(elections);
+        clusterRegistry.addToReplicaRegistry(elections, Long.MAX_VALUE - orderIdProvider.nextId());
+        LOG.inc("rebalance>elect", elected);
     }
 
     private Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> extractPartitions(boolean currentPartitionOnly,

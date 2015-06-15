@@ -29,6 +29,7 @@ import com.jivesoftware.os.routing.bird.shared.HostPort;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> implements MiruWALClient<C, S> {
 
@@ -64,7 +65,8 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         this.cursorClass = cursorClass;
         this.sipCursorClass = sipCursorClass;
         this.tenantRoutingCache = CacheBuilder.newBuilder()
-            .maximumSize(50_000)
+            .maximumSize(50_000) //TODO config
+            .expireAfterWrite(5, TimeUnit.MINUTES) //TODO config
             .build();
     }
 

@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.cluster;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ListMultimap;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
@@ -8,6 +9,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
@@ -35,11 +37,11 @@ public interface MiruClusterRegistry {
 
     List<MiruTenantId> getTenantsForHost(MiruHost miruHost) throws Exception;
 
-    void addToReplicaRegistry(MiruTenantId tenantId, MiruPartitionId partitionId, long nextId, MiruHost host) throws Exception;
+    void addToReplicaRegistry(ListMultimap<MiruHost, TenantAndPartition> coords, long nextId) throws Exception;
 
     void removeTenantPartionReplicaSet(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    void ensurePartitionCoord(MiruPartitionCoord coord) throws Exception;
+    void ensurePartitionCoords(ListMultimap<MiruHost, TenantAndPartition> coords) throws Exception;
 
     List<MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception;
 
