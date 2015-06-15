@@ -317,7 +317,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         });
 
         topologyInfoClient.commit(new AmzaPartitionUpdates().setAll(keyToBytesMap.entrySet()),
-            replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
+            0, 0, TimeUnit.MILLISECONDS);
 
         markTenantTopologyUpdated(topologyUpdates.stream()
             .filter(input -> input.optionalInfo.isPresent())
@@ -334,7 +334,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         for (HostHeartbeat heartbeat : getAllHosts()) {
             AmzaKretr topologyUpdatesClient = topologyUpdatesClient(heartbeat.host);
             topologyUpdatesClient.commit(new AmzaPartitionUpdates().setAll(tenantUpdates.entrySet()),
-                replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
+                0, 0, TimeUnit.MILLISECONDS);
         }
     }
 

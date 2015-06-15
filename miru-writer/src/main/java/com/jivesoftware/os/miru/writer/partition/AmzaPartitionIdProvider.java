@@ -85,6 +85,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         }
 
         amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, 1, 1, false)); //TODO config?
+        amzaService.awaitOnline(partitionName, 10_000L); //TODO config
         return amzaKretrProvider.getClient(partitionName);
     }
 
