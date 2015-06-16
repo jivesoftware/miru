@@ -60,6 +60,8 @@ import com.jivesoftware.os.routing.bird.server.util.Resource;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -213,7 +215,8 @@ public class MiruWriterMain {
                 walClient,
                 clientConfig.getPartitionMaximumAgeInMillis());
 
-            MiruActivityIngress activityIngress = new MiruActivityIngress(miruPartitioner, latestAlignmentCache);
+            ExecutorService sendActivitiesExecutorService = Executors.newFixedThreadPool(clientConfig.getSendActivitiesThreadPoolSize());
+            MiruActivityIngress activityIngress = new MiruActivityIngress(miruPartitioner, latestAlignmentCache, sendActivitiesExecutorService);
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
