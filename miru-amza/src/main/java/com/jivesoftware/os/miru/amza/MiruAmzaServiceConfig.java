@@ -64,9 +64,6 @@ public interface MiruAmzaServiceConfig extends Config {
     int getNumberOfAckerThreads();
 
     @IntDefault(1)
-    int getReplicationFactor();
-
-    @IntDefault(1)
     int getTakeFromFactor();
 
     @BooleanDefault(false)

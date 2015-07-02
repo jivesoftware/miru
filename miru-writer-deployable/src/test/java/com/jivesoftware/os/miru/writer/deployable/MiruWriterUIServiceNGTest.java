@@ -12,19 +12,18 @@ import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
-import com.jivesoftware.os.amza.service.replication.SendFailureListener;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
 import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
-import com.jivesoftware.os.amza.shared.partition.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.ring.RingHost;
 import com.jivesoftware.os.amza.shared.ring.RingMember;
 import com.jivesoftware.os.amza.shared.stats.AmzaStats;
-import com.jivesoftware.os.amza.shared.take.UpdatesTaker;
-import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
-import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesTaker;
+import com.jivesoftware.os.amza.shared.take.RowsTaker;
+import com.jivesoftware.os.amza.transport.http.replication.HttpRowsTaker;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -53,8 +52,6 @@ import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
-import com.jivesoftware.os.miru.writer.partition.AmzaPartitionIdProvider;
-import com.jivesoftware.os.miru.writer.partition.MiruPartitionIdProvider;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.io.File;
 import java.util.List;
@@ -100,7 +97,10 @@ public class MiruWriterUIServiceNGTest {
 
         RingMember ringMember = new RingMember("testInstance");
         RingHost ringHost = new RingHost("localhost", 10000);
-        final TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
+        SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
+        TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1),
+            idPacker,
+            new JiveEpochTimestampProvider());
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
@@ -109,9 +109,9 @@ public class MiruWriterUIServiceNGTest {
         indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
-        UpdatesTaker tableTaker = new HttpUpdatesTaker(amzaStats);
+        RowsTaker rowsTaker = new HttpRowsTaker(amzaStats);
 
-        final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
+        AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
         amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfTakerThreads = 1;
@@ -134,10 +134,10 @@ public class MiruWriterUIServiceNGTest {
             ringMember,
             ringHost,
             orderIdProvider,
+            idPacker,
             regionPropertyMarshaller,
             indexProviderRegistry,
-            tableTaker,
-            Optional.<SendFailureListener>absent(),
+            rowsTaker,
             Optional.<TakeFailureListener>absent(),
             rowsChanged -> {
             });
@@ -154,21 +154,10 @@ public class MiruWriterUIServiceNGTest {
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.DAYS.toMillis(365),
-            0,
             0);
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry));
         MiruWALDirector<RCVSCursor, RCVSSipCursor> director = new MiruWALDirector<>(walLookup,
             activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
-
-        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-            null, 1000, 1000);
-        MiruPartitionIdProvider miruPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
-            amzaKretrProvider,
-            0,
-            10_000L,
-            storageDescriptor,
-            100_000,
-            director);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         service = new MiruWriterUIServiceInitializer().initialize(renderer, new MiruStats());

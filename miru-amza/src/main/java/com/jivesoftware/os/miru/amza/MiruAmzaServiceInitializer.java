@@ -7,26 +7,28 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.discovery.AmzaDiscovery;
-import com.jivesoftware.os.amza.service.replication.SendFailureListener;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
 import com.jivesoftware.os.amza.shared.AmzaInstance;
 import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
-import com.jivesoftware.os.amza.shared.ring.AmzaRing;
+import com.jivesoftware.os.amza.shared.ring.AmzaRingReader;
+import com.jivesoftware.os.amza.shared.ring.AmzaRingWriter;
 import com.jivesoftware.os.amza.shared.ring.RingHost;
 import com.jivesoftware.os.amza.shared.ring.RingMember;
 import com.jivesoftware.os.amza.shared.scan.RowChanges;
 import com.jivesoftware.os.amza.shared.stats.AmzaStats;
-import com.jivesoftware.os.amza.shared.take.HighwaterStorage;
-import com.jivesoftware.os.amza.shared.take.UpdatesTaker;
-import com.jivesoftware.os.amza.transport.http.replication.HttpUpdatesTaker;
+import com.jivesoftware.os.amza.shared.take.RowsTaker;
+import com.jivesoftware.os.amza.transport.http.replication.HttpRowsTaker;
 import com.jivesoftware.os.amza.transport.http.replication.endpoints.AmzaReplicationRestEndpoints;
 import com.jivesoftware.os.amza.ui.AmzaUIInitializer;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -52,9 +54,12 @@ public class MiruAmzaServiceInitializer {
             Strings.padStart(String.valueOf(instanceId), 5, '0') + "_" + instanceKey);
         RingHost ringHost = new RingHost(hostName, port);
 
-        final TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId));
+        SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
+        TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId),
+            idPacker,
+            new JiveEpochTimestampProvider());
 
-        final ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
@@ -63,10 +68,9 @@ public class MiruAmzaServiceInitializer {
         indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
-        UpdatesTaker tableTaker = new HttpUpdatesTaker(amzaStats);
+        RowsTaker tableTaker = new HttpRowsTaker(amzaStats);
 
-        final com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig amzaServiceConfig =
-            new com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig();
+        AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
         amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis = config.getCheckIfCompactionIsNeededIntervalInMillis();
         amzaServiceConfig.deltaStripeCompactionIntervalInMillis = config.getDeltaStripeCompactionIntervalInMillis();
@@ -98,10 +102,10 @@ public class MiruAmzaServiceInitializer {
             ringMember,
             ringHost,
             orderIdProvider,
+            idPacker,
             partitionPropertyMarshaller,
             indexProviderRegistry,
             tableTaker,
-            Optional.<SendFailureListener>absent(),
             Optional.<TakeFailureListener>absent(),
             allRowChanges);
 
@@ -127,9 +131,9 @@ public class MiruAmzaServiceInitializer {
         });
 
         deployable.addEndpoints(AmzaReplicationRestEndpoints.class);
-        deployable.addInjectables(AmzaRing.class, amzaService.getAmzaHostRing());
+        deployable.addInjectables(AmzaRingWriter.class, amzaService.getRingWriter());
+        deployable.addInjectables(AmzaRingReader.class, amzaService.getRingReader());
         deployable.addInjectables(AmzaInstance.class, amzaService);
-        deployable.addInjectables(HighwaterStorage.class, amzaService.getHighwaterMarks());
 
         Resource staticResource = new Resource(null)
             .addClasspathResource("resources/static/amza")
@@ -137,7 +141,11 @@ public class MiruAmzaServiceInitializer {
         deployable.addResource(staticResource);
 
         if (clusterName != null && multicastPort > 0) {
-            AmzaDiscovery amzaDiscovery = new AmzaDiscovery(amzaService.getAmzaHostRing(), clusterName, multicastGroup, multicastPort);
+            AmzaDiscovery amzaDiscovery = new AmzaDiscovery(amzaService.getRingReader(),
+                amzaService.getRingWriter(),
+                clusterName,
+                multicastGroup,
+                multicastPort);
             amzaDiscovery.start();
             System.out.println("-----------------------------------------------------------------------");
             System.out.println("|      Amza Service Discovery Online");

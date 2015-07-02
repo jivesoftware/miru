@@ -7,11 +7,6 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
-import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -94,7 +89,6 @@ public class MiruManageServiceTest {
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.DAYS.toMillis(365),
-            0,
             0);
 
         clusterRegistry.registerSchema(tenantId, miruSchema);

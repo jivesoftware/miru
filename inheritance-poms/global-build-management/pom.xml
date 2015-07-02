@@ -18,7 +18,7 @@
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.72</filer-version>
         <routing-bird-version>0.14</routing-bird-version>
-        <amza-version>0.91</amza-version>
+        <amza-version>0.93</amza-version>
         <jackson-version>2.5.3</jackson-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <test.excludedGroups>blocked-by-jira,slow</test.excludedGroups>
@@ -557,7 +557,7 @@
             </plugins>
         </pluginManagement>
         <plugins>
-            <!--            <plugin>
+            <!--<plugin>
                 <groupId>io.takari.maven.plugins</groupId>
                 <artifactId>takari-lifecycle-plugin</artifactId>
                 <version>1.10.2</version>
