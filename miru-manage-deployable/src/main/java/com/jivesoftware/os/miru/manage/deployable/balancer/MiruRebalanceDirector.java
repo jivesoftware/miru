@@ -45,6 +45,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 
@@ -74,6 +75,7 @@ public class MiruRebalanceDirector {
         try {
             BufferedOutputStream buf = new BufferedOutputStream(os);
             List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
+            AtomicLong exported = new AtomicLong(0);
             clusterRegistry.topologiesForTenants(tenantIds, status -> {
                 if (status != null) {
                     buf.write(status.partition.coord.tenantId.getBytes());
@@ -82,10 +84,12 @@ public class MiruRebalanceDirector {
                     buf.write(',');
                     buf.write(status.partition.coord.host.toStringForm().getBytes(Charsets.US_ASCII));
                     buf.write('\n');
+                    exported.incrementAndGet();
                 }
                 return status;
             });
             buf.flush();
+            LOG.info("Exported {} topologies", exported.get());
         } catch (Exception x) {
             throw new RuntimeException(x);
         }
@@ -107,6 +111,7 @@ public class MiruRebalanceDirector {
         }
         clusterRegistry.ensurePartitionCoords(elections);
         clusterRegistry.addToReplicaRegistry(elections, Long.MAX_VALUE - orderIdProvider.nextId());
+        LOG.info("Imported {} topologies", elections.size());
     }
 
     public void shiftTopologies(Optional<MiruHost> fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
