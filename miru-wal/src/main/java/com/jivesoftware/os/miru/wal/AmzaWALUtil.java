@@ -45,7 +45,7 @@ public class AmzaWALUtil {
         MiruPartitionId partitionId,
         Optional<PartitionProperties> regionProperties) throws Exception {
         PartitionName partitionName = getActivityPartitionName(tenantId, partitionId);
-        amzaService.getAmzaHostRing().ensureMaximalSubRing(partitionName.getRingName());
+        amzaService.getRingWriter().ensureMaximalSubRing(partitionName.getRingName());
         amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
         return amzaService.getPartitionRoute(partitionName).orderedPartitionHosts.stream()
             .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))
@@ -97,7 +97,7 @@ public class AmzaWALUtil {
     }
 
     private AmzaKretr getOrCreateMaximalClient(PartitionName partitionName, Optional<PartitionProperties> regionProperties) throws Exception {
-        amzaService.getAmzaHostRing().ensureMaximalSubRing(partitionName.getRingName());
+        amzaService.getRingWriter().ensureMaximalSubRing(partitionName.getRingName());
         amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
         return amzaKretrProvider.getClient(partitionName);
     }
@@ -111,7 +111,7 @@ public class AmzaWALUtil {
     }
 
     public TakeCursors take(AmzaKretr client, Map<String, NamedCursor> cursorsByName, Scan<TimestampedValue> scan) throws Exception {
-        String localRingMemberName = amzaService.getAmzaRingReader().getRingMember().getMember();
+        String localRingMemberName = amzaService.getRingReader().getRingMember().getMember();
         NamedCursor localNamedCursor = cursorsByName.get(localRingMemberName);
         long transactionId = (localNamedCursor != null) ? localNamedCursor.id : 0;
 

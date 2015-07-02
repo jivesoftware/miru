@@ -76,15 +76,15 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
     private AmzaKretr ensureClient(PartitionName partitionName) throws Exception {
         if (!ringInitialized.get()) {
-            int ringSize = amzaService.getAmzaHostRing().getRingSize(AMZA_RING_NAME);
-            int systemRingSize = amzaService.getAmzaHostRing().getRingSize("system");
+            int ringSize = amzaService.getRingReader().getRingSize(AMZA_RING_NAME);
+            int systemRingSize = amzaService.getRingReader().getRingSize("system");
             if (ringSize < systemRingSize) {
-                amzaService.getAmzaHostRing().buildRandomSubRing(AMZA_RING_NAME, systemRingSize);
+                amzaService.getRingWriter().buildRandomSubRing(AMZA_RING_NAME, systemRingSize);
             }
             ringInitialized.set(true);
         }
 
-        amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, 1, 1, false)); //TODO config?
+        amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, 1, false)); //TODO config?
         amzaService.awaitOnline(partitionName, 10_000L); //TODO config
         return amzaKretrProvider.getClient(partitionName);
     }

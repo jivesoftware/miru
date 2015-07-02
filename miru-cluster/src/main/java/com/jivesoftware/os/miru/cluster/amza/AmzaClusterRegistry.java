@@ -104,7 +104,6 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private final long defaultTopologyIsStaleAfterMillis;
     private final long defaultTopologyIsIdleAfterMillis;
     private final long defaultTopologyDestroyAfterMillis;
-    private final int replicationFactor;
     private final int takeFromFactor;
     private final WALStorageDescriptor amzaStorageDescriptor;
 
@@ -120,7 +119,6 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         long defaultTopologyIsStaleAfterMillis,
         long defaultTopologyIsIdleAfterMillis,
         long defaultTopologyDestroyAfterMillis,
-        int replicationFactor,
         int takeFromFactor) throws Exception {
         this.amzaService = amzaService;
         this.amzaKretrProvider = amzaKretrProvider;
@@ -131,7 +129,6 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         this.defaultTopologyIsStaleAfterMillis = defaultTopologyIsStaleAfterMillis;
         this.defaultTopologyIsIdleAfterMillis = defaultTopologyIsIdleAfterMillis;
         this.defaultTopologyDestroyAfterMillis = defaultTopologyDestroyAfterMillis;
-        this.replicationFactor = replicationFactor;
         this.takeFromFactor = takeFromFactor;
         this.amzaStorageDescriptor = new WALStorageDescriptor(
             new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
@@ -141,9 +138,9 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private AmzaKretr ensureClient(String name) throws Exception {
         return clientMap.computeIfAbsent(name, s -> {
             try {
-                amzaService.getAmzaHostRing().ensureMaximalSubRing(CLUSTER_REGISTRY_RING_NAME);
+                amzaService.getRingWriter().ensureMaximalSubRing(CLUSTER_REGISTRY_RING_NAME);
                 PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name);
-                amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, replicationFactor, takeFromFactor, false));
+                amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, takeFromFactor, false));
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config
                 return amzaKretrProvider.getClient(partitionName);
             } catch (Exception e) {
@@ -345,7 +342,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
 
         final Map<MiruTenantId, MiruTenantTopologyUpdate> updates = Maps.newHashMap();
 
-        String ringMember = amzaService.getAmzaRingReader().getRingMember().getMember();
+        String ringMember = amzaService.getRingReader().getRingMember().getMember();
         long sinceTransactionId = 0;
         for (NamedCursor sinceCursor : sinceCursors) {
             if (ringMember.equals(sinceCursor.name)) {
@@ -388,7 +385,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         String partitionInfoName = "host-" + host.toStringForm() + "-" + INFO_SUFFIX;
         String partitionIngressName = "host-" + host.toStringForm() + "-" + INGRESS_PARTITION_NAME; // global region still gets host prefix
 
-        String ringMember = amzaService.getAmzaRingReader().getRingMember().getMember();
+        String ringMember = amzaService.getRingReader().getRingMember().getMember();
         String registryCursorName = ringMember + '/' + partitionRegistryName;
         String infoCursorName = ringMember + '/' + partitionInfoName;
         String ingressCursorName = ringMember + '/' + partitionIngressName;

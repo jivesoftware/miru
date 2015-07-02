@@ -194,7 +194,7 @@ public class MiruWALMain {
             AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
             AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService,
                 amzaKretrProvider,
-                new PartitionProperties(storageDescriptor, amzaServiceConfig.getReplicationFactor(), amzaServiceConfig.getTakeFromFactor(), false));
+                new PartitionProperties(storageDescriptor, amzaServiceConfig.getTakeFromFactor(), false));
 
             MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
             MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(instanceConfig.getMainPort(),

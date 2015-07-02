@@ -202,7 +202,6 @@ public class MiruManageMain {
                 registryConfig.getDefaultTopologyIsStaleAfterMillis(),
                 registryConfig.getDefaultTopologyIsIdleAfterMillis(),
                 registryConfig.getDefaultTopologyDestroyAfterMillis(),
-                amzaClusterRegistryConfig.getReplicationFactor(),
                 amzaClusterRegistryConfig.getTakeFromFactor());
             amzaService.watch(PartitionProvider.RING_INDEX.getPartitionName(), clusterRegistry);
 
