@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable.balancer;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.cache.Cache;
@@ -43,6 +42,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 
@@ -75,6 +75,7 @@ public class MiruRebalanceDirector {
         try {
             BufferedOutputStream buf = new BufferedOutputStream(os);
             List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
+            AtomicLong exported = new AtomicLong(0);
             clusterRegistry.topologiesForTenants(tenantIds, status -> {
                 if (status != null) {
                     buf.write(status.partition.coord.tenantId.getBytes());
@@ -83,10 +84,12 @@ public class MiruRebalanceDirector {
                     buf.write(',');
                     buf.write(status.partition.coord.host.toStringForm().getBytes(Charsets.US_ASCII));
                     buf.write('\n');
+                    exported.incrementAndGet();
                 }
                 return status;
             });
             buf.flush();
+            LOG.info("Exported {} topologies", exported.get());
         } catch (Exception x) {
             throw new RuntimeException(x);
         }
@@ -95,7 +98,7 @@ public class MiruRebalanceDirector {
     public void importTopology(InputStream in) throws Exception {
         Splitter splitter = Splitter.on(',');
         BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-        ListMultimap<MiruHost, TenantAndPartition> elections = ArrayListMultimap.create();
+        int count = 0;
         String line;
         while ((line = reader.readLine()) != null) {
             Iterator<String> split = splitter.split(line).iterator();
@@ -103,11 +106,12 @@ public class MiruRebalanceDirector {
             MiruPartitionId partitionId = split.hasNext() ? MiruPartitionId.of(Integer.parseInt(split.next())) : null;
             MiruHost host = split.hasNext() ? new MiruHost(split.next()) : null;
             if (tenantId != null && partitionId != null && host != null) {
-                elections.put(host, new TenantAndPartition(tenantId, partitionId));
+                clusterRegistry.ensurePartitionCoord(new MiruPartitionCoord(tenantId, partitionId, host));
+                clusterRegistry.addToReplicaRegistry(tenantId, partitionId, Long.MAX_VALUE - orderIdProvider.nextId(), host);
+                count++;
             }
         }
-        clusterRegistry.ensurePartitionCoords(elections);
-        clusterRegistry.addToReplicaRegistry(elections, Long.MAX_VALUE - orderIdProvider.nextId());
+        LOG.info("Imported {} topologies", count);
     }
 
     public void shiftTopologies(Optional<MiruHost> fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
