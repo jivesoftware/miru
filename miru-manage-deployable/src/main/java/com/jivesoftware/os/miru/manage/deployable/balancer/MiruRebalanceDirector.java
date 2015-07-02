@@ -1,6 +1,9 @@
 package com.jivesoftware.os.miru.manage.deployable.balancer;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.HashBasedTable;
@@ -26,9 +29,15 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -60,6 +69,45 @@ public class MiruRebalanceDirector {
         this.miruWALClient = miruWALClient;
         this.orderIdProvider = orderIdProvider;
         this.readerRequestHelpers = readerRequestHelpers;
+    }
+
+    public void exportTopology(OutputStream os) throws IOException {
+        try {
+            BufferedOutputStream buf = new BufferedOutputStream(os);
+            List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
+            clusterRegistry.topologiesForTenants(tenantIds, status -> {
+                if (status != null) {
+                    buf.write(status.partition.coord.tenantId.getBytes());
+                    buf.write(',');
+                    buf.write(String.valueOf(status.partition.coord.partitionId.getId()).getBytes(Charsets.US_ASCII));
+                    buf.write(',');
+                    buf.write(status.partition.coord.host.toStringForm().getBytes(Charsets.US_ASCII));
+                    buf.write('\n');
+                }
+                return status;
+            });
+            buf.flush();
+        } catch (Exception x) {
+            throw new RuntimeException(x);
+        }
+    }
+
+    public void importTopology(InputStream in) throws Exception {
+        Splitter splitter = Splitter.on(',');
+        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+        ListMultimap<MiruHost, TenantAndPartition> elections = ArrayListMultimap.create();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            Iterator<String> split = splitter.split(line).iterator();
+            MiruTenantId tenantId = split.hasNext() ? new MiruTenantId(split.next().getBytes(Charsets.US_ASCII)) : null;
+            MiruPartitionId partitionId = split.hasNext() ? MiruPartitionId.of(Integer.parseInt(split.next())) : null;
+            MiruHost host = split.hasNext() ? new MiruHost(split.next()) : null;
+            if (tenantId != null && partitionId != null && host != null) {
+                elections.put(host, new TenantAndPartition(tenantId, partitionId));
+            }
+        }
+        clusterRegistry.ensurePartitionCoords(elections);
+        clusterRegistry.addToReplicaRegistry(elections, Long.MAX_VALUE - orderIdProvider.nextId());
     }
 
     public void shiftTopologies(Optional<MiruHost> fromHost, ShiftPredicate shiftPredicate, final SelectHostsStrategy selectHostsStrategy) throws Exception {
