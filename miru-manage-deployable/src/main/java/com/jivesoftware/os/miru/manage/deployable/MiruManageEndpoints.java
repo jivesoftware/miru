@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.manage.deployable.balancer.UnhealthyTopologyShif
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
+import java.io.InputStream;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -28,6 +29,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
+import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
+import org.glassfish.jersey.media.multipart.FormDataParam;
 
 /**
  *
@@ -40,14 +43,11 @@ public class MiruManageEndpoints {
 
     private final MiruManageService miruManageService;
     private final MiruRebalanceDirector rebalanceDirector;
-    private final MiruWALClient miruWALClient;
 
     public MiruManageEndpoints(@Context MiruManageService miruManageService,
-        @Context MiruRebalanceDirector rebalanceDirector,
-        @Context MiruWALClient miruWALClient) {
+        @Context MiruRebalanceDirector rebalanceDirector) {
         this.miruManageService = miruManageService;
         this.rebalanceDirector = rebalanceDirector;
-        this.miruWALClient = miruWALClient;
     }
 
     @GET
@@ -82,6 +82,28 @@ public class MiruManageEndpoints {
     public Response getBalancer() {
         String rendered = miruManageService.renderBalancer();
         return Response.ok(rendered).build();
+    }
+
+    @GET
+    @Path("/balancer/export")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response importTopology() {
+        StreamingOutput streamingOutput = rebalanceDirector::exportTopology;
+        return Response.ok(streamingOutput).build();
+    }
+
+    @POST
+    @Path("/balancer/import")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.TEXT_HTML)
+    public Response importTopology(@FormDataParam("file") InputStream fileInputStream,
+        @FormDataParam("file") FormDataContentDisposition contentDispositionHeader) {
+        try {
+            rebalanceDirector.importTopology(fileInputStream);
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            return Response.serverError().entity(t.getMessage()).build();
+        }
     }
 
     @GET
