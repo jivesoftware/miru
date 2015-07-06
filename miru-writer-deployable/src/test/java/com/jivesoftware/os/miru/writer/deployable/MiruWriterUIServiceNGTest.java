@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.writer.deployable;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -54,6 +55,7 @@ import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -119,13 +121,21 @@ public class MiruWriterUIServiceNGTest {
         PartitionPropertyMarshaller regionPropertyMarshaller = new PartitionPropertyMarshaller() {
 
             @Override
-            public PartitionProperties fromBytes(byte[] bytes) throws Exception {
-                return mapper.readValue(bytes, PartitionProperties.class);
+            public PartitionProperties fromBytes(byte[] bytes) {
+                try {
+                    return mapper.readValue(bytes, PartitionProperties.class);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
             @Override
-            public byte[] toBytes(PartitionProperties partitionProperties) throws Exception {
-                return mapper.writeValueAsBytes(partitionProperties);
+            public byte[] toBytes(PartitionProperties partitionProperties) {
+                try {
+                    return mapper.writeValueAsBytes(partitionProperties);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
             }
         };
 

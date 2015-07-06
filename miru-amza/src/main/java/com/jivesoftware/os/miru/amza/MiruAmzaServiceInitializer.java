@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.amza;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -32,6 +33,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import java.io.IOException;
 
 /**
  *
@@ -74,26 +76,32 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
         amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis = config.getCheckIfCompactionIsNeededIntervalInMillis();
         amzaServiceConfig.deltaStripeCompactionIntervalInMillis = config.getDeltaStripeCompactionIntervalInMillis();
-        amzaServiceConfig.takeFromNeighborsIntervalInMillis = config.getTakeFromNeighborsIntervalInMillis();
         amzaServiceConfig.compactTombstoneIfOlderThanNMillis = config.getCompactTombstoneIfOlderThanNMillis();
         amzaServiceConfig.corruptionParanoiaFactor = config.getCorruptionParanoiaFactor();
         amzaServiceConfig.maxUpdatesBeforeDeltaStripeCompaction = config.getMaxUpdatesBeforeDeltaStripeCompaction();
         amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfCompactorThreads = config.getNumberOfCompactorThreads();
         amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
-        amzaServiceConfig.numberOfAckerThreads = config.getNumberOfAckerThreads();
         amzaServiceConfig.hardFsync = config.getHardFsync();
 
         PartitionPropertyMarshaller partitionPropertyMarshaller = new PartitionPropertyMarshaller() {
 
             @Override
-            public PartitionProperties fromBytes(byte[] bytes) throws Exception {
-                return mapper.readValue(bytes, PartitionProperties.class);
+            public PartitionProperties fromBytes(byte[] bytes) {
+                try {
+                    return mapper.readValue(bytes, PartitionProperties.class);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
             @Override
-            public byte[] toBytes(PartitionProperties partitionProperties) throws Exception {
-                return mapper.writeValueAsBytes(partitionProperties);
+            public byte[] toBytes(PartitionProperties partitionProperties) {
+                try {
+                    return mapper.writeValueAsBytes(partitionProperties);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
             }
         };
 
