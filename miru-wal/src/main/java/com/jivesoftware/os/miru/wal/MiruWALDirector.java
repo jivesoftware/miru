@@ -118,6 +118,10 @@ public class MiruWALDirector implements MiruWALClient {
         }
     }
 
+    public void copyPartition(MiruTenantId tenantId, MiruPartitionId from, MiruPartitionId to) throws Exception {
+        activityWALWriter.copyPartition(tenantId, from, to, 10_000);
+    }
+
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         activityWALWriter.removePartition(tenantId, partitionId);
     }

@@ -149,6 +149,11 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
     }
 
     @Override
+    public void copyPartition(MiruTenantId tenantId, MiruPartitionId from, MiruPartitionId to, int batchSize) throws Exception {
+        throw new UnsupportedOperationException("Doesn't work yet");
+    }
+
+    @Override
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         /*TODO
         String ringName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();

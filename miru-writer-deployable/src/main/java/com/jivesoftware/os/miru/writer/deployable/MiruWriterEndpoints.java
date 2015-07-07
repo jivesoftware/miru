@@ -197,6 +197,24 @@ public class MiruWriterEndpoints {
     }
 
     @POST
+    @Path("/repair/copyPartition/{tenantId}/{from}/{to}")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
+    public Response copyPartition(@PathParam("tenantId") String tenantId,
+        @PathParam("from") int fromPartitionId,
+        @PathParam("to") int toPartitionId) {
+        try {
+            miruWALDirector.copyPartition(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(fromPartitionId),
+                MiruPartitionId.of(toPartitionId));
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /repair/copyPartition/{}/{}/{}", new Object[] { tenantId, fromPartitionId, toPartitionId }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @POST
     @Path("/repair/removePartition/{tenantId}/{partitionId}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)

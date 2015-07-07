@@ -12,5 +12,7 @@ public interface MiruActivityWALWriter {
 
     void write(MiruTenantId tenantId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
 
+    void copyPartition(MiruTenantId tenantId, MiruPartitionId from, MiruPartitionId to, int batchSize) throws Exception;
+
     void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 }
