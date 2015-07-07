@@ -52,14 +52,16 @@ public class MiruRCVSActivityWALWriter implements MiruActivityWALWriter {
                 @Override
                 public ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> callback
                     (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> value) throws Exception {
-                    batch.add(new RowColumValueTimestampAdd<>(toRow, value.getColumn(), value.getValue(), new ConstantTimestamper(value.getTimestamp())));
-                    if (batch.size() == batchSize) {
-                        activityWAL.multiRowsMultiAdd(tenantId, batch);
-                        long c = copied.addAndGet(batch.size());
-                        batch.clear();
-                        LOG.info("Finished copying {} activities from partition {} to {} for tenant {}", c, from, to, tenantId);
+                    if (value != null) {
+                        batch.add(new RowColumValueTimestampAdd<>(toRow, value.getColumn(), value.getValue(), new ConstantTimestamper(value.getTimestamp())));
+                        if (batch.size() == batchSize) {
+                            activityWAL.multiRowsMultiAdd(tenantId, batch);
+                            long c = copied.addAndGet(batch.size());
+                            batch.clear();
+                            LOG.info("Finished copying {} activities from partition {} to {} for tenant {}", c, from, to, tenantId);
+                        }
                     }
-                    return null;
+                    return value;
                 }
             });
         if (!batch.isEmpty()) {
@@ -74,14 +76,17 @@ public class MiruRCVSActivityWALWriter implements MiruActivityWALWriter {
                 @Override
                 public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback
                     (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> value) throws Exception {
-                    sipBatch.add(new RowColumValueTimestampAdd<>(toRow, value.getColumn(), value.getValue(), new ConstantTimestamper(value.getTimestamp())));
-                    if (sipBatch.size() == batchSize) {
-                        sipWAL.multiRowsMultiAdd(tenantId, sipBatch);
-                        long c = copied.addAndGet(sipBatch.size());
-                        sipBatch.clear();
-                        LOG.info("Finished copying {} sip activities from partition {} to {} for tenant {}", c, from, to, tenantId);
+                    if (value != null) {
+                        sipBatch.add(
+                            new RowColumValueTimestampAdd<>(toRow, value.getColumn(), value.getValue(), new ConstantTimestamper(value.getTimestamp())));
+                        if (sipBatch.size() == batchSize) {
+                            sipWAL.multiRowsMultiAdd(tenantId, sipBatch);
+                            long c = copied.addAndGet(sipBatch.size());
+                            sipBatch.clear();
+                            LOG.info("Finished copying {} sip activities from partition {} to {} for tenant {}", c, from, to, tenantId);
+                        }
                     }
-                    return null;
+                    return value;
                 }
             });
         if (!sipBatch.isEmpty()) {
