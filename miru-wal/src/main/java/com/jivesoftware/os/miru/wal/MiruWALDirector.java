@@ -122,6 +122,10 @@ public class MiruWALDirector implements MiruWALClient {
         activityWALWriter.copyPartition(tenantId, from, to, 10_000);
     }
 
+    public void fixPartitionIds(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        activityWALWriter.fixPartitionIds(tenantId, partitionId, 10_000);
+    }
+
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         activityWALWriter.removePartition(tenantId, partitionId);
         walLookup.removeRange(tenantId, partitionId);

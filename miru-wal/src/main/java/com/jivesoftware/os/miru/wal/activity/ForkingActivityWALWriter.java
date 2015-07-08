@@ -70,6 +70,26 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
     }
 
     @Override
+    public void fixPartitionIds(MiruTenantId tenantId, MiruPartitionId partitionId, int batchSize) throws Exception {
+        LOG.startTimer("forking>copyPartition>primary");
+        try {
+            primaryWAL.fixPartitionIds(tenantId, partitionId, batchSize);
+        } finally {
+            LOG.startTimer("forking>copyPartition>primary");
+        }
+
+        if (secondaryWAL != null) {
+            LOG.startTimer("forking>copyPartition>secondary");
+            try {
+                secondaryWAL.fixPartitionIds(tenantId, partitionId, batchSize);
+                //TODO spin?
+            } finally {
+                LOG.stopTimer("forking>copyPartition>secondary");
+            }
+        }
+    }
+
+    @Override
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         LOG.startTimer("forking>removePartition>primary");
         try {

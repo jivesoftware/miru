@@ -14,5 +14,7 @@ public interface MiruActivityWALWriter {
 
     void copyPartition(MiruTenantId tenantId, MiruPartitionId from, MiruPartitionId to, int batchSize) throws Exception;
 
+    void fixPartitionIds(MiruTenantId tenantId, MiruPartitionId partitionId, int batchSize) throws Exception;
+
     void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 }

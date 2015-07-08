@@ -229,4 +229,19 @@ public class MiruWriterEndpoints {
         }
     }
 
+    @POST
+    @Path("/repair/fixPartitionIds/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
+    public Response alignPartitionIds(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        try {
+            miruWALDirector.fixPartitionIds(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /repair/fixPartitionIds/{}/{}", new Object[] { tenantId, partitionId }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
 }

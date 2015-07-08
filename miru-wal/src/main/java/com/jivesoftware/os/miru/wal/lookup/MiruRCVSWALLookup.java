@@ -9,6 +9,8 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruRangeLookupColumnKey;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumValueTimestampAdd;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
@@ -21,6 +23,8 @@ import java.util.Map;
  *
  */
 public class MiruRCVSWALLookup implements MiruWALLookup {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruRangeLookupColumnKey, Long, ? extends Exception> rangeLookupTable;
@@ -147,9 +151,14 @@ public class MiruRCVSWALLookup implements MiruWALLookup {
 
     @Override
     public void removeRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.clockMin.getType()), null);
-        rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.clockMax.getType()), null);
-        rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.orderIdMin.getType()), null);
-        rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.orderIdMax.getType()), null);
+        streamRanges(tenantId, partitionId, (_partitionId, type, timestamp) -> {
+            try {
+                rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), type.getType()),
+                    new ConstantTimestamper(timestamp + 1));
+            } catch (Exception e) {
+                LOG.error("Failed to remove range for tenant {} partition {}", new Object[] { tenantId, partitionId }, e);
+            }
+            return true;
+        });
     }
 }

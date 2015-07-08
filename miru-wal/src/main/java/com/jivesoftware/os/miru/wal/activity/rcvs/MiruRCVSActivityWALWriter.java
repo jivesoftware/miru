@@ -101,6 +101,65 @@ public class MiruRCVSActivityWALWriter implements MiruActivityWALWriter {
     }
 
     @Override
+    public void fixPartitionIds(MiruTenantId tenantId, MiruPartitionId partitionId, int batchSize) throws Exception {
+        MiruActivityWALRow row = new MiruActivityWALRow(partitionId.getId());
+
+        List<RowColumValueTimestampAdd<MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity>> batch = Lists.newArrayList();
+        AtomicLong copied = new AtomicLong(0);
+        activityWAL.getEntrys(tenantId, row, null, null, batchSize, false, null, null,
+            new CallbackStream<ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>>() {
+                @Override
+                public ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> callback
+                    (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> value) throws Exception {
+                    if (value != null && !value.getValue().partitionId.equals(partitionId)) {
+                        batch.add(new RowColumValueTimestampAdd<>(row,
+                            value.getColumn(),
+                            value.getValue().copyToPartitionId(partitionId),
+                            new ConstantTimestamper(value.getTimestamp() + 1)));
+                        if (batch.size() == batchSize) {
+                            activityWAL.multiRowsMultiAdd(tenantId, batch);
+                            long c = copied.addAndGet(batch.size());
+                            batch.clear();
+                            LOG.info("Finished rewriting {} activities as partition id {} for tenant {}", c, partitionId, tenantId);
+                        }
+                    }
+                    return value;
+                }
+            });
+        if (!batch.isEmpty()) {
+            activityWAL.multiRowsMultiAdd(tenantId, batch);
+        }
+        batch.clear();
+
+        List<RowColumValueTimestampAdd<MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity>> sipBatch = Lists.newArrayList();
+        copied.set(0);
+        sipWAL.getEntrys(tenantId, row, null, null, batchSize, false, null, null,
+            new CallbackStream<ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long>>() {
+                @Override
+                public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback
+                    (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> value) throws Exception {
+                    if (value != null && !value.getValue().partitionId.equals(partitionId)) {
+                        sipBatch.add(new RowColumValueTimestampAdd<>(row,
+                            value.getColumn(),
+                            value.getValue().copyToPartitionId(partitionId),
+                            new ConstantTimestamper(value.getTimestamp() + 1)));
+                        if (sipBatch.size() == batchSize) {
+                            sipWAL.multiRowsMultiAdd(tenantId, sipBatch);
+                            long c = copied.addAndGet(sipBatch.size());
+                            sipBatch.clear();
+                            LOG.info("Finished rewriting {} sip activities as partition id {} for tenant {}", c, partitionId, tenantId);
+                        }
+                    }
+                    return value;
+                }
+            });
+        if (!sipBatch.isEmpty()) {
+            sipWAL.multiRowsMultiAdd(tenantId, sipBatch);
+        }
+        sipBatch.clear();
+    }
+
+    @Override
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         activityWAL.removeRow(tenantId, new MiruActivityWALRow(partitionId.getId()), null);
         sipWAL.removeRow(tenantId, new MiruActivityWALRow(partitionId.getId()), null);
