@@ -38,7 +38,7 @@ public class MiruRCVSWALLookupTest {
             buildActivity(tenantId, factory, 1, 2005L) // clock 10
         ));
 
-        walLookup.streamRanges(tenantId, MiruPartitionId.of(0), (partitionId, type, timestamp) -> {
+        walLookup.streamRanges(tenantId, MiruPartitionId.of(0), (partitionId, type, timestamp, version) -> {
             assertEquals(partitionId.getId(), 0);
             if (type == MiruWALLookup.RangeType.clockMin) {
                 assertEquals(timestamp, 1);
@@ -54,7 +54,7 @@ public class MiruRCVSWALLookupTest {
             }
             return true;
         });
-        walLookup.streamRanges(tenantId, MiruPartitionId.of(1), (partitionId, type, timestamp) -> {
+        walLookup.streamRanges(tenantId, MiruPartitionId.of(1), (partitionId, type, timestamp, version) -> {
             assertEquals(partitionId.getId(), 1);
             if (type == MiruWALLookup.RangeType.clockMin) {
                 assertEquals(timestamp, 6);

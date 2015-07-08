@@ -92,7 +92,7 @@ public class MiruWALDirector implements MiruWALClient {
         List<MiruTenantId> tenantIds = walLookup.allTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             final Set<MiruPartitionId> found = Sets.newHashSet();
-            walLookup.streamRanges(tenantId, null, (partitionId, type, timestamp) -> {
+            walLookup.streamRanges(tenantId, null, (partitionId, type, timestamp, version) -> {
                 found.add(partitionId);
                 return true;
             });
@@ -200,7 +200,7 @@ public class MiruWALDirector implements MiruWALClient {
     @Override
     public MiruLookupRange lookupRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         final MiruLookupRange lookupRange = new MiruLookupRange(partitionId.getId(), -1, -1, -1, -1); // ugly
-        walLookup.streamRanges(tenantId, partitionId, (streamPartitionId, type, timestamp) -> {
+        walLookup.streamRanges(tenantId, partitionId, (streamPartitionId, type, timestamp, version) -> {
             if (partitionId.equals(streamPartitionId)) {
                 if (type == MiruWALLookup.RangeType.clockMin) {
                     lookupRange.minClock = timestamp;
@@ -222,7 +222,7 @@ public class MiruWALDirector implements MiruWALClient {
     @Override
     public Collection<MiruLookupRange> lookupRanges(MiruTenantId tenantId) throws Exception {
         final Map<MiruPartitionId, MiruLookupRange> partitionLookupRange = Maps.newHashMap();
-        walLookup.streamRanges(tenantId, null, (partitionId, type, timestamp) -> {
+        walLookup.streamRanges(tenantId, null, (partitionId, type, timestamp, version) -> {
             MiruLookupRange lookupRange = partitionLookupRange.get(partitionId);
             if (lookupRange == null) {
                 lookupRange = new MiruLookupRange(partitionId.getId(), -1, -1, -1, -1); // ugly

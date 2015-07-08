@@ -32,7 +32,7 @@ public interface MiruWALLookup {
 
     interface StreamRangeLookup {
 
-        boolean stream(MiruPartitionId partitionId, RangeType type, long timestamp);
+        boolean stream(MiruPartitionId partitionId, RangeType type, long timestamp, long version);
     }
 
     enum RangeType {

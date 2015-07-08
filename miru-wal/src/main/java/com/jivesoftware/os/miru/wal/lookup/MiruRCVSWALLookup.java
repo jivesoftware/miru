@@ -126,7 +126,7 @@ public class MiruRCVSWALLookup implements MiruWALLookup {
                     if (v != null) {
                         MiruPartitionId streamPartitionId = MiruPartitionId.of(v.getColumn().partitionId);
                         if (partitionId == null || partitionId.equals(streamPartitionId)) {
-                            if (streamRangeLookup.stream(streamPartitionId, RangeType.fromType(v.getColumn().type), v.getValue())) {
+                            if (streamRangeLookup.stream(streamPartitionId, RangeType.fromType(v.getColumn().type), v.getValue(), v.getTimestamp())) {
                                 return v;
                             }
                         }
@@ -151,10 +151,10 @@ public class MiruRCVSWALLookup implements MiruWALLookup {
 
     @Override
     public void removeRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        streamRanges(tenantId, partitionId, (_partitionId, type, timestamp) -> {
+        streamRanges(tenantId, partitionId, (_partitionId, type, timestamp, version) -> {
             try {
                 rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), type.getType()),
-                    new ConstantTimestamper(timestamp + 1));
+                    new ConstantTimestamper(version + 1));
             } catch (Exception e) {
                 LOG.error("Failed to remove range for tenant {} partition {}", new Object[] { tenantId, partitionId }, e);
             }
