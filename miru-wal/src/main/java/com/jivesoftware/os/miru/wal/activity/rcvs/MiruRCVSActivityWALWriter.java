@@ -53,7 +53,10 @@ public class MiruRCVSActivityWALWriter implements MiruActivityWALWriter {
                 public ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> callback
                     (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> value) throws Exception {
                     if (value != null) {
-                        batch.add(new RowColumValueTimestampAdd<>(toRow, value.getColumn(), value.getValue(), new ConstantTimestamper(value.getTimestamp())));
+                        batch.add(new RowColumValueTimestampAdd<>(toRow,
+                            value.getColumn(),
+                            value.getValue().copyToPartitionId(to),
+                            new ConstantTimestamper(value.getTimestamp() + 1)));
                         if (batch.size() == batchSize) {
                             activityWAL.multiRowsMultiAdd(tenantId, batch);
                             long c = copied.addAndGet(batch.size());
@@ -77,8 +80,10 @@ public class MiruRCVSActivityWALWriter implements MiruActivityWALWriter {
                 public ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> callback
                     (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> value) throws Exception {
                     if (value != null) {
-                        sipBatch.add(
-                            new RowColumValueTimestampAdd<>(toRow, value.getColumn(), value.getValue(), new ConstantTimestamper(value.getTimestamp())));
+                        sipBatch.add(new RowColumValueTimestampAdd<>(toRow,
+                            value.getColumn(),
+                            value.getValue().copyToPartitionId(to),
+                            new ConstantTimestamper(value.getTimestamp() + 1)));
                         if (sipBatch.size() == batchSize) {
                             sipWAL.multiRowsMultiAdd(tenantId, sipBatch);
                             long c = copied.addAndGet(sipBatch.size());

@@ -124,6 +124,7 @@ public class MiruWALDirector implements MiruWALClient {
 
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         activityWALWriter.removePartition(tenantId, partitionId);
+        walLookup.removeRange(tenantId, partitionId);
     }
 
     private long packTimestamp(long millisIntoTheFuture) {

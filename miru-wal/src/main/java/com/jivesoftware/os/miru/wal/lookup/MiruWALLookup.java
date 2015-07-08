@@ -23,6 +23,8 @@ public interface MiruWALLookup {
 
     void putRange(MiruTenantId tenantId, MiruPartitionId partitionId, RangeMinMax minMax) throws Exception;
 
+    void removeRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     interface StreamLookupEntry {
 
         boolean stream(long activityTimestamp, MiruActivityLookupEntry entry, long version) throws Exception;

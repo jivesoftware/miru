@@ -67,6 +67,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
             MiruPartitionId latestPartitionId = miruWALClient.getLargestPartitionIdAcrossAllWriters(tenant);
 
             if (latestPartitionId != null) {
+                log.info("Latest partition id for {} is {}", tenant, latestPartitionId.getId());
                 List<MiruPartitionId> partitionIds = new ArrayList<>();
                 for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
                     partitionIds.add(latest);
@@ -77,11 +78,17 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                             new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size()));
                     }
                 }
+            } else {
+                log.info("No latest partition id for {}", tenant);
             }
 
             for (MiruTopologyStatus topologyStatus : statusForTenant) {
                 MiruPartition partition = topologyStatus.partition;
                 MiruPartitionId partitionId = partition.coord.partitionId;
+                if (latestPartitionId != null && partitionId.compareTo(latestPartitionId) > 0) {
+                    log.warn("Topologies for {} include partition id {} which is greater than latest {}",
+                        tenant, partitionId.getId(), latestPartitionId.getId());
+                }
                 PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
                 MiruPartitionState state = partition.info.state;
                 String lastIngress = timeAgo(System.currentTimeMillis() - topologyStatus.lastIngressTimestamp);
@@ -102,6 +109,10 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
             if (lookupRanges != null) {
                 for (MiruWALClient.MiruLookupRange lookupRange : lookupRanges) {
                     MiruPartitionId partitionId = MiruPartitionId.of(lookupRange.partitionId);
+                    if (latestPartitionId != null && partitionId.compareTo(latestPartitionId) > 0) {
+                        log.warn("Ranges for {} include partition id {} which is greater than latest {}",
+                            tenant, partitionId.getId(), latestPartitionId.getId());
+                    }
                     PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
                     partitionBean.setMinClock(String.valueOf(lookupRange.minClock));
                     partitionBean.setMaxClock(String.valueOf(lookupRange.maxClock));

@@ -91,6 +91,10 @@ public class MiruPartitionedActivity {
             clockTimestamp, Optional.fromNullable(activity), Optional.fromNullable(readEvent));
     }
 
+    public MiruPartitionedActivity copyToPartitionId(MiruPartitionId to) {
+        return new MiruPartitionedActivity(type, writerId, to, tenantId, index, timestamp, clockTimestamp, activity, readEvent);
+    }
+
     @JsonGetter("activity")
     public MiruActivity getActivityNullable() {
         return activity.orNull();

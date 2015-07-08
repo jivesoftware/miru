@@ -144,4 +144,12 @@ public class MiruRCVSWALLookup implements MiruWALLookup {
             new RowColumValueTimestampAdd<>(tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.orderIdMax.getType()),
                 rangeMinMax.getMaxOrderId(), new ConstantTimestamper(rangeMinMax.getMaxOrderId()))));
     }
+
+    @Override
+    public void removeRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.clockMin.getType()), null);
+        rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.clockMax.getType()), null);
+        rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.orderIdMin.getType()), null);
+        rangeLookupTable.remove(MiruVoidByte.INSTANCE, tenantId, new MiruRangeLookupColumnKey(partitionId.getId(), RangeType.orderIdMax.getType()), null);
+    }
 }
