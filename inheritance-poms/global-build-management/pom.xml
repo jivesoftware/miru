@@ -16,9 +16,9 @@
         <mlogger-version>0.10</mlogger-version>
         <jive-utils-version>0.93</jive-utils-version>
         <rcvs-version>0.18</rcvs-version>
-        <filer-version>0.72</filer-version>
+        <filer-version>0.74</filer-version>
         <routing-bird-version>0.14</routing-bird-version>
-        <amza-version>0.94</amza-version>
+        <amza-version>0.96</amza-version>
         <jackson-version>2.5.3</jackson-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <test.excludedGroups>blocked-by-jira,slow</test.excludedGroups>

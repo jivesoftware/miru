@@ -153,7 +153,7 @@ public class MiruRebalanceDirector {
                 if (fromHost.isPresent()) {
                     pivotHost = fromHost.get();
                 } else if (partitions.isEmpty()) {
-                    pivotHost = allHosts.get(Math.abs(Objects.hashCode(tenantId, partitionId)) % allHosts.size());
+                    pivotHost = allHosts.get(Math.abs(Objects.hashCode(tenantId, partitionId) % allHosts.size()));
                 } else {
                     pivotHost = partitions.get(0).coord.host;
                 }

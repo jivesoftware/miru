@@ -149,7 +149,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             }
             return partitionedActivity.type.isActivityType();
         });
-        activityWALReader.delete(tenantId, partitionId, badKeys);
+        activityWALWriter.delete(tenantId, partitionId, badKeys);
     }
 
     public void sanitizeActivitySipWAL(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
@@ -164,7 +164,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 }
                 return partitionedActivity.type.isActivityType();
             });
-        activityWALReader.deleteSip(tenantId, partitionId, badKeys);
+        activityWALWriter.deleteSip(tenantId, partitionId, badKeys);
     }
 
     @Override
