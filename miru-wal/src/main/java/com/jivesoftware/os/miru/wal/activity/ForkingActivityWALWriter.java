@@ -4,8 +4,11 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -50,6 +53,60 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
             }
         }
         return partitionMinMax;
+    }
+
+    @Override
+    public void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception {
+        LOG.startTimer("forking>delete>primary");
+        try {
+            primaryWAL.delete(tenantId, partitionId, keys);
+        } finally {
+            LOG.startTimer("forking>delete>primary");
+        }
+
+        if (secondaryWAL != null) {
+            LOG.startTimer("forking>delete>secondary");
+            try {
+                while (true) {
+                    try {
+                        secondaryWAL.delete(tenantId, partitionId, keys);
+                        break;
+                    } catch (Exception x) {
+                        LOG.warn("Failed to delete:{} activities for tenant:{} from secondary WAL.", new Object[] { keys.size(), tenantId }, x);
+                        Thread.sleep(10_000);
+                    }
+                }
+            } finally {
+                LOG.stopTimer("forking>delete>secondary");
+            }
+        }
+    }
+
+    @Override
+    public void deleteSip(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivitySipWALColumnKey> keys) throws Exception {
+        LOG.startTimer("forking>deleteSip>primary");
+        try {
+            primaryWAL.deleteSip(tenantId, partitionId, keys);
+        } finally {
+            LOG.startTimer("forking>deleteSip>primary");
+        }
+
+        if (secondaryWAL != null) {
+            LOG.startTimer("forking>deleteSip>secondary");
+            try {
+                while (true) {
+                    try {
+                        secondaryWAL.deleteSip(tenantId, partitionId, keys);
+                        break;
+                    } catch (Exception x) {
+                        LOG.warn("Failed to deleteSip:{} activities for tenant:{} from secondary WAL.", new Object[] { keys.size(), tenantId }, x);
+                        Thread.sleep(10_000);
+                    }
+                }
+            } finally {
+                LOG.stopTimer("forking>deleteSip>secondary");
+            }
+        }
     }
 
     @Override

@@ -5,10 +5,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
-import java.util.Collection;
 
 /** @author jonathan */
 public interface MiruActivityWALReader<C, S> {
@@ -34,10 +31,6 @@ public interface MiruActivityWALReader<C, S> {
     MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
-
-    void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception;
-
-    void deleteSip(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivitySipWALColumnKey> keys) throws Exception;
 
     void allPartitions(PartitionsStream stream) throws Exception;
 

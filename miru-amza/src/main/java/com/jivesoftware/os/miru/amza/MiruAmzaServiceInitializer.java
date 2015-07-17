@@ -22,7 +22,9 @@ import com.jivesoftware.os.amza.shared.ring.RingHost;
 import com.jivesoftware.os.amza.shared.ring.RingMember;
 import com.jivesoftware.os.amza.shared.scan.RowChanges;
 import com.jivesoftware.os.amza.shared.stats.AmzaStats;
-import com.jivesoftware.os.amza.shared.take.RowsTaker;
+import com.jivesoftware.os.amza.shared.take.AvailableRowsTaker;
+import com.jivesoftware.os.amza.shared.take.RowsTakerFactory;
+import com.jivesoftware.os.amza.transport.http.replication.HttpAvailableRowsTaker;
 import com.jivesoftware.os.amza.transport.http.replication.HttpRowsTaker;
 import com.jivesoftware.os.amza.transport.http.replication.endpoints.AmzaReplicationRestEndpoints;
 import com.jivesoftware.os.amza.ui.AmzaUIInitializer;
@@ -70,7 +72,8 @@ public class MiruAmzaServiceInitializer {
         indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
-        RowsTaker tableTaker = new HttpRowsTaker(amzaStats);
+        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
+        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(amzaStats);
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
@@ -113,7 +116,8 @@ public class MiruAmzaServiceInitializer {
             idPacker,
             partitionPropertyMarshaller,
             indexProviderRegistry,
-            tableTaker,
+            availableRowsTaker,
+            rowsTakerFactory,
             Optional.<TakeFailureListener>absent(),
             allRowChanges);
 

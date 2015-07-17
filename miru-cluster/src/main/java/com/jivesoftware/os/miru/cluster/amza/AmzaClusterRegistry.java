@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.cluster.amza;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -82,7 +82,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private static final byte[] EMPTY_BYTES = new byte[0];
-    private static final String CLUSTER_REGISTRY_RING_NAME = "clusterRegistry";
+    private static final byte[] CLUSTER_REGISTRY_RING_NAME = "clusterRegistry".getBytes(Charsets.UTF_8);
 
     private static final String INGRESS_PARTITION_NAME = "partition-ingress";
     private static final String HOSTS_PARTITION_NAME = "hosts";
@@ -95,6 +95,9 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private final MiruHostMarshaller hostMarshaller = new MiruHostMarshaller();
     private final MiruTopologyColumnValueMarshaller topologyColumnValueMarshaller = new MiruTopologyColumnValueMarshaller();
     private final TypeMarshaller<MiruSchema> schemaMarshaller;
+
+    private final byte[] initialEnsuredTopologyBytes = topologyColumnValueMarshaller.toBytes(
+        new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, 0));
 
     private final AmzaService amzaService;
     private final AmzaKretrProvider amzaKretrProvider;
@@ -139,7 +142,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return clientMap.computeIfAbsent(name, s -> {
             try {
                 amzaService.getRingWriter().ensureMaximalSubRing(CLUSTER_REGISTRY_RING_NAME);
-                PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name);
+                PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name.getBytes(Charsets.UTF_8));
                 amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, takeFromFactor, false));
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config
                 return amzaKretrProvider.getClient(partitionName);
@@ -173,33 +176,33 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return ensureClient("host-" + host.toStringForm() + "-" + REGISTRY_SUFFIX);
     }
 
-    private WALKey toTenantKey(MiruTenantId tenantId) {
-        return new WALKey(tenantId.getBytes());
+    private byte[] toTenantKey(MiruTenantId tenantId) {
+        return tenantId.getBytes();
     }
 
-    private MiruTenantId fromTenantKey(WALKey walKey) {
-        return new MiruTenantId(walKey.getKey());
+    private MiruTenantId fromTenantKey(byte[] walKey) {
+        return new MiruTenantId(walKey);
     }
 
-    private WALKey toTopologyKey(MiruTenantId tenantId, MiruPartitionId partitionId) {
+    private byte[] toTopologyKey(MiruTenantId tenantId, MiruPartitionId partitionId) {
         int length = tenantId.length();
         ByteBuffer bb = ByteBuffer.allocate(4 + length + 4);
         bb.putInt(length);
         bb.put(tenantId.getBytes());
         bb.putInt(partitionId.getId());
-        return new WALKey(bb.array());
+        return bb.array();
     }
 
-    private WALKey topologyKeyPrefix(MiruTenantId tenantId) {
+    private byte[] topologyKeyPrefix(MiruTenantId tenantId) {
         int length = tenantId.length();
         ByteBuffer bb = ByteBuffer.allocate(4 + length);
         bb.putInt(length);
         bb.put(tenantId.getBytes());
-        return new WALKey(bb.array());
+        return bb.array();
     }
 
-    private RawTenantAndPartition fromTopologyKey(WALKey walKey) {
-        ByteBuffer bb = ByteBuffer.wrap(walKey.getKey());
+    private RawTenantAndPartition fromTopologyKey(byte[] walKey) {
+        ByteBuffer bb = ByteBuffer.wrap(walKey);
         int length = bb.getInt();
         byte[] tenantBytes = new byte[length];
         bb.get(tenantBytes);
@@ -217,15 +220,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     public void heartbeat(MiruHost miruHost) throws Exception {
         byte[] key = hostMarshaller.toBytes(miruHost);
 
-        hostsClient().commit(new AmzaPartitionUpdates().set(new WALKey(key), FilerIO.longBytes(System.currentTimeMillis())),
-            0, 0, TimeUnit.MILLISECONDS);
+        hostsClient().commit(new AmzaPartitionUpdates().set(key, FilerIO.longBytes(System.currentTimeMillis())), 0, 0, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public LinkedHashSet<HostHeartbeat> getAllHosts() throws Exception {
         final LinkedHashSet<HostHeartbeat> heartbeats = new LinkedHashSet<>();
         hostsClient().scan(null, null, (transactionId, key, value) -> {
-            MiruHost host = hostMarshaller.fromBytes(key.getKey());
+            MiruHost host = hostMarshaller.fromBytes(key);
             long timestamp = FilerIO.bytesLong(value.getValue());
             heartbeats.add(new HostHeartbeat(host, timestamp));
             return true;
@@ -236,7 +238,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     @Override
     public void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception {
         AmzaKretr ingressClient = ingressClient();
-        Map<WALKey, byte[]> keyToBytesMap = Maps.newHashMap();
+        AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
 
         MiruTenantId tenantId = ingressUpdate.tenantId;
         MiruPartitionId partitionId = ingressUpdate.partitionId;
@@ -245,77 +247,71 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
 
         if (ingressUpdate.ingressTimestamp != -1 &&
             (existing == null || existing.ingressTimestamp == -1 || ingressUpdate.ingressTimestamp > existing.ingressTimestamp)) {
-            keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.ingressTimestamp), FilerIO.longBytes(ingressUpdate.ingressTimestamp));
+            updates.set(toIngressKey(tenantId, partitionId, IngressType.ingressTimestamp),
+                FilerIO.longBytes(ingressUpdate.ingressTimestamp));
         }
         if (ingressUpdate.minMax.clockMin != -1 &&
             (existing == null || existing.clockMin == -1 || ingressUpdate.minMax.clockMin < existing.clockMin)) {
-            keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.clockMin), FilerIO.longBytes(ingressUpdate.minMax.clockMin));
+            updates.set(toIngressKey(tenantId, partitionId, IngressType.clockMin), FilerIO.longBytes(ingressUpdate.minMax.clockMin));
         }
         if (ingressUpdate.minMax.clockMax != -1 &&
             (existing == null || existing.clockMax == -1 || ingressUpdate.minMax.clockMax > existing.clockMax)) {
-            keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.clockMax), FilerIO.longBytes(ingressUpdate.minMax.clockMax));
+            updates.set(toIngressKey(tenantId, partitionId, IngressType.clockMax), FilerIO.longBytes(ingressUpdate.minMax.clockMax));
         }
         if (ingressUpdate.minMax.orderIdMin != -1 &&
             (existing == null || existing.orderIdMin == -1 || ingressUpdate.minMax.orderIdMin < existing.orderIdMin)) {
-            keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.orderIdMin), FilerIO.longBytes(ingressUpdate.minMax.orderIdMin));
+            updates.set(toIngressKey(tenantId, partitionId, IngressType.orderIdMin), FilerIO.longBytes(ingressUpdate.minMax.orderIdMin));
         }
         if (ingressUpdate.minMax.orderIdMax != -1 &&
             (existing == null || existing.orderIdMax == -1 || ingressUpdate.minMax.orderIdMax > existing.orderIdMax)) {
-            keyToBytesMap.put(toIngressKey(tenantId, partitionId, IngressType.orderIdMax), FilerIO.longBytes(ingressUpdate.minMax.orderIdMax));
+            updates.set(toIngressKey(tenantId, partitionId, IngressType.orderIdMax), FilerIO.longBytes(ingressUpdate.minMax.orderIdMax));
         }
 
-        ingressClient.commit(new AmzaPartitionUpdates().setAll(keyToBytesMap.entrySet()),
-            replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
+        ingressClient.commit(updates, replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void updateTopologies(MiruHost host, Collection<TopologyUpdate> topologyUpdates) throws Exception {
         final AmzaKretr topologyInfoClient = topologyInfoClient(host);
+        AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
 
-        ImmutableMap<WALKey, TopologyUpdate> keyToUpdateMap = Maps.uniqueIndex(topologyUpdates, topologyUpdate -> {
-            return toTopologyKey(topologyUpdate.coord.tenantId, topologyUpdate.coord.partitionId);
-        });
+        for (TopologyUpdate topologyUpdate : topologyUpdates) {
+            MiruPartitionCoord coord = topologyUpdate.coord;
+            Optional<MiruPartitionCoordInfo> optionalInfo = topologyUpdate.optionalInfo;
+            Optional<Long> refreshQueryTimestamp = topologyUpdate.queryTimestamp;
+            byte[] key = toTopologyKey(coord.tenantId, coord.partitionId);
 
-        Map<WALKey, byte[]> keyToBytesMap = Maps.transformValues(keyToUpdateMap, topologyUpdate -> {
-            try {
-                MiruPartitionCoord coord = topologyUpdate.coord;
-                Optional<MiruPartitionCoordInfo> optionalInfo = topologyUpdate.optionalInfo;
-                Optional<Long> refreshQueryTimestamp = topologyUpdate.queryTimestamp;
-                WALKey key = toTopologyKey(coord.tenantId, coord.partitionId);
-
-                MiruPartitionCoordInfo coordInfo;
-                if (optionalInfo.isPresent()) {
-                    coordInfo = optionalInfo.get();
+            MiruPartitionCoordInfo coordInfo;
+            if (optionalInfo.isPresent()) {
+                coordInfo = optionalInfo.get();
+            } else {
+                byte[] got = topologyInfoClient.getValue(key);
+                if (got != null) {
+                    MiruTopologyColumnValue value = topologyColumnValueMarshaller.fromBytes(got);
+                    coordInfo = new MiruPartitionCoordInfo(value.state, value.storage);
                 } else {
-                    byte[] got = topologyInfoClient.getValue(key);
-                    if (got != null) {
-                        MiruTopologyColumnValue value = topologyColumnValueMarshaller.fromBytes(got);
-                        coordInfo = new MiruPartitionCoordInfo(value.state, value.storage);
-                    } else {
-                        coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
-                    }
+                    coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
                 }
-                long queryTimestamp = refreshQueryTimestamp.or(-1L);
-                if (queryTimestamp == -1) {
-                    byte[] got = topologyInfoClient.getValue(key);
-                    if (got != null) {
-                        MiruTopologyColumnValue value = topologyColumnValueMarshaller.fromBytes(got);
-                        queryTimestamp = value.lastQueryTimestamp;
-                    } else {
-                        queryTimestamp = 0;
-                    }
-                }
-
-                MiruTopologyColumnValue value = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, queryTimestamp);
-                LOG.debug("Updating {} to {} at query={}", new Object[] { coord, coordInfo, queryTimestamp });
-                return topologyColumnValueMarshaller.toBytes(value);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to apply topology update", e);
             }
-        });
+            long queryTimestamp = refreshQueryTimestamp.or(-1L);
+            if (queryTimestamp == -1) {
+                byte[] got = topologyInfoClient.getValue(key);
+                if (got != null) {
+                    MiruTopologyColumnValue value = topologyColumnValueMarshaller.fromBytes(got);
+                    queryTimestamp = value.lastQueryTimestamp;
+                } else {
+                    queryTimestamp = 0;
+                }
+            }
 
-        topologyInfoClient.commit(new AmzaPartitionUpdates().setAll(keyToBytesMap.entrySet()),
-            0, 0, TimeUnit.MILLISECONDS);
+            MiruTopologyColumnValue value = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, queryTimestamp);
+            LOG.debug("Updating {} to {} at query={}", new Object[] { coord, coordInfo, queryTimestamp });
+
+            byte[] valueBytes = topologyColumnValueMarshaller.toBytes(value);
+            updates.set(toTopologyKey(topologyUpdate.coord.tenantId, topologyUpdate.coord.partitionId), valueBytes);
+        }
+
+        topologyInfoClient.commit(updates, 0, 0, TimeUnit.MILLISECONDS);
 
         markTenantTopologyUpdated(topologyUpdates.stream()
             .filter(input -> input.optionalInfo.isPresent())
@@ -477,17 +473,19 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         for (MiruHost host : coords.keySet()) {
             AmzaKretr topologyInfoClient = topologyInfoClient(host);
             List<TenantAndPartition> tenantAndPartitions = coords.get(host);
-            List<WALKey> keys = Lists.newArrayListWithCapacity(tenantAndPartitions.size());
-            for (TenantAndPartition tenantAndPartition : tenantAndPartitions) {
-                keys.add(toTopologyKey(tenantAndPartition.tenantId, tenantAndPartition.partitionId));
-            }
 
-            MiruTopologyColumnValue update = new MiruTopologyColumnValue(MiruPartitionState.offline, MiruBackingStorage.memory, 0);
-            byte[] updateBytes = topologyColumnValueMarshaller.toBytes(update);
             AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
-            topologyInfoClient.get(keys, (txId, walKey, timestampedValue) -> {
-                if (timestampedValue == null) {
-                    updates.set(walKey, updateBytes);
+            // where's my putIfAbsent?
+            topologyInfoClient.get(stream -> {
+                for (TenantAndPartition tenantAndPartition : tenantAndPartitions) {
+                    if (!stream.stream(toTopologyKey(tenantAndPartition.tenantId, tenantAndPartition.partitionId))) {
+                        return false;
+                    }
+                }
+                return true;
+            }, (key, value, timestamp) -> {
+                if (value == null) {
+                    updates.set(key, initialEnsuredTopologyBytes);
                 }
                 return true;
             });
@@ -506,8 +504,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             byte[] nextIdBytes = FilerIO.longBytes(nextId); // most recent is smallest.
             for (TenantAndPartition tenantAndPartition : tenantAndPartitions) {
                 tenantIds.add(tenantAndPartition.tenantId);
-                WALKey key = toTopologyKey(tenantAndPartition.tenantId, tenantAndPartition.partitionId);
-                updates.set(key, nextIdBytes);
+                updates.set(toTopologyKey(tenantAndPartition.tenantId, tenantAndPartition.partitionId), nextIdBytes);
             }
             registryClient.commit(updates, replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
         }
@@ -547,14 +544,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     public void removeTenantPartionReplicaSet(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
         hostsClient().scan(null, null, (transactionId, key, value) -> {
-            MiruHost host = hostMarshaller.fromBytes(key.getKey());
+            MiruHost host = hostMarshaller.fromBytes(key);
             hosts.add(host);
             return true;
         });
         for (MiruHost host : hosts) {
             AmzaKretr registryClient = registryClient(host);
             AmzaKretr topologyInfoClient = topologyInfoClient(host);
-            WALKey topologyKey = toTopologyKey(tenantId, partitionId);
+            byte[] topologyKey = toTopologyKey(tenantId, partitionId);
             registryClient.commit(new AmzaPartitionUpdates().remove(topologyKey), replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
             topologyInfoClient.commit(new AmzaPartitionUpdates().remove(topologyKey), replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
         }
@@ -601,8 +598,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     private NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> tenantLatestTopologies(MiruTenantId tenantId) throws Exception {
-        final WALKey from = topologyKeyPrefix(tenantId);
-        final WALKey to = from.prefixUpperExclusive();
+        final byte[] from = topologyKeyPrefix(tenantId);
+        final byte[] to = WALKey.prefixUpperExclusive(from);
         final NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> partitionIdToLatest = new TreeMap<>();
         for (HostHeartbeat hostHeartbeat : getAllHosts()) {
             AmzaKretr registryClient = registryClient(hostHeartbeat.host);
@@ -814,7 +811,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         long lastIngressTimestamp = getIngressUpdate(coord.tenantId, coord.partitionId, IngressType.ingressTimestamp, -1L);
         long lastQueryTimestamp = -1;
 
-        WALKey key = toTopologyKey(coord.tenantId, coord.partitionId);
+        byte[] key = toTopologyKey(coord.tenantId, coord.partitionId);
         AmzaKretr topologyInfoClient = topologyInfoClient(coord.host);
         byte[] gotTopology = topologyInfoClient.getValue(key);
         if (gotTopology != null) {
@@ -847,7 +844,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         Set<MiruTenantId> tenantIds = getTenantsForHostAsSet(host);
 
         // TODO add to Amza removeTable
-        hostsClient().commit(new AmzaPartitionUpdates().remove(new WALKey(hostMarshaller.toBytes(host))),
+        hostsClient().commit(new AmzaPartitionUpdates().remove(hostMarshaller.toBytes(host)),
             replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
 
         markTenantTopologyUpdated(tenantIds);
@@ -896,12 +893,11 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             return false;
         }
         byte[] schemaBytes = schemaMarshaller.toBytes(schema);
-        Map<WALKey, byte[]> toMap = Maps.newHashMap();
+        AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
         for (MiruTenantId to : toTenantIds) {
-            toMap.put(toTenantKey(to), schemaBytes);
+            updates.set(toTenantKey(to), schemaBytes);
         }
-        schemasClient().commit(new AmzaPartitionUpdates().setAll(toMap.entrySet()),
-            replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
+        schemasClient().commit(updates, replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
         return true;
     }
 
@@ -962,15 +958,15 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     private void streamRanges(MiruTenantId tenantId, MiruPartitionId partitionId, StreamRangeLookup streamRangeLookup) throws Exception {
-        WALKey fromKey = toIngressKey(tenantId, partitionId, null);
-        WALKey toKey = fromKey.prefixUpperExclusive();
+        byte[] fromKey = toIngressKey(tenantId, partitionId, null);
+        byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
         AmzaKretr ingressClient = ingressClient();
         if (ingressClient != null) {
             ingressClient.scan(fromKey, toKey, (rowTxId, key, value) -> {
                 if (value != null) {
-                    MiruPartitionId streamPartitionId = ingressKeyToPartitionId(key.getKey());
+                    MiruPartitionId streamPartitionId = ingressKeyToPartitionId(key);
                     if (partitionId == null || partitionId.equals(streamPartitionId)) {
-                        IngressType ingressType = ingressKeyToType(key.getKey());
+                        IngressType ingressType = ingressKeyToType(key);
                         if (streamRangeLookup.stream(streamPartitionId, ingressType, value.getTimestampId())) {
                             return true;
                         }
@@ -981,7 +977,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         }
     }
 
-    private WALKey toIngressKey(MiruTenantId tenantId, MiruPartitionId partitionId, IngressType ingressType) {
+    private byte[] toIngressKey(MiruTenantId tenantId, MiruPartitionId partitionId, IngressType ingressType) {
         byte[] keyBytes;
         byte[] tenantBytes = tenantId.getBytes();
         if (partitionId != null) {
@@ -1002,7 +998,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             FilerIO.intBytes(tenantBytes.length, keyBytes, 0);
             System.arraycopy(tenantBytes, 0, keyBytes, 4, tenantBytes.length);
         }
-        return new WALKey(keyBytes);
+        return keyBytes;
     }
 
     private MiruPartitionId ingressKeyToPartitionId(byte[] keyBytes) {

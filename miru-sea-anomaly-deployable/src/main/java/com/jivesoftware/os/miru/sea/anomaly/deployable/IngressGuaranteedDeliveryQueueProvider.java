@@ -125,7 +125,7 @@ public class IngressGuaranteedDeliveryQueueProvider {
     }
 
     public GuaranteedDeliveryService getGuaranteedDeliveryServices(int hash) {
-        return guaranteedDeliveryServices[Math.abs(hash) % guaranteedDeliveryServices.length];
+        return guaranteedDeliveryServices[Math.abs(hash % guaranteedDeliveryServices.length)];
     }
 
 }

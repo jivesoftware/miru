@@ -36,7 +36,7 @@ public class DiskIdentifierPartResourceLocator implements MiruResourceLocator {
 
     private File getPartitionPathByName(MiruResourcePartitionIdentifier identifier, String name) {
         File[] partitionPaths = ensurePartitionPaths(identifier);
-        return partitionPaths[Math.abs(name.hashCode()) % partitionPaths.length];
+        return partitionPaths[Math.abs(name.hashCode() % partitionPaths.length)];
     }
 
     @Override

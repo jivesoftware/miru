@@ -18,7 +18,7 @@ public class MiruTempDirectoryResourceLocator implements MiruResourceLocator {
     public File getFilerFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
         File[] partitionPaths = getPartitionPaths(identifier);
         //TODO leaky
-        return new File(partitionPaths[Math.abs(name.hashCode()) % partitionPaths.length], name + ".filer");
+        return new File(partitionPaths[Math.abs(name.hashCode() % partitionPaths.length)], name + ".filer");
     }
 
     @Override

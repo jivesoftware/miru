@@ -2,12 +2,8 @@ package com.jivesoftware.os.miru.wal.activity.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.shared.AmzaPartitionUpdates;
-import com.jivesoftware.os.amza.shared.scan.Commitable;
-import com.jivesoftware.os.amza.shared.scan.Scan;
-import com.jivesoftware.os.amza.shared.take.Highwaters;
-import com.jivesoftware.os.amza.shared.wal.WALKey;
-import com.jivesoftware.os.amza.shared.wal.WALValue;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -15,8 +11,10 @@ import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
+import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -30,8 +28,8 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
     private final long replicateTimeoutMillis;
     private final MiruActivityWALColumnKeyMarshaller columnKeyMarshaller = new MiruActivityWALColumnKeyMarshaller();
     private final JacksonJsonObjectTypeMarshaller<MiruPartitionedActivity> partitionedActivityMarshaller;
-    private final Function<MiruPartitionedActivity, WALKey> activityWALKeyFunction;
-    private final Function<MiruPartitionedActivity, WALValue> activitySerializerFunction;
+    private final Function<MiruPartitionedActivity, byte[]> activityWALKeyFunction;
+    private final Function<MiruPartitionedActivity, byte[]> activitySerializerFunction;
 
     public AmzaActivityWALWriter(AmzaWALUtil amzaWALUtil,
         int replicateRequireNReplicas,
@@ -51,18 +49,14 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
             }
 
             try {
-                return new WALKey(columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(),
-                    activityCollisionId)));
+                return columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(partitionedActivity.type.getSort(), activityCollisionId));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         };
         this.activitySerializerFunction = partitionedActivity -> {
             try {
-                long timestamp = partitionedActivity.activity.isPresent()
-                    ? partitionedActivity.activity.get().version
-                    : System.currentTimeMillis();
-                return new WALValue(partitionedActivityMarshaller.toBytes(partitionedActivity), timestamp, false);
+                return partitionedActivityMarshaller.toBytes(partitionedActivity);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -76,19 +70,51 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
 
         recordTenantPartition(tenantId, partitionId);
         RangeMinMax partitionMinMax = new RangeMinMax();
+
+        amzaWALUtil.getActivityClient(tenantId, partitionId).commit(
+            (highwaters, txKeyValueStream) -> {
+                for (MiruPartitionedActivity activity : partitionedActivities) {
+                    long timestamp = activity.activity.isPresent() ? activity.activity.get().version : System.currentTimeMillis();
+                    if (!txKeyValueStream.row(-1, activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp, false)) {
+                        return false;
+                    }
+                }
+                return true;
+            },
+            replicateRequireNReplicas,
+            replicateTimeoutMillis,
+            TimeUnit.MILLISECONDS);
+
         for (MiruPartitionedActivity activity : partitionedActivities) {
             if (partitionId.equals(activity.partitionId)) {
                 partitionMinMax.put(activity.clockTimestamp, activity.timestamp);
             }
         }
 
-        amzaWALUtil.getActivityClient(tenantId, partitionId).commit(
-            new ActivityUpdates(partitionId, partitionedActivities, activityWALKeyFunction, activitySerializerFunction),
-            replicateRequireNReplicas,
-            replicateTimeoutMillis,
-            TimeUnit.MILLISECONDS);
-
         return partitionMinMax;
+    }
+
+    @Override
+    public void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception {
+        AmzaKretrProvider.AmzaKretr client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        if (client != null) {
+            client.commit((highwaters, txKeyValueStream) -> {
+                    for (MiruActivityWALColumnKey columnKey : keys) {
+                        if (!txKeyValueStream.row(-1, columnKeyMarshaller.toLexBytes(columnKey), null, -1, true)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+                replicateRequireNReplicas,
+                replicateTimeoutMillis,
+                TimeUnit.MILLISECONDS);
+        }
+    }
+
+    @Override
+    public void deleteSip(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivitySipWALColumnKey> keys) throws Exception {
+        // no such thing
     }
 
     @Override
@@ -99,34 +125,5 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
     private void recordTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         AmzaPartitionUpdates updates = new AmzaPartitionUpdates().set(amzaWALUtil.toPartitionsKey(tenantId, partitionId), null);
         amzaWALUtil.getLookupPartitionsClient().commit(updates, 0, 0, TimeUnit.MILLISECONDS);
-    }
-
-    private static class ActivityUpdates implements Commitable<WALValue> {
-
-        private final MiruPartitionId partitionId;
-        private final List<MiruPartitionedActivity> activities;
-        private final Function<MiruPartitionedActivity, WALKey> walKeyFunction;
-        private final Function<MiruPartitionedActivity, WALValue> walValueFunction;
-
-        public ActivityUpdates(MiruPartitionId partitionId,
-            List<MiruPartitionedActivity> activities,
-            Function<MiruPartitionedActivity, WALKey> walKeyFunction,
-            Function<MiruPartitionedActivity, WALValue> walValueFunction) {
-            this.partitionId = partitionId;
-            this.activities = activities;
-            this.walKeyFunction = walKeyFunction;
-            this.walValueFunction = walValueFunction;
-        }
-
-        @Override
-        public void commitable(Highwaters highwaters, Scan<WALValue> scan) throws Exception {
-            for (MiruPartitionedActivity activity : activities) {
-                if (partitionId.equals(activity.partitionId)) {
-                    if (!scan.row(-1, walKeyFunction.apply(activity), walValueFunction.apply(activity))) {
-                        return;
-                    }
-                }
-            }
-        }
     }
 }

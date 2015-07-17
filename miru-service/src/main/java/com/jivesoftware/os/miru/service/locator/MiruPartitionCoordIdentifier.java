@@ -17,7 +17,7 @@ public class MiruPartitionCoordIdentifier implements MiruResourcePartitionIdenti
 
     @Override
     public String[] getParts() {
-        String hashDir = "tenantHash-" + String.valueOf(Math.abs(coord.tenantId.hashCode()) % NUM_HASH_DIRS);
+        String hashDir = "tenantHash-" + String.valueOf(Math.abs(coord.tenantId.hashCode() % NUM_HASH_DIRS));
         return new String[] { hashDir, coord.tenantId.toString(), coord.partitionId.toString() };
     }
 

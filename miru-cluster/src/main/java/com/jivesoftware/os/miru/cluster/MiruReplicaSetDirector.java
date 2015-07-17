@@ -84,7 +84,7 @@ public class MiruReplicaSetDirector {
         // TODO since we only consider eligible hosts we should add a cleanup task that makes replica sets contiguous with respect to the ring.
         int hashCode = Objects.hash(tenantId, partitionId);
         int electedCount = 0;
-        int index = Math.abs(hashCode);
+        int index = hashCode == Integer.MIN_VALUE ? Integer.MAX_VALUE : Math.abs(hashCode);
         for (int i = 0; i < hostsArray.length && electedCount < countOfMissingReplicas; i++, index++) {
             MiruHost hostToElect = hostsArray[index % hostsArray.length];
             if (!hostsWithReplica.contains(hostToElect)) {

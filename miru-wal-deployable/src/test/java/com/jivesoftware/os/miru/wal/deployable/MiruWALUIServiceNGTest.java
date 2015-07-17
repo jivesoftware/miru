@@ -18,7 +18,9 @@ import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
 import com.jivesoftware.os.amza.shared.ring.RingHost;
 import com.jivesoftware.os.amza.shared.ring.RingMember;
 import com.jivesoftware.os.amza.shared.stats.AmzaStats;
-import com.jivesoftware.os.amza.shared.take.RowsTaker;
+import com.jivesoftware.os.amza.shared.take.AvailableRowsTaker;
+import com.jivesoftware.os.amza.shared.take.RowsTakerFactory;
+import com.jivesoftware.os.amza.transport.http.replication.HttpAvailableRowsTaker;
 import com.jivesoftware.os.amza.transport.http.replication.HttpRowsTaker;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
@@ -108,7 +110,8 @@ public class MiruWALUIServiceNGTest {
         indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
-        RowsTaker rowsTaker = new HttpRowsTaker(amzaStats);
+        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(amzaStats);
+        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
 
         final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
@@ -144,7 +147,8 @@ public class MiruWALUIServiceNGTest {
             idPacker,
             partitionPropertyMarshaller,
             indexProviderRegistry,
-            rowsTaker,
+            availableRowsTaker,
+            rowsTakerFactory,
             Optional.<TakeFailureListener>absent(),
             rowsChanged -> {
             });

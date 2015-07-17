@@ -177,7 +177,7 @@ public class MiruWriterMain {
                 miruAmzaServiceConfig,
                 changes -> {
                     if (changes.getVersionedPartitionName().getPartitionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_PARTITION_NAME)) {
-                        for (WALKey key : changes.getApply().columnKeySet()) {
+                        for (WALKey key : changes.getApply().keySet()) {
                             MiruTenantId tenantId = AmzaPartitionIdProvider.extractTenantForLatestPartition(key);
                             latestAlignmentCache.remove(tenantId);
                         }

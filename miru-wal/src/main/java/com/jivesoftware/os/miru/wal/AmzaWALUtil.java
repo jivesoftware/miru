@@ -1,15 +1,15 @@
 package com.jivesoftware.os.miru.wal;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.amza.client.AmzaKretrProvider;
 import com.jivesoftware.os.amza.client.AmzaKretrProvider.AmzaKretr;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.AmzaPartitionAPI.TimestampedValue;
+import com.jivesoftware.os.amza.shared.TimestampedValue;
 import com.jivesoftware.os.amza.shared.partition.PartitionName;
 import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
 import com.jivesoftware.os.amza.shared.scan.Scan;
 import com.jivesoftware.os.amza.shared.take.TakeCursors;
-import com.jivesoftware.os.amza.shared.wal.WALKey;
 import com.jivesoftware.os.amza.shared.wal.WALValue;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
@@ -24,8 +24,12 @@ import java.util.Map;
  */
 public class AmzaWALUtil {
 
-    private static final PartitionName LOOKUP_TENANTS_PARTITION_NAME = new PartitionName(false, "lookup-tenants", "lookup-tenants");
-    private static final PartitionName LOOKUP_PARTITIONS_REGION_NAME = new PartitionName(false, "lookup-partitions", "lookup-partitions");
+    private static final PartitionName LOOKUP_TENANTS_PARTITION_NAME = new PartitionName(false,
+        "lookup-tenants".getBytes(Charsets.UTF_8),
+        "lookup-tenants".getBytes(Charsets.UTF_8));
+    private static final PartitionName LOOKUP_PARTITIONS_REGION_NAME = new PartitionName(false,
+        "lookup-partitions".getBytes(Charsets.UTF_8),
+        "lookup-partitions".getBytes(Charsets.UTF_8));
 
     public static final WALValue NULL_VALUE = new WALValue(null, 0L, false);
 
@@ -60,12 +64,14 @@ public class AmzaWALUtil {
 
     private PartitionName getActivityPartitionName(MiruTenantId tenantId, MiruPartitionId partitionId) {
         String walName = "activityWAL-" + tenantId.toString() + "-" + partitionId.toString();
-        return new PartitionName(false, walName, walName);
+        byte[] walNameBytes = walName.getBytes(Charsets.UTF_8);
+        return new PartitionName(false, walNameBytes, walNameBytes);
     }
 
     private PartitionName getLookupPartitionName(MiruTenantId tenantId) {
         String lookupName = "lookup-activity-" + tenantId.toString();
-        return new PartitionName(false, lookupName, lookupName);
+        byte[] lookupNameBytes = lookupName.getBytes(Charsets.UTF_8);
+        return new PartitionName(false, lookupNameBytes, lookupNameBytes);
     }
 
     /* TODO should be done by the remote client looking up ordered hosts
@@ -118,17 +124,17 @@ public class AmzaWALUtil {
         return client.takeFromTransactionId(transactionId, scan);
     }
 
-    public WALKey toPartitionsKey(MiruTenantId tenantId, MiruPartitionId partitionId) {
+    public byte[] toPartitionsKey(MiruTenantId tenantId, MiruPartitionId partitionId) {
         byte[] tenantBytes = tenantId.getBytes();
         ByteBuffer buf = ByteBuffer.allocate(4 + tenantBytes.length + 4);
         buf.putInt(tenantBytes.length);
         buf.put(tenantBytes);
         buf.putInt(partitionId.getId());
-        return new WALKey(buf.array());
+        return buf.array();
     }
 
-    public TenantAndPartition fromPartitionsKey(WALKey key) {
-        ByteBuffer buf = ByteBuffer.wrap(key.getKey());
+    public TenantAndPartition fromPartitionsKey(byte[] key) {
+        ByteBuffer buf = ByteBuffer.wrap(key);
         int tenantLength = buf.getInt();
         byte[] tenantBytes = new byte[tenantLength];
         buf.get(tenantBytes);

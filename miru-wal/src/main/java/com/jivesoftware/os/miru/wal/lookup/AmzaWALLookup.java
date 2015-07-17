@@ -3,9 +3,8 @@ package com.jivesoftware.os.miru.wal.lookup;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.client.AmzaKretrProvider.AmzaKretr;
-import com.jivesoftware.os.amza.shared.AmzaPartitionAPI.TimestampedValue;
 import com.jivesoftware.os.amza.shared.AmzaPartitionUpdates;
-import com.jivesoftware.os.amza.shared.wal.WALKey;
+import com.jivesoftware.os.amza.shared.TimestampedValue;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
@@ -48,7 +47,7 @@ public class AmzaWALLookup implements MiruWALLookup {
 
         MiruVersionedActivityLookupEntry[] entries = new MiruVersionedActivityLookupEntry[activityTimestamps.length];
         for (int i = 0; i < activityTimestamps.length; i++) {
-            WALKey key = new WALKey(FilerIO.longBytes(activityTimestamps[i]));
+            byte[] key = FilerIO.longBytes(activityTimestamps[i]);
             TimestampedValue value = client.getTimestampedValue(key);
             if (value != null) {
                 entries[i] = new MiruVersionedActivityLookupEntry(activityTimestamps[i],
@@ -63,7 +62,7 @@ public class AmzaWALLookup implements MiruWALLookup {
     public void add(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception {
         if (!knownLookupTenants.contains(tenantId)) {
             AmzaKretr lookupTenantsRegion = amzaWALUtil.getLookupTenantsClient();
-            lookupTenantsRegion.commit(new AmzaPartitionUpdates().set(new WALKey(tenantId.getBytes()), null), 1, 1, TimeUnit.MINUTES); //TODO config
+            lookupTenantsRegion.commit(new AmzaPartitionUpdates().set(tenantId.getBytes(), null), 1, 1, TimeUnit.MINUTES); //TODO config
             knownLookupTenants.add(tenantId);
         }
 
@@ -71,7 +70,7 @@ public class AmzaWALLookup implements MiruWALLookup {
 
         for (MiruVersionedActivityLookupEntry versionedEntry : entries) {
             lookupActivityRegion.commit(
-                new AmzaPartitionUpdates().set(new WALKey(FilerIO.longBytes(versionedEntry.timestamp)),
+                new AmzaPartitionUpdates().set(FilerIO.longBytes(versionedEntry.timestamp),
                     activityLookupEntryMarshaller.toBytes(versionedEntry.entry), versionedEntry.version),
                 replicateLookupQuorum,
                 replicateLookupTimeoutMillis,
@@ -84,10 +83,10 @@ public class AmzaWALLookup implements MiruWALLookup {
         AmzaKretr client = amzaWALUtil.getLookupClient(tenantId);
 
         if (client != null) {
-            client.scan(new WALKey(FilerIO.longBytes(afterTimestamp)), null, (rowTxId, key, value) -> {
+            client.scan(FilerIO.longBytes(afterTimestamp), null, (rowTxId, key, value) -> {
                 if (value != null) {
                     MiruActivityLookupEntry entry = activityLookupEntryMarshaller.fromBytes(value.getValue());
-                    if (!streamLookupEntry.stream(FilerIO.bytesLong(key.getKey()), entry, value.getTimestampId())) {
+                    if (!streamLookupEntry.stream(FilerIO.bytesLong(key), entry, value.getTimestampId())) {
                         return false;
                     }
                 }
@@ -104,7 +103,7 @@ public class AmzaWALLookup implements MiruWALLookup {
         if (client != null) {
             client.scan(null, null, (rowTxId, key, value) -> {
                 if (key != null) {
-                    tenantIds.add(new MiruTenantId(key.getKey()));
+                    tenantIds.add(new MiruTenantId(key));
                 }
                 return true;
             });

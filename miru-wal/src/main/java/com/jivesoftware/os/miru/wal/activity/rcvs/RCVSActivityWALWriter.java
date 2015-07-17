@@ -10,6 +10,7 @@ import com.jivesoftware.os.rcvs.api.RowColumValueTimestampAdd;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
 import com.jivesoftware.os.rcvs.api.timestamper.Timestamper;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -32,6 +33,18 @@ public class RCVSActivityWALWriter implements MiruActivityWALWriter {
         RangeMinMax partitionMinMax = writeActivity(tenantId, partitionId, partitionedActivities);
         writeSip(tenantId, partitionId, partitionedActivities);
         return partitionMinMax;
+    }
+
+    @Override
+    public void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception {
+        MiruActivityWALColumnKey[] remove = keys.toArray(new MiruActivityWALColumnKey[keys.size()]);
+        activityWAL.multiRemove(tenantId, new MiruActivityWALRow(partitionId.getId()), remove, null);
+    }
+
+    @Override
+    public void deleteSip(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivitySipWALColumnKey> keys) throws Exception {
+        MiruActivitySipWALColumnKey[] remove = keys.toArray(new MiruActivitySipWALColumnKey[keys.size()]);
+        sipWAL.multiRemove(tenantId, new MiruActivityWALRow(partitionId.getId()), remove, null);
     }
 
     @Override
