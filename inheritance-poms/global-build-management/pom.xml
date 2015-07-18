@@ -4,12 +4,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.512</version>
+        <version>0.513</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.512</version>
+    <version>0.513</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -17,9 +17,12 @@
         <jive-utils-version>0.93</jive-utils-version>
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.74</filer-version>
-        <routing-bird-version>0.14</routing-bird-version>
+        <routing-bird-version>0.15</routing-bird-version>
         <amza-version>0.96</amza-version>
         <jackson-version>2.5.3</jackson-version>
+        <jersey-version>2.13</jersey-version>
+        <jetty-version>9.1.1.v20140108</jetty-version>
+        <hk2-version>2.3.0-b10</hk2-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <test.excludedGroups>blocked-by-jira,slow</test.excludedGroups>
         <maven.build.timestamp.format>yyyy-MM-dd-HH:mm:ss.S</maven.build.timestamp.format>
@@ -92,7 +95,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.512</version>
+                <version>0.513</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -259,7 +262,7 @@
             <dependency>
                 <groupId>org.glassfish.jersey.media</groupId>
                 <artifactId>jersey-media-multipart</artifactId>
-                <version>2.3.1</version>
+                <version>${jersey-version}</version>
             </dependency>
             <dependency>
                 <groupId>org.reflections</groupId>
@@ -279,7 +282,7 @@
             <dependency>
                 <groupId>org.glassfish.jersey.core</groupId>
                 <artifactId>jersey-server</artifactId>
-                <version>2.3.1</version>
+                <version>${jersey-version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.jaxrs</groupId>
@@ -289,17 +292,17 @@
             <dependency>
                 <groupId>org.glassfish.jersey.containers</groupId>
                 <artifactId>jersey-container-servlet-core</artifactId>
-                <version>2.3.1</version>
+                <version>${jersey-version}</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.hk2</groupId>
                 <artifactId>hk2-api</artifactId>
-                <version>2.2.0-b14</version>
+                <version>${hk2-version}</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.hk2.external</groupId>
                 <artifactId>javax.inject</artifactId>
-                <version>2.2.0-b14</version>
+                <version>${hk2-version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.inject</groupId>
