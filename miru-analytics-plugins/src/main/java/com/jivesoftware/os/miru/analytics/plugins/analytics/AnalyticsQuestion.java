@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -63,7 +64,7 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
                 new AnalyticsAnswer(
                     Maps.transformValues(
                         request.query.analyticsFilters,
-                        input -> new AnalyticsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments])),
+                        input -> new Waveform(new long[request.query.divideTimeRangeIntoNSegments])),
                     resultsExhausted),
                 solutionLog.asList());
         }
@@ -118,10 +119,10 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             currentTime += segmentDuration;
         }
 
-        Map<String, AnalyticsAnswer.Waveform> waveforms = Maps.newHashMap();
+        Map<String, Waveform> waveforms = Maps.newHashMap();
         start = System.currentTimeMillis();
         for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
-            AnalyticsAnswer.Waveform waveform = null;
+            Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), entry.getValue(), solutionLog,
@@ -139,7 +140,7 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
                 }
             }
             if (waveform == null) {
-                waveform = new AnalyticsAnswer.Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
+                waveform = new Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
             }
             waveforms.put(entry.getKey(), waveform);
         }

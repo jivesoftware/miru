@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -18,7 +19,7 @@ public class TrendingQuery implements Serializable {
         LINEAR_REGRESSION, LEADER, PEAKS, HIGHEST_PEAK;
     }
 
-    public final Strategy strategy;
+    public final Set<Strategy> strategies;
     public final MiruTimeRange timeRange;
     public final MiruTimeRange relativeChangeTimeRange; // nullable
     public final int divideTimeRangeIntoNSegments;
@@ -30,7 +31,7 @@ public class TrendingQuery implements Serializable {
 
     @JsonCreator
     public TrendingQuery(
-        @JsonProperty("strategy") Strategy strategy,
+        @JsonProperty("strategies") Set<Strategy> strategies,
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("relativeChangeTimeRange") MiruTimeRange relativeChangeTimeRange,
         @JsonProperty("divideTimeRangeIntoNSegments") int divideTimeRangeIntoNSegments,
@@ -39,20 +40,13 @@ public class TrendingQuery implements Serializable {
         @JsonProperty("distinctsFilter") MiruFilter distinctsFilter,
         @JsonProperty("distinctPrefixes") List<String> distinctPrefixes,
         @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
-        Preconditions.checkNotNull(strategy, "Must specifiy a strategy");
-        this.strategy = strategy;
+        Preconditions.checkArgument(strategies != null && !strategies.isEmpty(), "Must specify at least one strategy");
+        this.strategies = strategies;
 
         Preconditions.checkArgument(!MiruTimeRange.ALL_TIME.equals(timeRange), "Requires an explicit time range");
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.relativeChangeTimeRange = relativeChangeTimeRange;
 
-        if (strategy == Strategy.LINEAR_REGRESSION) {
-            Preconditions.checkArgument(divideTimeRangeIntoNSegments > 1, "Strategy.LINEAR_REGRESSION requires divideTimeRangeIntoNSegments > 1");
-        } else if (strategy == Strategy.PEAKS) {
-            Preconditions.checkArgument(divideTimeRangeIntoNSegments > 1, "Strategy.PEAKS requires divideTimeRangeIntoNSegments > 1");
-        } else if (strategy == Strategy.LEADER) {
-            Preconditions.checkArgument(divideTimeRangeIntoNSegments == 1, "Strategy.LEADER requires divideTimeRangeIntoNSegments == 1");
-        }
         this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
@@ -65,7 +59,7 @@ public class TrendingQuery implements Serializable {
     @Override
     public String toString() {
         return "TrendingQuery{"
-            + "strategy=" + strategy
+            + "strategies=" + strategies
             + ", timeRange=" + timeRange
             + ", relativeChangeTimeRange=" + relativeChangeTimeRange
             + ", divideTimeRangeIntoNSegments=" + divideTimeRangeIntoNSegments

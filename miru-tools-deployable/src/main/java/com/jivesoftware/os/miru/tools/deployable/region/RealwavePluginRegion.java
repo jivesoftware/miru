@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -229,13 +230,13 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
         if (response != null && response.answer != null) {
             data.put("elapse", String.valueOf(response.totalElapsed));
 
-            Map<String, AnalyticsAnswer.Waveform> waveforms = response.answer.waveforms;
+            Map<String, Waveform> waveforms = response.answer.waveforms;
             if (waveforms == null) {
                 waveforms = Collections.emptyMap();
             }
 
             Map<String, Object> waveformData = Maps.newHashMap();
-            for (Map.Entry<String, AnalyticsAnswer.Waveform> entry : waveforms.entrySet()) {
+            for (Map.Entry<String, Waveform> entry : waveforms.entrySet()) {
                 long[] waveform = entry.getValue().waveform;
                 int[] counts = new int[waveform.length];
                 for (int i = 0; i < counts.length; i++) {

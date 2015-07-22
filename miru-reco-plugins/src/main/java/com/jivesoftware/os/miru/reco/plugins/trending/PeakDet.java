@@ -4,13 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * @author jonathan.colt
  */
 public class PeakDet {
 
     public static void main(String[] args) {
-        long[] vector = new long[]{
+        long[] vector = new long[] {
             0, 1, 2, 3, 4, 5, 1, 2, 3, 4, 8, 7, 6, 5, 4, 3, 2, 1
         };
         List<Peak> peaks = new PeakDet().peakdet(vector, 1);
@@ -18,6 +17,10 @@ public class PeakDet {
         for (Peak peak : peaks) {
             System.out.println(peak);
         }
+    }
+
+    List<Peak> peakdet(long[] vector, double triggerDelta) {
+        return peakdet(vector, 0, vector.length, triggerDelta);
     }
 
     /*
@@ -38,43 +41,7 @@ public class PeakDet {
      ! Eli Billauer, 3.4.05 (http://billauer.co.il)
      ! Translated into Fortran by Brian McNoldy (http://andrew.rsmas.miami.edu/bmcnoldy)
      ! This function is released to the public domain; Any use is allowed.*/
-    List<Peak> peakdet(long[] vector, double triggerDelta) {
-        /*
-         use, intrinsic :: ieee_arithmetic
-         implicit none
-
-         integer, intent(in)            :: n
-         real, intent(in)               :: v(n), delta
-         real, intent(in), optional     :: x(n)
-         real, intent(out), allocatable :: maxtab(:,:), mintab(:,:)
-         integer                        :: nargin, lookformax, i, j, c, d
-         real                           :: a, NaN, Pinf, Minf, &
-         mn, mx, mnpos, mxpos, this, &
-         x2(n), maxtab_tmp(n,2), mintab_tmp(n,2)
-
-         nargin=command_argument_count()
-         if (nargin < 6) then
-         forall(j=1:n) x2(j)=dble(j)
-         else
-         x2=x
-         if (size(v) /= size(x)) then
-         print*,'Input vectors v and x must have same length'
-         end if
-         end if
-
-         if (size((/ delta /)) > 1) then
-         print*,'Input argument DELTA must be a scalar'
-         end if
-
-         if (delta <= 0) then
-         print*,'Input argument DELTA must be positive'
-         end if
-
-         NaN=ieee_value(a, ieee_quiet_nan)
-         Pinf=ieee_value(a, ieee_positive_inf)
-         Minf=ieee_value(a, ieee_negative_inf)
-         */
-
+    List<Peak> peakdet(long[] vector, int offset, int length, double triggerDelta) {
         double mn = Double.POSITIVE_INFINITY;
         double mx = Double.NEGATIVE_INFINITY;
         double mnpos = Double.NaN;
@@ -82,44 +49,36 @@ public class PeakDet {
         int lookformax = 1;
 
         List<Peak> maxtab_tmp = new ArrayList<>();
-        List<Valley> mintab_tmp = new ArrayList<>();
-        long[] x2 = vector;
+        //List<Valley> mintab_tmp = new ArrayList<>();
 
-        for (int i = 0; i < vector.length; i++) {
+        for (int i = offset; i < length; i++) {
             double a = vector[i];
             if (a > mx) {
                 mx = a;
-                mxpos = x2[i];
+                mxpos = vector[i];
             }
             if (a < mn) {
                 mn = a;
-                mnpos = x2[i];
+                mnpos = vector[i];
             }
             if (lookformax == 1) {
                 if (a < mx - triggerDelta) {
                     maxtab_tmp.add(new Peak(mxpos, i));
                     mn = a;
-                    mnpos = x2[i];
+                    mnpos = vector[i];
                     lookformax = 0;
                 }
             } else {
                 if (a > mn + triggerDelta) {
-                    mintab_tmp.add(new Valley(mnpos, i));
+                    //mintab_tmp.add(new Valley(mnpos, i));
                     mx = a;
-                    mxpos = x2[i];
+                    mxpos = vector[i];
                     lookformax = 1;
                 }
             }
         }
 
         return maxtab_tmp;
-
-        /*
-         allocate(maxtab(c,2))
-         allocate(mintab(d,2))
-         where (.not.ieee_is_nan(maxtab_tmp))
-         maxtab=maxtab_tmp
-         end where*/
     }
 
     static class Peak {

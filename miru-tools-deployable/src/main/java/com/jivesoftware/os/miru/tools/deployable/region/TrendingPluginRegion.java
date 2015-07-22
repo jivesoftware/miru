@@ -11,7 +11,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -25,9 +24,11 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.tools.deployable.analytics.MinMaxDouble;
 import com.jivesoftware.os.miru.tools.deployable.analytics.PNGWaveforms;
@@ -129,7 +130,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                             MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
                                 new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
                                     new TrendingQuery(
-                                        TrendingQuery.Strategy.LINEAR_REGRESSION,
+                                        Collections.singleton(Strategy.LINEAR_REGRESSION),
                                         new MiruTimeRange(fromTime, toTime),
                                         null,
                                         input.buckets,
@@ -157,7 +158,8 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    List<Trendy> results = response.answer.results;
+                    Map<String, Waveform> waveforms = response.answer.waveforms;
+                    List<Trendy> results = response.answer.results.get(Strategy.LINEAR_REGRESSION.name());
                     if (results == null) {
                         results = Collections.emptyList();
                     }
@@ -167,7 +169,8 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                     final MinMaxDouble mmd = new MinMaxDouble();
                     mmd.value(0);
                     for (Trendy t : results) {
-                        for (long w : t.waveform) {
+                        long[] waveform = waveforms.get(t.distinctValue).waveform;
+                        for (long w : waveform) {
                             mmd.value(w);
                         }
                     }
@@ -177,7 +180,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         "rank", String.valueOf(trendy.rank),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 128, 10,
-                                ImmutableMap.of(trendy.distinctValue, new AnalyticsAnswer.Waveform(trendy.waveform)),
+                                ImmutableMap.of(trendy.distinctValue, waveforms.get(trendy.distinctValue)),
                                 Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
