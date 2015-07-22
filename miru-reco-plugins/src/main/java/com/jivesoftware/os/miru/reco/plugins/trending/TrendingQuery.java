@@ -15,7 +15,7 @@ public class TrendingQuery implements Serializable {
 
     public static enum Strategy {
 
-        LINEAR_REGRESSION, LEADER, PEAKS;
+        LINEAR_REGRESSION, LEADER, PEAKS, HIGHEST_PEAK;
     }
 
     public final Strategy strategy;
