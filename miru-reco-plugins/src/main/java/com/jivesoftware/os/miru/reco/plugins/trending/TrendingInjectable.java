@@ -108,10 +108,10 @@ public class TrendingInjectable {
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(provider.getStats(), "trending", new TrendingQuestion(distincts,
-                    analytics,
-                    combinedTimeRange,
-                    request,
-                    provider.getRemotePartition(TrendingRemotePartition.class))),
+                        analytics,
+                        combinedTimeRange,
+                        request,
+                        provider.getRemotePartition(TrendingRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(combinedTimeRange),
                 AnalyticsAnswer.EMPTY_RESULTS,
@@ -177,28 +177,28 @@ public class TrendingInjectable {
                         }
                     } else if (request.query.strategy == TrendingQuery.Strategy.PEAKS) {
                         if (request.query.relativeChangeTimeRange != null) {
-                            long sum = 0;
-                            for (int i = firstBucket + 1; i < lastBucket; i++) {
-                                sum += (waveform[i] - waveform[i - 1]);
-                            }
-                            long relativeSum = 0;
-                            for (int i = firstRelativeBucket + 1; i < lastRelativeBucket; i++) {
-                                relativeSum += (waveform[i] - waveform[i - 1]);
-                            }
-                            double rankDelta = sum - relativeSum;
-                            int l = lastBucket - firstBucket;
-                            if (l < 1) {
-                                l = 1;
-                            }
-                            long[] copy = new long[l];
-                            System.arraycopy(waveform, firstBucket, copy, 0, l);
-                            trendies.add(new Trendy(entry.getKey(), (double) sum, rankDelta, copy));
+                            List<PeakDet.Peak> peaks = new PeakDet().peakdet(waveform, 2);
+                            trendies.add(new Trendy(entry.getKey(), (double) peaks.size(), null, waveform));
                         } else {
-                            long sum = 0;
-                            for (long w : waveform) {
-                                sum += w;
+
+                            List<PeakDet.Peak> peaks = new PeakDet().peakdet(waveform, 2);
+                            trendies.add(new Trendy(entry.getKey(), (double) peaks.size(), null, waveform));
+                        }
+                    } else if (request.query.strategy == TrendingQuery.Strategy.HIGHEST_PEAK) {
+                        if (request.query.relativeChangeTimeRange != null) {
+                            List<PeakDet.Peak> peaks = new PeakDet().peakdet(waveform, 2);
+                            double max = 0;
+                            for (PeakDet.Peak peak : peaks) {
+                                max = Math.max(max, peak.height);
                             }
-                            trendies.add(new Trendy(entry.getKey(), (double) sum, null, waveform));
+                            trendies.add(new Trendy(entry.getKey(), max, null, waveform));
+                        } else {
+                            List<PeakDet.Peak> peaks = new PeakDet().peakdet(waveform, 2);
+                            double max = 0;
+                            for (PeakDet.Peak peak : peaks) {
+                                max = Math.max(max, peak.height);
+                            }
+                            trendies.add(new Trendy(entry.getKey(), max, null, waveform));
                         }
                     }
                 }
@@ -214,13 +214,13 @@ public class TrendingInjectable {
 
             return new MiruResponse<>(new TrendingAnswer(sortedTrendies),
                 ImmutableList.<MiruSolution>builder()
-                    .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
-                    .build(),
+                .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
+                .build(),
                 analyticsResponse.totalElapsed,
                 analyticsResponse.missingSchema,
                 ImmutableList.<Integer>builder()
-                    .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
-                    .build(),
+                .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
+                .build(),
                 solutionLog);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
