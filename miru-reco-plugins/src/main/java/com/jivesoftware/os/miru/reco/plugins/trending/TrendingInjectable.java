@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.math.stat.descriptive.rank.Percentile;
 import org.apache.commons.math.stat.regression.SimpleRegression;
 
 import static com.google.common.base.Objects.firstNonNull;
@@ -132,14 +133,17 @@ public class TrendingInjectable {
 
             double bucket95 = 0;
             if (request.query.strategies.contains(Strategy.PEAKS)) {
-                DescriptiveStatistics descriptiveStatistics = new DescriptiveStatistics();
+                double[] highestBuckets = new double[waveforms.size()];
+                int i = 0;
                 for (Map.Entry<String, Waveform> entry : waveforms.entrySet()) {
                     long[] waveform = entry.getValue().waveform;
                     for (long w : waveform) {
-                        descriptiveStatistics.addValue(w);
+                        highestBuckets[i] = Math.max(highestBuckets[i], w);
                     }
+                    i++;
                 }
-                bucket95 = descriptiveStatistics.getPercentile(95.0);
+                Percentile percentile = new Percentile();
+                bucket95 = percentile.evaluate(highestBuckets, 0.95);
             }
 
             Map<String, Waveform> distinctWaveforms = Maps.newHashMap();
