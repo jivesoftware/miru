@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -35,7 +36,7 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
             return currentAnswer;
         }
 
-        Map<String, AnalyticsAnswer.Waveform> mergedWaveforms;
+        Map<String, Waveform> mergedWaveforms;
         AnalyticsAnswer lastAnswer = last.get();
         if (currentAnswer.waveforms == null) {
             if (lastAnswer.waveforms == null) {
@@ -56,13 +57,13 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
         return new AnalyticsAnswer(mergedWaveforms, currentAnswer.resultsExhausted);
     }
 
-    private void mergeWaveform(Map<String, AnalyticsAnswer.Waveform> mergedWaveforms, AnalyticsAnswer addAnswer, MiruSolutionLog solutionLog) {
-        for (Map.Entry<String, AnalyticsAnswer.Waveform> addEntry : addAnswer.waveforms.entrySet()) {
+    private void mergeWaveform(Map<String, Waveform> mergedWaveforms, AnalyticsAnswer addAnswer, MiruSolutionLog solutionLog) {
+        for (Map.Entry<String, Waveform> addEntry : addAnswer.waveforms.entrySet()) {
             String key = addEntry.getKey();
-            AnalyticsAnswer.Waveform addWaveform = addEntry.getValue();
-            AnalyticsAnswer.Waveform mergedWaveform = mergedWaveforms.get(key);
+            Waveform addWaveform = addEntry.getValue();
+            Waveform mergedWaveform = mergedWaveforms.get(key);
             if (mergedWaveform == null) {
-                mergedWaveform = new AnalyticsAnswer.Waveform(new long[addWaveform.waveform.length]);
+                mergedWaveform = new Waveform(new long[addWaveform.waveform.length]);
                 mergedWaveforms.put(key, mergedWaveform);
             }
             for (int i = 0; i < mergedWaveform.waveform.length; i++) {

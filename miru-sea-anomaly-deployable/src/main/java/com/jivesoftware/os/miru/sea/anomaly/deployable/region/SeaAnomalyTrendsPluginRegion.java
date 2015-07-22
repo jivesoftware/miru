@@ -22,9 +22,11 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SeaAnomalySchemaConstants;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.MinMaxDouble;
@@ -106,7 +108,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                                 new MiruRequest<>(tenantId,
                                     MiruActorId.NOT_PROVIDED,
                                     MiruAuthzExpression.NOT_PROVIDED,
-                                    new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
+                                    new TrendingQuery(Collections.singleton(Strategy.LINEAR_REGRESSION),
                                         new MiruTimeRange(fromTime, toTime),
                                         null,
                                         30,
@@ -136,7 +138,8 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    List<Trendy> results = response.answer.results;
+                    Map<String, Waveform> waveforms = response.answer.waveforms;
+                    List<Trendy> results = response.answer.results.get(Strategy.LINEAR_REGRESSION.name());
                     if (results == null) {
                         results = Collections.emptyList();
                     }
@@ -146,7 +149,8 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                     final MinMaxDouble mmd = new MinMaxDouble();
                     mmd.value(0);
                     for (Trendy t : results) {
-                        for (long w : t.waveform) {
+                        long[] waveform = waveforms.get(t.distinctValue).waveform;
+                        for (long w : waveform) {
                             mmd.value(w);
                         }
                     }
@@ -156,7 +160,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                         "rank", String.valueOf(Math.round(trendy.rank * 100.0) / 100.0),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                ImmutableMap.of(trendy.distinctValue, trendy.waveform),
+                                ImmutableMap.of(trendy.distinctValue, waveforms.get(trendy.distinctValue).waveform),
                                 Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

@@ -173,7 +173,7 @@ public class MiruTrendingNGTest {
             MiruRequest<TrendingQuery> request = new MiruRequest<>(tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
-                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
+                new TrendingQuery(Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),
                     timeRange,
                     null,
                     32,

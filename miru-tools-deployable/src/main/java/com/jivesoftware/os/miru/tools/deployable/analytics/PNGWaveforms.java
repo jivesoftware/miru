@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.tools.deployable.analytics;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -22,7 +22,7 @@ import org.apache.commons.net.util.Base64;
  */
 public class PNGWaveforms {
 
-    public String hitsToBase64PNGWaveform(int width, int height, int padding, Map<String, AnalyticsAnswer.Waveform> waveforms,
+    public String hitsToBase64PNGWaveform(int width, int height, int padding, Map<String, Waveform> waveforms,
         Optional<MinMaxDouble> bounds) {
         int headerHeight = waveforms.size() * 16;
         int w = width;
@@ -45,7 +45,7 @@ public class PNGWaveforms {
         int padTop = padding + headerHeight;
         int padBottom = padding;
 
-        List<Map.Entry<String, AnalyticsAnswer.Waveform>> entries = Lists.newArrayList(waveforms.entrySet());
+        List<Map.Entry<String, Waveform>> entries = Lists.newArrayList(waveforms.entrySet());
         Collections.sort(entries, (o1, o2) -> {
             return Long.compare(rank(o2.getValue().waveform), rank(o1.getValue().waveform)); // reverse
         });
@@ -53,7 +53,7 @@ public class PNGWaveforms {
         int labelYOffset = padding;
         int maxWaveformLength = 0;
         for (int i = entries.size() - 1; i >= 0; i--) {
-            Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
+            Map.Entry<String, Waveform> entry = entries.get(i);
             long[] waveform = entry.getValue().waveform;
             maxWaveformLength = Math.max(maxWaveformLength, waveform.length);
             double[] hits = new double[waveform.length];
@@ -73,12 +73,12 @@ public class PNGWaveforms {
             mmd.value(0d);
 
             for (int i = 0; i < entries.size(); i++) {
-                Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
+                Map.Entry<String, Waveform> entry = entries.get(i);
                 long[] waveform = entry.getValue().waveform;
 
                 for (int j = 0; j < waveform.length; j++) {
                     if (i > 0) {
-                        Map.Entry<String, AnalyticsAnswer.Waveform> prevEntry = entries.get(i - 1);
+                        Map.Entry<String, Waveform> prevEntry = entries.get(i - 1);
                         waveform[j] += prevEntry.getValue().waveform[j];
                     }
                     mmd.value(waveform[j]);
@@ -93,7 +93,7 @@ public class PNGWaveforms {
         pw.paintGrid(g, maxWaveformLength, 10, mmd, padLeft, padTop, w - padLeft - padRight, h - padTop - padBottom);
 
         for (int i = entries.size() - 1; i >= 0; i--) {
-            Map.Entry<String, AnalyticsAnswer.Waveform> entry = entries.get(i);
+            Map.Entry<String, Waveform> entry = entries.get(i);
             long[] waveform = entry.getValue().waveform;
             double[] hits = new double[waveform.length];
             for (int j = 0; j < hits.length; j++) {

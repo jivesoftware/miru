@@ -13,18 +13,15 @@ public class Trendy implements Comparable<Trendy>, Serializable {
     public final String distinctValue;
     public final double rank;
     public final Double rankDelta; // nullable
-    public final long[] waveform;
 
     @JsonCreator
     public Trendy(
         @JsonProperty("distinctValue") String distinctValue,
         @JsonProperty("rank") double rank,
-        @JsonProperty("rankDelta") Double rankDelta,
-        @JsonProperty("waveform") long[] waveform) {
+        @JsonProperty("rankDelta") Double rankDelta) {
         this.distinctValue = distinctValue;
         this.rank = rank;
         this.rankDelta = rankDelta;
-        this.waveform = waveform;
     }
 
     @Override
@@ -38,7 +35,7 @@ public class Trendy implements Comparable<Trendy>, Serializable {
         return "Trendy{"
             + "distinctValue=" + distinctValue
             + ", rank=" + rank
-            + ", waveform=" + Arrays.toString(waveform)
+            + ", rankDelta=" + rankDelta
             + '}';
     }
 }

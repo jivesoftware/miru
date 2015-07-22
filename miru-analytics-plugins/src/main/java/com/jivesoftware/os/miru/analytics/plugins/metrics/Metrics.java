@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.analytics.plugins.metrics;
 
-import com.jivesoftware.os.miru.analytics.plugins.metrics.MetricsAnswer.Waveform;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;

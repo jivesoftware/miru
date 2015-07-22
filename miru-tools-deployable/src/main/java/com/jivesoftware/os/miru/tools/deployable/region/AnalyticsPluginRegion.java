@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -202,7 +203,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 }
 
                 if (response != null && response.answer != null) {
-                    Map<String, AnalyticsAnswer.Waveform> waveforms = response.answer.waveforms;
+                    Map<String, Waveform> waveforms = response.answer.waveforms;
                     if (waveforms == null) {
                         waveforms = Collections.emptyMap();
                     }

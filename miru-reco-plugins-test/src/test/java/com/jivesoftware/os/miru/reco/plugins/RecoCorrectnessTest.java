@@ -42,6 +42,7 @@ import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
@@ -271,7 +272,7 @@ public class RecoCorrectnessTest {
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
-                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
+                new TrendingQuery(Collections.singleton(Strategy.LINEAR_REGRESSION),
                     timeRange,
                     null,
                     27,
@@ -285,7 +286,7 @@ public class RecoCorrectnessTest {
             System.out.println("trendingResult:" + response.answer.results);
             System.out.println("Took:" + (System.currentTimeMillis() - s));
             //assertTrue(response.answer.results.size() > 0, response.toString());
-            for (Trendy result : response.answer.results) {
+            for (Trendy result : response.answer.results.get(Strategy.LINEAR_REGRESSION.name())) {
                 assertTrue(docTypes.contains(result.distinctValue.substring(0, result.distinctValue.indexOf(' '))), "Didn't expect " + result.distinctValue);
                 assertTrue(contextToParents.get(context).contains(result.distinctValue));
             }
