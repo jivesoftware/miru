@@ -2,6 +2,8 @@ package com.jivesoftware.os.miru.service.stream.allocator;
 
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.service.stream.KeyedIndexStore;
+import java.io.IOException;
 
 /**
  *
@@ -12,5 +14,7 @@ public interface MiruChunkAllocator {
 
     ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception;
 
-    <BM> void close(ChunkStore[] chunkStores);
+    KeyedIndexStore[] allocateIndexStores(MiruPartitionCoord coord) throws IOException;
+
+    void close(ChunkStore[] chunkStores, KeyedIndexStore[] environments) throws IOException;
 }

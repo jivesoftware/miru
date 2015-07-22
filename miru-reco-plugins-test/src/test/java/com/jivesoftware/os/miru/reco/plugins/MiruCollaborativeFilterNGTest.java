@@ -67,9 +67,9 @@ public class MiruCollaborativeFilterNGTest {
     Random rand = new Random(1_234);
 
     int numqueries = 2;
-    int numberOfUsers = 2;
-    int numberOfDocument = 1000;
-    int numberOfViewsPerUser = 100;
+    int numberOfUsers = 1_000;
+    int numberOfDocument = 10_000;
+    int numberOfViewsPerUser = 10_000;
     int numberOfActivityType = 10;
 
     MiruService service;
@@ -88,7 +88,7 @@ public class MiruCollaborativeFilterNGTest {
         }
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), partitionedActivities);
+            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaring(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
         this.injectable = new RecoInjectable(miruProvider,

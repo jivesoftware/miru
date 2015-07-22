@@ -10,7 +10,7 @@ public interface MiruResourceLocator {
 
     File getFilerFile(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
 
-    File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
+    File[] getPartitionSubDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException;
 
     long getOnDiskInitialChunkSize();
 

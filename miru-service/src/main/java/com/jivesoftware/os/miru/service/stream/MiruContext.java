@@ -39,6 +39,7 @@ public class MiruContext<BM, S extends MiruSipCursor<S>> implements MiruRequestC
     public final MiruActivityInternExtern activityInternExtern;
     public final StripingLocksProvider<MiruStreamId> streamLocks;
     public final ChunkStore[] chunkStores;
+    public final KeyedIndexStore[] indexStores;
     public final Object writeLock = new Object();
     public final AtomicBoolean corrupt = new AtomicBoolean(false);
 
@@ -54,7 +55,8 @@ public class MiruContext<BM, S extends MiruSipCursor<S>> implements MiruRequestC
         MiruInboxIndex<BM> inboxIndex,
         MiruActivityInternExtern activityInternExtern,
         StripingLocksProvider<MiruStreamId> streamLocks,
-        ChunkStore[] chunkStores) {
+        ChunkStore[] chunkStores,
+        KeyedIndexStore[] indexStores) {
         this.schema = schema;
         this.termComposer = termComposer;
         this.timeIndex = timeIndex;
@@ -68,6 +70,7 @@ public class MiruContext<BM, S extends MiruSipCursor<S>> implements MiruRequestC
         this.activityInternExtern = activityInternExtern;
         this.streamLocks = streamLocks;
         this.chunkStores = chunkStores;
+        this.indexStores = indexStores;
     }
 
     @Override
@@ -123,6 +126,12 @@ public class MiruContext<BM, S extends MiruSipCursor<S>> implements MiruRequestC
     @Override
     public StripingLocksProvider<MiruStreamId> getStreamLocks() {
         return streamLocks;
+    }
+
+    public void flush(boolean fsync) {
+        for (KeyedIndexStore indexStore : indexStores) {
+            indexStore.flush(fsync);
+        }
     }
 
     public boolean isCorrupt() {

@@ -15,13 +15,13 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final long indexId;
-    private final KeyedFilerStore keyedStore;
+    private final KeyedFilerStore<Long, Void> keyedStore;
     private final MiruAuthzCache<BM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
 
     public MiruFilerAuthzIndex(MiruBitmaps<BM> bitmaps,
         long indexId,
-        KeyedFilerStore keyedStore,
+        KeyedFilerStore<Long, Void> keyedStore,
         MiruAuthzCache<BM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
         throws Exception {

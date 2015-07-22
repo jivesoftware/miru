@@ -112,6 +112,7 @@ public class MiruPluginTestBootstrap {
         config.setDefaultStorage(desiredStorage.name());
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
         config.setMergeChitCount(10_000);
+        config.setPartitionNumberOfIndexStores(1);
 
         Logger rootLogger = LogManager.getRootLogger();
         if (rootLogger instanceof org.apache.logging.log4j.core.Logger) {

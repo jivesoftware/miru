@@ -22,7 +22,7 @@ public class MiruTempDirectoryResourceLocator implements MiruResourceLocator {
     }
 
     @Override
-    public File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
+    public File[] getPartitionSubDirectories(MiruResourcePartitionIdentifier identifier, String name) throws IOException {
         return makeSubDirectories(getPartitionPaths(identifier), name);
     }
 

@@ -253,7 +253,7 @@ public class MiruInvertedIndexTest {
     private <BM> MiruDeltaInvertedIndex<BM> buildDeltaInvertedIndex(MiruBitmaps<BM> bitmaps) throws Exception {
         return new MiruDeltaInvertedIndex<>(bitmaps,
             buildFilerInvertedIndex(bitmaps),
-            new MiruDeltaInvertedIndex.Delta<BM>(),
+            new MiruDeltaInvertedIndex.Delta<>(),
             new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
             null);
     }

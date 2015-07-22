@@ -14,7 +14,7 @@ public class DiskIdentifierPartResourceLocator implements MiruResourceLocator {
 
     protected static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final String DISK_FORMAT_VERSION = "version-14";
+    private static final String DISK_FORMAT_VERSION = "version-15";
 
     protected final File[] basePaths;
     protected final long onDiskInitialChunkSize;
@@ -45,7 +45,7 @@ public class DiskIdentifierPartResourceLocator implements MiruResourceLocator {
     }
 
     @Override
-    public File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name) {
+    public File[] getPartitionSubDirectories(MiruResourcePartitionIdentifier identifier, String name) {
         return makeSubDirectories(ensurePartitionPaths(identifier), name);
     }
 

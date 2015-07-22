@@ -8,6 +8,7 @@ import com.jivesoftware.os.filer.io.api.KeyValueStore;
 import com.jivesoftware.os.filer.io.api.KeyValueTransaction;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
+import com.jivesoftware.os.miru.service.index.TimeOrderAnomalyStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import gnu.trove.iterator.TLongIterator;
@@ -456,13 +457,5 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
 
     @Override
     public void close() {
-    }
-
-    public static interface TimeOrderAnomalyStream {
-
-        void underflowOfSmallestTimestamp(long delta);
-
-        void underflowOfLargestTimestamp(long delta);
-
     }
 }

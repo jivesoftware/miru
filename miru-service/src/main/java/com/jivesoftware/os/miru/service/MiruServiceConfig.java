@@ -88,11 +88,19 @@ public interface MiruServiceConfig extends Config {
 
     void setPartitionNumberOfChunkStores(int partitionNumberOfChunkStores);
 
+    @IntDefault(3)
+    int getPartitionNumberOfIndexStores();
+
+    void setPartitionNumberOfIndexStores(int partitionNumberOfIndexStores);
+
     @IntDefault(10_000)
     int getPartitionAuthzCacheSize();
 
     @BooleanDefault(true)
     boolean getPartitionDeleteChunkStoreOnClose();
+
+    @BooleanDefault(true)
+    boolean getPartitionDeleteIndexStoreOnClose();
 
     @IntDefault(10_000)
     int getPartitionInitialChunkCacheSize();

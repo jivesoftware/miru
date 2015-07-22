@@ -41,6 +41,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.KeyedFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
+import com.jivesoftware.os.miru.service.index.TimeOrderAnomalyStream;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
@@ -53,14 +54,15 @@ import com.jivesoftware.os.miru.service.index.delta.MiruDeltaRemovalIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaSipIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.index.filer.MiruFilerActivityIndex;
+import com.jivesoftware.os.miru.service.index.filer.KeyedIndexActivityIndex;
+import com.jivesoftware.os.miru.service.index.filer.KeyedIndexFieldIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerAuthzIndex;
-import com.jivesoftware.os.miru.service.index.filer.MiruFilerFieldIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerInboxIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerRemovalIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerSipIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerTimeIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerUnreadTrackingIndex;
+import com.jivesoftware.os.miru.service.index.keyed.KeyedIndexTimeIndex;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
@@ -79,6 +81,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
+    private static final byte[] GENERIC_FILER_TIME_INDEX_KEY = new byte[] { 0 };
+    private static final byte[] GENERIC_FILER_SIP_INDEX_KEY = new byte[] { 1 };
 
     private final TxCogs cogs;
     private final MiruSchemaProvider schemaProvider;
@@ -149,11 +154,15 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     }
 
     public <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
-        ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord);
-        return allocate(bitmaps, coord, chunkStores);
+        MiruChunkAllocator allocator = getAllocator(storage);
+        ChunkStore[] chunkStores = allocator.allocateChunkStores(coord);
+        KeyedIndexStore[] indexStores = allocator.allocateIndexStores(coord);
+        return allocate(bitmaps, coord, chunkStores, indexStores);
     }
 
-    private <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ChunkStore[] chunkStores) throws Exception {
+    private <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ChunkStore[] chunkStores, KeyedIndexStore[] indexStores)
+        throws Exception {
+
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         int seed = coord.hashCode();
@@ -164,13 +173,15 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
             TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
 
-        MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new MiruFilerTimeIndex(
-            Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
-            new KeyedFilerProvider<>(genericFilerStore, MiruContextConstants.GENERIC_FILER_TIME_INDEX_KEY),
-            new TxKeyValueStore<>(skyhookCog, cogs.getSkyHookKeySemaphores(), seed, chunkStores,
-                new LongIntKeyValueMarshaller(),
-                keyBytes("timeIndex-timestamps"),
-                8, false, 4, false)));
+        KeyedIndex[] timestampKeyedIndexes = new KeyedIndex[indexStores.length];
+        for (int i = 0; i < timestampKeyedIndexes.length; i++) {
+            timestampKeyedIndexes[i] = indexStores[i].open("timestamp");
+        }
+
+        MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new KeyedIndexTimeIndex(
+            indexStores[Math.abs(coord.hashCode() % indexStores.length)].open("alignment"),
+            timestampKeyedIndexes,
+            Optional.<TimeOrderAnomalyStream>absent()));
 
         TxKeyedFilerStore<Long, Void> activityFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
@@ -178,17 +189,23 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
             TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
 
+        KeyedIndex[] activityKeyedIndexes = new KeyedIndex[indexStores.length];
+        for (int i = 0; i < activityKeyedIndexes.length; i++) {
+            activityKeyedIndexes[i] = indexStores[i].open("activity");
+        }
+
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
-            new MiruFilerActivityIndex(
-                activityFilerStore,
+            new KeyedIndexActivityIndex(
+                activityKeyedIndexes,
                 new MiruInternalActivityMarshaller(),
                 new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size"))));
 
         @SuppressWarnings("unchecked")
         MiruFieldIndex<BM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
-            @SuppressWarnings("unchecked")
-            KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
+            //@SuppressWarnings("unchecked")
+            //KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
+            KeyedIndex[] indexes = new KeyedIndex[schema.fieldCount()];
             long[] indexIds = new long[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 int fieldId = fieldDefinition.fieldId;
@@ -197,19 +214,23 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
                     indexes[fieldId] = null;
                 } else {
-                    boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
+                    /*boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
                     indexes[fieldId] = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
                         TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                         TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                         TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
-                        TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
+                        TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);*/
+
+                    // Open the keyed index
+                    indexes[fieldId] = indexStores[fieldId % indexStores.length].open("field-" + fieldType.name() + "-" + fieldId);
                 }
                 indexIds[fieldId] = fieldIndexIdProvider.incrementAndGet();
             }
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
                 indexIds,
-                new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, fieldIndexStripingLocksProvider),
+                new KeyedIndexFieldIndex<>(bitmaps, indexIds, indexes, fieldIndexStripingLocksProvider),
+                //new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, fieldIndexStripingLocksProvider),
                 schema.fieldCount(),
                 fieldIndexCache);
         }
@@ -306,7 +327,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             inboxIndex,
             activityInternExtern,
             streamLocks,
-            chunkStores);
+            chunkStores, indexStores);
     }
 
     public <BM> MiruContext<BM, S> copy(MiruBitmaps<BM> bitmaps,
@@ -315,14 +336,19 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage toStorage) throws Exception {
 
         ChunkStore[] fromChunks = from.chunkStores;
+        KeyedIndexStore[] fromIndexStores = from.indexStores;
         ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord);
+        KeyedIndexStore[] toIndexStores = getAllocator(toStorage).allocateIndexStores(coord);
         if (fromChunks.length != toChunks.length) {
             throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
         }
         for (int i = 0; i < fromChunks.length; i++) {
             fromChunks[i].copyTo(toChunks[i]);
         }
-        return allocate(bitmaps, coord, toChunks);
+        for (int i = 0; i < fromIndexStores.length; i++) {
+            fromIndexStores[i].copyTo(toIndexStores[i]);
+        }
+        return allocate(bitmaps, coord, toChunks, toIndexStores);
     }
 
     public void markStorage(MiruPartitionCoord coord, MiruBackingStorage marked) throws Exception {
@@ -346,14 +372,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         diskResourceLocator.clean(new MiruPartitionCoordIdentifier(coord));
     }
 
-    public <BM> void close(MiruContext<BM, S> context, MiruBackingStorage storage) {
+    public <BM> void close(MiruContext<BM, S> context, MiruBackingStorage storage) throws IOException {
         context.activityIndex.close();
         context.authzIndex.close();
         context.timeIndex.close();
         context.unreadTrackingIndex.close();
         context.inboxIndex.close();
 
-        getAllocator(storage).close(context.chunkStores);
+        getAllocator(storage).close(context.chunkStores, context.indexStores);
     }
 
     public <BM> void releaseCaches(MiruContext<BM, S> context, MiruBackingStorage storage) throws IOException {

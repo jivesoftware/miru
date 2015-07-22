@@ -135,13 +135,16 @@ public class MiruServiceInitializer {
             byteBufferFactory,
             resourceLocator.getInMemoryChunkSize(),
             config.getPartitionNumberOfChunkStores(),
+            config.getPartitionNumberOfIndexStores(),
             config.getPartitionDeleteChunkStoreOnClose(),
+            config.getPartitionDeleteIndexStoreOnClose(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize());
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(resourceLocator,
             byteBufferFactory,
             config.getPartitionNumberOfChunkStores(),
+            config.getPartitionNumberOfIndexStores(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize());
 

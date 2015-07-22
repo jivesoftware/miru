@@ -161,7 +161,9 @@ public class MiruLocalHostedPartitionTest {
         when(config.getBitsetBufferSize()).thenReturn(32);
         when(config.getDefaultStorage()).thenReturn(defaultStorage.name());
         when(config.getPartitionNumberOfChunkStores()).thenReturn(1);
+        when(config.getPartitionNumberOfIndexStores()).thenReturn(1);
         when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
+        when(config.getPartitionDeleteIndexStoreOnClose()).thenReturn(false);
 
         schema = new MiruSchema.Builder("test", 1)
             .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
@@ -191,7 +193,9 @@ public class MiruLocalHostedPartitionTest {
             new HeapByteBufferFactory(),
             4_096,
             config.getPartitionNumberOfChunkStores(),
+            config.getPartitionNumberOfIndexStores(),
             config.getPartitionDeleteChunkStoreOnClose(),
+            config.getPartitionDeleteIndexStoreOnClose(),
             100,
             1_000);
 
@@ -199,6 +203,7 @@ public class MiruLocalHostedPartitionTest {
             new MiruTempDirectoryResourceLocator(),
             new HeapByteBufferFactory(),
             config.getPartitionNumberOfChunkStores(),
+            config.getPartitionNumberOfIndexStores(),
             100,
             1_000);
 

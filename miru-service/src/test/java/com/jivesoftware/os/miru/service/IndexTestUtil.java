@@ -48,7 +48,7 @@ public class IndexTestUtil {
 
     public static TxCogs cogs = new TxCogs(256, 64, null, null, null);
 
-    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores) {
+    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfStripes) {
 
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(1024);
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(1024);
@@ -69,7 +69,9 @@ public class IndexTestUtil {
             new HeapByteBufferFactory(),
             new HeapByteBufferFactory(),
             4_096,
-            numberOfChunkStores,
+            numberOfStripes,
+            numberOfStripes,
+            true,
             true,
             100,
             1_000);
@@ -77,7 +79,8 @@ public class IndexTestUtil {
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
             new HeapByteBufferFactory(),
-            numberOfChunkStores,
+            numberOfStripes,
+            numberOfStripes,
             100,
             1_000);
 
@@ -101,13 +104,13 @@ public class IndexTestUtil {
         );
     }
 
-    public static <BM> MiruContext<BM, ?> buildInMemoryContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory);
+    public static <BM> MiruContext<BM, ?> buildInMemoryContext(int numberOfStripes, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+        return factory(numberOfStripes).allocate(bitmaps, coord, MiruBackingStorage.memory);
 
     }
 
-    public static <BM> MiruContext<BM, ?> buildOnDiskContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk);
+    public static <BM> MiruContext<BM, ?> buildOnDiskContext(int numberOfStripes, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
+        return factory(numberOfStripes).allocate(bitmaps, coord, MiruBackingStorage.disk);
 
     }
 

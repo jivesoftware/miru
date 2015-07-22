@@ -9,7 +9,7 @@ public class MiruFilerRemovalIndex<BM> extends MiruFilerInvertedIndex<BM> implem
 
     public MiruFilerRemovalIndex(MiruBitmaps<BM> bitmaps,
         long indexId,
-        KeyedFilerStore keyedFilerStore,
+        KeyedFilerStore<Long, Void> keyedFilerStore,
         byte[] keyBytes,
         int considerIfIndexIdGreaterThanN,
         Object mutationLock) {

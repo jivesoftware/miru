@@ -14,14 +14,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
 
-    private final MiruFilerTimeIndex backingIndex;
+    private final MiruTimeIndex backingIndex;
     private final AtomicInteger baseId = new AtomicInteger(-1);
     private final AtomicInteger lastId = new AtomicInteger(-1);
     private final TLongArrayList timestamps = new TLongArrayList();
     private final TLongArrayList actualInsertionOrderTimestamps = new TLongArrayList();
     private final TLongIntHashMap timestampToId = new TLongIntHashMap(10, 0.5f, -1, -1);
 
-    public MiruDeltaTimeIndex(MiruFilerTimeIndex backingIndex) {
+    public MiruDeltaTimeIndex(MiruTimeIndex backingIndex) {
         this.backingIndex = backingIndex;
         clear();
     }

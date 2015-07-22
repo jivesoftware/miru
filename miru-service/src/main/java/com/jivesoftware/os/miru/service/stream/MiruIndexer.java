@@ -115,6 +115,7 @@ public class MiruIndexer<BM> {
         // 9. Mark as ready
         context.activityIndex.ready(internalActivityAndIds.get(internalActivityAndIds.size() - 1).id);
 
+        context.flush(false); //TODO config fsync
         log.debug("End: Index batch of {}", internalActivityAndIds.size());
     }
 
