@@ -229,7 +229,7 @@ public class RecoCorrectnessTest {
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
                                 Arrays.asList(
-                                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "11", "65")),
+                                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "72", "65")),
                                     new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes))),
                                 null),
                             new MiruFilter(MiruFilterOperation.and,
@@ -263,7 +263,7 @@ public class RecoCorrectnessTest {
                 Arrays.asList(
                     new MiruFieldFilter(MiruFieldType.primary, "context", Arrays.asList(context)),
                     new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes)),
-                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "11", "65"))
+                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "72", "65"))
                 ),
                 null);
 

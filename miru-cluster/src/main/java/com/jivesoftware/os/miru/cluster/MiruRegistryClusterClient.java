@@ -73,12 +73,12 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
-    public void remove(MiruHost host) throws Exception {
+    public void removeHost(MiruHost host) throws Exception {
         clusterRegistry.removeHost(host);
     }
 
     @Override
-    public void remove(MiruHost host, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    public void removeTopology(MiruHost host, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         clusterRegistry.removeTopology(tenantId, partitionId, host);
     }
 

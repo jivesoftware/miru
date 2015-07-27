@@ -88,7 +88,7 @@ public class MiruStumptownIntakeService {
             while (true) {
                 try {
                     // TODO expose "" tenant to config?
-                    miruWriter.call("", roundRobinStrategy, client -> {
+                    miruWriter.call("", roundRobinStrategy, "ingress", client -> {
                         HttpResponse postJson = client.postJson(miruIngressEndpoint, jsonActivities, null);
                         if (postJson.getStatusCode() < 200 || postJson.getStatusCode() >= 300) {
                             throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);

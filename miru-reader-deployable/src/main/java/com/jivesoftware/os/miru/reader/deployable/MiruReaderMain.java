@@ -82,6 +82,8 @@ import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthChec
 import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -183,14 +185,22 @@ public class MiruReaderMain {
 
             final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
 
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(
+                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
+
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-wal", "main")); // TODO expose to conf
+                .getConnections("miru-wal", "main"),
+                clientHealthProvider,
+                10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main"));  // TODO expose to conf
+                .getConnections("miru-manage", "main"),
+                clientHealthProvider,
+                10, 10_000);  // TODO expose to conf
 
             // TODO add fall back to config
             final MiruStats miruStats = new MiruStats();
@@ -318,6 +328,7 @@ public class MiruReaderMain {
             deployable.addResource(sourceTree);
 
             deployable.buildServer().start();
+            clientHealthProvider.start();
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);

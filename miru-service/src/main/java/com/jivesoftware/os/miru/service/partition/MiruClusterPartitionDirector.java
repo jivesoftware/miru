@@ -90,13 +90,13 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     /** Removes host from the registry */
     @Override
     public void removeHost(MiruHost host) throws Exception {
-        clusterClient.remove(host);
+        clusterClient.removeHost(host);
     }
 
     /** Remove topology from the registry */
     @Override
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
-        clusterClient.remove(host, tenantId, partitionId);
+        clusterClient.removeTopology(host, tenantId, partitionId);
     }
 
     /** Check if the given tenant partition is in the desired state */

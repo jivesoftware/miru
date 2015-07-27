@@ -154,7 +154,7 @@ public class MiruTopologyEndpoints {
         try {
             long start = System.currentTimeMillis();
             MiruHost miruHost = new MiruHost(host, port);
-            registry.remove(miruHost);
+            registry.removeHost(miruHost);
             stats.ingressed("/remove/" + host + "/" + port, 1, System.currentTimeMillis() - start);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
@@ -177,7 +177,7 @@ public class MiruTopologyEndpoints {
             MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
             MiruPartitionId miruPartitionId = MiruPartitionId.of(partitionId);
             MiruHost miruHost = new MiruHost(host, port);
-            registry.remove(miruHost, miruTenantId, miruPartitionId);
+            registry.removeTopology(miruHost, miruTenantId, miruPartitionId);
             stats.ingressed("/remove/" + host + "/" + port + "/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
