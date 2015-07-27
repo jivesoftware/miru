@@ -86,7 +86,7 @@ public class MiruSeaAnomalyIntakeService {
             while (true) {
                 try {
                     // TODO expose "" tenant to config?
-                    miruWriterClient.call("", roundRobinStrategy, client -> {
+                    miruWriterClient.call("", roundRobinStrategy, "ingress", client -> {
                         HttpResponse response = client.postJson(miruIngressEndpoint, jsonActivities, null);
                         if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
                             throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);

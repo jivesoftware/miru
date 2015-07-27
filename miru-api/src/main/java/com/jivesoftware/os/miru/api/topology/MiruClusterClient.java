@@ -22,9 +22,9 @@ public interface MiruClusterClient {
 
     boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception;
 
-    void remove(final MiruHost host) throws Exception;
+    void removeHost(final MiruHost host) throws Exception;
 
-    void remove(final MiruHost host, final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception;
+    void removeTopology(final MiruHost host, final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception;
 
     MiruTenantConfig tenantConfig(final MiruTenantId tenantId) throws Exception;
 

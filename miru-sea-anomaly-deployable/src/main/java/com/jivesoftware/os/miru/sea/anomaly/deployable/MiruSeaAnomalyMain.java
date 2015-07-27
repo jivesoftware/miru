@@ -51,6 +51,8 @@ import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -117,14 +119,22 @@ public class MiruSeaAnomalyMain {
 
             MiruSeaAnomalyIntakeConfig intakeConfig = deployable.config(MiruSeaAnomalyIntakeConfig.class);
 
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(
+                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
+
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main")); // TODO expose to conf
+                .getConnections("miru-manage", "main"),
+                clientHealthProvider,
+                10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main"));  // TODO expose to conf
+                .getConnections("miru-writer", "main"),
+                clientHealthProvider,
+                10, 10_000);  // TODO expose to conf
 
             // TODO add fall back to config
             //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
@@ -142,17 +152,17 @@ public class MiruSeaAnomalyMain {
                 AnomalyMetric.class,
                 true,
                 null) {
-                @Override
-                void deliverSerialized(List<AnomalyMetric> serialized) {
-                    try {
-                        inTakeService.ingressEvents(serialized);
-                        LOG.inc("ingress>delivered");
-                    } catch (Exception x) {
-                        LOG.error("Encountered the following while draining seaAnomalyQueue.", x);
-                        throw new RuntimeException(x);
+                    @Override
+                    void deliverSerialized(List<AnomalyMetric> serialized) {
+                        try {
+                            inTakeService.ingressEvents(serialized);
+                            LOG.inc("ingress>delivered");
+                        } catch (Exception x) {
+                            LOG.error("Encountered the following while draining seaAnomalyQueue.", x);
+                            throw new RuntimeException(x);
+                        }
                     }
-                }
-            };
+                };
 
             IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);
@@ -208,6 +218,7 @@ public class MiruSeaAnomalyMain {
             deployable.addResource(sourceTree);
             serviceStartupHealthCheck.info("start serving...", null);
             deployable.buildServer().start();
+            clientHealthProvider.start();
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
