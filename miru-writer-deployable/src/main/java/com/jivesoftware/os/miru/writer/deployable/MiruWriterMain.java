@@ -182,6 +182,7 @@ public class MiruWriterMain {
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
+                instanceConfig.getServiceName(),
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 null, //"miru-writer-" + instanceConfig.getClusterName(),

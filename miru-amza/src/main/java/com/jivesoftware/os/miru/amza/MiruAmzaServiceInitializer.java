@@ -38,6 +38,7 @@ import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
+import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.IOException;
@@ -47,9 +48,10 @@ import java.io.IOException;
  */
 public class MiruAmzaServiceInitializer {
 
-    public AmzaService initialize(final Deployable deployable,
+    public AmzaService initialize(Deployable deployable,
         int instanceId,
         String instanceKey,
+        String serviceName,
         String hostName,
         int port,
         String clusterName,
@@ -173,11 +175,16 @@ public class MiruAmzaServiceInitializer {
             System.out.println("-----------------------------------------------------------------------");
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
-            TenantsServiceConnectionDescriptorProvider connections = tenantRoutingProvider.getConnections("miru-manage", "main");
+            TenantsServiceConnectionDescriptorProvider connections = tenantRoutingProvider.getConnections(serviceName, "main");
             ConnectionDescriptors selfConnections = connections.getConnections("");
             for (ConnectionDescriptor connectionDescriptor : selfConnections.getConnectionDescriptors()) {
+
+                InstanceDescriptor routingInstanceDescriptor = connectionDescriptor.getInstanceDescriptor();
+                RingMember routingRingMember = new RingMember(
+                    Strings.padStart(String.valueOf(routingInstanceDescriptor.instanceName), 5, '0') + "_" + routingInstanceDescriptor.instanceKey);
+
                 HostPort hostPort = connectionDescriptor.getHostPort();
-                amzaService.getRingWriter().register(new RingMember(hostPort.getHost() + ":" + hostPort.getPort()),
+                amzaService.getRingWriter().register(routingRingMember,
                     new RingHost(hostPort.getHost(), hostPort.getPort()));
             }
         }
