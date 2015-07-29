@@ -35,6 +35,11 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
+import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
+import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.IOException;
 
 /**
@@ -166,6 +171,15 @@ public class MiruAmzaServiceInitializer {
             System.out.println("-----------------------------------------------------------------------");
             System.out.println("|     Amza Service is in manual Discovery mode.  No cluster name was specified or discovery port not set");
             System.out.println("-----------------------------------------------------------------------");
+
+            TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
+            TenantsServiceConnectionDescriptorProvider connections = tenantRoutingProvider.getConnections("miru-manage", "main");
+            ConnectionDescriptors selfConnections = connections.getConnections("");
+            for (ConnectionDescriptor connectionDescriptor : selfConnections.getConnectionDescriptors()) {
+                HostPort hostPort = connectionDescriptor.getHostPort();
+                amzaService.getRingWriter().register(new RingMember(hostPort.getHost() + ":" + hostPort.getPort()),
+                    new RingHost(hostPort.getHost(), hostPort.getPort()));
+            }
         }
         return amzaService;
     }

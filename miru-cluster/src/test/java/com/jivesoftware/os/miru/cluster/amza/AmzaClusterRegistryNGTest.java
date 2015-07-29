@@ -67,7 +67,7 @@ public class AmzaClusterRegistryNGTest {
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         acrc.setTakeFromNeighborsIntervalInMillis(10);
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, "test-cluster", acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
         registry = new AmzaClusterRegistry(amzaService,

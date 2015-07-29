@@ -196,10 +196,11 @@ public class MiruManageMain {
                 instanceConfig.getInstanceKey(),
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
-                "amza-topology-" + instanceConfig.getClusterName(),
+                null, //"amza-topology-" + instanceConfig.getClusterName(), // Manual service discovery if null
                 amzaClusterRegistryConfig,
                 rowsChanged -> {
                 });
+
             AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
             AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
                 amzaKretrProvider,
