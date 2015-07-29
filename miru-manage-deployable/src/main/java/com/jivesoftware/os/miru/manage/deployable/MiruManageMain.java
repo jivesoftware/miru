@@ -194,6 +194,7 @@ public class MiruManageMain {
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
+                instanceConfig.getServiceName(),
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 null, //"amza-topology-" + instanceConfig.getClusterName(), // Manual service discovery if null
