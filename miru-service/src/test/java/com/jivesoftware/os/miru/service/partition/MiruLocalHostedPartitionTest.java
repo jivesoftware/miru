@@ -242,7 +242,7 @@ public class MiruLocalHostedPartitionTest {
         acrc.setAmzaDiscoveryGroup("225.5.6.26");
         acrc.setAmzaDiscoveryPort(1226);
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, "test-cluster", acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
 
