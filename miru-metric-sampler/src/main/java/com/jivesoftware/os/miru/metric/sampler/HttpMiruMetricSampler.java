@@ -116,7 +116,7 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         for (CountersAndTimers a : CountersAndTimers.getAll()) {
             gather("null", a, metrics, time);
             if (tenantLevelMetricsEnable) {
-                Collection<CountersAndTimers> cats = a.getAllTenantSpecficMetrics();
+                Collection<CountersAndTimers> cats = a.getAllTenantSpecificMetrics();
                 for (CountersAndTimers c : cats) {
                     String tenant = c.getName().split(">")[2];
                     gather(tenant, c, metrics, time);
