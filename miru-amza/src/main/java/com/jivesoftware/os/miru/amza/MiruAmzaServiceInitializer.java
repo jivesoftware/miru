@@ -207,7 +207,7 @@ public class MiruAmzaServiceInitializer {
         }
 
         public void start() {
-            scheduledExecutorService.scheduleWithFixedDelay(this, discoveryIntervalMillis, discoveryIntervalMillis, TimeUnit.MILLISECONDS);
+            scheduledExecutorService.scheduleWithFixedDelay(this, 0, discoveryIntervalMillis, TimeUnit.MILLISECONDS);
         }
 
         public void stop() {
