@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
+import com.jivesoftware.os.amza.service.AmzaRingStoreWriter;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
@@ -175,7 +176,7 @@ public class MiruAmzaServiceInitializer {
             System.out.println("|      Amza Service Discovery Online");
             System.out.println("-----------------------------------------------------------------------");
         } else {
-            
+
             System.out.println("-----------------------------------------------------------------------");
             System.out.println("|     Amza Service is in routing bird Discovery mode.  No cluster name was specified or discovery port not set");
             System.out.println("-----------------------------------------------------------------------");
@@ -226,7 +227,10 @@ public class MiruAmzaServiceInitializer {
                         Strings.padStart(String.valueOf(routingInstanceDescriptor.instanceName), 5, '0') + "_" + routingInstanceDescriptor.instanceKey);
 
                     HostPort hostPort = connectionDescriptor.getHostPort();
-                    amzaService.getRingWriter().register(routingRingMember, new RingHost(hostPort.getHost(), hostPort.getPort()));
+                    AmzaRingStoreWriter ringWriter = amzaService.getRingWriter();
+                    ringWriter.register(routingRingMember, new RingHost(hostPort.getHost(), hostPort.getPort()));
+                    ringWriter.addRingMember(AmzaRingReader.SYSTEM_RING, routingRingMember);
+
                 }
             } catch (Exception x) {
                 LOG.warn("Failed while calling routing bird discovery.", x);
