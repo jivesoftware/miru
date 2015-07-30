@@ -33,6 +33,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
@@ -42,6 +44,9 @@ import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -170,24 +175,62 @@ public class MiruAmzaServiceInitializer {
             System.out.println("|      Amza Service Discovery Online");
             System.out.println("-----------------------------------------------------------------------");
         } else {
+            
             System.out.println("-----------------------------------------------------------------------");
-            System.out.println("|     Amza Service is in manual Discovery mode.  No cluster name was specified or discovery port not set");
+            System.out.println("|     Amza Service is in routing bird Discovery mode.  No cluster name was specified or discovery port not set");
             System.out.println("-----------------------------------------------------------------------");
-
-            TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
-            TenantsServiceConnectionDescriptorProvider connections = tenantRoutingProvider.getConnections(serviceName, "main");
-            ConnectionDescriptors selfConnections = connections.getConnections("");
-            for (ConnectionDescriptor connectionDescriptor : selfConnections.getConnectionDescriptors()) {
-
-                InstanceDescriptor routingInstanceDescriptor = connectionDescriptor.getInstanceDescriptor();
-                RingMember routingRingMember = new RingMember(
-                    Strings.padStart(String.valueOf(routingInstanceDescriptor.instanceName), 5, '0') + "_" + routingInstanceDescriptor.instanceKey);
-
-                HostPort hostPort = connectionDescriptor.getHostPort();
-                amzaService.getRingWriter().register(routingRingMember,
-                    new RingHost(hostPort.getHost(), hostPort.getPort()));
-            }
+            RoutingBirdAmzaDiscovery routingBirdAmzaDiscovery = new RoutingBirdAmzaDiscovery(deployable,
+                serviceName,
+                amzaService,
+                config.getDiscoveryIntervalMillis());
+            routingBirdAmzaDiscovery.start();
         }
         return amzaService;
+    }
+
+    static class RoutingBirdAmzaDiscovery implements Runnable {
+
+        private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+        private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+
+        private final Deployable deployable;
+        private final String serviceName;
+        private final AmzaService amzaService;
+        private final long discoveryIntervalMillis;
+
+        public RoutingBirdAmzaDiscovery(Deployable deployable, String serviceName, AmzaService amzaService, long discoveryIntervalMillis) {
+            this.deployable = deployable;
+            this.serviceName = serviceName;
+            this.amzaService = amzaService;
+            this.discoveryIntervalMillis = discoveryIntervalMillis;
+        }
+
+        public void start() {
+            scheduledExecutorService.scheduleWithFixedDelay(this, discoveryIntervalMillis, discoveryIntervalMillis, TimeUnit.MILLISECONDS);
+        }
+
+        public void stop() {
+            scheduledExecutorService.shutdownNow();
+        }
+
+        @Override
+        public void run() {
+            try {
+                TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
+                TenantsServiceConnectionDescriptorProvider connections = tenantRoutingProvider.getConnections(serviceName, "main");
+                ConnectionDescriptors selfConnections = connections.getConnections("");
+                for (ConnectionDescriptor connectionDescriptor : selfConnections.getConnectionDescriptors()) {
+
+                    InstanceDescriptor routingInstanceDescriptor = connectionDescriptor.getInstanceDescriptor();
+                    RingMember routingRingMember = new RingMember(
+                        Strings.padStart(String.valueOf(routingInstanceDescriptor.instanceName), 5, '0') + "_" + routingInstanceDescriptor.instanceKey);
+
+                    HostPort hostPort = connectionDescriptor.getHostPort();
+                    amzaService.getRingWriter().register(routingRingMember, new RingHost(hostPort.getHost(), hostPort.getPort()));
+                }
+            } catch (Exception x) {
+                LOG.warn("Failed while calling routing bird discovery.", x);
+            }
+        }
     }
 }

@@ -68,4 +68,7 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @BooleanDefault(false)
     boolean getHardFsync();
+
+    @LongDefault(30_000L)
+    long getDiscoveryIntervalMillis();
 }
