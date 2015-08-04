@@ -18,9 +18,9 @@ public class MiruPartitionStatus {
 
     @JsonCreator
     public MiruPartitionStatus(@JsonProperty("tenantId") MiruTenantId tenantId,
-        @JsonProperty("tenantId") MiruPartitionId partitionId,
-        @JsonProperty("tenantId") long lastIngressTimestamp,
-        @JsonProperty("tenantId") long destroyAfterTimestamp) {
+        @JsonProperty("partitionId") MiruPartitionId partitionId,
+        @JsonProperty("lastIngressTimestamp") long lastIngressTimestamp,
+        @JsonProperty("destroyAfterTimestamp") long destroyAfterTimestamp) {
         this.tenantId = tenantId;
         this.partitionId = partitionId;
         this.lastIngressTimestamp = lastIngressTimestamp;
