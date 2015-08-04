@@ -32,7 +32,6 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
-import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -41,8 +40,10 @@ import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
@@ -689,6 +690,17 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     @Override
+    public List<MiruPartitionStatus> getPartitionStatusForTenant(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception {
+        List<MiruPartitionStatus> status = new ArrayList<>();
+        for (MiruPartitionId partitionId = MiruPartitionId.of(0); partitionId.compareTo(largestPartitionId) <= 0; partitionId = partitionId.next()) {
+            long destroyAfterTimestamp = getDestroyAfterTimestamp(tenantId, partitionId);
+            long lastIngressTimestampMillis = getIngressUpdate(tenantId, partitionId, IngressType.ingressTimestamp, 0);
+            status.add(new MiruPartitionStatus(tenantId, partitionId, lastIngressTimestampMillis, destroyAfterTimestamp));
+        }
+        return status;
+    }
+
+    @Override
     public List<MiruTopologyStatus> getTopologyStatusForTenant(MiruTenantId tenantId) throws Exception {
         NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> partitionIdToLatest = tenantLatestTopologies(tenantId);
         List<MiruTopologyStatus> status = new ArrayList<>();
@@ -696,10 +708,10 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             MinMaxPriorityQueue<HostAndTimestamp> got = partitionIdToLatest.get(partitionId);
             for (HostAndTimestamp hat : got) {
                 AmzaKretr topologyInfoClient = topologyInfoClient(hat.host);
-                byte[] rawInfo = topologyInfoClient.getValue(toTopologyKey(tenantId, partitionId));
-                MiruPartitionCoordInfo info;
                 long lastIngressTimestampMillis = getIngressUpdate(tenantId, partitionId, IngressType.ingressTimestamp, 0);
                 long lastQueryTimestampMillis = 0;
+                byte[] rawInfo = topologyInfoClient.getValue(toTopologyKey(tenantId, partitionId));
+                MiruPartitionCoordInfo info;
                 if (rawInfo == null) {
                     info = new MiruPartitionCoordInfo(MiruPartitionState.offline, MiruBackingStorage.memory);
                 } else {
@@ -709,7 +721,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 }
                 MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hat.host);
                 MiruPartition miruPartition = new MiruPartition(coord, info);
-                status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis, getDestroyAfterTimestamp(coord)));
+                status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis,
+                    getDestroyAfterTimestamp(coord.tenantId, coord.partitionId)));
             }
         }
         return status;
@@ -737,7 +750,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     }
                     MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hat.host);
                     MiruPartition miruPartition = new MiruPartition(coord, info);
-                    status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis, getDestroyAfterTimestamp(coord)));
+                    status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis,
+                        getDestroyAfterTimestamp(coord.tenantId, coord.partitionId)));
                 }
             }
         }
@@ -827,12 +841,12 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             idleAfterTimestamp = activeTimestamp + defaultTopologyIsIdleAfterMillis;
         }
 
-        return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp, getDestroyAfterTimestamp(coord));
+        return new MiruPartitionActive(activeUntilTimestamp, idleAfterTimestamp, getDestroyAfterTimestamp(coord.tenantId, coord.partitionId));
     }
 
-    private long getDestroyAfterTimestamp(MiruPartitionCoord coord) throws Exception {
+    private long getDestroyAfterTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         long destroyAfterTimestamp = -1;
-        long clockMax = getIngressUpdate(coord.tenantId, coord.partitionId, IngressType.clockMax, -1);
+        long clockMax = getIngressUpdate(tenantId, partitionId, IngressType.clockMax, -1);
         if (clockMax > 0) {
             destroyAfterTimestamp = clockMax + defaultTopologyDestroyAfterMillis;
         }

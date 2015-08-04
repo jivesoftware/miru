@@ -27,6 +27,7 @@ public class MiruWALUIService {
     private final MiruPageRegion<RCVSActivityWALRegionInput> activityWALRegion;
     private final MiruPageRegion<MiruReadWALRegionInput> readWALRegion;
     private final MiruPageRegion<Optional<String>> repairRegion;
+    private final MiruPageRegion<Void> cleanupRegion;
 
     private final List<MiruManagePlugin> plugins = Lists.newCopyOnWriteArrayList();
 
@@ -37,7 +38,8 @@ public class MiruWALUIService {
         MiruPageRegion<MiruLookupRegionInput> lookupRegion,
         MiruPageRegion<RCVSActivityWALRegionInput> activityWALRegion,
         MiruPageRegion<MiruReadWALRegionInput> readWALRegion,
-        MiruPageRegion<Optional<String>> repairRegion) {
+        MiruPageRegion<Optional<String>> repairRegion,
+        MiruPageRegion<Void> cleanupRegion) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.adminRegion = adminRegion;
@@ -45,6 +47,7 @@ public class MiruWALUIService {
         this.activityWALRegion = activityWALRegion;
         this.readWALRegion = readWALRegion;
         this.repairRegion = repairRegion;
+        this.cleanupRegion = cleanupRegion;
     }
 
     public void registerPlugin(MiruManagePlugin plugin) {
@@ -117,12 +120,8 @@ public class MiruWALUIService {
         return chrome(repairRegion).render(Optional.of(tenantId));
     }
 
-    public <I> String renderPlugin(MiruPageRegion<I> pluginRegion, I input) {
-        return chrome(pluginRegion).render(input);
-    }
-
-    public <I> String renderFramePlugin(MiruPageRegion<I> pluginRegion, I input) {
-        return frame(pluginRegion).render(input);
+    public String renderCleanup() {
+        return chrome(cleanupRegion).render(null);
     }
 
 }

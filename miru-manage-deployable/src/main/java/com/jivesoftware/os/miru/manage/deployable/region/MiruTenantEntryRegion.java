@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.manage.deployable.region;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
-import com.jivesoftware.os.miru.api.MiruTopologyStatus;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
@@ -67,7 +67,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
 
             if (latestPartitionId != null) {
                 for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
-                    MiruActivityWALStatus status = miruWALClient.getPartitionStatus(tenant, latest);
+                    MiruActivityWALStatus status = miruWALClient.getActivityWALStatusForTenant(tenant, latest);
                     if (status != null) {
                         partitionsMap.put(status.partitionId,
                             new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size()));
@@ -119,7 +119,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         MiruPartitionId partitionId) throws Exception {
         PartitionBean partitionBean = partitionsMap.get(partitionId);
         if (partitionBean == null) {
-            MiruActivityWALStatus status = miruWALClient.getPartitionStatus(tenant, partitionId);
+            MiruActivityWALStatus status = miruWALClient.getActivityWALStatusForTenant(tenant, partitionId);
             if (status != null && status.partitionId.equals(partitionId)) {
                 partitionBean = new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size());
             }

@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable.topology;
 
+import com.google.common.base.Charsets;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -69,6 +70,25 @@ public class MiruTopologyEndpoints {
             return r;
         } catch (Exception x) {
             String msg = "Failed to update ingress";
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
+    @GET
+    @Path("/partition/status/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPartitionStatus(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int largestPartitionId) {
+        try {
+            long start = System.currentTimeMillis();
+            Response r = ResponseHelper.INSTANCE.jsonResponse(
+                registry.getPartitionStatus(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(largestPartitionId)));
+            stats.ingressed("/partition/status/" + tenantId + "/" + largestPartitionId, 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to get partition status for " + tenantId + " " + largestPartitionId;
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }

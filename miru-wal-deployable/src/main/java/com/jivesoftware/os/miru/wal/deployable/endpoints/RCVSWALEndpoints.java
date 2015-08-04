@@ -271,18 +271,18 @@ public class RCVSWALEndpoints {
     }
 
     @GET
-    @Path("/partition/status/{tenantId}/{partitionId}")
+    @Path("/activity/wal/status/{tenantId}/{partitionId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getPartitionStatus(@PathParam("tenantId") String tenantId,
+    public Response getActivityWALStatus(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            MiruActivityWALStatus partitionStatus = walDirector.getPartitionStatus(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+            MiruActivityWALStatus partitionStatus = walDirector.getActivityWALStatusForTenant(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId));
-            stats.ingressed("/partition/status/" + tenantId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/activity/wal/status/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(partitionStatus);
         } catch (Exception x) {
-            log.error("Failed calling getPartitionStatus({},{})", new Object[] { tenantId, partitionId }, x);
+            log.error("Failed calling getActivityWALStatus({},{})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

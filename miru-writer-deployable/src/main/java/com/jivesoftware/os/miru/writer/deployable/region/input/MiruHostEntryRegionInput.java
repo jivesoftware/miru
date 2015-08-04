@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.writer.deployable.region.input;
 
-import com.jivesoftware.os.miru.api.MiruTopologyStatus;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import java.util.List;
 

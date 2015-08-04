@@ -50,7 +50,7 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         }
     }
 
-    MiruActivityWALStatus getPartitionStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+    MiruActivityWALStatus getActivityWALStatusForTenant(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 

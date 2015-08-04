@@ -1,4 +1,6 @@
-package com.jivesoftware.os.miru.api;
+package com.jivesoftware.os.miru.api.topology;
+
+import com.jivesoftware.os.miru.api.MiruPartition;
 
 /**
  *

@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
@@ -32,6 +33,7 @@ import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.mutable.MutableLong;
@@ -126,6 +128,30 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
             LOG.info("Repaired ranges in {} partitions for tenant {}", count, tenantId);
         }
+    }
+
+    public void removeDestroyed() throws Exception {
+        LOG.info("Beginning scan for destroyed partitions");
+        List<MiruTenantId> tenantIds = getAllTenantIds();
+        for (MiruTenantId tenantId : tenantIds) {
+            List<MiruPartitionStatus> status = getAllPartitionStatus(tenantId);
+            int count = 0;
+            for (MiruPartitionStatus partitionStatus : status) {
+                if (System.currentTimeMillis() > partitionStatus.getDestroyAfterTimestamp()) {
+                    removePartition(tenantId, partitionStatus.getPartitionId());
+                    count++;
+                }
+            }
+            if (count > 0) {
+                LOG.info("Removed {} partitions for tenant {}", count, tenantId);
+            }
+        }
+        LOG.info("Finished scan for destroyed partitions");
+    }
+
+    public List<MiruPartitionStatus> getAllPartitionStatus(MiruTenantId tenantId) throws Exception {
+        MiruPartitionId largestPartitionId = getLargestPartitionId(tenantId);
+        return clusterClient.getPartitionStatus(tenantId, largestPartitionId);
     }
 
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
@@ -226,7 +252,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     @Override
-    public MiruActivityWALStatus getPartitionStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    public MiruActivityWALStatus getActivityWALStatusForTenant(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return activityWALReader.getStatus(tenantId, partitionId);
     }
 

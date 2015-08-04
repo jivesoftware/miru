@@ -9,7 +9,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
-import com.jivesoftware.os.miru.api.MiruTopologyStatus;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;

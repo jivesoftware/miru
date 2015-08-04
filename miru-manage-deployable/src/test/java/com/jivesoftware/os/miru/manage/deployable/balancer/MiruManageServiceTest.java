@@ -97,7 +97,7 @@ public class MiruManageServiceTest {
         Mockito.when(miruWALClient.getAllTenantIds()).thenReturn(Arrays.asList(tenantId));
         Mockito.when(miruWALClient.getLargestPartitionId(Mockito.<MiruTenantId>any())).thenReturn(partitionId);
 
-        Mockito.when(miruWALClient.getPartitionStatus(Mockito.<MiruTenantId>any(), Mockito.any(MiruPartitionId.class)))
+        Mockito.when(miruWALClient.getActivityWALStatusForTenant(Mockito.<MiruTenantId>any(), Mockito.any(MiruPartitionId.class)))
             .thenReturn(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0)));
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);

@@ -148,9 +148,9 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public MiruActivityWALStatus getPartitionStatus(final MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getPartitionStatus",
-            client -> extract(client.get(pathPrefix + "/partition/status/" + tenantId.toString() + "/" + partitionId.getId(), null),
+    public MiruActivityWALStatus getActivityWALStatusForTenant(final MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getActivityWALStatusForTenant",
+            client -> extract(client.get(pathPrefix + "/activity/wal/status/" + tenantId.toString() + "/" + partitionId.getId(), null),
                 MiruActivityWALStatus.class));
     }
 

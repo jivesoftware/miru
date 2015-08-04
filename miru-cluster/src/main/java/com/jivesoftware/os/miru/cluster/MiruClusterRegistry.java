@@ -7,7 +7,6 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -15,8 +14,10 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
@@ -46,6 +47,8 @@ public interface MiruClusterRegistry {
     List<MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception;
 
     List<MiruPartition> getPartitionsForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception;
+
+    List<MiruPartitionStatus> getPartitionStatusForTenant(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception;
 
     List<MiruTopologyStatus> getTopologyStatusForTenant(MiruTenantId tenantId) throws Exception;
 

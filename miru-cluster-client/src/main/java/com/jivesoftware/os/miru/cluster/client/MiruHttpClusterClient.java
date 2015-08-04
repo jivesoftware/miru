@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatRequest;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
 import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -73,6 +74,18 @@ public class MiruHttpClusterClient implements MiruClusterClient {
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/update/ingress", 1, System.currentTimeMillis() - start);
             return new ClientResponse<>(r, true);
+        });
+    }
+
+    @Override
+    public List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception {
+        return sendRoundRobin("getPartitionStatus", client -> {
+            long start = System.currentTimeMillis();
+            HttpResponse response = client.get("/miru/topology/partition/status/" + tenantId.toString() + "/" + largestPartitionId.toString(), null);
+            MiruPartitionStatus[] statuses = responseMapper.extractResultFromResponse(response, MiruPartitionStatus[].class, null);
+            miruStats.egressed("/miru/topology/partition/status/" + tenantId.toString() + "/" + largestPartitionId.toString(), 1,
+                System.currentTimeMillis() - start);
+            return new ClientResponse<>(Arrays.asList(statuses), true);
         });
     }
 
