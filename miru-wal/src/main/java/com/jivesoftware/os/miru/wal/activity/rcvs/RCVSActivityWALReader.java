@@ -289,7 +289,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         LOG.inc("largestPartitionId");
         long writerId = 1L; //TODO this is so bogus
         int partitionId = 0;
-        int partitionsPerBatch = 100; //TODO config?
+        int partitionsPerBatch = 10_000; //TODO config?
         MiruPartitionedActivity latestBoundaryActivity = null;
         while (true) {
             List<MiruActivityWALRow> rows = Lists.newArrayListWithCapacity(partitionsPerBatch);

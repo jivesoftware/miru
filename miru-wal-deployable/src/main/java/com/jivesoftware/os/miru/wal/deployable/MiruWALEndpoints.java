@@ -211,4 +211,25 @@ public class MiruWALEndpoints {
         }
     }
 
+    @GET
+    @Path("/cleanup")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getCleanup() {
+        String rendered = writerUIService.renderCleanup();
+        return Response.ok(rendered).build();
+    }
+
+    @POST
+    @Path("/cleanup/destroyed")
+    @Produces(MediaType.TEXT_HTML)
+    public Response cleanupDestroyed() {
+        try {
+            miruWALDirector.removeDestroyed();
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /cleanup/destroyed", t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
 }

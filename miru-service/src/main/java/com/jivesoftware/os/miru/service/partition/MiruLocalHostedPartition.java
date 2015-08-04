@@ -557,7 +557,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
-                    MiruActivityWALStatus status = walClient.getPartitionStatus(coord.tenantId, coord.partitionId);
+                    MiruActivityWALStatus status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
                     Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, status.count);
                     if (token.isPresent()) {
                         try {
@@ -756,7 +756,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         log.info("Forcing rebuild because context is corrupt for {}", coord);
                         forceRebuild = true;
                     } else if (firstSip.get()) {
-                        MiruActivityWALStatus status = walClient.getPartitionStatus(coord.tenantId, coord.partitionId);
+                        MiruActivityWALStatus status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
                         if (status != null) {
                             accessor.notifyBoundaries(status.begins, status.ends);
                             long currentCount = accessor.context.get().activityIndex.lastId();

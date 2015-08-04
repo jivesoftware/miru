@@ -1,0 +1,53 @@
+{namespace soy.miru.page}
+
+/**
+ * Cleanup
+ *
+ * @param? tenants
+ */
+{template .cleanupRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Cleanup</div>
+        <div class="panel-body">
+            <table class="table table-condensed">
+                <tr>
+                    <td><input type="button" value="Repair Boundaries" onclick="miru.cleanup.removeDestroyed(this)" /></td>
+                    <td>Remove all partitions for all tenants that have been marked for destruction based on their latest clock timestamp</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    {if $tenants}
+        <div class="panel panel-default">
+            <div class="panel-heading">Partitions marked for destruction</div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Tenant</th>
+                            <th>Partition</th>
+                            <th>Last Ingress</th>
+                            <th>Destroy After</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $tenant in $tenants}
+                            {foreach $partition in $tenant.partitions}
+                                <tr>
+                                    <td>{$tenant.tenantId}</td>
+                                    <td>{$partition.partitionId}</td>
+                                    <td>{$partition.lastIngressTimestamp}</td>
+                                    <td>{$partition.destroyAfterTimestamp}</td>
+                                </tr>
+                            {/foreach}
+                        {ifempty}
+                            <tr>
+                                <td colspan="4">No partitions found</td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {/if}
+{/template}

@@ -17,7 +17,7 @@ public class MiruIBA implements Comparable, Serializable {
     private final byte[] bytes;
 
     @JsonCreator
-    public MiruIBA(@JsonProperty ("bytes") byte[] _bytes) {
+    public MiruIBA(@JsonProperty("bytes") byte[] _bytes) {
         bytes = _bytes;
     }
 

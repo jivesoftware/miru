@@ -30,6 +30,8 @@ public interface MiruClusterClient {
 
     void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception;
 
+    List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception;
+
     MiruHeartbeatResponse thumpthump(final MiruHost host, final MiruHeartbeatRequest heartbeatRequest) throws Exception;
 
     MiruTopologyResponse routingTopology(MiruTenantId tenantId) throws Exception;
