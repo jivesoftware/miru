@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.partition.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.shared.wal.WALKey;
@@ -160,21 +160,21 @@ public class MiruWriterMain {
 
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
-                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(),instanceConfig.getRoutesPort()),
+                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
-            
+
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main"),
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-manage", "main"),
                 clientHealthProvider,
-                10,10_000); // TODO expose to conf
+                10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-wal", "main"),
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-wal", "main"),
                 clientHealthProvider,
-                10,10_000); // TODO expose to conf
+                10, 10_000); // TODO expose to conf
 
             final Map<MiruTenantId, Boolean> latestAlignmentCache = Maps.newConcurrentMap();
 
@@ -213,9 +213,9 @@ public class MiruWriterMain {
             WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                 null, 1000, 1000);
 
-            AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
+            AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
             AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
-                amzaKretrProvider,
+                amzaClientProvider,
                 miruAmzaServiceConfig.getReplicateCursorQuorum(),
                 miruAmzaServiceConfig.getReplicateCursorTimeoutMillis(),
                 storageDescriptor,

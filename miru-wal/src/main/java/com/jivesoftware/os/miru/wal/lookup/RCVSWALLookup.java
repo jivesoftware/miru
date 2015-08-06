@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.wal.lookup;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
@@ -17,19 +18,24 @@ import java.util.List;
  */
 public class RCVSWALLookup implements MiruWALLookup {
 
-    private final int mainPort;
+    private final HostPortProvider hostPortProvider;
     private final RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
 
-    public RCVSWALLookup(int mainPort,
+    public RCVSWALLookup(HostPortProvider hostPortProvider,
         RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable) {
-        this.mainPort = mainPort;
+        this.hostPortProvider = hostPortProvider;
         this.activityLookupTable = activityLookupTable;
     }
 
     @Override
     public HostPort[] getRoutingGroup(MiruTenantId tenantId) throws Exception {
         RowColumnValueStore.HostAndPort hostAndPort = activityLookupTable.locate(MiruVoidByte.INSTANCE, tenantId);
-        return new HostPort[] { new HostPort(hostAndPort.host, mainPort) };
+        int port = hostPortProvider.getPort(hostAndPort.host);
+        if (port < 0) {
+            return new HostPort[0];
+        } else {
+            return new HostPort[] { new HostPort(hostAndPort.host, port) };
+        }
     }
 
     @Override

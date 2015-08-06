@@ -48,7 +48,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final MiruWALLookup walLookup;
     private final MiruActivityWALReader<C, S> activityWALReader;
     private final MiruActivityWALWriter activityWALWriter;
-    private final MiruReadTrackingWALReader readTrackingWALReader;
+    private final MiruReadTrackingWALReader<C, S> readTrackingWALReader;
     private final MiruReadTrackingWALWriter readTrackingWALWriter;
     private final MiruClusterClient clusterClient;
 
@@ -57,7 +57,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     public MiruWALDirector(MiruWALLookup walLookup,
         MiruActivityWALReader<C, S> activityWALReader,
         MiruActivityWALWriter activityWALWriter,
-        MiruReadTrackingWALReader readTrackingWALReader,
+        MiruReadTrackingWALReader<C, S> readTrackingWALReader,
         MiruReadTrackingWALWriter readTrackingWALWriter,
         MiruClusterClient clusterClient) {
         this.walLookup = walLookup;
@@ -310,57 +310,29 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     @Override
-    public StreamBatch<MiruWALEntry, GetReadCursor> getRead(MiruTenantId tenantId,
+    public StreamBatch<MiruWALEntry, S> getRead(MiruTenantId tenantId,
         MiruStreamId streamId,
-        GetReadCursor cursor,
-        final int batchSize) throws Exception {
+        S sipCursor,
+        long oldestEventId,
+        int batchSize) throws Exception {
 
-        final List<MiruWALEntry> batch = new ArrayList<>();
-        final MutableLong lastEventId = new MutableLong(cursor.eventId);
-
-        readTrackingWALReader.stream(tenantId, streamId, cursor.eventId, (eventId, partitionedActivity, timestamp) -> {
-            batch.add(new MiruWALEntry(eventId, timestamp, partitionedActivity));
-            lastEventId.setValue(eventId);
-            return batch.size() < batchSize;
+        long[] minEventId = new long[1];
+        int[] count = new int[1];
+        S nextCursor = readTrackingWALReader.streamSip(tenantId, streamId, sipCursor, batchSize, (eventId, timestamp) -> {
+            minEventId[0] = Math.min(minEventId[0], eventId);
+            count[0]++;
+            return count[0] < batchSize;
         });
+        C cursor = readTrackingWALReader.getCursor(minEventId[0]);
 
-        GetReadCursor nextCursor;
-        if (batch.size() < batchSize || lastEventId.longValue() == Long.MAX_VALUE) {
-            nextCursor = null;
-        } else {
-            nextCursor = new GetReadCursor(lastEventId.longValue() + 1);
-        }
-        return new StreamBatch<>(batch, nextCursor);
-    }
+        // Take either the oldest eventId or the oldest readtracking sip time
+        minEventId[0] = Math.min(minEventId[0], oldestEventId);
 
-    @Override
-    public StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead(MiruTenantId tenantId, MiruStreamId streamId, SipReadCursor cursor,
-        final int batchSize)
-        throws Exception {
-
-        final List<MiruReadSipEntry> batch = new ArrayList<>();
-        final MutableLong lastEventId = new MutableLong(cursor.eventId);
-        final MutableLong lastSipId = new MutableLong(cursor.sipId);
-
-        readTrackingWALReader.streamSip(tenantId, streamId, cursor.eventId, (eventId, timestamp) -> {
-            batch.add(new MiruReadSipEntry(eventId, timestamp));
-            lastEventId.setValue(eventId);
-            lastSipId.setValue(timestamp);
-            return batch.size() < batchSize;
+        List<MiruWALEntry> batch = new ArrayList<>();
+        readTrackingWALReader.stream(tenantId, streamId, cursor, batchSize, (collisionId, partitionedActivity, timestamp) -> {
+            batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
+            return true; // always consume completely
         });
-
-        SipReadCursor nextCursor;
-        if (batch.size() < batchSize) {
-            nextCursor = null;
-        } else if (lastSipId.longValue() == Long.MAX_VALUE) {
-            if (lastEventId.longValue() == Long.MAX_VALUE) {
-                nextCursor = null;
-            } else {
-                nextCursor = new SipReadCursor(lastEventId.longValue() + 1, Long.MIN_VALUE);
-            }
-        } else {
-            nextCursor = new SipReadCursor(lastEventId.longValue(), lastSipId.longValue() + 1);
-        }
         return new StreamBatch<>(batch, nextCursor);
     }
 

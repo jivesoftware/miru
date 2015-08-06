@@ -7,9 +7,10 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
+import com.jivesoftware.os.miru.api.wal.RCVSCursor;
+import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
@@ -31,9 +32,9 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruWALDirector miruWALDirector;
+    private final MiruWALDirector<RCVSCursor, RCVSSipCursor> miruWALDirector;
 
-    public MiruReadWALRegion(String template, MiruSoyRenderer renderer, MiruWALDirector miruWALDirector) {
+    public MiruReadWALRegion(String template, MiruSoyRenderer renderer, MiruWALDirector<RCVSCursor, RCVSSipCursor> miruWALDirector) {
         this.template = template;
         this.renderer = renderer;
         this.miruWALDirector = miruWALDirector;
@@ -63,24 +64,11 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
                 MiruStreamId miruStreamId = new MiruStreamId(streamId.getBytes(Charsets.UTF_8));
 
                 try {
-                    if (sip) {
+                    MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> read = miruWALDirector.getRead(miruTenantId, miruStreamId,
+                        new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false), Long.MAX_VALUE, limit);
 
-                        final MiruWALClient.StreamBatch<MiruReadSipEntry, MiruWALClient.SipReadCursor> sipped = miruWALDirector.sipRead(miruTenantId,
-                            miruStreamId,
-                            new MiruWALClient.SipReadCursor(afterTimestamp, 0),
-                            limit);
-
-                        walReadEvents = Lists.transform(sipped.batch,
-                            input -> new WALBean(input.timestamp, Optional.<MiruPartitionedActivity>absent(), input.eventId));
-                        lastTimestamp.set(sipped.cursor != null ? sipped.cursor.sipId : Long.MAX_VALUE);
-
-                    } else {
-                        MiruWALClient.StreamBatch<MiruWALEntry, MiruWALClient.GetReadCursor> read = miruWALDirector.getRead(miruTenantId, miruStreamId,
-                            new MiruWALClient.GetReadCursor(afterTimestamp), limit);
-
-                        walReadEvents = Lists.transform(read.batch, input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
-                        lastTimestamp.set(read.cursor != null ? read.cursor.eventId : Long.MAX_VALUE);
-                    }
+                    walReadEvents = Lists.transform(read.batch, input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
+                    lastTimestamp.set(read.cursor != null ? read.cursor.clockTimestamp : Long.MAX_VALUE);
                 } catch (Exception e) {
                     log.error("Failed to read read-tracking WAL", e);
                     data.put("error", ExceptionUtils.getStackTrace(e));

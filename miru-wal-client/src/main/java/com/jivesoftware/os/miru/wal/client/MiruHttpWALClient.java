@@ -9,7 +9,6 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
-import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
@@ -190,13 +189,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     client -> extract(
                         client.postJson(pathPrefix + "/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor, null),
                         StreamBatch.class,
-                        new Class[]{MiruWALEntry.class, sipCursorClass}));
+                        new Class[] { MiruWALEntry.class, sipCursorClass }));
                 if (response != null) {
                     return response;
                 }
             } catch (Exception e) {
                 // non-interrupts are retried
-                LOG.warn("Failure while streaming, will retry in {} ms", new Object[]{sleepOnFailureMillis}, e);
+                LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
                 try {
                     Thread.sleep(sleepOnFailureMillis);
                 } catch (InterruptedException ie) {
@@ -220,13 +219,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     client -> extract(
                         client.postJson(pathPrefix + "/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor, null),
                         StreamBatch.class,
-                        new Class[]{MiruWALEntry.class, cursorClass}));
+                        new Class[] { MiruWALEntry.class, cursorClass }));
                 if (response != null) {
                     return response;
                 }
             } catch (Exception e) {
                 // non-interrupts are retried
-                LOG.warn("Failure while streaming, will retry in {} ms", new Object[]{sleepOnFailureMillis}, e);
+                LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
                 try {
                     Thread.sleep(sleepOnFailureMillis);
                 } catch (InterruptedException ie) {
@@ -239,30 +238,19 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     @SuppressWarnings("unchecked")
-    public StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead(final MiruTenantId tenantId,
+    public StreamBatch<MiruWALEntry, S> getRead(final MiruTenantId tenantId,
         final MiruStreamId streamId,
-        SipReadCursor cursor,
-        final int batchSize) throws
-        Exception {
-        final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "sipRead",
-            client -> extract(client.postJson(pathPrefix + "/sip/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + batchSize, jsonCursor, null),
-                StreamBatch.class,
-                new Class[]{MiruReadSipEntry.class, SipReadCursor.class}));
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public StreamBatch<MiruWALEntry, GetReadCursor> getRead(final MiruTenantId tenantId,
-        final MiruStreamId streamId,
-        GetReadCursor cursor,
-        final int batchSize) throws
-        Exception {
+        S cursor,
+        long oldestEventId,
+        int batchSize) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
         return sendWithTenant(RoutingGroupType.readTracking, tenantId, "getRead",
-            client -> extract(client.postJson(pathPrefix + "/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + batchSize, jsonCursor, null),
+            client -> extract(
+                client.postJson(pathPrefix + "/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + oldestEventId + "/" + batchSize,
+                    jsonCursor,
+                    null),
                 StreamBatch.class,
-                new Class[]{MiruWALEntry.class, GetReadCursor.class}));
+                new Class[] { MiruWALEntry.class, sipCursorClass }));
     }
 
     private <R> R sendRoundRobin(String family, ClientCall<HttpClient, R, HttpClientException> call) {

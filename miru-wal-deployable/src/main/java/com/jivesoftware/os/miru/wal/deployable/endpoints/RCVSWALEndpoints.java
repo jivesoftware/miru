@@ -7,12 +7,9 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
-import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient.GetReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient.SipReadCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
@@ -381,41 +378,22 @@ public class RCVSWALEndpoints {
     }
 
     @POST
-    @Path("/sip/read/{tenantId}/{streamId}/{batchSize}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response sipRead(@PathParam("tenantId") String tenantId,
-        @PathParam("streamId") String streamId,
-        @PathParam("batchSize") int batchSize,
-        SipReadCursor cursor) throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead = walDirector.sipRead(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
-            stats.ingressed("/sip/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(sipRead);
-        } catch (Exception x) {
-            log.error("Failed calling sipRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @POST
-    @Path("/read/{tenantId}/{streamId}/{batchSize}")
+    @Path("/read/{tenantId}/{streamId}/{oldestEventId}/{batchSize}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRead(@PathParam("tenantId") String tenantId,
         @PathParam("streamId") String streamId,
         @PathParam("batchSize") int batchSize,
-        GetReadCursor cursor) throws Exception {
+        @PathParam("oldestEventId") long oldestEventId,
+        RCVSSipCursor cursor) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            StreamBatch<MiruWALEntry, GetReadCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, batchSize);
+            StreamBatch<MiruWALEntry, RCVSSipCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, oldestEventId, batchSize);
             stats.ingressed("/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(read);
         } catch (Exception x) {
-            log.error("Failed calling getRead({},{},{},{})", new Object[] { tenantId, streamId, batchSize, cursor }, x);
+            log.error("Failed calling getRead({},{},{},{},{})", new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

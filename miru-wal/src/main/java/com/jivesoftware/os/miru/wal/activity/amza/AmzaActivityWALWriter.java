@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.wal.activity.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.shared.AmzaPartitionUpdates;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -27,7 +27,6 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
     private final int replicateRequireNReplicas;
     private final long replicateTimeoutMillis;
     private final MiruActivityWALColumnKeyMarshaller columnKeyMarshaller = new MiruActivityWALColumnKeyMarshaller();
-    private final JacksonJsonObjectTypeMarshaller<MiruPartitionedActivity> partitionedActivityMarshaller;
     private final Function<MiruPartitionedActivity, byte[]> activityWALKeyFunction;
     private final Function<MiruPartitionedActivity, byte[]> activitySerializerFunction;
 
@@ -39,7 +38,8 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         this.replicateRequireNReplicas = replicateRequireNReplicas;
         this.replicateTimeoutMillis = replicateTimeoutMillis;
 
-        this.partitionedActivityMarshaller = new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, mapper);
+        JacksonJsonObjectTypeMarshaller<MiruPartitionedActivity> partitionedActivityMarshaller =
+            new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, mapper);
         this.activityWALKeyFunction = (partitionedActivity) -> {
             long activityCollisionId;
             if (partitionedActivity.type != MiruPartitionedActivity.Type.BEGIN && partitionedActivity.type != MiruPartitionedActivity.Type.END) {
@@ -71,7 +71,7 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         recordTenantPartition(tenantId, partitionId);
         RangeMinMax partitionMinMax = new RangeMinMax();
 
-        amzaWALUtil.getActivityClient(tenantId, partitionId).commit(
+        amzaWALUtil.getActivityClient(tenantId, partitionId).commit(null,
             (highwaters, txKeyValueStream) -> {
                 for (MiruPartitionedActivity activity : partitionedActivities) {
                     long timestamp = activity.activity.isPresent() ? activity.activity.get().version : System.currentTimeMillis();
@@ -96,9 +96,9 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
 
     @Override
     public void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception {
-        AmzaKretrProvider.AmzaKretr client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        AmzaClientProvider.AmzaClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
         if (client != null) {
-            client.commit((highwaters, txKeyValueStream) -> {
+            client.commit(null, (highwaters, txKeyValueStream) -> {
                     for (MiruActivityWALColumnKey columnKey : keys) {
                         if (!txKeyValueStream.row(-1, columnKeyMarshaller.toLexBytes(columnKey), null, -1, true)) {
                             return false;
@@ -124,6 +124,6 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
 
     private void recordTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         AmzaPartitionUpdates updates = new AmzaPartitionUpdates().set(amzaWALUtil.toPartitionsKey(tenantId, partitionId), null);
-        amzaWALUtil.getLookupPartitionsClient().commit(updates, 0, 0, TimeUnit.MILLISECONDS);
+        amzaWALUtil.getLookupPartitionsClient().commit(null, updates, 0, 0, TimeUnit.MILLISECONDS);
     }
 }

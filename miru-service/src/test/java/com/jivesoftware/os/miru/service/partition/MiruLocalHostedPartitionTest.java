@@ -8,7 +8,7 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
@@ -20,6 +20,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
+import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -67,7 +68,7 @@ import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
@@ -209,9 +210,9 @@ public class MiruLocalHostedPartitionTest {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, hybridContextAllocator)
-            .put(MiruBackingStorage.disk, diskContextAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             defaultStorage,
@@ -226,13 +227,20 @@ public class MiruLocalHostedPartitionTest {
         ObjectMapper mapper = new ObjectMapper();
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
 
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
+        RCVSWALInitializer.RCVSWAL wal = new RCVSWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
+
+        HostPortProvider hostPortProvider = host -> 10_000;
 
         MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(10_000, wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(10_000, wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+        MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(hostPortProvider,
+            wal.getActivityWAL(),
+            wal.getActivitySipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new RCVSWALLookup(10_000, wal.getActivityLookupTable());
+        MiruReadTrackingWALReader<RCVSCursor, RCVSSipCursor> readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
+            wal.getReadTrackingWAL(),
+            wal.getReadTrackingSipWAL());
+        MiruWALLookup walLookup = new RCVSWALLookup(hostPortProvider,
+            wal.getActivityLookupTable());
 
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();
@@ -246,10 +254,10 @@ public class MiruLocalHostedPartitionTest {
             rowsChanged -> {
             });
 
-        AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
+        AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
 
         clusterRegistry = new AmzaClusterRegistry(amzaService,
-            amzaKretrProvider,
+            amzaClientProvider,
             0,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
@@ -447,9 +455,9 @@ public class MiruLocalHostedPartitionTest {
     private void indexNormalActivity(MiruLocalHostedPartition localHostedPartition) throws Exception {
         localHostedPartition.index(Lists.newArrayList(
             factory.activity(1, partitionId, 0, new MiruActivity(
-                    tenantId, System.currentTimeMillis(), new String[0], 0,
-                    Collections.<String, List<String>>emptyMap(),
-                    Collections.<String, List<String>>emptyMap()))
+                tenantId, System.currentTimeMillis(), new String[0], 0,
+                Collections.<String, List<String>>emptyMap(),
+                Collections.<String, List<String>>emptyMap()))
         ).iterator());
     }
 
