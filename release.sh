@@ -55,7 +55,7 @@ git checkout ${ON_BRANCH}
 
 
 VERSION=`cat pom.xml | grep -m 1 "<version>" | awk -F '[>-]' '{print $2}'`
-NEXT_VERSION=`echo $VERSION | awk '{n = substr($0, match($0, /[0-9]+$/), RLENGTH) + 1; sub(/[0-9]+$/, n); print }'
+NEXT_VERSION=`echo $VERSION | awk '{n = substr($0, match($0, /[0-9]+$/), RLENGTH) + 1; sub(/[0-9]+$/, n); print }'`
 
 echo "/-------------------------------------------------------"
 echo "| setting version to "${VERSION}
