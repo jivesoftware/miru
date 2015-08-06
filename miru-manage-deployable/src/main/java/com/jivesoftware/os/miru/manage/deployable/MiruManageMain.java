@@ -18,7 +18,7 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.storage.PartitionProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -202,9 +202,9 @@ public class MiruManageMain {
                 rowsChanged -> {
                 });
 
-            AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
+            AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
             AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-                amzaKretrProvider,
+                amzaClientProvider,
                 amzaClusterRegistryConfig.getReplicateTakeQuorum(),
                 amzaClusterRegistryConfig.getReplicateTimeoutMillis(),
                 new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),

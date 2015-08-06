@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.wal.lookup;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider.AmzaKretr;
+import com.jivesoftware.os.amza.client.AmzaClientProvider.AmzaClient;
 import com.jivesoftware.os.amza.shared.AmzaPartitionUpdates;
 import com.jivesoftware.os.amza.shared.TimestampedValue;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -43,12 +43,12 @@ public class AmzaWALLookup implements MiruWALLookup {
 
     @Override
     public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, final Long[] activityTimestamps) throws Exception {
-        AmzaKretr client = amzaWALUtil.getLookupClient(tenantId);
+        AmzaClient client = amzaWALUtil.getLookupClient(tenantId);
 
         MiruVersionedActivityLookupEntry[] entries = new MiruVersionedActivityLookupEntry[activityTimestamps.length];
         for (int i = 0; i < activityTimestamps.length; i++) {
             byte[] key = FilerIO.longBytes(activityTimestamps[i]);
-            TimestampedValue value = client.getTimestampedValue(key);
+            TimestampedValue value = client.getTimestampedValue(null, key);
             if (value != null) {
                 entries[i] = new MiruVersionedActivityLookupEntry(activityTimestamps[i],
                     value.getTimestampId(),
@@ -61,15 +61,16 @@ public class AmzaWALLookup implements MiruWALLookup {
     @Override
     public void add(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception {
         if (!knownLookupTenants.contains(tenantId)) {
-            AmzaKretr lookupTenantsRegion = amzaWALUtil.getLookupTenantsClient();
-            lookupTenantsRegion.commit(new AmzaPartitionUpdates().set(tenantId.getBytes(), null), 1, 1, TimeUnit.MINUTES); //TODO config
+            AmzaClient lookupTenantsRegion = amzaWALUtil.getLookupTenantsClient();
+            lookupTenantsRegion.commit(null, new AmzaPartitionUpdates().set(tenantId.getBytes(), null), 1, 1, TimeUnit.MINUTES); //TODO config
             knownLookupTenants.add(tenantId);
         }
 
-        AmzaKretr lookupActivityRegion = amzaWALUtil.getLookupClient(tenantId);
+        AmzaClient lookupActivityRegion = amzaWALUtil.getLookupClient(tenantId);
 
         for (MiruVersionedActivityLookupEntry versionedEntry : entries) {
             lookupActivityRegion.commit(
+                null,
                 new AmzaPartitionUpdates().set(FilerIO.longBytes(versionedEntry.timestamp),
                     activityLookupEntryMarshaller.toBytes(versionedEntry.entry), versionedEntry.version),
                 replicateLookupQuorum,
@@ -80,10 +81,10 @@ public class AmzaWALLookup implements MiruWALLookup {
 
     @Override
     public void stream(MiruTenantId tenantId, long afterTimestamp, final StreamLookupEntry streamLookupEntry) throws Exception {
-        AmzaKretr client = amzaWALUtil.getLookupClient(tenantId);
+        AmzaClient client = amzaWALUtil.getLookupClient(tenantId);
 
         if (client != null) {
-            client.scan(FilerIO.longBytes(afterTimestamp), null, (rowTxId, key, value) -> {
+            client.scan(null, FilerIO.longBytes(afterTimestamp), null, null, (rowTxId, prefix, key, value) -> {
                 if (value != null) {
                     MiruActivityLookupEntry entry = activityLookupEntryMarshaller.fromBytes(value.getValue());
                     if (!streamLookupEntry.stream(FilerIO.bytesLong(key), entry, value.getTimestampId())) {
@@ -97,11 +98,11 @@ public class AmzaWALLookup implements MiruWALLookup {
 
     @Override
     public List<MiruTenantId> allTenantIds() throws Exception {
-        AmzaKretr client = amzaWALUtil.getLookupTenantsClient();
+        AmzaClient client = amzaWALUtil.getLookupTenantsClient();
 
         final List<MiruTenantId> tenantIds = Lists.newArrayList();
         if (client != null) {
-            client.scan(null, null, (rowTxId, key, value) -> {
+            client.scan(null, null, null, null, (rowTxId, prefix, key, value) -> {
                 if (key != null) {
                     tenantIds.add(new MiruTenantId(key));
                 }

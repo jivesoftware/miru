@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -47,15 +47,15 @@ public class MiruManageServiceTest {
     private MiruPartitionId partitionId;
 
     private MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
+        .setFieldDefinitions(new MiruFieldDefinition[] {
             new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
         })
         .setPairedLatest(ImmutableMap.of(
-                "user", Arrays.asList("doc"),
-                "doc", Arrays.asList("user")))
+            "user", Arrays.asList("doc"),
+            "doc", Arrays.asList("user")))
         .setBloom(ImmutableMap.of(
-                "doc", Arrays.asList("user")))
+            "doc", Arrays.asList("user")))
         .build();
 
     @BeforeClass
@@ -81,7 +81,7 @@ public class MiruManageServiceTest {
             rowsChanged -> {
             });
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-            new AmzaKretrProvider(amzaService),
+            new AmzaClientProvider(amzaService),
             0,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),

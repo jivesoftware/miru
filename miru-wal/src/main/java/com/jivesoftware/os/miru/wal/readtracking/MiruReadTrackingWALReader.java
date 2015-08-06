@@ -3,16 +3,27 @@ package com.jivesoftware.os.miru.wal.readtracking;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.wal.MiruCursor;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 
-public interface MiruReadTrackingWALReader {
+public interface MiruReadTrackingWALReader<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
     HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId) throws Exception;
 
-    void stream(MiruTenantId tenantId, MiruStreamId streamId, long afterEventId, StreamReadTrackingWAL streamReadTrackingWAL) throws Exception;
+    C getCursor(long eventId);
 
-    void streamSip(MiruTenantId tenantId, MiruStreamId streamId, long sipTimestamp, StreamReadTrackingSipWAL streamReadTrackingSipWAL)
-        throws Exception;
+    C stream(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        C afterCursor,
+        int batchSize,
+        StreamReadTrackingWAL streamReadTrackingWAL) throws Exception;
+
+    S streamSip(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        S afterSipCursor,
+        int batchSize,
+        StreamReadTrackingSipWAL streamReadTrackingSipWAL) throws Exception;
 
     interface StreamReadTrackingWAL {
 

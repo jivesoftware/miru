@@ -106,47 +106,6 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     }
 
-    StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead(MiruTenantId tenantId,
-        MiruStreamId streamId, SipReadCursor cursor, int batchSize) throws Exception;
+    StreamBatch<MiruWALEntry, S> getRead(MiruTenantId tenantId, MiruStreamId streamId, S cursor, long oldestEventId, int batchSize) throws Exception;
 
-    StreamBatch<MiruWALEntry, GetReadCursor> getRead(MiruTenantId tenantId,
-        MiruStreamId streamId, GetReadCursor cursor, int batchSize) throws Exception;
-
-    class SipReadCursor {
-
-        public long sipId; // non final for json ser-der
-        public long eventId; // non final for json ser-der
-
-        public SipReadCursor() {
-        }
-
-        public SipReadCursor(long sipId, long eventId) {
-            this.sipId = sipId;
-            this.eventId = eventId;
-        }
-
-        @Override
-        public String toString() {
-            return "SipReadCursor{" + "sipId=" + sipId + ", eventId=" + eventId + '}';
-        }
-
-    }
-
-    class GetReadCursor {
-
-        public long eventId; // non final for json ser-der
-
-        public GetReadCursor() {
-        }
-
-        public GetReadCursor(long eventId) {
-            this.eventId = eventId;
-        }
-
-        @Override
-        public String toString() {
-            return "GetReadCursor{" + "eventId=" + eventId + '}';
-        }
-
-    }
 }

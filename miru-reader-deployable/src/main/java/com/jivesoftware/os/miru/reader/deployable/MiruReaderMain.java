@@ -44,10 +44,13 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.backfill.AmzaInboxReadTracker;
+import com.jivesoftware.os.miru.plugin.backfill.MiruInboxReadTracker;
+import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.plugin.backfill.RCVSInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
-import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.AmzaSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
@@ -191,14 +194,14 @@ public class MiruReaderMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-wal", "main"),
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-wal", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main"),
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
@@ -208,12 +211,14 @@ public class MiruReaderMain {
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
             MiruWALClient<?, ?> walClient;
+            MiruInboxReadTracker inboxReadTracker;
             MiruLifecyle<MiruService> miruServiceLifecyle;
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
 
                 walClient = rcvsWALClient;
+                inboxReadTracker = new RCVSInboxReadTracker(rcvsWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                     miruStats,
                     clusterClient,
@@ -232,6 +237,7 @@ public class MiruReaderMain {
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
 
                 walClient = amzaWALClient;
+                inboxReadTracker = new AmzaInboxReadTracker(amzaWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                     miruStats,
                     clusterClient,
@@ -250,7 +256,7 @@ public class MiruReaderMain {
             }
 
             MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-                .initialize(miruServiceConfig.getReadStreamIdsPropName(), miruHost, walClient);
+                .initialize(miruServiceConfig.getReadStreamIdsPropName(), miruHost, inboxReadTracker);
 
             backfillerizerLifecycle.start();
             final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();

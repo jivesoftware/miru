@@ -31,9 +31,9 @@ import com.jivesoftware.os.rcvs.marshall.id.SaltingDelegatingMarshaller;
 import com.jivesoftware.os.rcvs.marshall.primatives.IntegerTypeMarshaller;
 import com.jivesoftware.os.rcvs.marshall.primatives.LongTypeMarshaller;
 
-public class MiruWALInitializer {
+public class RCVSWALInitializer {
 
-    public MiruWAL initialize(String tableNameSpace,
+    public RCVSWAL initialize(String tableNameSpace,
         RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer,
         ObjectMapper objectMapper)
         throws Exception {
@@ -115,10 +115,10 @@ public class MiruWALInitializer {
                 new CurrentTimestamper()
             );
 
-        return new MiruWAL(activityWAL, activitySipWAL, readTrackingWAL, readTrackingSipWAL, activityLookupTable, writerPartitionRegistry);
+        return new RCVSWAL(activityWAL, activitySipWAL, readTrackingWAL, readTrackingSipWAL, activityLookupTable, writerPartitionRegistry);
     }
 
-    static public class MiruWAL {
+    static public class RCVSWAL {
 
         private final RowColumnValueStore<MiruTenantId,
             MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
@@ -133,7 +133,7 @@ public class MiruWALInitializer {
         private final RowColumnValueStore<MiruVoidByte,
             MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
 
-        public MiruWAL(
+        public RCVSWAL(
             RowColumnValueStore<MiruTenantId,
                 MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
             RowColumnValueStore<MiruTenantId,

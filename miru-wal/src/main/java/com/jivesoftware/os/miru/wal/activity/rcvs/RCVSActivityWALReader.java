@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -22,16 +23,16 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final int mainPort;
+    private final HostPortProvider hostPortProvider;
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activitySipWAL;
 
     public RCVSActivityWALReader(
-        int mainPort,
+        HostPortProvider hostPortProvider,
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
-        this.mainPort = mainPort;
+        this.hostPortProvider = hostPortProvider;
         this.activityWAL = activityWAL;
         this.activitySipWAL = activitySipWAL;
     }
@@ -43,7 +44,12 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     @Override
     public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         RowColumnValueStore.HostAndPort hostAndPort = activityWAL.locate(tenantId, rowKey(partitionId));
-        return new HostPort[] { new HostPort(hostAndPort.host, mainPort) };
+        int port = hostPortProvider.getPort(hostAndPort.host);
+        if (port < 0) {
+            return new HostPort[0];
+        } else {
+            return new HostPort[] { new HostPort(hostAndPort.host, port) };
+        }
     }
 
     @Override
@@ -200,6 +206,9 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
                     }
                 } else {
                     streaming = false;
+                    nextSort = sort;
+                    nextClockTimestamp = collisionId;
+                    nextActivityTimestamp = sipId;
                     break;
                 }
             }
