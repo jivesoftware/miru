@@ -67,7 +67,7 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
                     MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> read = miruWALDirector.getRead(miruTenantId, miruStreamId,
                         new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false), Long.MAX_VALUE, limit);
 
-                    walReadEvents = Lists.transform(read.batch, input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
+                    walReadEvents = Lists.transform(read.activities, input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
                     lastTimestamp.set(read.cursor != null ? read.cursor.clockTimestamp : Long.MAX_VALUE);
                 } catch (Exception e) {
                     log.error("Failed to read read-tracking WAL", e);

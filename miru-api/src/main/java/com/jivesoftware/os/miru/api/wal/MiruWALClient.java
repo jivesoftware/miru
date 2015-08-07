@@ -61,22 +61,30 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     class StreamBatch<T, C> {
 
-        public List<T> batch; // non final for json ser-der
+        public List<T> activities; // non final for json ser-der
+        public List<T> boundaries; // non final for json ser-der
         public C cursor; // non final for json ser-der
+        public boolean endOfStream; // non final for json ser-der
 
         public StreamBatch() {
         }
 
-        public StreamBatch(List<T> batch, C cursor) {
-            this.batch = batch;
+        public StreamBatch(List<T> activities, List<T> boundaries, C cursor, boolean endOfStream) {
+            this.activities = activities;
+            this.boundaries = boundaries;
             this.cursor = cursor;
+            this.endOfStream = endOfStream;
         }
 
         @Override
         public String toString() {
-            return "StreamBatch{" + "batch=" + batch + ", cursor=" + cursor + '}';
+            return "StreamBatch{" +
+                "activities=" + activities +
+                ", boundaries=" + boundaries +
+                ", cursor=" + cursor +
+                ", endOfStream=" + endOfStream +
+                '}';
         }
-
     }
 
     StreamBatch<MiruWALEntry, S> getRead(MiruTenantId tenantId, MiruStreamId streamId, S cursor, long oldestEventId, int batchSize) throws Exception;
