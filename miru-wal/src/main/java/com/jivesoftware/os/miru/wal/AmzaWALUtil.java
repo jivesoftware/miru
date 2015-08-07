@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.wal;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.AmzaClientProvider.AmzaClient;
 import com.jivesoftware.os.amza.service.AmzaService;
@@ -38,6 +39,7 @@ public class AmzaWALUtil {
     private final AmzaService amzaService;
     private final AmzaClientProvider amzaClientProvider;
     private final PartitionProperties defaultProperties;
+    private final Map<PartitionName, AmzaClient> clientMap = Maps.newConcurrentMap();
 
     public AmzaWALUtil(AmzaService amzaService,
         AmzaClientProvider amzaClientProvider,
@@ -60,7 +62,7 @@ public class AmzaWALUtil {
 
     public HostPort[] getReadTrackingRoutingGroup(MiruTenantId tenantId, Optional<PartitionProperties> partitionProperties) throws Exception {
         PartitionName partitionName = getReadTrackingPartitionName(tenantId);
-        amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3);
+        amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3); //TODO config numberOfReplicas
         amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(defaultProperties));
         return amzaService.getPartitionRoute(partitionName).orderedPartitionHosts.stream()
             .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))
@@ -142,9 +144,16 @@ public class AmzaWALUtil {
     }
 
     private AmzaClient getOrCreateMaximalClient(PartitionName partitionName, Optional<PartitionProperties> partitionProperties) throws Exception {
-        amzaService.getRingWriter().ensureMaximalSubRing(partitionName.getRingName());
-        amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(defaultProperties));
-        return amzaClientProvider.getClient(partitionName);
+        return clientMap.computeIfAbsent(partitionName, key -> {
+            try {
+                amzaService.getRingWriter().ensureMaximalSubRing(partitionName.getRingName());
+                amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(defaultProperties));
+                amzaService.awaitOnline(partitionName, 10_000); //TODO config
+                return amzaClientProvider.getClient(partitionName);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to create maximal client", e);
+            }
+        });
     }
 
     public boolean hasActivityPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
