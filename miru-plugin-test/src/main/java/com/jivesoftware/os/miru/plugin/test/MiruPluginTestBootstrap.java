@@ -38,11 +38,11 @@ import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.backfill.MiruInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.plugin.backfill.RCVSInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
-import com.jivesoftware.os.miru.plugin.backfill.RCVSInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
@@ -145,7 +145,7 @@ public class MiruPluginTestBootstrap {
         MiruReadTrackingWALReader<RCVSCursor, RCVSSipCursor> readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
             wal.getReadTrackingWAL(),
             wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new RCVSWALLookup(hostPortProvider, wal.getActivityLookupTable());
+        MiruWALLookup walLookup = new RCVSWALLookup(wal.getWALLookupTable());
 
         MiruClusterRegistry clusterRegistry;
 

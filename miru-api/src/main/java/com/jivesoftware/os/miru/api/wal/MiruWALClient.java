@@ -20,15 +20,12 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     enum RoutingGroupType {
         activity,
-        lookup,
         readTracking
     }
 
     List<MiruTenantId> getAllTenantIds() throws Exception;
 
     void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
-
-    void writeLookup(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception;
 
     void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
 
@@ -54,31 +51,7 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception;
-
-    List<MiruLookupEntry> lookupActivity(MiruTenantId tenantId, long afterTimestamp, int batchSize) throws Exception;
-
-    class MiruLookupEntry {
-
-        public long collisionId;
-        public long version;
-        public MiruActivityLookupEntry entry;
-
-        public MiruLookupEntry() {
-        }
-
-        public MiruLookupEntry(long collisionId, long version, MiruActivityLookupEntry entry) {
-            this.collisionId = collisionId;
-            this.version = version;
-            this.entry = entry;
-        }
-
-        @Override
-        public String toString() {
-            return "MiruLookupEntry{" + "collisionId=" + collisionId + ", version=" + version + ", entry=" + entry + '}';
-        }
-
-    }
+    List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception;
 
     StreamBatch<MiruWALEntry, C> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId, C cursor, int batchSize) throws Exception;

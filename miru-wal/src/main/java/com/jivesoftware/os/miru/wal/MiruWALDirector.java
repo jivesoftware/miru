@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
-import com.jivesoftware.os.miru.api.wal.MiruReadSipEntry;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
@@ -33,10 +32,9 @@ import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang.mutable.MutableLong;
 
 /**
  *
@@ -53,6 +51,10 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final MiruClusterClient clusterClient;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
+    private final Callable<Void> repairLookupCallback = () -> {
+        repairLookup();
+        return null;
+    };
 
     public MiruWALDirector(MiruWALLookup walLookup,
         MiruActivityWALReader<C, S> activityWALReader,
@@ -69,7 +71,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     public void repairBoundaries() throws Exception {
-        List<MiruTenantId> tenantIds = walLookup.allTenantIds();
+        List<MiruTenantId> tenantIds = getAllTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             MiruPartitionId latestPartitionId = getLargestPartitionId(tenantId);
             if (latestPartitionId != null) {
@@ -95,7 +97,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     public void repairRanges() throws Exception {
-        List<MiruTenantId> tenantIds = walLookup.allTenantIds();
+        List<MiruTenantId> tenantIds = getAllTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             final Set<MiruPartitionId> found = Sets.newHashSet();
             final Set<MiruPartitionId> broken = Sets.newHashSet();
@@ -193,13 +195,21 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         activityWALWriter.deleteSip(tenantId, partitionId, badKeys);
     }
 
+    private void repairLookup() throws Exception {
+        LOG.info("Repairing lookup...");
+        int[] count = new int[1];
+        activityWALReader.allPartitions((tenantId, partitionId) -> {
+            walLookup.add(tenantId, partitionId);
+            count[0]++;
+            return true;
+        });
+        walLookup.markRepaired();
+        LOG.info("Finished repairing lookup for {} partitions", count[0]);
+    }
+
     @Override
     public HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception {
-        if (routingGroupType == RoutingGroupType.lookup) {
-            return walLookup.getRoutingGroup(tenantId);
-        } else {
-            throw new IllegalArgumentException("Type is not have tenant routing: " + routingGroupType.name());
-        }
+        throw new IllegalArgumentException("Type does not have tenant routing: " + routingGroupType.name());
     }
 
     @Override
@@ -207,7 +217,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         if (routingGroupType == RoutingGroupType.activity) {
             return activityWALReader.getRoutingGroup(tenantId, partitionId);
         } else {
-            throw new IllegalArgumentException("Type is not have tenant-partition routing: " + routingGroupType.name());
+            throw new IllegalArgumentException("Type does not have tenant-partition routing: " + routingGroupType.name());
         }
     }
 
@@ -216,24 +226,20 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         if (routingGroupType == RoutingGroupType.readTracking) {
             return readTrackingWALReader.getRoutingGroup(tenantId, streamId);
         } else {
-            throw new IllegalArgumentException("Type is not have tenant-stream routing: " + routingGroupType.name());
+            throw new IllegalArgumentException("Type does not have tenant-stream routing: " + routingGroupType.name());
         }
     }
 
     @Override
     public List<MiruTenantId> getAllTenantIds() throws Exception {
-        return walLookup.allTenantIds();
+        return walLookup.allTenantIds(repairLookupCallback);
     }
 
     @Override
     public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         RangeMinMax partitionMinMax = activityWALWriter.write(tenantId, partitionId, partitionedActivities);
+        walLookup.add(tenantId, partitionId);
         clusterClient.updateIngress(new MiruIngressUpdate(tenantId, partitionId, partitionMinMax, System.currentTimeMillis(), false));
-    }
-
-    @Override
-    public void writeLookup(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception {
-        walLookup.add(tenantId, entries);
     }
 
     @Override
@@ -243,7 +249,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     @Override
     public MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception {
-        return activityWALReader.largestPartitionId(tenantId);
+        return walLookup.largestPartitionId(tenantId, repairLookupCallback);
     }
 
     @Override
@@ -262,18 +268,8 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     @Override
-    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception {
-        return walLookup.getVersionedEntries(tenantId, timestamps);
-    }
-
-    @Override
-    public List<MiruLookupEntry> lookupActivity(MiruTenantId tenantId, long afterTimestamp, final int batchSize) throws Exception {
-        final List<MiruLookupEntry> batch = new ArrayList<>();
-        walLookup.stream(tenantId, afterTimestamp, (activityTimestamp, entry, version) -> {
-            batch.add(new MiruLookupEntry(activityTimestamp, version, entry));
-            return batch.size() < batchSize;
-        });
-        return batch;
+    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception {
+        return activityWALReader.getVersionedEntries(tenantId, partitionId, timestamps);
     }
 
     @Override

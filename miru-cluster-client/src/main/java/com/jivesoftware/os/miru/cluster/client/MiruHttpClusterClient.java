@@ -135,6 +135,17 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception {
+        return sendRoundRobin("getIngressRanges", client -> {
+            long start = System.currentTimeMillis();
+            HttpResponse response = client.get("/miru/topology/ingress/ranges/" + tenantId.toString(), null);
+            PartitionRange[] partitionRanges = responseMapper.extractResultFromResponse(response, PartitionRange[].class, null);
+            miruStats.egressed("/miru/topology/ingress/ranges/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
+            return new ClientResponse<>(Arrays.asList(partitionRanges), true);
+        });
+    }
+
+    @Override
     public void removeHost(final MiruHost host) {
         sendRoundRobin("removeHost", client -> {
             long start = System.currentTimeMillis();

@@ -1,29 +1,25 @@
 package com.jivesoftware.os.miru.wal.lookup;
 
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
-import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
-import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  *
  */
 public interface MiruWALLookup {
 
-    HostPort[] getRoutingGroup(MiruTenantId tenantId) throws Exception;
+    void add(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    List<MiruTenantId> allTenantIds() throws Exception;
+    void markRepaired() throws Exception;
 
-    List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] activityTimestamp) throws Exception;
+    List<MiruTenantId> allTenantIds(Callable<Void> repairCallback) throws Exception;
 
-    void add(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception;
+    void allPartitions(PartitionsStream partitionsStream, Callable<Void> repairCallback) throws Exception;
 
-    void stream(MiruTenantId tenantId, long afterTimestamp, StreamLookupEntry streamLookupEntry) throws Exception;
+    void allPartitionsForTenant(MiruTenantId tenantId, PartitionsStream partitionsStream, Callable<Void> repairCallback) throws Exception;
 
-    interface StreamLookupEntry {
-
-        boolean stream(long activityTimestamp, MiruActivityLookupEntry entry, long version) throws Exception;
-    }
+    MiruPartitionId largestPartitionId(MiruTenantId tenantId, Callable<Void> repairCallback) throws Exception;
 
 }

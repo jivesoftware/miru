@@ -5,16 +5,20 @@ import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
+import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang.mutable.MutableLong;
 
@@ -273,37 +277,39 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     }
 
     @Override
-    public MiruPartitionId largestPartitionId(MiruTenantId tenantId) throws Exception {
-        LOG.inc("largestPartitionId");
-        long writerId = 1L; //TODO this is so bogus
-        int partitionId = 0;
-        int partitionsPerBatch = 10_000; //TODO config?
-        MiruPartitionedActivity latestBoundaryActivity = null;
-        while (true) {
-            List<MiruActivityWALRow> rows = Lists.newArrayListWithCapacity(partitionsPerBatch);
-            for (int i = partitionId; i < partitionId + partitionsPerBatch; i++) {
-                rows.add(new MiruActivityWALRow(i));
+    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception {
+        MiruActivityWALColumnKey[] columnKeys = new MiruActivityWALColumnKey[timestamps.length];
+        int[] offsets = new int[timestamps.length];
+        int index = 0;
+        for (int i = 0; i < timestamps.length; i++) {
+            if (timestamps[i] != null) {
+                columnKeys[index] = new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), timestamps[i]);
+                offsets[index] = i;
+                index++;
             }
-            List<MiruPartitionedActivity> batch = activityWAL.multiRowGet(tenantId, rows,
-                new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), writerId), null, null);
-            boolean found = false;
-            for (MiruPartitionedActivity got : batch) {
-                if (got != null) {
-                    latestBoundaryActivity = got;
-                    found = true;
-                }
-            }
-            if (!found) {
-                break;
-            }
-            partitionId += partitionsPerBatch;
         }
+        ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long>[] got = activityWAL.multiGetEntries(tenantId,
+            new MiruActivityWALRow(partitionId.getId()),
+            columnKeys,
+            null, null);
 
-        if (latestBoundaryActivity == null) {
-            return MiruPartitionId.of(0);
-        } else {
-            return latestBoundaryActivity.partitionId;
+        MiruVersionedActivityLookupEntry[] entries = new MiruVersionedActivityLookupEntry[timestamps.length];
+        for (int i = 0; i < got.length; i++) {
+            int offset = offsets[i];
+            if (got[i] == null) {
+                entries[offset] = null;
+            } else {
+                MiruPartitionedActivity partitionedActivity = got[i].getValue();
+                entries[offset] = new MiruVersionedActivityLookupEntry(timestamps[i],
+                    got[i].getTimestamp(),
+                    new MiruActivityLookupEntry(
+                        partitionId.getId(),
+                        partitionedActivity.index,
+                        partitionedActivity.writerId,
+                        !partitionedActivity.activity.isPresent()));
+            }
         }
+        return Arrays.asList(entries);
     }
 
     @Override

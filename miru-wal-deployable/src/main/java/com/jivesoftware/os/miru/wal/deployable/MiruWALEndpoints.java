@@ -47,28 +47,6 @@ public class MiruWALEndpoints {
     }
 
     @GET
-    @Path("/lookup")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getLookup() {
-        String rendered = writerUIService.renderLookup();
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/lookup/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getActivityWALForTenant(
-        @PathParam("tenantId") String tenantId,
-        @QueryParam("afterTimestamp") Long afterTimestamp,
-        @QueryParam("limit") Integer limit) {
-        String rendered = writerUIService.renderLookupWithFocus(
-            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-            Optional.fromNullable(afterTimestamp),
-            Optional.fromNullable(limit));
-        return Response.ok(rendered).build();
-    }
-
-    @GET
     @Path("/activity")
     @Produces(MediaType.TEXT_HTML)
     public Response getActivityWALForTenant() {

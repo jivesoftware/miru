@@ -116,13 +116,6 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public void writeLookup(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception {
-        final String jsonEntries = requestMapper.writeValueAsString(entries);
-        sendWithTenant(RoutingGroupType.lookup, tenantId, "writeLookup",
-            client -> extract(client.postJson(pathPrefix + "/write/lookup/" + tenantId.toString(), jsonEntries, null), String.class));
-    }
-
-    @Override
     public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
         sendWithTenant(RoutingGroupType.readTracking, tenantId, "writeReadTracking",
@@ -161,18 +154,12 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception {
+    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception {
         final String jsonTimestamps = requestMapper.writeValueAsString(timestamps);
-        return sendWithTenant(RoutingGroupType.lookup, tenantId, "getVersionedEntries",
-            client -> extractToList(client.postJson(pathPrefix + "/versioned/entries/" + tenantId.toString(), jsonTimestamps, null),
+        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getVersionedEntries",
+            client -> extractToList(
+                client.postJson(pathPrefix + "/versioned/entries/" + tenantId.toString() + "/" + partitionId.getId(), jsonTimestamps, null),
                 MiruVersionedActivityLookupEntry[].class));
-    }
-
-    @Override
-    public List<MiruLookupEntry> lookupActivity(final MiruTenantId tenantId, final long afterTimestamp, final int batchSize) throws Exception {
-        return sendWithTenant(RoutingGroupType.lookup, tenantId, "lookupActivity",
-            client -> extractToList(client.get(pathPrefix + "/lookup/activity/" + tenantId.toString() + "/" + batchSize + "/" + afterTimestamp, null),
-                MiruLookupEntry[].class));
     }
 
     @Override

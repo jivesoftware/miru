@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
-import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import java.util.List;
 import java.util.concurrent.TimeUnit;

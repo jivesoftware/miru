@@ -18,6 +18,21 @@ public interface MiruClusterClient {
 
     List<MiruPartition> partitions(final MiruTenantId tenantId) throws Exception;
 
+    class PartitionRange {
+        public MiruPartitionId partitionId;
+        public RangeMinMax rangeMinMax;
+
+        public PartitionRange() {
+        }
+
+        public PartitionRange(MiruPartitionId partitionId, RangeMinMax rangeMinMax) {
+            this.partitionId = partitionId;
+            this.rangeMinMax = rangeMinMax;
+        }
+    }
+
+    List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception;
+
     void registerSchema(final MiruTenantId tenantId, final MiruSchema schema) throws Exception;
 
     boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception;
