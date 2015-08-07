@@ -110,8 +110,14 @@ public class MiruWALMain {
         @Override
         int getAmzaDiscoveryPort();
 
-        @IntDefault(0)
+        @IntDefault(1)
         int getReplicateLookupQuorum();
+
+        @IntDefault(1)
+        int getReplicateActivityQuorum();
+
+        @IntDefault(1)
+        int getReplicateReadTrackingQuorum();
 
         @LongDefault(60_000L)
         long getReplicateTimeoutMillis();
@@ -266,13 +272,19 @@ public class MiruWALMain {
                 miruWALDirector = rcvsWALDirector;
                 walEndpointsClass = RCVSWALEndpoints.class;
             } else if (walConfig.getActivityWALType().equals("amza")) {
-                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 10_000, mapper); //TODO config
+                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil,
+                    amzaServiceConfig.getReplicateActivityQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis(),
+                    mapper);
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
                     amzaServiceConfig.getReplicateLookupQuorum(),
                     amzaServiceConfig.getReplicateTimeoutMillis());
 
-                AmzaReadTrackingWALWriter readTrackingWALWriter = new AmzaReadTrackingWALWriter(amzaWALUtil, 3, 10_000, mapper); //TODO config
+                AmzaReadTrackingWALWriter readTrackingWALWriter = new AmzaReadTrackingWALWriter(amzaWALUtil,
+                    amzaServiceConfig.getReplicateReadTrackingQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis(),
+                    mapper);
                 AmzaReadTrackingWALReader readTrackingWALReader = new AmzaReadTrackingWALReader(amzaWALUtil, mapper);
 
                 amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
@@ -291,7 +303,10 @@ public class MiruWALMain {
                     mapper);
 
                 RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL());
-                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 10_000, mapper); //TODO config
+                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil,
+                    amzaServiceConfig.getReplicateActivityQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis(),
+                    mapper);
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(rcvsActivityWALWriter, amzaActivityWALWriter);
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(hostPortProvider,
                     rcvsWAL.getActivityWAL(),
@@ -305,7 +320,10 @@ public class MiruWALMain {
 
                 RCVSReadTrackingWALWriter rcvsReadTrackingWALWriter = new RCVSReadTrackingWALWriter(rcvsWAL.getReadTrackingWAL(),
                     rcvsWAL.getReadTrackingSipWAL());
-                AmzaReadTrackingWALWriter amzaReadTrackingWALWriter = new AmzaReadTrackingWALWriter(amzaWALUtil, 3, 10_000, mapper); //TODO config
+                AmzaReadTrackingWALWriter amzaReadTrackingWALWriter = new AmzaReadTrackingWALWriter(amzaWALUtil,
+                    amzaServiceConfig.getReplicateReadTrackingQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis(),
+                    mapper);
                 ForkingReadTrackingWALWriter forkingReadTrackingWALWriter = new ForkingReadTrackingWALWriter(rcvsReadTrackingWALWriter,
                     amzaReadTrackingWALWriter);
                 RCVSReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
@@ -328,7 +346,10 @@ public class MiruWALMain {
                     mapper);
 
                 RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL());
-                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 3, 1, mapper); //TODO ringSize?
+                AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil,
+                    amzaServiceConfig.getReplicateActivityQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis(),
+                    mapper);
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(amzaActivityWALWriter, rcvsActivityWALWriter);
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
 
@@ -340,7 +361,10 @@ public class MiruWALMain {
 
                 RCVSReadTrackingWALWriter rcvsReadTrackingWALWriter = new RCVSReadTrackingWALWriter(rcvsWAL.getReadTrackingWAL(),
                     rcvsWAL.getReadTrackingSipWAL());
-                AmzaReadTrackingWALWriter amzaReadTrackingWALWriter = new AmzaReadTrackingWALWriter(amzaWALUtil, 3, 10_000, mapper); //TODO config
+                AmzaReadTrackingWALWriter amzaReadTrackingWALWriter = new AmzaReadTrackingWALWriter(amzaWALUtil,
+                    amzaServiceConfig.getReplicateReadTrackingQuorum(),
+                    amzaServiceConfig.getReplicateTimeoutMillis(),
+                    mapper);
                 ForkingReadTrackingWALWriter forkingReadTrackingWALWriter = new ForkingReadTrackingWALWriter(amzaReadTrackingWALWriter,
                     rcvsReadTrackingWALWriter);
                 AmzaReadTrackingWALReader readTrackingWALReader = new AmzaReadTrackingWALReader(amzaWALUtil, mapper);
