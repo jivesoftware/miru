@@ -140,10 +140,8 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) {
-        return sendRoundRobin("getCursorForWriterId", client -> {
-            HttpResponse response = client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + writerId, null);
-            return new ClientResponse<>(responseMapper.extractResultFromResponse(response, WriterCursor.class, null), true);
-        });
+        return sendWithTenant(RoutingGroupType.activity, tenantId, "getCursorForWriterId",
+            client -> extract(client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + writerId, null), WriterCursor.class));
     }
 
     @Override
