@@ -93,8 +93,8 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     @Override
     public MiruPartitionCursor getCursor(MiruTenantId tenantId, int writerId) throws Exception {
         byte[] key = key(tenantId, writerId);
-        byte[] rawPartitonId = ensureClient(LATEST_PARTITIONS_PARTITION_NAME).getValue(null, key);
-        if (rawPartitonId == null) {
+        byte[] rawPartitionId = ensureClient(LATEST_PARTITIONS_PARTITION_NAME).getValue(null, key);
+        if (rawPartitionId == null) {
             WriterCursor cursor = walClient.getCursorForWriterId(tenantId, writerId);
             if (cursor == null) {
                 throw new IllegalStateException("Unknown cursor for tenant " + tenantId + " writer " + writerId);
@@ -103,7 +103,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             MiruPartitionCursor cursorForWriterId = new MiruPartitionCursor(MiruPartitionId.of(cursor.partitionId), new AtomicInteger(cursor.index), capacity);
             return setCursor(tenantId, writerId, cursorForWriterId);
         } else {
-            MiruPartitionId partitionId = MiruPartitionId.of(FilerIO.bytesInt(rawPartitonId));
+            MiruPartitionId partitionId = MiruPartitionId.of(FilerIO.bytesInt(rawPartitionId));
             int latestIndex = getLatestIndex(tenantId, partitionId, writerId);
             return new MiruPartitionCursor(partitionId, new AtomicInteger(latestIndex), capacity);
         }
