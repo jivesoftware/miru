@@ -630,7 +630,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
                     while (rebuilding.get() && accessorRef.get() == accessor && streamBatch != null) {
                         tryQueuePut(rebuilding, queue, streamBatch);
-                        if (streamBatch.batch.isEmpty()) {
+                        if (streamBatch.activities.isEmpty()) {
                             break;
                         }
                         streamBatch = (streamBatch.cursor != null)
@@ -663,8 +663,11 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     }
 
                     if (streamBatch != null) {
-                        partitionedActivities = new ArrayList<>(streamBatch.batch.size());
-                        for (MiruWALEntry batch : streamBatch.batch) {
+                        partitionedActivities = new ArrayList<>(streamBatch.activities.size() + streamBatch.boundaries.size());
+                        for (MiruWALEntry batch : streamBatch.activities) {
+                            partitionedActivities.add(batch.activity);
+                        }
+                        for (MiruWALEntry batch : streamBatch.boundaries) {
                             partitionedActivities.add(batch.activity);
                         }
                         nextCursor = streamBatch.cursor;
@@ -805,21 +808,25 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                 sip.get(),
                 partitionSipBatchSize);
 
-            while (accessorRef.get() == accessor && sippedActivity != null && !sippedActivity.batch.isEmpty()) {
+            while (accessorRef.get() == accessor && sippedActivity != null && !sippedActivity.activities.isEmpty()) {
                 if (Thread.interrupted()) {
                     throw new InterruptedException("Interrupted while streaming sip");
                 }
 
-                List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(sippedActivity.batch.size());
-                for (MiruWALEntry e : sippedActivity.batch) {
+                List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(
+                    sippedActivity.activities.size() + sippedActivity.boundaries.size());
+                for (MiruWALEntry e : sippedActivity.activities) {
                     long version = e.activity.activity.isPresent() ? e.activity.activity.get().version : 0; // Smells!
                     TimeAndVersion timeAndVersion = new TimeAndVersion(e.activity.timestamp, version);
 
-                    if (e.activity.type.isBoundaryType() || !sipTracker.wasSeenLastSip(timeAndVersion)) {
+                    if (!sipTracker.wasSeenLastSip(timeAndVersion)) {
                         partitionedActivities.add(e.activity);
                     }
                     sipTracker.addSeenThisSip(timeAndVersion);
                     sipTracker.track(e.activity);
+                }
+                for (MiruWALEntry e : sippedActivity.boundaries) {
+                    partitionedActivities.add(e.activity);
                 }
 
                 deliver(partitionedActivities, accessor, sipTracker, sip, sippedActivity.cursor);

@@ -65,9 +65,9 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
             oldestBackfilledEventId,
             1000);
         AmzaSipCursor lastCursor = null;
-        while (got != null && !got.batch.isEmpty()) {
+        while (got != null && !got.activities.isEmpty()) {
             lastCursor = got.cursor;
-            for (MiruWALEntry e : got.batch) {
+            for (MiruWALEntry e : got.activities) {
                 MiruReadEvent readEvent = e.activity.readEvent.get();
                 MiruFilter filter = readEvent.filter;
 

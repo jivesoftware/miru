@@ -81,7 +81,7 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                     MiruPartitionId partitionId = optionalPartitionId.get();
                     data.put("partition", partitionId.getId());
 
-                    List<WALBean> walActivities = Lists.newArrayList();
+                    List<WALBean> walActivities = Collections.emptyList();
                     final boolean sip = RCVSActivityWALRegionInput.getSip().or(false);
                     final int limit = RCVSActivityWALRegionInput.getLimit().or(100);
                     long afterTimestamp = RCVSActivityWALRegionInput.getAfterTimestamp().or(0l);
@@ -93,8 +93,11 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                                 new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false),
                                 limit);
 
-                            walActivities = Lists.transform(sipped.batch,
-                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
+                            walActivities = Lists.newArrayListWithCapacity(sipped.activities.size() + sipped.boundaries.size());
+                            walActivities.addAll(Lists.transform(sipped.activities,
+                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
+                            walActivities.addAll(Lists.transform(sipped.boundaries,
+                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
                             lastTimestamp.set(sipped.cursor != null ? sipped.cursor.clockTimestamp : Long.MAX_VALUE);
 
                         } else {
@@ -102,8 +105,11 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                                 partitionId,
                                 new RCVSCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, false, null),
                                 limit);
-                            walActivities = Lists.transform(gopped.batch,
-                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
+                            walActivities = Lists.newArrayListWithCapacity(gopped.activities.size() + gopped.boundaries.size());
+                            walActivities.addAll(Lists.transform(gopped.activities,
+                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
+                            walActivities.addAll(Lists.transform(gopped.boundaries,
+                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
                             lastTimestamp.set(gopped.cursor != null ? gopped.cursor.activityTimestamp : Long.MAX_VALUE);
 
                         }
