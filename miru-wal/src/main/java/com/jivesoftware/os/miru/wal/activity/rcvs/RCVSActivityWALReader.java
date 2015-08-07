@@ -260,36 +260,15 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     }
 
     @Override
-    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, final int writerId) throws Exception {
+    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, final int writerId) throws Exception {
         LOG.inc("getCursorForWriterId");
         LOG.inc("getCursorForWriterId>" + writerId, tenantId.toString());
-        int partitionId = 0;
-        int partitionsPerBatch = 100; //TODO config?
-        MiruPartitionedActivity latestBoundaryActivity = null;
-        while (true) {
-            List<MiruActivityWALRow> rows = Lists.newArrayListWithCapacity(partitionsPerBatch);
-            for (int i = partitionId; i < partitionId + partitionsPerBatch; i++) {
-                rows.add(new MiruActivityWALRow(i));
-            }
-            List<MiruPartitionedActivity> batch = activityWAL.multiRowGet(tenantId, rows,
-                new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId), null, null);
-            boolean found = false;
-            for (MiruPartitionedActivity got : batch) {
-                if (got != null) {
-                    latestBoundaryActivity = got;
-                    found = true;
-                }
-            }
-            if (!found) {
-                break;
-            }
-            partitionId += partitionsPerBatch;
-        }
-
-        if (latestBoundaryActivity == null) {
-            return new WriterCursor(0, 0);
+        MiruPartitionedActivity latestBoundaryActivity = activityWAL.get(tenantId, new MiruActivityWALRow(partitionId.getId()),
+            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), (long) writerId), null, null);
+        if (latestBoundaryActivity != null) {
+            return new WriterCursor(latestBoundaryActivity.partitionId.getId(), latestBoundaryActivity.index);
         } else {
-            return new WriterCursor(latestBoundaryActivity.getPartitionId(), latestBoundaryActivity.index);
+            return new WriterCursor(0, 0);
         }
     }
 

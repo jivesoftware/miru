@@ -50,7 +50,7 @@ public class AmzaWALUtil {
         MiruPartitionId partitionId,
         Optional<PartitionProperties> regionProperties) throws Exception {
         PartitionName partitionName = getActivityPartitionName(tenantId, partitionId);
-        amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3);
+        amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3); //TODO config numberOfReplicas
         amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
         return amzaService.getPartitionRoute(partitionName).orderedPartitionHosts.stream()
             .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))

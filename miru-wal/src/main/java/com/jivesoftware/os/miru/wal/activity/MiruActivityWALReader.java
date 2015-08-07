@@ -26,7 +26,7 @@ public interface MiruActivityWALReader<C, S> {
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 
-    WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) throws Exception;
+    WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception;
 
     MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
