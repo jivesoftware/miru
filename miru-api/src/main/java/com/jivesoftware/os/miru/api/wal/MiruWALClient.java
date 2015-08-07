@@ -34,7 +34,7 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception;
 
-    WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) throws Exception;
+    WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception;
 
     class WriterCursor {
 

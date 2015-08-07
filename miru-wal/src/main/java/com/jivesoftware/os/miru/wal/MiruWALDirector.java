@@ -247,8 +247,8 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     @Override
-    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) throws Exception {
-        return activityWALReader.getCursorForWriterId(tenantId, writerId);
+    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
+        return activityWALReader.getCursorForWriterId(tenantId, partitionId, writerId);
     }
 
     @Override

@@ -252,17 +252,19 @@ public class RCVSWALEndpoints {
     }
 
     @GET
-    @Path("/cursor/writer/{tenantId}/{writerId}")
+    @Path("/cursor/writer/{tenantId}/{partitionId}/{writerId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCursorForWriterId(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
         @PathParam("writerId") int writerId) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            WriterCursor cursor = walDirector.getCursorForWriterId(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), writerId);
+            WriterCursor cursor = walDirector.getCursorForWriterId(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId), writerId);
             stats.ingressed("/cursor/writer/" + tenantId + "/" + writerId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(cursor);
         } catch (Exception x) {
-            log.error("Failed calling getCursorForWriterId({},{})", new Object[] { tenantId, writerId }, x);
+            log.error("Failed calling getCursorForWriterId({},{},{})", new Object[] { tenantId, partitionId, writerId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

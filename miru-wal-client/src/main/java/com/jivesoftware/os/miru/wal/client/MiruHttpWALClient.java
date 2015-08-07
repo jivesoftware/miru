@@ -139,9 +139,10 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) {
-        return sendWithTenant(RoutingGroupType.activity, tenantId, "getCursorForWriterId",
-            client -> extract(client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + writerId, null), WriterCursor.class));
+    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) {
+        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getCursorForWriterId",
+            client -> extract(client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + partitionId.getId() + "/" + writerId, null),
+                WriterCursor.class));
     }
 
     @Override
