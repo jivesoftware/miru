@@ -2,13 +2,13 @@ package com.jivesoftware.os.miru.wal;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.AmzaClientProvider.AmzaClient;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.TimestampedValue;
 import com.jivesoftware.os.amza.shared.partition.PartitionName;
 import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
+import com.jivesoftware.os.amza.shared.partition.VersionedPartitionName;
 import com.jivesoftware.os.amza.shared.ring.RingMember;
 import com.jivesoftware.os.amza.shared.scan.Scan;
 import com.jivesoftware.os.amza.shared.take.TakeCursors;
@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
+import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -66,10 +67,28 @@ public class AmzaWALUtil {
             .toArray(HostPort[]::new);
     }
 
-    public HostPort[] getLookupRoutingGroup(MiruTenantId tenantId) throws Exception {
-        return amzaService.getPartitionRoute(getLookupPartitionName(tenantId)).orderedPartitionHosts.stream()
-            .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))
-            .toArray(HostPort[]::new);
+    //TODO slit my wrists
+    public void allActivityPartitions(PartitionsStream partitionsStream) throws Exception {
+        byte[] prefix = "activityWAL-".getBytes(Charsets.UTF_8);
+
+        partition:
+        for (VersionedPartitionName versionedPartitionName : amzaService.getPartitionIndex().getAllPartitions()) {
+            byte[] nameBytes = versionedPartitionName.getPartitionName().getName();
+            if (nameBytes.length > prefix.length) {
+                for (int i = 0; i < prefix.length; i++) {
+                    if (nameBytes[i] != prefix[i]) {
+                        continue partition;
+                    }
+                }
+                String partitionName = new String(nameBytes, Charsets.UTF_8);
+                int firstHyphen = partitionName.indexOf('-');
+                int lastHyphen = partitionName.lastIndexOf('-');
+                if (!partitionsStream.stream(new MiruTenantId(partitionName.substring(firstHyphen + 1, lastHyphen).getBytes(Charsets.UTF_8)),
+                    MiruPartitionId.of(Integer.parseInt(partitionName.substring(lastHyphen + 1))))) {
+                    break;
+                }
+            }
+        }
     }
 
     private PartitionName getActivityPartitionName(MiruTenantId tenantId, MiruPartitionId partitionId) {
@@ -172,12 +191,20 @@ public class AmzaWALUtil {
     }
 
     public byte[] toPartitionsKey(MiruTenantId tenantId, MiruPartitionId partitionId) {
-        byte[] tenantBytes = tenantId.getBytes();
-        ByteBuffer buf = ByteBuffer.allocate(4 + tenantBytes.length + 4);
-        buf.putInt(tenantBytes.length);
-        buf.put(tenantBytes);
-        buf.putInt(partitionId.getId());
-        return buf.array();
+        if (partitionId != null) {
+            byte[] tenantBytes = tenantId.getBytes();
+            ByteBuffer buf = ByteBuffer.allocate(4 + tenantBytes.length + 4);
+            buf.putInt(tenantBytes.length);
+            buf.put(tenantBytes);
+            buf.putInt(partitionId.getId());
+            return buf.array();
+        } else {
+            byte[] tenantBytes = tenantId.getBytes();
+            ByteBuffer buf = ByteBuffer.allocate(4 + tenantBytes.length);
+            buf.putInt(tenantBytes.length);
+            buf.put(tenantBytes);
+            return buf.array();
+        }
     }
 
     public TenantAndPartition fromPartitionsKey(byte[] key) {

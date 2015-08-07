@@ -1,9 +1,9 @@
 package com.jivesoftware.os.miru.wal.lookup;
 
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
-import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  *
@@ -19,28 +19,34 @@ public class ForkingWALLookup implements MiruWALLookup {
     }
 
     @Override
-    public HostPort[] getRoutingGroup(MiruTenantId tenantId) throws Exception {
-        return primaryLookup.getRoutingGroup(tenantId);
+    public void add(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        primaryLookup.add(tenantId, partitionId);
+        secondaryLookup.add(tenantId, partitionId);
     }
 
     @Override
-    public List<MiruTenantId> allTenantIds() throws Exception {
-        return primaryLookup.allTenantIds();
+    public void markRepaired() throws Exception {
+        primaryLookup.markRepaired();
+        secondaryLookup.markRepaired();
     }
 
     @Override
-    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] activityTimestamp) throws Exception {
-        return primaryLookup.getVersionedEntries(tenantId, activityTimestamp);
+    public List<MiruTenantId> allTenantIds(Callable<Void> repairCallback) throws Exception {
+        return primaryLookup.allTenantIds(repairCallback);
     }
 
     @Override
-    public void add(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception {
-        primaryLookup.add(tenantId, entries);
-        secondaryLookup.add(tenantId, entries);
+    public void allPartitions(PartitionsStream partitionsStream, Callable<Void> repairCallback) throws Exception {
+        primaryLookup.allPartitions(partitionsStream, repairCallback);
     }
 
     @Override
-    public void stream(MiruTenantId tenantId, long afterTimestamp, StreamLookupEntry streamLookupEntry) throws Exception {
-        primaryLookup.stream(tenantId, afterTimestamp, streamLookupEntry);
+    public void allPartitionsForTenant(MiruTenantId tenantId, PartitionsStream partitionsStream, Callable<Void> repairCallback) throws Exception {
+        primaryLookup.allPartitionsForTenant(tenantId, partitionsStream, repairCallback);
+    }
+
+    @Override
+    public MiruPartitionId largestPartitionId(MiruTenantId tenantId, Callable<Void> repairCallback) throws Exception {
+        return primaryLookup.largestPartitionId(tenantId, repairCallback);
     }
 }

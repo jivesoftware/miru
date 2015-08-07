@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.cluster;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -24,11 +25,13 @@ import com.jivesoftware.os.miru.api.topology.MiruTopologyPartition;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -61,6 +64,16 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     @Override
     public List<MiruPartition> partitions(MiruTenantId tenantId) throws Exception {
         return clusterRegistry.getPartitionsForTenant(tenantId);
+    }
+
+    @Override
+    public List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception {
+        List<PartitionRange> partitionRanges = Lists.newArrayList();
+        Map<MiruPartitionId, RangeMinMax> ingressRanges = clusterRegistry.getIngressRanges(tenantId);
+        for (Map.Entry<MiruPartitionId, RangeMinMax> entry : ingressRanges.entrySet()) {
+            partitionRanges.add(new PartitionRange(entry.getKey(), entry.getValue()));
+        }
+        return partitionRanges;
     }
 
     @Override

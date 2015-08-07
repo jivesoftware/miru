@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.wal.activity.amza;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.jivesoftware.os.amza.client.AmzaClientProvider;
-import com.jivesoftware.os.amza.shared.AmzaPartitionUpdates;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -68,7 +67,6 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         MiruPartitionId partitionId,
         List<MiruPartitionedActivity> partitionedActivities) throws Exception {
 
-        recordTenantPartition(tenantId, partitionId);
         RangeMinMax partitionMinMax = new RangeMinMax();
 
         amzaWALUtil.getActivityClient(tenantId, partitionId).commit(null,
@@ -120,10 +118,5 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
     @Override
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         amzaWALUtil.destroyActivityPartition(tenantId, partitionId);
-    }
-
-    private void recordTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        AmzaPartitionUpdates updates = new AmzaPartitionUpdates().set(amzaWALUtil.toPartitionsKey(tenantId, partitionId), null);
-        amzaWALUtil.getLookupPartitionsClient().commit(null, updates, 0, 0, TimeUnit.MILLISECONDS);
     }
 }

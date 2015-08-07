@@ -9,14 +9,12 @@ import com.jivesoftware.os.miru.api.marshall.MiruPartitionIdMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruTenantIdMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByteMarshaller;
-import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKeyMarshaller;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRow;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALRowMarshaller;
-import com.jivesoftware.os.miru.wal.lookup.MiruActivityLookupEntryMarshaller;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingSipWALColumnKey;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingSipWALColumnKeyMarshaller;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.MiruReadTrackingWALColumnKey;
@@ -87,16 +85,16 @@ public class RCVSWALInitializer {
             );
 
         // Miru Activity Lookup Table
-        RowColumnValueStore<MiruVoidByte, MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable =
+        RowColumnValueStore<MiruVoidByte, MiruTenantId, MiruPartitionId, Long, ? extends Exception> walLookupTable =
             rowColumnValueStoreInitializer.initialize(
                 tableNameSpace,
-                "miru.lookup.t", // Tenant
-                "a",
+                "miru.lookup.wal", // Tenant
+                "p",
                 new DefaultRowColumnValueStoreMarshaller<>(
                     new MiruVoidByteMarshaller(),
                     new SaltingDelegatingMarshaller<>(new MiruTenantIdMarshaller()),
-                    new LongTypeMarshaller(),
-                    new MiruActivityLookupEntryMarshaller()),
+                    new MiruPartitionIdMarshaller(),
+                    new LongTypeMarshaller()),
                 new CurrentTimestamper()
             );
 
@@ -115,7 +113,7 @@ public class RCVSWALInitializer {
                 new CurrentTimestamper()
             );
 
-        return new RCVSWAL(activityWAL, activitySipWAL, readTrackingWAL, readTrackingSipWAL, activityLookupTable, writerPartitionRegistry);
+        return new RCVSWAL(activityWAL, activitySipWAL, readTrackingWAL, readTrackingSipWAL, walLookupTable, writerPartitionRegistry);
     }
 
     static public class RCVSWAL {
@@ -129,7 +127,7 @@ public class RCVSWALInitializer {
         private final RowColumnValueStore<MiruTenantId,
             MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL;
         private final RowColumnValueStore<MiruVoidByte,
-            MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable;
+            MiruTenantId, MiruPartitionId, Long, ? extends Exception> walLookupTable;
         private final RowColumnValueStore<MiruVoidByte,
             MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry;
 
@@ -143,14 +141,14 @@ public class RCVSWALInitializer {
             RowColumnValueStore<MiruTenantId,
                 MiruReadTrackingWALRow, MiruReadTrackingSipWALColumnKey, Long, ? extends Exception> readTrackingSipWAL,
             RowColumnValueStore<MiruVoidByte,
-                MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> activityLookupTable,
+                MiruTenantId, MiruPartitionId, Long, ? extends Exception> walLookupTable,
             RowColumnValueStore<MiruVoidByte,
                 MiruTenantId, Integer, MiruPartitionId, ? extends Exception> writerPartitionRegistry) {
             this.activityWAL = activityWAL;
             this.activitySipWAL = activitySipWAL;
             this.readTrackingWAL = readTrackingWAL;
             this.readTrackingSipWAL = readTrackingSipWAL;
-            this.activityLookupTable = activityLookupTable;
+            this.walLookupTable = walLookupTable;
             this.writerPartitionRegistry = writerPartitionRegistry;
         }
 
@@ -175,8 +173,8 @@ public class RCVSWALInitializer {
         }
 
         public RowColumnValueStore<MiruVoidByte,
-            MiruTenantId, Long, MiruActivityLookupEntry, ? extends Exception> getActivityLookupTable() {
-            return activityLookupTable;
+            MiruTenantId, MiruPartitionId, Long, ? extends Exception> getWALLookupTable() {
+            return walLookupTable;
         }
 
         public RowColumnValueStore<MiruVoidByte,

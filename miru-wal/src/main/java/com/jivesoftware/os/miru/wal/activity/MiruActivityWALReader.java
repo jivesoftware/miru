@@ -4,8 +4,11 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
+import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
+import java.util.List;
 
 /** @author jonathan */
 public interface MiruActivityWALReader<C, S> {
@@ -32,17 +35,12 @@ public interface MiruActivityWALReader<C, S> {
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    void allPartitions(PartitionsStream stream) throws Exception;
+    List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception;
 
-    MiruPartitionId largestPartitionId(MiruTenantId tenantId) throws Exception;
+    void allPartitions(PartitionsStream partitionsStream) throws Exception;
 
     interface StreamMiruActivityWAL {
 
         boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception;
-    }
-
-    interface PartitionsStream {
-
-        boolean stream(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
     }
 }

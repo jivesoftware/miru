@@ -28,12 +28,14 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
@@ -222,9 +224,13 @@ public class MiruWriterMain {
                 clientConfig.getTotalCapacity(),
                 walClient);
 
+            MiruStats miruStats = new MiruStats();
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
+
             MiruPartitioner miruPartitioner = new MiruPartitioner(instanceConfig.getInstanceName(),
                 amzaPartitionIdProvider,
                 walClient,
+                clusterClient,
                 clientConfig.getPartitionMaximumAgeInMillis());
 
             ExecutorService sendActivitiesExecutorService = Executors.newFixedThreadPool(clientConfig.getSendActivitiesThreadPoolSize());
@@ -241,7 +247,6 @@ public class MiruWriterMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            MiruStats miruStats = new MiruStats();
             MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer()
                 .initialize(renderer, miruStats);
 

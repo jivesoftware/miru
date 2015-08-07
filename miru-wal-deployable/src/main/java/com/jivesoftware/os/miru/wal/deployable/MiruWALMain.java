@@ -110,7 +110,7 @@ public class MiruWALMain {
         @Override
         int getAmzaDiscoveryPort();
 
-        @IntDefault(1)
+        @IntDefault(0)
         int getReplicateLookupQuorum();
 
         @LongDefault(60_000L)
@@ -248,7 +248,7 @@ public class MiruWALMain {
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(hostPortProvider,
                     rcvsWAL.getActivityWAL(),
                     rcvsWAL.getActivitySipWAL());
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(hostPortProvider, rcvsWAL.getActivityLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(rcvsWAL.getWALLookupTable());
 
                 RCVSReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(rcvsWAL.getReadTrackingWAL(), rcvsWAL.getReadTrackingSipWAL());
                 RCVSReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
@@ -297,7 +297,7 @@ public class MiruWALMain {
                     rcvsWAL.getActivityWAL(),
                     rcvsWAL.getActivitySipWAL());
 
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(hostPortProvider, rcvsWAL.getActivityLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(rcvsWAL.getWALLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
                     amzaServiceConfig.getReplicateLookupQuorum(),
                     amzaServiceConfig.getReplicateTimeoutMillis());
@@ -332,7 +332,7 @@ public class MiruWALMain {
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(amzaActivityWALWriter, rcvsActivityWALWriter);
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
 
-                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(hostPortProvider, rcvsWAL.getActivityLookupTable());
+                RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(rcvsWAL.getWALLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
                     amzaServiceConfig.getReplicateLookupQuorum(),
                     amzaServiceConfig.getReplicateTimeoutMillis());

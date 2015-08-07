@@ -4,28 +4,30 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.AmzaClientProvider.AmzaClient;
 import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
 import com.jivesoftware.os.amza.shared.take.TakeCursors;
-import com.jivesoftware.os.amza.shared.wal.WALKey;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
-import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
+import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
+import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang.mutable.MutableLong;
@@ -150,30 +152,6 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     @Override
-    public MiruPartitionId largestPartitionId(MiruTenantId tenantId) throws Exception {
-        LOG.inc("largestPartitionId");
-        MiruPartitionId partitionId = MiruPartitionId.of(0);
-        int largestRunOfGaps = 10; // TODO expose to config?
-        MiruPartitionId latestPartitionId = partitionId;
-        int gaps = 0;
-        while (true) {
-            boolean got = amzaWALUtil.hasActivityPartition(tenantId, partitionId);
-            if (got) {
-                gaps = 0;
-                latestPartitionId = partitionId;
-            } else {
-                gaps++;
-                if (gaps > largestRunOfGaps) {
-                    break;
-                }
-            }
-            partitionId = partitionId.next();
-        }
-
-        return latestPartitionId;
-    }
-
-    @Override
     public MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         final MutableLong count = new MutableLong(0);
         final List<Integer> begins = Lists.newArrayList();
@@ -220,16 +198,41 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     @Override
-    public void allPartitions(PartitionsStream stream) throws Exception {
-        AmzaClient partitionsClient = amzaWALUtil.getLookupPartitionsClient();
-        partitionsClient.scan(null, null, null, null, (rowTxId, prefix, key, scanned) -> {
-            if (key != null) {
-                TenantAndPartition tenantAndPartition = amzaWALUtil.fromPartitionsKey(key);
-                if (!stream.stream(tenantAndPartition.tenantId, tenantAndPartition.partitionId)) {
+    public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception {
+        AmzaClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        if (client == null) {
+            return null;
+        }
+
+        MiruVersionedActivityLookupEntry[] entries = new MiruVersionedActivityLookupEntry[timestamps.length];
+        int[] index = new int[1];
+        client.get(null, unprefixedWALKeyStream -> {
+            for (Long timestamp : timestamps) {
+                if (timestamp != null && !unprefixedWALKeyStream.stream(FilerIO.longBytes(timestamp))) {
                     return false;
                 }
+                index[0]++;
+            }
+            return true;
+        }, (prefix, key, value, timestamp) -> {
+            if (value != null) {
+                MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
+                entries[index[0]] = new MiruVersionedActivityLookupEntry(
+                    partitionedActivity.timestamp,
+                    timestamp,
+                    new MiruActivityLookupEntry(
+                        partitionedActivity.partitionId.getId(),
+                        partitionedActivity.index,
+                        partitionedActivity.writerId,
+                        !partitionedActivity.activity.isPresent()));
             }
             return true;
         });
+        return Arrays.asList(entries);
+    }
+
+    @Override
+    public void allPartitions(PartitionsStream partitionsStream) throws Exception {
+        amzaWALUtil.allActivityPartitions(partitionsStream);
     }
 }

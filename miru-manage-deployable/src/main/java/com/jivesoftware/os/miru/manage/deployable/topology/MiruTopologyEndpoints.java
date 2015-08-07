@@ -165,6 +165,23 @@ public class MiruTopologyEndpoints {
         }
     }
 
+    @GET
+    @Path("/ingress/ranges/{tenantId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getIngressRanges(@PathParam("tenantId") String tenantId) {
+        try {
+            long start = System.currentTimeMillis();
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.getIngressRanges(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            stats.ingressed("/ingress/ranges/" + tenantId, 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to getIngressRanges for " + tenantId;
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
     @POST
     @Path("/remove/{host}/{port}")
     @Consumes(MediaType.APPLICATION_JSON)

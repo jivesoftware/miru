@@ -239,8 +239,7 @@ public class MiruLocalHostedPartitionTest {
         MiruReadTrackingWALReader<RCVSCursor, RCVSSipCursor> readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
             wal.getReadTrackingWAL(),
             wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new RCVSWALLookup(hostPortProvider,
-            wal.getActivityLookupTable());
+        MiruWALLookup walLookup = new RCVSWALLookup(wal.getWALLookupTable());
 
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();

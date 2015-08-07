@@ -134,21 +134,21 @@ public class MiruStumptownMain {
 
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
-                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(),instanceConfig.getRoutesPort()),
+                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
 
             TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main"),
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-writer", "main"),
                 clientHealthProvider,
-                10,10_000);  // TODO expose to conf
+                10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main"),
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-manage", "main"),
                 clientHealthProvider,
-                10,10_000); // TODO expose to conf
+                10, 10_000); // TODO expose to conf
 
             LogMill logMill = new LogMill(orderIdProvider);
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);

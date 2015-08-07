@@ -10,7 +10,6 @@ import com.jivesoftware.os.miru.wal.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruFrameRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruManagePlugin;
-import com.jivesoftware.os.miru.wal.deployable.region.input.MiruLookupRegionInput;
 import com.jivesoftware.os.miru.wal.deployable.region.input.MiruReadWALRegionInput;
 import com.jivesoftware.os.miru.wal.deployable.region.input.RCVSActivityWALRegionInput;
 import java.util.List;
@@ -23,7 +22,6 @@ public class MiruWALUIService {
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final MiruPageRegion<Void> adminRegion;
-    private final MiruPageRegion<MiruLookupRegionInput> lookupRegion;
     private final MiruPageRegion<RCVSActivityWALRegionInput> activityWALRegion;
     private final MiruPageRegion<MiruReadWALRegionInput> readWALRegion;
     private final MiruPageRegion<Optional<String>> repairRegion;
@@ -35,7 +33,6 @@ public class MiruWALUIService {
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
         MiruPageRegion<Void> adminRegion,
-        MiruPageRegion<MiruLookupRegionInput> lookupRegion,
         MiruPageRegion<RCVSActivityWALRegionInput> activityWALRegion,
         MiruPageRegion<MiruReadWALRegionInput> readWALRegion,
         MiruPageRegion<Optional<String>> repairRegion,
@@ -43,7 +40,6 @@ public class MiruWALUIService {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.adminRegion = adminRegion;
-        this.lookupRegion = lookupRegion;
         this.activityWALRegion = activityWALRegion;
         this.readWALRegion = readWALRegion;
         this.repairRegion = repairRegion;
@@ -64,14 +60,6 @@ public class MiruWALUIService {
 
     public String render() {
         return chrome(adminRegion).render(null);
-    }
-
-    public String renderLookup() {
-        return chrome(lookupRegion).render(new MiruLookupRegionInput(Optional.<MiruTenantId>absent(), Optional.<Long>absent(), Optional.<Integer>absent()));
-    }
-
-    public String renderLookupWithFocus(MiruTenantId tenantId, Optional<Long> afterTimestamp, Optional<Integer> limit) {
-        return chrome(lookupRegion).render(new MiruLookupRegionInput(Optional.of(tenantId), afterTimestamp, limit));
     }
 
     public String renderActivityWAL() {

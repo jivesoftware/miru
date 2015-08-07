@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient.MiruLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
@@ -199,24 +198,6 @@ public class AmzaWALEndpoints {
     }
 
     @POST
-    @Path("/write/lookup/{tenantId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response writeLookup(@PathParam("tenantId") String tenantId,
-        List<MiruVersionedActivityLookupEntry> entries) throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            walDirector.writeLookup(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), entries);
-            stats.ingressed("/write/lookup/" + tenantId, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse("ok");
-        } catch (Exception x) {
-            log.error("Failed calling writeLookup({},count:{})",
-                new Object[] { tenantId, entries != null ? entries.size() : null }, x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @POST
     @Path("/write/reads/{tenantId}/{streamId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -302,36 +283,22 @@ public class AmzaWALEndpoints {
     }
 
     @POST
-    @Path("/versioned/entries/{tenantId}")
+    @Path("/versioned/entries/{tenantId}/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response getVersionedEntries(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
         Long[] timestamps) throws Exception {
         try {
             long start = System.currentTimeMillis();
             List<MiruVersionedActivityLookupEntry> versionedEntries = walDirector.getVersionedEntries(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId),
                 timestamps);
-            stats.ingressed("/versioned/entries/" + tenantId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/versioned/entries/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(versionedEntries);
         } catch (Exception x) {
-            log.error("Failed calling getVersionedEntries({},count:{})", new Object[] { tenantId, timestamps != null ? timestamps.length : null }, x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @GET
-    @Path("/lookup/activity/{tenantId}/{batchSize}/{afterTimestamp}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response lookupActivity(@PathParam("tenantId") String tenantId,
-        @PathParam("batchSize") int batchSize,
-        @PathParam("afterTimestamp") long afterTimestamp) throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            List<MiruLookupEntry> lookupActivity = walDirector.lookupActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), afterTimestamp, batchSize);
-            stats.ingressed("/lookup/activity/" + tenantId + "/" + batchSize + "/" + afterTimestamp, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(lookupActivity);
-        } catch (Exception x) {
-            log.error("Failed calling lookupActivity({},{},{})", new Object[] { tenantId, afterTimestamp, batchSize }, x);
+            log.error("Failed calling getVersionedEntries({},{},count:{})",
+                new Object[] { tenantId, partitionId, timestamps != null ? timestamps.length : null }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
