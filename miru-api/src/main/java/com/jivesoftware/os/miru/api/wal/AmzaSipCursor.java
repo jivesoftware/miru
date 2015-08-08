@@ -28,7 +28,7 @@ public class AmzaSipCursor implements MiruSipCursor<AmzaSipCursor> {
         for (int i = 0; i < cursors.size(); i++) {
             long id = cursors.get(i).id;
             long oId = oSize >= i + 1 ? o.cursors.get(i).id : Long.MIN_VALUE;
-            int c = Longs.compare(oId, id); // reverse for descending order
+            int c = Longs.compare(id, oId);
             if (c != 0) {
                 return c;
             }
