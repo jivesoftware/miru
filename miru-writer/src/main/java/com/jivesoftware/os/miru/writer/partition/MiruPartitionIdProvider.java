@@ -21,4 +21,6 @@ public interface MiruPartitionIdProvider {
     void setLargestPartitionIdForWriter(MiruTenantId tenantId, MiruPartitionId partition, int writerId) throws Exception;
 
     MiruPartitionId getLargestPartitionIdAcrossAllWriters(MiruTenantId tenantId) throws Exception;
+
+    void rewindCursor(MiruTenantId tenantId, int writerId, int size) throws Exception;
 }
