@@ -1,0 +1,42 @@
+{namespace soy.miru.page}
+
+/**
+ * Partitions
+ *
+ * @param? partitions
+ */
+{template .partitionsRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Partitions</div>
+        <div class="panel-body">
+            <table class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Tenant</th>
+                        <th>Partition</th>
+                        <th>Last Id (Activity)</th>
+                        <th>Last Id (Time)</th>
+                        <th>Smallest Timestamp</th>
+                        <th>Largest Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {foreach $partition in $partitions}
+                        <tr>
+                            <td>{$partition.tenantId}</td>
+                            <td>{$partition.partitionId}</td>
+                            <td>{$partition.activityLastId}</td>
+                            <td>{$partition.timeLastId}</td>
+                            <td>{$partition.smallestTimestamp}</td>
+                            <td>{$partition.largestTimestamp}</td>
+                        </tr>
+                    {ifempty}
+                        <tr>
+                            <td colspan="6">No partitions found</td>
+                        </tr>
+                    {/foreach}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{/template}

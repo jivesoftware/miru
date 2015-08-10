@@ -228,6 +228,18 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
     }
 
     @Override
+    public MiruRequestHandle<BM, S> tryQueryHandle() throws Exception {
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
+
+        if (removed.get()) {
+            throw new MiruPartitionUnavailableException("Partition has been removed");
+        }
+
+        MiruPartitionAccessor<BM, C, S> accessor = accessorRef.get();
+        return accessor.getRequestHandle();
+    }
+
+    @Override
     public void remove() throws Exception {
         log.info("Removing partition by request: {}", coord);
         removed.set(true);

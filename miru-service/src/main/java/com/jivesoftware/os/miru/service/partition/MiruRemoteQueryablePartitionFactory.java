@@ -49,6 +49,11 @@ public class MiruRemoteQueryablePartitionFactory {
             }
 
             @Override
+            public MiruRequestHandle<BM, ?> tryQueryHandle() throws Exception {
+                return acquireQueryHandle();
+            }
+
+            @Override
             public MiruRequestHandle<BM, S> acquireQueryHandle() throws Exception {
                 return new MiruRequestHandle<BM, S>() {
 

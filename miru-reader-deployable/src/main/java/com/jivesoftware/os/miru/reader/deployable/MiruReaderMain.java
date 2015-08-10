@@ -273,7 +273,7 @@ public class MiruReaderMain {
                 .setContext("/static");
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-            MiruReaderUIService uiService = new MiruReaderUIInitializer().initialize(renderer, miruStats);
+            MiruReaderUIService uiService = new MiruReaderUIInitializer().initialize(renderer, miruStats, miruService);
 
             deployable.addEndpoints(MiruReaderUIEndpoints.class);
             deployable.addInjectables(MiruReaderUIService.class, uiService);

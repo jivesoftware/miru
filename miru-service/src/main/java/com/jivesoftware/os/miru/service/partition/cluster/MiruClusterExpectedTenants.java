@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
+import com.jivesoftware.os.miru.api.activity.CoordinateStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
@@ -38,6 +39,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
@@ -199,4 +201,16 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         return false;
     }
 
+    @Override
+    public boolean expectedTopologies(CoordinateStream stream) throws Exception {
+        for (Map.Entry<MiruTenantId, MiruTenantTopology<?>> entry : localTopologies.entrySet()) {
+            for (MiruLocalHostedPartition<?, ?, ?> hostedPartition : entry.getValue().allPartitions()) {
+                MiruPartitionCoord coord = hostedPartition.getCoord();
+                if (!stream.stream(coord.tenantId, coord.partitionId, coord.host)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }
