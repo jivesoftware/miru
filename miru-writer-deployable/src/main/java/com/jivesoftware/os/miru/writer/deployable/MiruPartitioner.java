@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
@@ -25,7 +26,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,6 +44,7 @@ public class MiruPartitioner {
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
     private final StripingLocksProvider<MiruTenantId> locks = new StripingLocksProvider<>(64);
     private final Cache<MiruTenantId, Map<MiruPartitionId, RangeMinMax>> tenantIngressRangeCache;
+    private final Set<TenantAndPartition> closedTenantPartitions = Collections.newSetFromMap(Maps.newConcurrentMap());
 
     public MiruPartitioner(int writerId,
         MiruPartitionIdProvider partitionIdProvider,
@@ -81,7 +82,8 @@ public class MiruPartitioner {
                 partitionedActivities.put(largestPartitionIdAcrossAllWriters,
                     partitionedActivityFactory.begin(writerId, largestPartitionIdAcrossAllWriters, tenantId, latestIndex));
 
-                flush(tenantId, largestPartitionIdAcrossAllWriters, latestIndex, true, partitionedActivities);
+                flushActivities(tenantId, largestPartitionIdAcrossAllWriters, latestIndex, true,
+                    new PartitionedLists(Collections.emptyList(), partitionedActivities));
             } else {
                 long oldestActivityClockTimestamp = walClient.oldestActivityClockTimestamp(tenantId, currentPartitionId); //TODO cache
                 long ageOfOldestActivity = System.currentTimeMillis() - oldestActivityClockTimestamp;
@@ -94,7 +96,7 @@ public class MiruPartitioner {
                     int nextLatestIndex = partitionIdProvider.getLatestIndex(tenantId, nextPartitionId, writerId);
                     partitionedActivities.put(nextPartitionId, partitionedActivityFactory.begin(writerId, nextPartitionId, tenantId, nextLatestIndex));
 
-                    flush(tenantId, nextPartitionId, nextLatestIndex, true, partitionedActivities);
+                    flushActivities(tenantId, nextPartitionId, nextLatestIndex, true, new PartitionedLists(Collections.emptyList(), partitionedActivities));
                 }
             }
         }
@@ -103,53 +105,51 @@ public class MiruPartitioner {
     public void writeActivities(MiruTenantId tenantId, List<MiruActivity> activities, boolean recoverFromRemoval)
         throws Exception {
 
-        MiruPartitionId latestPartitionId;
-        int latestIndex;
-        ListMultimap<MiruPartitionId, MiruPartitionedActivity> partitionedActivities;
-        boolean partitionRolloverOccurred = false;
+        List<List<MiruActivity>> partitions = Lists.partition(activities, 10_000); //TODO config
+        for (List<MiruActivity> partition : partitions) {
+            MiruPartitionId latestPartitionId;
+            int latestIndex;
+            boolean partitionRolloverOccurred = false;
+            PartitionedLists partitionedLists;
+            MiruPartitionId endPartitionId;
 
-        //TODO probably much more efficient just to overflow the latest partition and then roll the cursor
-        synchronized (locks.lock(tenantId, 0)) {
-            MiruPartitionCursor partitionCursor = partitionIdProvider.getCursor(tenantId, writerId);
-            PartitionedLists partitionedLists = partition(tenantId, activities, partitionCursor, recoverFromRemoval);
-            partitionIdProvider.saveCursor(tenantId, partitionCursor, writerId);
-
-            latestPartitionId = partitionCursor.getPartitionId();
-            latestIndex = partitionCursor.last();
-
-            // by always writing a "begin" we ensure the writer's index is always written to the WAL (used to reset the cursor on restart)
-            Set<MiruPartitionId> begins = new HashSet<>();
-            Set<MiruPartitionId> ends = new HashSet<>();
-            begins.add(latestPartitionId);
-
-            for (MiruPartitionId partitionId : partitionedLists.activities.keySet()) {
-                int comparison = latestPartitionId.compareTo(partitionId);
-                if (comparison < 0) {
-                    ends.add(latestPartitionId);
+            synchronized (locks.lock(tenantId, 0)) {
+                MiruPartitionCursor partitionCursor = partitionIdProvider.getCursor(tenantId, writerId);
+                if (partitionCursor.isMaxCapacity()) {
+                    endPartitionId = partitionCursor.getPartitionId();
+                    partitionCursor = partitionIdProvider.nextCursor(tenantId, partitionCursor, writerId);
                     partitionRolloverOccurred = true;
-                    latestPartitionId = partitionId;
-                    begins.add(latestPartitionId);
-                } else if (comparison > 0) {
-                    throw new RuntimeException("Should be impossible!");
+                } else {
+                    endPartitionId = partitionCursor.getPartitionId().prev();
                 }
+
+                partitionedLists = partition(tenantId, partition, partitionCursor, recoverFromRemoval);
+                if (!partitionRolloverOccurred && partitionedLists.activities.isEmpty() && partitionedLists.repairs.isEmpty()) {
+                    continue;
+                }
+
+                latestPartitionId = partitionCursor.getPartitionId();
+                latestIndex = partitionCursor.last();
+
+                partitionIdProvider.saveCursor(tenantId, partitionCursor, writerId);
             }
 
-            partitionedActivities = ArrayListMultimap.create();
-            partitionedActivities.putAll(partitionedLists.activities);
+            partitionedLists.activities.add(partitionedActivityFactory.begin(writerId, latestPartitionId, tenantId, latestIndex));
 
-            for (MiruPartitionId partitionId : begins) {
-                int partitionLatestIndex = partitionIdProvider.getLatestIndex(tenantId, partitionId, writerId);
-                partitionedActivities.put(partitionId, partitionedActivityFactory.begin(writerId, partitionId, tenantId, partitionLatestIndex));
-            }
-            for (MiruPartitionId partitionId : ends) {
-                int partitionLatestIndex = partitionIdProvider.getLatestIndex(tenantId, partitionId, writerId);
-                partitionedActivities.put(partitionId, partitionedActivityFactory.end(writerId, partitionId, tenantId, partitionLatestIndex));
+            if (endPartitionId != null) {
+                int endLatestIndex = partitionIdProvider.getLatestIndex(tenantId, endPartitionId, writerId);
+                partitionedLists.repairs.put(endPartitionId, partitionedActivityFactory.end(writerId, endPartitionId, tenantId, endLatestIndex));
             }
 
-            partitionedActivities.putAll(partitionedLists.repairs);
+            try {
+                flushActivities(tenantId, latestPartitionId, latestIndex, partitionRolloverOccurred, partitionedLists);
+            } catch (Exception e) {
+                synchronized (locks.lock(tenantId, 0)) {
+                    partitionIdProvider.rewindCursor(tenantId, writerId, partitionedLists.activities.size());
+                }
+                throw e;
+            }
         }
-
-        flush(tenantId, latestPartitionId, latestIndex, partitionRolloverOccurred, partitionedActivities);
     }
 
     public void removeActivities(MiruTenantId tenantId, List<MiruActivity> activities) throws Exception {
@@ -213,24 +213,30 @@ public class MiruPartitioner {
         }
     }
 
-    private void flush(MiruTenantId tenantId,
-        MiruPartitionId latestPartitionId,
+    private void flushActivities(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
         int latestIndex,
         boolean partitionRolloverOccurred,
-        ListMultimap<MiruPartitionId, MiruPartitionedActivity> partitionedActivities) throws Exception {
+        PartitionedLists partitionedLists) throws Exception {
 
-        for (MiruPartitionId partitionId : partitionedActivities.keySet()) {
-            walClient.writeActivity(tenantId, partitionId, partitionedActivities.get(partitionId));
+        if (!partitionedLists.activities.isEmpty()) {
+            walClient.writeActivity(tenantId, partitionId, partitionedLists.activities);
+            log.set(ValueType.COUNT, "partitioner>index>" + partitionId.getId(), latestIndex, tenantId.toString());
+            log.set(ValueType.COUNT, "partitioner>partition", partitionId.getId(), tenantId.toString());
         }
 
-        if (!partitionedActivities.isEmpty()) {
-            log.set(ValueType.COUNT, "partitioner>index>" + latestPartitionId.getId(), latestIndex, tenantId.toString());
-            log.set(ValueType.COUNT, "partitioner>partition", latestPartitionId.getId(), tenantId.toString());
+        for (MiruPartitionId repairPartitionId : partitionedLists.repairs.keySet()) {
+            List<MiruPartitionedActivity> repairActivities = partitionedLists.repairs.get(repairPartitionId);
+            if (!repairActivities.isEmpty()) {
+                walClient.writeActivity(tenantId, repairPartitionId, repairActivities);
+                log.inc("partitioner>repair>calls>" + repairPartitionId.getId(), tenantId.toString());
+                log.inc("partitioner>repair>count>" + repairPartitionId.getId(), repairActivities.size(), tenantId.toString());
+            }
         }
 
         if (partitionRolloverOccurred) {
             synchronized (locks.lock(tenantId, 0)) {
-                partitionIdProvider.setLargestPartitionIdForWriter(tenantId, latestPartitionId, writerId);
+                partitionIdProvider.setLargestPartitionIdForWriter(tenantId, partitionId, writerId);
                 tenantIngressRangeCache.invalidate(tenantId);
             }
         }
@@ -246,7 +252,7 @@ public class MiruPartitioner {
         }
 
         ListMultimap<MiruPartitionId, MiruPartitionedActivity> partitionedRepairs = ArrayListMultimap.create();
-        ListMultimap<MiruPartitionId, MiruPartitionedActivity> partitionedActivities = ArrayListMultimap.create();
+        List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList();
 
         Long[] times = new Long[activities.size()];
         int index = 0;
@@ -273,16 +279,13 @@ public class MiruPartitioner {
                     log.debug("Ignored stale version {} <= {} of activity {}", activity.version, versionedEntry.version, activity);
                 }
             } else {
-                while (!cursor.hasNext()) {
-                    cursor = partitionIdProvider.nextCursor(tenantId, cursor, writerId);
-                }
                 int id = cursor.next();
                 MiruPartitionId partitionId = cursor.getPartitionId();
-                partitionedActivities.put(partitionId, partitionedActivityFactory.activity(writerId, partitionId, id, activity));
+                partitionedActivities.add(partitionedActivityFactory.activity(writerId, partitionId, id, activity));
             }
         }
 
-        return new PartitionedLists(partitionedRepairs, partitionedActivities);
+        return new PartitionedLists(partitionedActivities, partitionedRepairs);
     }
 
     private List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] times) throws Exception {
@@ -335,13 +338,13 @@ public class MiruPartitioner {
 
     private static class PartitionedLists {
 
+        public final List<MiruPartitionedActivity> activities;
         public final ListMultimap<MiruPartitionId, MiruPartitionedActivity> repairs;
-        public final ListMultimap<MiruPartitionId, MiruPartitionedActivity> activities;
 
-        private PartitionedLists(ListMultimap<MiruPartitionId, MiruPartitionedActivity> repairs,
-            ListMultimap<MiruPartitionId, MiruPartitionedActivity> activities) {
-            this.repairs = repairs;
+        public PartitionedLists(List<MiruPartitionedActivity> activities,
+            ListMultimap<MiruPartitionId, MiruPartitionedActivity> repairs) {
             this.activities = activities;
+            this.repairs = repairs;
         }
     }
 

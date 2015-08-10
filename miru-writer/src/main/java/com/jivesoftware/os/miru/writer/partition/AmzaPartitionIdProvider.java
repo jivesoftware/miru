@@ -119,6 +119,13 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             TimeUnit.MILLISECONDS);
     }
 
+    @Override
+    public void rewindCursor(MiruTenantId tenantId, int writerId, int size) throws Exception {
+        MiruPartitionCursor partitionCursor = getCursor(tenantId, writerId);
+        int rewindIndex = Math.max(partitionCursor.last() - size, 0);
+        setCursor(tenantId, writerId, new MiruPartitionCursor(partitionCursor.getPartitionId(), new AtomicInteger(rewindIndex), capacity));
+    }
+
     private MiruPartitionCursor setCursor(MiruTenantId tenantId, int writerId, MiruPartitionCursor cursor) throws Exception {
         AmzaClient latestPartitions = ensureClient(LATEST_PARTITIONS_PARTITION_NAME);
         byte[] latestPartitionKey = key(tenantId, writerId);
