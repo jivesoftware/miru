@@ -63,11 +63,11 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
 
     public static class TrendingPluginRegionInput {
 
-        final String logLevel;
+        final String type;
         final String service;
 
-        public TrendingPluginRegionInput(String logLevel, String service) {
-            this.logLevel = logLevel;
+        public TrendingPluginRegionInput(String type, String service) {
+            this.type = type;
             this.service = service;
         }
     }
@@ -81,7 +81,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 int fromHoursAgo = 8;
                 int toHoursAgo = 0;
 
-                data.put("logLevel", input.logLevel);
+                data.put("type", input.type);
                 data.put("service", input.service);
                 data.put("fromHoursAgo", fromHoursAgo);
 
@@ -91,7 +91,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "level", Arrays.asList(String.valueOf(input.logLevel))));
+                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "type", Arrays.asList(String.valueOf(input.type))));
                 if (input.service != null) {
                     fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "service", Arrays.asList(input.service)));
                 }
