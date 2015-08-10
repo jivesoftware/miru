@@ -32,14 +32,14 @@ public class SeaAnomalyTrendsPluginEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response getTrends(@QueryParam("logLevel") @DefaultValue("ERROR") String logLevel,
+    public Response getTrends(@QueryParam("type") @DefaultValue("counter") String type,
         @QueryParam("service") @DefaultValue("") String service) {
 
         if (service.trim().isEmpty()) {
             service = null;
         }
         String rendered = miruSeaAnomalyService.renderPlugin(trendingPluginRegion,
-            Optional.of(new TrendingPluginRegionInput(logLevel, service)));
+            Optional.of(new TrendingPluginRegionInput(type, service)));
         return Response.ok(rendered).build();
     }
 }
