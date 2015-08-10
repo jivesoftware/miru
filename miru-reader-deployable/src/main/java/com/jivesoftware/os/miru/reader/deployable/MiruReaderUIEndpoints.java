@@ -29,4 +29,12 @@ public class MiruReaderUIEndpoints {
         return Response.ok(rendered).build();
     }
 
+    @GET
+    @Path("/partitions")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getPartitions() {
+        String rendered = service.renderPartitions();
+        return Response.ok(rendered).build();
+    }
+
 }

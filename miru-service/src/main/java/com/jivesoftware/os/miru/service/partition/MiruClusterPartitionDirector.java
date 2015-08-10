@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
+import com.jivesoftware.os.miru.api.activity.CoordinateStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -117,6 +118,11 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     @Override
     public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return expectedTenants.prioritizeRebuild(new MiruPartitionCoord(tenantId, partitionId, host));
+    }
+
+    @Override
+    public boolean expectedTopologies(CoordinateStream stream) throws Exception {
+        return expectedTenants.expectedTopologies(stream);
     }
 
     /** MiruService calls this on a periodic interval */

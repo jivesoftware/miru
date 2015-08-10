@@ -6,9 +6,11 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
+import com.jivesoftware.os.miru.api.activity.CoordinateStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.plugin.context.RequestContextCallback;
 
 /**
  *
@@ -32,4 +34,6 @@ public interface MiruPartitionDirector {
     boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;
 
     boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    boolean expectedTopologies(CoordinateStream stream) throws Exception;
 }

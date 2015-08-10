@@ -13,16 +13,19 @@ public class MiruReaderUIService {
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final MiruAdminRegion adminRegion;
+    private final MiruPageRegion<Void> partitionsRegion;
 
     private final List<MiruReaderUIPlugin> plugins = Lists.newCopyOnWriteArrayList();
 
     public MiruReaderUIService(
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
-        MiruAdminRegion adminRegion) {
+        MiruAdminRegion adminRegion,
+        MiruPageRegion<Void> partitionsRegion) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.adminRegion = adminRegion;
+        this.partitionsRegion = partitionsRegion;
     }
 
     public void registerPlugin(MiruReaderUIPlugin plugin) {
@@ -41,12 +44,7 @@ public class MiruReaderUIService {
         return chrome(adminRegion).render(null);
     }
 
-    public <I> String renderPlugin(MiruPageRegion<I> pluginRegion, I input) {
-        return chrome(pluginRegion).render(input);
+    public String renderPartitions() {
+        return chrome(partitionsRegion).render(null);
     }
-
-    public <I> String renderFramePlugin(MiruPageRegion<I> pluginRegion, I input) {
-        return frame(pluginRegion).render(input);
-    }
-
 }

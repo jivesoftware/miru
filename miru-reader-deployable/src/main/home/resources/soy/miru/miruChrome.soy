@@ -81,16 +81,14 @@
 {/template}
 
 /**
- * @param plugins
+ *
  */
 {template .nav}
     <div style="margin-bottom:20px;">
-        {foreach $plugin in $plugins}
-            <a class="list-group-item" href="{$plugin.path}">
-                <span class="glyphicon glyphicon-{$plugin.glyphicon}"></span>{sp}
-                {$plugin.name}
-            </a>
-        {/foreach}
+        <a class="list-group-item" href="/miru/reader/activity">
+            <span class="glyphicon glyphicon-bookmark"></span>{sp}
+            Partitions
+        </a>
     </div>
 {/template}
 
