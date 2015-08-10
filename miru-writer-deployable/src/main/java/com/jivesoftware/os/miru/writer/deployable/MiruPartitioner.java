@@ -109,6 +109,7 @@ public class MiruPartitioner {
         for (List<MiruActivity> partition : partitions) {
             MiruPartitionId latestPartitionId;
             int latestIndex;
+            int indexAdvanced;
             boolean partitionRolloverOccurred = false;
             PartitionedLists partitionedLists;
             MiruPartitionId endPartitionId;
@@ -123,6 +124,7 @@ public class MiruPartitioner {
                     endPartitionId = partitionCursor.getPartitionId().prev();
                 }
 
+                int indexBefore = partitionCursor.last();
                 partitionedLists = partition(tenantId, partition, partitionCursor, recoverFromRemoval);
                 if (!partitionRolloverOccurred && partitionedLists.activities.isEmpty() && partitionedLists.repairs.isEmpty()) {
                     continue;
@@ -130,6 +132,7 @@ public class MiruPartitioner {
 
                 latestPartitionId = partitionCursor.getPartitionId();
                 latestIndex = partitionCursor.last();
+                indexAdvanced = partitionCursor.last() - indexBefore;
 
                 partitionIdProvider.saveCursor(tenantId, partitionCursor, writerId);
             }
@@ -145,7 +148,7 @@ public class MiruPartitioner {
                 flushActivities(tenantId, latestPartitionId, latestIndex, partitionRolloverOccurred, partitionedLists);
             } catch (Exception e) {
                 synchronized (locks.lock(tenantId, 0)) {
-                    partitionIdProvider.rewindCursor(tenantId, writerId, partitionedLists.activities.size());
+                    partitionIdProvider.rewindCursor(tenantId, writerId, indexAdvanced);
                 }
                 throw e;
             }
