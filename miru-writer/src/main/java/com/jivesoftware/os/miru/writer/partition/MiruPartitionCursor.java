@@ -27,11 +27,7 @@ public class MiruPartitionCursor {
     }
 
     public int next() {
-        int next = index.incrementAndGet();
-        if (next > capacity) {
-            throw new IndexOutOfBoundsException();
-        }
-        return next;
+        return index.incrementAndGet();
     }
 
     public int last() {
