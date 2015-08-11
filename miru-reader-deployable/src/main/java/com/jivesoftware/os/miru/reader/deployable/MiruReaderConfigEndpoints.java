@@ -112,7 +112,7 @@ public class MiruReaderConfigEndpoints {
             MiruPartitionId partition = MiruPartitionId.of(partitionId);
             Response response;
             if (miruService.checkInfo(tenant, partition, new MiruPartitionCoordInfo(state, storage))) {
-                response = Response.noContent().build();
+                response = Response.ok("success").build();
             } else {
                 response = Response.status(Response.Status.NOT_FOUND).build();
             }
@@ -135,7 +135,7 @@ public class MiruReaderConfigEndpoints {
             MiruPartitionId partition = MiruPartitionId.of(partitionId);
             Response response;
             if (miruService.prioritizeRebuild(tenant, partition)) {
-                response = Response.noContent().build();
+                response = Response.ok("success").build();
             } else {
                 response = Response.status(Response.Status.NOT_FOUND).build();
             }

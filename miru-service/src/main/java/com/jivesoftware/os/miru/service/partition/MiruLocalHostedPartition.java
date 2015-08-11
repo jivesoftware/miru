@@ -641,8 +641,10 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         partitionRebuildBatchSize);
 
                     while (rebuilding.get() && accessorRef.get() == accessor && streamBatch != null) {
+                        log.info("REBUILDING Queue put {} {}", streamBatch.activities.size(), streamBatch.boundaries.size());
                         tryQueuePut(rebuilding, queue, streamBatch);
                         if (streamBatch.activities.isEmpty()) {
+                            log.info("REBUILDING Queue stopped because batch is empty");
                             break;
                         }
                         streamBatch = (streamBatch.cursor != null)
@@ -675,6 +677,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     }
 
                     if (streamBatch != null) {
+                        log.info("REBUILDING Consumed {} {}", streamBatch.activities.size(), streamBatch.boundaries.size());
                         partitionedActivities = new ArrayList<>(streamBatch.activities.size() + streamBatch.boundaries.size());
                         for (MiruWALEntry batch : streamBatch.activities) {
                             partitionedActivities.add(batch.activity);
@@ -687,6 +690,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
                     if (!rebuilding.get() || partitionedActivities == null) {
                         // end of rebuild
+                        log.info("REBUILDING Consumer stopped {} {}", !rebuilding.get(), partitionedActivities == null);
                         log.debug("Ending rebuild for {}", coord);
                         break;
                     }
@@ -694,6 +698,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     int count = partitionedActivities.size();
                     totalIndexed += count;
 
+                    log.info("REBUILDING Indexed {} {}", count, totalIndexed);
                     log.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
                     log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                     boolean repair = firstRebuild.compareAndSet(true, false);
