@@ -18,6 +18,7 @@
                         <th>Last Id (Time)</th>
                         <th>Smallest Timestamp</th>
                         <th>Largest Timestamp</th>
+                        <th>Sip</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -29,10 +30,11 @@
                             <td>{$partition.timeLastId}</td>
                             <td>{$partition.smallestTimestamp}</td>
                             <td>{$partition.largestTimestamp}</td>
+                            <td>{$partition.sip}</td>
                         </tr>
                     {ifempty}
                         <tr>
-                            <td colspan="6">No partitions found</td>
+                            <td colspan="7">No partitions found</td>
                         </tr>
                     {/foreach}
                 </tbody>

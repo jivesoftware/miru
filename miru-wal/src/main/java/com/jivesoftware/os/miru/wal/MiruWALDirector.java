@@ -303,7 +303,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         List<MiruWALEntry> activities = new ArrayList<>();
         List<MiruWALEntry> boundaries = new ArrayList<>();
         S nextCursor = activityWALReader.streamSip(tenantId, partitionId, cursor, batchSize,
-            (long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) -> {
+            (collisionId, partitionedActivity, timestamp) -> {
                 if (partitionedActivity.type.isBoundaryType()) {
                     boundaries.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
                 } else {

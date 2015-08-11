@@ -1,8 +1,10 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
@@ -38,6 +40,7 @@ public class MiruPartitionsRegion implements MiruPageRegion<Void> {
             service.expectedTopologies((tenantId, partitionId, host) -> {
                 try {
                     service.introspect(tenantId, partitionId, requestContext -> {
+                        Optional<? extends MiruSipCursor<?>> sip = requestContext.getSipIndex().getSip();
                         partitions.add(ImmutableMap.<String, Object>builder()
                             .put("tenantId", tenantId.toString())
                             .put("partitionId", partitionId.toString())
@@ -45,6 +48,7 @@ public class MiruPartitionsRegion implements MiruPageRegion<Void> {
                             .put("timeLastId", requestContext.getTimeIndex().lastId())
                             .put("smallestTimestamp", String.valueOf(requestContext.getTimeIndex().getSmallestTimestamp()))
                             .put("largestTimestamp", String.valueOf(requestContext.getTimeIndex().getLargestTimestamp()))
+                            .put("sip", sip.isPresent() ? sip.get().toString() : "")
                             .build());
                     });
                     return true;
