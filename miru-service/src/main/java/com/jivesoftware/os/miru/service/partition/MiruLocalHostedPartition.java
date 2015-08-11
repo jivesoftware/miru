@@ -686,11 +686,9 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                             partitionedActivities.add(batch.activity);
                         }
                         nextCursor = streamBatch.cursor;
-                    }
-
-                    if (!rebuilding.get() || partitionedActivities == null) {
+                    } else {
                         // end of rebuild
-                        log.info("REBUILDING Consumer stopped {} {}", !rebuilding.get(), partitionedActivities == null);
+                        log.info("REBUILDING Consumer reached end of rebuild");
                         log.debug("Ending rebuild for {}", coord);
                         break;
                     }
