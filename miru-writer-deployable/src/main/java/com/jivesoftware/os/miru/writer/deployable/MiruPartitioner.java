@@ -112,16 +112,19 @@ public class MiruPartitioner {
             int indexAdvanced;
             boolean partitionRolloverOccurred = false;
             PartitionedLists partitionedLists;
-            MiruPartitionId endPartitionId;
+            TenantAndPartition end = null;
 
             synchronized (locks.lock(tenantId, 0)) {
                 MiruPartitionCursor partitionCursor = partitionIdProvider.getCursor(tenantId, writerId);
                 if (partitionCursor.isMaxCapacity()) {
-                    endPartitionId = partitionCursor.getPartitionId();
+                    end = new TenantAndPartition(tenantId, partitionCursor.getPartitionId());
                     partitionCursor = partitionIdProvider.nextCursor(tenantId, partitionCursor, writerId);
                     partitionRolloverOccurred = true;
                 } else {
-                    endPartitionId = partitionCursor.getPartitionId().prev();
+                    MiruPartitionId endPartitionId = partitionCursor.getPartitionId().prev();
+                    if (endPartitionId != null) {
+                        end = new TenantAndPartition(tenantId, endPartitionId);
+                    }
                 }
 
                 int indexBefore = partitionCursor.last();
@@ -139,13 +142,17 @@ public class MiruPartitioner {
 
             partitionedLists.activities.add(partitionedActivityFactory.begin(writerId, latestPartitionId, tenantId, latestIndex));
 
-            if (endPartitionId != null) {
+            if (end != null && !closedTenantPartitions.contains(end)) {
+                MiruPartitionId endPartitionId = end.partitionId;
                 int endLatestIndex = partitionIdProvider.getLatestIndex(tenantId, endPartitionId, writerId);
                 partitionedLists.repairs.put(endPartitionId, partitionedActivityFactory.end(writerId, endPartitionId, tenantId, endLatestIndex));
             }
 
             try {
                 flushActivities(tenantId, latestPartitionId, latestIndex, partitionRolloverOccurred, partitionedLists);
+                if (end != null) {
+                    closedTenantPartitions.add(end);
+                }
             } catch (Exception e) {
                 synchronized (locks.lock(tenantId, 0)) {
                     partitionIdProvider.rewindCursor(tenantId, writerId, indexAdvanced);
