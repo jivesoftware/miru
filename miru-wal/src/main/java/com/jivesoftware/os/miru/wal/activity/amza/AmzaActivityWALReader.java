@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.client.AmzaClientProvider.AmzaClient;
 import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
 import com.jivesoftware.os.amza.shared.take.TakeCursors;
@@ -30,6 +31,7 @@ import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
@@ -70,18 +72,23 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         });
     }
 
-    private void streamBoundaries(StreamMiruActivityWAL streamMiruActivityWAL, AmzaClient client) throws Exception {
+    private boolean isEndOfStream(AmzaClient client) throws Exception {
         byte[] fromKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));
         byte[] toKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), Long.MAX_VALUE));
+        Set<Integer> begins = Sets.newHashSet();
+        Set<Integer> ends = Sets.newHashSet();
         client.scan(null, fromKey, null, toKey, (rowTxId, prefix, key, value) -> {
             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
-            if (partitionedActivity != null && partitionedActivity.type.isBoundaryType()) {
-                if (!streamMiruActivityWAL.stream(partitionedActivity.timestamp, partitionedActivity, value.getTimestampId())) {
-                    return false;
+            if (partitionedActivity != null) {
+                if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
+                    begins.add(partitionedActivity.writerId);
+                } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
+                    ends.add(partitionedActivity.writerId);
                 }
             }
             return true;
         });
+        return !begins.isEmpty() && ends.containsAll(begins);
     }
 
     @Override
@@ -110,7 +117,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         amzaWALUtil.mergeCursors(cursorsByName, takeCursors);
         amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
 
-        return new AmzaCursor(cursorsByName.values(), new AmzaSipCursor(sipCursorsByName.values()));
+        return new AmzaCursor(cursorsByName.values(), new AmzaSipCursor(sipCursorsByName.values(), false));
     }
 
     @Override
@@ -128,11 +135,11 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? extractCursors(sipCursor.cursors) : Maps.newHashMap();
 
         TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, client, sipCursorsByName);
-        streamBoundaries(streamMiruActivityWAL, client);
+        boolean endOfStream = takeCursors.tookToEnd && isEndOfStream(client);
 
         amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
 
-        return new AmzaSipCursor(sipCursorsByName.values());
+        return new AmzaSipCursor(sipCursorsByName.values(), endOfStream);
     }
 
     @Override

@@ -114,6 +114,6 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
 
         amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
 
-        return new AmzaSipCursor(sipCursorsByName.values());
+        return new AmzaSipCursor(sipCursorsByName.values(), false);
     }
 }

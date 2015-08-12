@@ -28,6 +28,11 @@ public class RCVSSipCursor implements MiruSipCursor<RCVSSipCursor> {
     }
 
     @Override
+    public boolean endOfStream() {
+        return endOfStream;
+    }
+
+    @Override
     public int compareTo(RCVSSipCursor o) {
         int c = Long.compare(clockTimestamp, o.clockTimestamp);
         if (c == 0) {
@@ -55,18 +60,18 @@ public class RCVSSipCursor implements MiruSipCursor<RCVSSipCursor> {
             return false;
         }
 
-        RCVSSipCursor sipCursor = (RCVSSipCursor) o;
+        RCVSSipCursor that = (RCVSSipCursor) o;
 
-        if (sort != sipCursor.sort) {
+        if (sort != that.sort) {
             return false;
         }
-        if (clockTimestamp != sipCursor.clockTimestamp) {
+        if (clockTimestamp != that.clockTimestamp) {
             return false;
         }
-        if (activityTimestamp != sipCursor.activityTimestamp) {
+        if (activityTimestamp != that.activityTimestamp) {
             return false;
         }
-        return endOfStream == sipCursor.endOfStream;
+        return endOfStream == that.endOfStream;
 
     }
 

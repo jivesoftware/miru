@@ -61,7 +61,7 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         Collection<NamedCursor> cursors = getSipCursors(tenantId, partitionId, streamId);
         MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> got = walClient.getRead(tenantId,
             streamId,
-            new AmzaSipCursor(cursors),
+            new AmzaSipCursor(cursors, false),
             oldestBackfilledEventId,
             1000);
         AmzaSipCursor lastCursor = null;

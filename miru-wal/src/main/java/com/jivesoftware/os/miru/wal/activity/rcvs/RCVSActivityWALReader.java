@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -20,6 +21,7 @@ import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /** @author jonathan */
@@ -83,7 +85,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
             MiruActivityWALColumnKey start = new MiruActivityWALColumnKey(nextSort, nextTimestamp);
             activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                 (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v) -> {
-                    if (v != null) {
+                    if (v != null && v.getValue().type.isActivityType()) {
                         cvats.add(v);
                     }
                     if (cvats.size() < batchSize) {
@@ -94,7 +96,6 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
                 });
 
             if (cvats.size() < batchSize) {
-                endOfStream = true;
                 streaming = false;
             }
             for (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
@@ -161,12 +162,21 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         long nextClockTimestamp = afterCursor.clockTimestamp;
         long nextActivityTimestamp = afterCursor.activityTimestamp;
         boolean endOfStream = false;
+        Set<Integer> begins = Sets.newHashSet();
+        Set<Integer> ends = Sets.newHashSet();
         while (streaming) {
             MiruActivitySipWALColumnKey start = new MiruActivitySipWALColumnKey(nextSort, nextClockTimestamp, nextActivityTimestamp);
             activitySipWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                 (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v) -> {
                     if (v != null) {
-                        cvats.add(v);
+                        MiruPartitionedActivity partitionedActivity = v.getValue();
+                        if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
+                            begins.add(partitionedActivity.writerId);
+                        } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
+                            ends.add(partitionedActivity.writerId);
+                        } else {
+                            cvats.add(v);
+                        }
                     }
                     if (cvats.size() < batchSize) {
                         return v;
@@ -176,7 +186,6 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
                 });
 
             if (cvats.size() < batchSize) {
-                endOfStream = true;
                 streaming = false;
             }
             for (ColumnValueAndTimestamp<MiruActivitySipWALColumnKey, MiruPartitionedActivity, Long> v : cvats) {
@@ -218,6 +227,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
             }
             cvats.clear();
         }
+        endOfStream |= !begins.isEmpty() && ends.containsAll(begins);
         return new RCVSSipCursor(nextSort, nextClockTimestamp, nextActivityTimestamp, endOfStream);
     }
 

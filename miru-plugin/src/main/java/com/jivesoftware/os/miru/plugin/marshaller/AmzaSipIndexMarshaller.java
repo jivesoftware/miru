@@ -29,6 +29,7 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
             byte[] nameBytes = namedCursor.name.getBytes(Charsets.UTF_8);
             length += 8 + 4 + nameBytes.length;
         }
+        length += 1;
         return length;
     }
 
@@ -45,7 +46,8 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
             buf.get(nameBytes);
             namedCursors.add(new NamedCursor(new String(nameBytes, Charsets.UTF_8), id));
         }
-        return new AmzaSipCursor(namedCursors);
+        boolean endOfStream = (filer.length() - filer.getFilePointer()) > 0 && (FilerIO.readByte(filer, "endOfStream") == 1);
+        return new AmzaSipCursor(namedCursors, endOfStream);
     }
 
     @Override
@@ -64,5 +66,6 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
         }
 
         FilerIO.writeByteArray(filer, buf.array(), "bytes");
+        FilerIO.writeByte(filer, cursor.endOfStream ? (byte) 1 : (byte) 0, "endOfStream");
     }
 }

@@ -83,6 +83,9 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(3_000)
     long getPartitionMigrationWaitInMillis();
 
+    @LongDefault(30_000)
+    long getPartitionSipNotifyEndOfStreamMillis();
+
     @IntDefault(3)
     int getPartitionNumberOfChunkStores();
 

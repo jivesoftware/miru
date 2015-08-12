@@ -67,8 +67,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
 
     public final AtomicReference<Set<TimeAndVersion>> seenLastSip;
 
-    public final Set<Integer> beginWriters;
-    public final Set<Integer> endWriters;
+    public final AtomicLong endOfStream;
 
     public final Semaphore readSemaphore;
     public final Semaphore writeSemaphore;
@@ -87,8 +86,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         Optional<MiruContext<BM, S>> context,
         AtomicReference<C> rebuildCursor,
         Set<TimeAndVersion> seenLastSip,
-        Set<Integer> beginWriters,
-        Set<Integer> endWriters,
+        AtomicLong endOfStream,
         Semaphore readSemaphore,
         Semaphore writeSemaphore,
         AtomicBoolean closed,
@@ -103,8 +101,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         this.context = context;
         this.rebuildCursor = rebuildCursor;
         this.seenLastSip = new AtomicReference<>(seenLastSip);
-        this.beginWriters = beginWriters;
-        this.endWriters = endWriters;
+        this.endOfStream = endOfStream;
         this.readSemaphore = readSemaphore;
         this.writeSemaphore = writeSemaphore;
         this.closed = closed;
@@ -127,8 +124,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             context,
             new AtomicReference<>(),
             Sets.<TimeAndVersion>newHashSet(),
-            Sets.<Integer>newHashSet(),
-            Sets.<Integer>newHashSet(),
+            new AtomicLong(0),
             new Semaphore(PERMITS, true),
             new Semaphore(PERMITS, true),
             new AtomicBoolean(),
@@ -139,7 +135,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
 
     MiruPartitionAccessor<BM, C, S> copyToState(MiruPartitionState toState) {
         return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, info.copyToState(toState), context, rebuildCursor,
-            seenLastSip.get(), beginWriters, endWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
+            seenLastSip.get(), endOfStream, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
     }
 
     Optional<MiruContext<BM, S>> close() throws InterruptedException {
@@ -173,13 +169,13 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         return info.state == MiruPartitionState.online;
     }
 
-    void notifyBoundaries(List<Integer> begins, List<Integer> ends) {
-        this.beginWriters.addAll(begins);
-        this.endWriters.addAll(ends);
+    void notifyEndOfStream(long threshold) {
+        endOfStream.compareAndSet(0, System.currentTimeMillis() + threshold);
     }
 
     boolean hasOpenWriters() {
-        return beginWriters.isEmpty() || !endWriters.containsAll(beginWriters);
+        long timestamp = endOfStream.get();
+        return timestamp <= 0 || System.currentTimeMillis() < timestamp;
     }
 
     boolean isEligibleToBackfill() {
@@ -393,13 +389,6 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
     }
 
     private int handleBoundaryType(List<MiruPartitionedActivity> partitionedActivities) {
-        for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
-            if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                beginWriters.add(partitionedActivity.writerId);
-            } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
-                endWriters.add(partitionedActivity.writerId);
-            }
-        }
         return 0;
     }
 

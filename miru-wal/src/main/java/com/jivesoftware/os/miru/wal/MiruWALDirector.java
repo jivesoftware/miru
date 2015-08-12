@@ -291,7 +291,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 return activities.size() < batchSize;
             });
 
-        return new StreamBatch<>(activities, boundaries, nextCursor, activities.size() < batchSize);
+        return new StreamBatch<>(activities, boundaries, nextCursor, false);
     }
 
     @Override
@@ -312,7 +312,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 return activities.size() < batchSize;
             });
 
-        return new StreamBatch<>(activities, boundaries, nextCursor, activities.size() < batchSize);
+        return new StreamBatch<>(activities, boundaries, nextCursor, nextCursor.endOfStream());
     }
 
     @Override
