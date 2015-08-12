@@ -54,6 +54,8 @@ public interface MiruAmzaServiceConfig extends Config {
     @IntDefault(1_000_000)
     int getMaxUpdatesBeforeDeltaStripeCompaction();
 
+    void setMaxUpdatesBeforeDeltaStripeCompaction(int maxUpdatesBeforeDeltaStripeCompaction);
+
     @IntDefault(8)
     int getNumberOfCompactorThreads();
 

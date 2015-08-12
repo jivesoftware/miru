@@ -134,7 +134,6 @@ public class RCVSReadTrackingWALReader implements MiruReadTrackingWALReader<RCVS
                 });
 
             if (cvats.size() < batchSize) {
-                endOfStream = true;
                 streaming = false;
             }
             for (ColumnValueAndTimestamp<MiruReadTrackingSipWALColumnKey, Long, Long> v : cvats) {

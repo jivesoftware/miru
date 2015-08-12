@@ -776,7 +776,6 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     } else if (firstSip.get()) {
                         MiruActivityWALStatus status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
                         if (status != null) {
-                            accessor.notifyBoundaries(status.begins, status.ends);
                             long currentCount = accessor.context.get().activityIndex.lastId();
                             long behindByCount = status.count - currentCount;
                             if (behindByCount > partitionRebuildIfBehindByCount) {
@@ -817,10 +816,11 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
             final MiruSipTracker<S> sipTracker = sipTrackerFactory.create(accessor.seenLastSip.get());
 
-            AtomicReference<S> sip = new AtomicReference<>(accessor.getSipCursor().orNull());
+            S sipCursor = accessor.getSipCursor().orNull();
+            boolean first = firstSip.get();
 
             MiruWALClient.StreamBatch<MiruWALEntry, S> sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId,
-                sip.get(),
+                sipCursor,
                 partitionSipBatchSize);
 
             while (accessorRef.get() == accessor && sippedActivity != null && !sippedActivity.activities.isEmpty()) {
@@ -844,11 +844,16 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     partitionedActivities.add(e.activity);
                 }
 
-                deliver(partitionedActivities, accessor, sipTracker, sip, sippedActivity.cursor);
+                sipCursor = deliver(partitionedActivities, accessor, sipTracker, sipCursor, sippedActivity.cursor);
                 partitionedActivities.clear();
 
-                sippedActivity = (sippedActivity.cursor != null)
-                    ? walClient.sipActivity(coord.tenantId, coord.partitionId, sippedActivity.cursor, partitionSipBatchSize)
+                if (sippedActivity.cursor != null && sippedActivity.cursor.endOfStream()) {
+                    long threshold = first ? 0 : timings.partitionSipNotifyEndOfStreamMillis;
+                    accessor.notifyEndOfStream(threshold);
+                }
+
+                sippedActivity = (sipCursor != null)
+                    ? walClient.sipActivity(coord.tenantId, coord.partitionId, sipCursor, partitionSipBatchSize)
                     : null;
             }
 
@@ -859,16 +864,16 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             return accessorRef.get() == accessor;
         }
 
-        private void deliver(final List<MiruPartitionedActivity> partitionedActivities, final MiruPartitionAccessor<BM, C, S> accessor,
-            final MiruSipTracker<S> sipTracker, AtomicReference<S> sip, S nextSipCursor) throws Exception {
+        private S deliver(final List<MiruPartitionedActivity> partitionedActivities, final MiruPartitionAccessor<BM, C, S> accessor,
+            final MiruSipTracker<S> sipTracker, S sipCursor, S nextSipCursor) throws Exception {
             boolean repair = firstSip.compareAndSet(true, false);
             int initialCount = partitionedActivities.size();
             int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip,
                 repair, mergeChits, sipIndexExecutor, mergeExecutor);
 
-            S suggestion = sipTracker.suggest(sip.get(), nextSipCursor);
+            S suggestion = sipTracker.suggest(sipCursor, nextSipCursor);
             if (suggestion != null && accessor.setSip(suggestion)) {
-                sip.set(suggestion);
+                sipCursor = suggestion;
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
                 sipTracker.metrics(coord, suggestion);
             }
@@ -883,6 +888,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             if (initialCount > 0) {
                 log.inc("sip>count>skip", (initialCount - count));
             }
+            return suggestion;
         }
 
     }
@@ -902,17 +908,20 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         private final long partitionSipMigrateIntervalInMillis;
         private final long partitionBanUnregisteredSchemaMillis;
         private final long partitionMigrationWaitInMillis;
+        private final long partitionSipNotifyEndOfStreamMillis;
 
         public Timings(long partitionBootstrapIntervalInMillis,
             long partitionRebuildIntervalInMillis,
             long partitionSipMigrateIntervalInMillis,
             long partitionBanUnregisteredSchemaMillis,
-            long partitionMigrationWaitInMillis) {
+            long partitionMigrationWaitInMillis,
+            long partitionSipNotifyEndOfStreamMillis) {
             this.partitionBootstrapIntervalInMillis = partitionBootstrapIntervalInMillis;
             this.partitionRebuildIntervalInMillis = partitionRebuildIntervalInMillis;
             this.partitionSipMigrateIntervalInMillis = partitionSipMigrateIntervalInMillis;
             this.partitionBanUnregisteredSchemaMillis = partitionBanUnregisteredSchemaMillis;
             this.partitionMigrationWaitInMillis = partitionMigrationWaitInMillis;
+            this.partitionSipNotifyEndOfStreamMillis = partitionSipNotifyEndOfStreamMillis;
         }
     }
 

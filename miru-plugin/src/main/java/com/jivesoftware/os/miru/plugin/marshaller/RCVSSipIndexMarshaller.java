@@ -20,7 +20,7 @@ public class RCVSSipIndexMarshaller implements MiruSipIndexMarshaller<RCVSSipCur
 
     @Override
     public long expectedCapacity(RCVSSipCursor sip) {
-        return 8 + 1 + 8 + 8 + 1;
+        return 8 + 1 + 8 + 8 + 1 + 8;
     }
 
     @Override

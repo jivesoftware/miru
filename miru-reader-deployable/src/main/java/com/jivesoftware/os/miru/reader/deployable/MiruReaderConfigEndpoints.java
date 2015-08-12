@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import javax.inject.Singleton;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
@@ -29,6 +30,7 @@ public class MiruReaderConfigEndpoints {
 
     private final MiruService miruService;
     private final MiruStats stats;
+    private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
     public MiruReaderConfigEndpoints(@Context MiruService miruService, @Context MiruStats stats) {
         this.miruService = miruService;
@@ -112,7 +114,7 @@ public class MiruReaderConfigEndpoints {
             MiruPartitionId partition = MiruPartitionId.of(partitionId);
             Response response;
             if (miruService.checkInfo(tenant, partition, new MiruPartitionCoordInfo(state, storage))) {
-                response = Response.ok("success").build();
+                response = responseHelper.jsonResponse("Success");
             } else {
                 response = Response.status(Response.Status.NOT_FOUND).build();
             }
@@ -135,7 +137,7 @@ public class MiruReaderConfigEndpoints {
             MiruPartitionId partition = MiruPartitionId.of(partitionId);
             Response response;
             if (miruService.prioritizeRebuild(tenant, partition)) {
-                response = Response.ok("success").build();
+                response = responseHelper.jsonResponse("Success");
             } else {
                 response = Response.status(Response.Status.NOT_FOUND).build();
             }

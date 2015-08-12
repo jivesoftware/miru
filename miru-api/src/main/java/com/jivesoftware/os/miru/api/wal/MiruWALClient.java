@@ -64,16 +64,16 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         public List<T> activities; // non final for json ser-der
         public List<T> boundaries; // non final for json ser-der
         public C cursor; // non final for json ser-der
-        public boolean endOfStream; // non final for json ser-der
+        public boolean endOfWAL; // non final for json ser-der
 
         public StreamBatch() {
         }
 
-        public StreamBatch(List<T> activities, List<T> boundaries, C cursor, boolean endOfStream) {
+        public StreamBatch(List<T> activities, List<T> boundaries, C cursor, boolean endOfWAL) {
             this.activities = activities;
             this.boundaries = boundaries;
             this.cursor = cursor;
-            this.endOfStream = endOfStream;
+            this.endOfWAL = endOfWAL;
         }
 
         @Override
@@ -82,7 +82,7 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 "activities=" + activities +
                 ", boundaries=" + boundaries +
                 ", cursor=" + cursor +
-                ", endOfStream=" + endOfStream +
+                ", endOfWAL=" + endOfWAL +
                 '}';
         }
     }
