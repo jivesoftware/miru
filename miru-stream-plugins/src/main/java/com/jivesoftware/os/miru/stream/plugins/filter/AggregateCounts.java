@@ -188,8 +188,9 @@ public class AggregateCounts {
             }
         }
 
+        boolean resultsExhausted = request.query.answerTimeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         AggregateCountsAnswer result = new AggregateCountsAnswer(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms),
-            skippedDistincts, collectedDistincts);
+            skippedDistincts, collectedDistincts, resultsExhausted);
         log.debug("result={}", result);
         return result;
     }

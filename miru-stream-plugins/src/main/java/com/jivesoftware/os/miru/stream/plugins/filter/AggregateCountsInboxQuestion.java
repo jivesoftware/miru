@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -72,16 +71,16 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         List<BM> ands = new ArrayList<>();
         List<BM> counterAnds = new ArrayList<>();
 
+        if (!context.getTimeIndex().intersects(request.query.answerTimeRange)) {
+            LOG.debug("No answer time index intersection");
+            return new MiruPartitionResponse<>(
+                aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.absent()),
+                solutionLog.asList());
+        }
+
         if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
             MiruTimeRange timeRange = request.query.answerTimeRange;
 
-            // Short-circuit if the time range doesn't live here
-            if (!timeIndexIntersectsTimeRange(context.getTimeIndex(), timeRange)) {
-                LOG.debug("No answer time index intersection");
-                return new MiruPartitionResponse<>(
-                    aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
-                    solutionLog.asList());
-            }
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
@@ -157,11 +156,6 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
                 answer.get().collectedDistincts));
         }
         return report;
-    }
-
-    private boolean timeIndexIntersectsTimeRange(MiruTimeIndex timeIndex, MiruTimeRange timeRange) {
-        return timeRange.smallestTimestamp <= timeIndex.getLargestTimestamp() &&
-            timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
     }
 
 }

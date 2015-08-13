@@ -54,6 +54,14 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
+        if (!context.getTimeIndex().intersects(request.query.timeRange)) {
+            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
+            return new MiruPartitionResponse<>(
+                collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, bitmaps.create(), bitmaps.create(),
+                    removeDistinctsFilter),
+                solutionLog.asList());
+        }
+
         // Start building up list of bitmap operations to run
         List<BM> okAnds = new ArrayList<>();
 
@@ -105,8 +113,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         return new MiruPartitionResponse<>(
             collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, allMyActivity, okActivity, removeDistinctsFilter),
-            solutionLog.asList()
-        );
+            solutionLog.asList());
     }
 
     @Override

@@ -17,6 +17,10 @@ public class RecoAnswerEvaluator implements MiruAnswerEvaluator<RecoAnswer> {
 
     @Override
     public boolean isDone(RecoAnswer answer, MiruSolutionLog solutionLog) {
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Results exhausted = {}", answer.resultsExhausted);
+        if (answer.resultsExhausted) {
+            return true;
+        }
         solutionLog.log(MiruSolutionLogLevel.INFO, "Evaluate partitionsVisited {} < {}", answer.partitionsVisited, 2);
         if (answer.partitionsVisited < 2) { // TODO expose to query or config?
             return false;

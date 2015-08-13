@@ -198,12 +198,14 @@ public class RemoteRecoHttpTest {
                     null);
 
                 MiruTenantId tenantId1 = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
+                MiruTimeRange timeRange = lookBackFromNow(TimeUnit.DAYS.toMillis(7));
                 MiruRequest<RecoQuery> request = new MiruRequest<>(tenantId1,
                     new MiruActorId(FilerIO.intBytes(userId)),
                     MiruAuthzExpression.NOT_PROVIDED,
                     new RecoQuery(
+                        timeRange,
                         new DistinctsQuery(
-                            lookBackFromNow(TimeUnit.DAYS.toMillis(7)),
+                            timeRange,
                             "parent",
                             new MiruFilter(MiruFilterOperation.or,
                                 false,

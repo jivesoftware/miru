@@ -11,13 +11,13 @@ import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -71,8 +71,8 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
             MiruTimeRange timeRange = request.query.timeRange;
 
             // Short-circuit if the time range doesn't live here
-            if (!timeIndexIntersectsTimeRange(context.getTimeIndex(), timeRange)) {
-                LOG.debug("No time index intersection");
+            if (!context.getTimeIndex().intersects(timeRange)) {
+                solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
                 return new MiruPartitionResponse<>(distinctCount.numberOfDistincts(
                     bitmaps, context, request, report, bitmaps.create()), solutionLog.asList());
             }
@@ -128,10 +128,5 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
                 answer.get().collectedDistincts));
         }
         return report;
-    }
-
-    private boolean timeIndexIntersectsTimeRange(MiruTimeIndex timeIndex, MiruTimeRange timeRange) {
-        return timeRange.smallestTimestamp <= timeIndex.getLargestTimestamp() &&
-            timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
     }
 }

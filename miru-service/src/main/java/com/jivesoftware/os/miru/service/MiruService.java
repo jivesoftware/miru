@@ -275,7 +275,7 @@ public class MiruService implements Miru {
         Optional<? extends MiruQueryablePartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
         if (partition.isPresent()) {
             MiruQueryablePartition<?> hostedPartition = partition.get();
-            try (MiruRequestHandle<?, ? extends MiruSipCursor<?>> handle = hostedPartition.acquireQueryHandle()) {
+            try (MiruRequestHandle<?, ? extends MiruSipCursor<?>> handle = hostedPartition.tryQueryHandle()) {
                 callback.call(handle.getRequestContext());
             }
         }

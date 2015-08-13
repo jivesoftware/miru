@@ -5,6 +5,7 @@
  */
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.List;
 
 /**
@@ -13,6 +14,8 @@ import java.util.List;
 public interface MiruTimeIndex {
 
     boolean[] contains(List<Long> timestamps) throws Exception;
+
+    boolean intersects(MiruTimeRange timeRange);
 
     /**
      * Returns the actual index of the given timestamp if it appears in the index, or else where it would have been.

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 
 /**
@@ -10,6 +11,7 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
  */
 public class RecoQuery {
 
+    public final MiruTimeRange timeRange;
     public final DistinctsQuery removeDistinctsQuery;
     public final MiruFilter constraintsFilter;
     public final String aggregateFieldName1;
@@ -23,7 +25,8 @@ public class RecoQuery {
     public final MiruFilter scorableFilter;
     public final int desiredNumberOfDistincts;
 
-    public RecoQuery(@JsonProperty("removeDistinctsQuery") DistinctsQuery removeDistinctsQuery,
+    public RecoQuery(@JsonProperty("timeRange") MiruTimeRange timeRange,
+        @JsonProperty("removeDistinctsQuery") DistinctsQuery removeDistinctsQuery,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("aggregateFieldName1") String aggregateFieldName1,
         @JsonProperty("retrieveFieldName1") String retrieveFieldName1,
@@ -35,6 +38,8 @@ public class RecoQuery {
         @JsonProperty("retrieveFieldName3") String retrieveFieldName3,
         @JsonProperty("scorableFilter") MiruFilter scorableFilter,
         @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
+        Preconditions.checkArgument(!MiruTimeRange.ALL_TIME.equals(timeRange), "Requires an explicit time range");
+        this.timeRange = Preconditions.checkNotNull(timeRange);
         this.removeDistinctsQuery = removeDistinctsQuery;
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.aggregateFieldName1 = Preconditions.checkNotNull(aggregateFieldName1);

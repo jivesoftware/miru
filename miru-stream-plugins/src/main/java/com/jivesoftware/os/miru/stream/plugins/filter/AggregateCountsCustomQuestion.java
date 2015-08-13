@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -53,6 +54,12 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+
+        if (!context.getTimeIndex().intersects(request.query.answerTimeRange)) {
+            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
+            return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.absent()),
+                solutionLog.asList());
+        }
 
         MiruFilter combinedFilter = request.query.streamFilter;
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {

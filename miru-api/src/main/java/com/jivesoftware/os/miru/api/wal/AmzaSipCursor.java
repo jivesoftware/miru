@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.api.wal;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Longs;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import java.util.Collection;
 import java.util.Collections;

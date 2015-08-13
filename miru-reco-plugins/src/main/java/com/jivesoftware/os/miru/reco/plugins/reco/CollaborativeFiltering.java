@@ -134,7 +134,7 @@ public class CollaborativeFiltering {
 
         if (request.query.aggregateFieldName2.equals(request.query.aggregateFieldName3)) {
             // special case where the ranked users <field2> are the desired parents <field3>
-            return composeAnswer(requestContext, fieldDefinition3, contributorHeap);
+            return composeAnswer(requestContext, request, fieldDefinition3, contributorHeap);
         }
 
         // augment distinctParents with additional distinct parents <field1> for exclusion below
@@ -191,10 +191,11 @@ public class CollaborativeFiltering {
             scoredHeap.add(new MiruTermCount(entry.getElement(), null, entry.getCount()));
         }
 
-        return composeAnswer(requestContext, fieldDefinition3, scoredHeap);
+        return composeAnswer(requestContext, request, fieldDefinition3, scoredHeap);
     }
 
     private <BM> RecoAnswer composeAnswer(MiruRequestContext<BM, ?> requestContext,
+        MiruRequest<RecoQuery> request,
         MiruFieldDefinition fieldDefinition,
         MinMaxPriorityQueue<MiruTermCount> heap) {
 
@@ -205,7 +206,8 @@ public class CollaborativeFiltering {
             results.add(new Recommendation(term, result.count));
         }
         log.debug("score: results.size={}", results.size());
-        return new RecoAnswer(results, 1);
+        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        return new RecoAnswer(results, 1, resultsExhausted);
     }
 
 }

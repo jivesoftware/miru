@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.stream.plugins;
+package com.jivesoftware.os.miru.plugin.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
