@@ -53,7 +53,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
         }
 
         AggregateCountsAnswer mergedAnswer = new AggregateCountsAnswer(ImmutableList.copyOf(mergedResults), currentAnswer.aggregateTerms,
-            currentAnswer.skippedDistincts, currentAnswer.collectedDistincts);
+            currentAnswer.skippedDistincts, currentAnswer.collectedDistincts, currentAnswer.resultsExhausted);
 
         logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 

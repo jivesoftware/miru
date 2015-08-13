@@ -60,7 +60,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
             }
         }
         int partitionsVisited = lastAnswer.partitionsVisited + 1;
-        RecoAnswer mergedAnswer = new RecoAnswer(ImmutableList.copyOf(mergedResults), partitionsVisited);
+        RecoAnswer mergedAnswer = new RecoAnswer(ImmutableList.copyOf(mergedResults), partitionsVisited, currentAnswer.resultsExhausted);
 
         logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
@@ -75,7 +75,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
             Collections.sort(results);
             solutionLog.log(MiruSolutionLogLevel.INFO, "mergeReco: sorted in {} ms", (System.currentTimeMillis() - t));
             results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
-            return new RecoAnswer(ImmutableList.copyOf(results), answer.partitionsVisited);
+            return new RecoAnswer(ImmutableList.copyOf(results), answer.partitionsVisited, answer.resultsExhausted);
         }).or(alternative);
     }
 

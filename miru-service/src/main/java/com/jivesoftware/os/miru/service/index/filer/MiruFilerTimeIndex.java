@@ -7,6 +7,7 @@ import com.jivesoftware.os.filer.io.api.KeyValueContext;
 import com.jivesoftware.os.filer.io.api.KeyValueStore;
 import com.jivesoftware.os.filer.io.api.KeyValueTransaction;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -388,6 +389,12 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     @Override
     public boolean[] contains(List<Long> timestamp) throws Exception {
         return timestampToIndex.contains(timestamp);
+    }
+
+    @Override
+    public boolean intersects(MiruTimeRange timeRange) {
+        return timeRange.smallestTimestamp <= getLargestTimestamp()
+            && timeRange.largestTimestamp >= getSmallestTimestamp();
     }
 
     @Override

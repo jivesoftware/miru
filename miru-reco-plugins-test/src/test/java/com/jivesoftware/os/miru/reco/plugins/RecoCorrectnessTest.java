@@ -192,7 +192,7 @@ public class RecoCorrectnessTest {
 
         if (doSystemRecommendedContent) {
             System.out.println("Running system recommended content...");
-            testSystemRecommendedContent(authorToParents, userToParents);
+            testSystemRecommendedContent(authorToParents, userToParents, timeRange);
         }
         if (doContainerTrendingContent) {
             System.out.println("Running container trending content...");
@@ -200,7 +200,7 @@ public class RecoCorrectnessTest {
         }
     }
 
-    private void testSystemRecommendedContent(SetMultimap<String, String> authorToParents, SetMultimap<String, String> userToParents)
+    private void testSystemRecommendedContent(SetMultimap<String, String> authorToParents, SetMultimap<String, String> userToParents, MiruTimeRange timeRange)
         throws MiruQueryServiceException {
 
         Set<String> docTypes = Sets.newHashSet("50", "51", "52");
@@ -217,6 +217,7 @@ public class RecoCorrectnessTest {
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new RecoQuery(
+                    timeRange,
                     null,
                     filter,
                     "parent", "parent", "parent",

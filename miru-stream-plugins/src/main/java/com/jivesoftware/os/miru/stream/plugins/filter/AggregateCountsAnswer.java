@@ -12,21 +12,25 @@ import java.util.Set;
 public class AggregateCountsAnswer {
 
     public static final AggregateCountsAnswer EMPTY_RESULTS = new AggregateCountsAnswer(ImmutableList.<AggregateCount>of(),
-            ImmutableSet.<String>of(), 0, 0);
+        ImmutableSet.<String>of(), 0, 0, true);
 
     public final ImmutableList<AggregateCount> results;
     public final ImmutableSet<String> aggregateTerms;
     public final int skippedDistincts;
     public final int collectedDistincts;
+    public final boolean resultsExhausted;
 
     public AggregateCountsAnswer(
-            ImmutableList<AggregateCount> results,
-            ImmutableSet<String> aggregateTerms,
-            int skippedDistincts, int collectedDistincts) {
+        ImmutableList<AggregateCount> results,
+        ImmutableSet<String> aggregateTerms,
+        int skippedDistincts,
+        int collectedDistincts,
+        boolean resultsExhausted) {
         this.results = results;
         this.aggregateTerms = aggregateTerms;
         this.skippedDistincts = skippedDistincts;
         this.collectedDistincts = collectedDistincts;
+        this.resultsExhausted = resultsExhausted;
     }
 
     @JsonCreator
@@ -34,8 +38,13 @@ public class AggregateCountsAnswer {
         @JsonProperty("results") List<AggregateCount> results,
         @JsonProperty("aggregateTerms") Set<String> aggregateTerms,
         @JsonProperty("skippedDistincts") int skippedDistincts,
-        @JsonProperty("collectedDistincts") int collectedDistincts) {
-        return new AggregateCountsAnswer(ImmutableList.copyOf(results), ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
+        @JsonProperty("collectedDistincts") int collectedDistincts,
+        @JsonProperty("resultsExhausted") boolean resultsExhausted) {
+        return new AggregateCountsAnswer(ImmutableList.copyOf(results),
+            ImmutableSet.copyOf(aggregateTerms),
+            skippedDistincts,
+            collectedDistincts,
+            resultsExhausted);
     }
 
     @Override
@@ -45,6 +54,7 @@ public class AggregateCountsAnswer {
             ", aggregateTerms=" + aggregateTerms +
             ", skippedDistincts=" + skippedDistincts +
             ", collectedDistincts=" + collectedDistincts +
+            ", resultsExhausted=" + resultsExhausted +
             '}';
     }
 
@@ -59,16 +69,20 @@ public class AggregateCountsAnswer {
 
         AggregateCountsAnswer that = (AggregateCountsAnswer) o;
 
-        if (collectedDistincts != that.collectedDistincts) {
-            return false;
-        }
         if (skippedDistincts != that.skippedDistincts) {
             return false;
         }
-        if (aggregateTerms != null ? !aggregateTerms.equals(that.aggregateTerms) : that.aggregateTerms != null) {
+        if (collectedDistincts != that.collectedDistincts) {
             return false;
         }
-        return !(results != null ? !results.equals(that.results) : that.results != null);
+        if (resultsExhausted != that.resultsExhausted) {
+            return false;
+        }
+        if (results != null ? !results.equals(that.results) : that.results != null) {
+            return false;
+        }
+        return !(aggregateTerms != null ? !aggregateTerms.equals(that.aggregateTerms) : that.aggregateTerms != null);
+
     }
 
     @Override
@@ -77,6 +91,7 @@ public class AggregateCountsAnswer {
         result = 31 * result + (aggregateTerms != null ? aggregateTerms.hashCode() : 0);
         result = 31 * result + skippedDistincts;
         result = 31 * result + collectedDistincts;
+        result = 31 * result + (resultsExhausted ? 1 : 0);
         return result;
     }
 

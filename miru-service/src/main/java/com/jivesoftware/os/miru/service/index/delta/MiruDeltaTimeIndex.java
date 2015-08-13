@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerTimeIndex;
 import gnu.trove.list.array.TLongArrayList;
@@ -57,6 +58,12 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
             }
             return result;
         }
+    }
+
+    @Override
+    public boolean intersects(MiruTimeRange timeRange) {
+        return timeRange.smallestTimestamp <= getLargestTimestamp()
+            && timeRange.largestTimestamp >= getSmallestTimestamp();
     }
 
     @Override
