@@ -96,9 +96,14 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] rawPartitionId = ensureClient(LATEST_PARTITIONS_PARTITION_NAME).getValue(null, key);
         if (rawPartitionId == null) {
             MiruPartitionId largestPartitionId = walClient.getLargestPartitionId(tenantId);
-            WriterCursor cursor = largestPartitionId != null ? walClient.getCursorForWriterId(tenantId, largestPartitionId, writerId) : null;
-            if (cursor == null) {
-                throw new IllegalStateException("Unknown cursor for tenant " + tenantId + " writer " + writerId);
+            WriterCursor cursor;
+            if (largestPartitionId == null) {
+                cursor = new WriterCursor(0, 0);
+            } else {
+                cursor = walClient.getCursorForWriterId(tenantId, largestPartitionId, writerId);
+                if (cursor == null) {
+                    throw new IllegalStateException("Unknown cursor for tenant " + tenantId + " writer " + writerId);
+                }
             }
             LOG.debug("Recovered cursor for {} writer {} at partition {} index {}", tenantId, writerId, cursor.partitionId, cursor.index);
             MiruPartitionCursor cursorForWriterId = new MiruPartitionCursor(MiruPartitionId.of(cursor.partitionId), new AtomicInteger(cursor.index), capacity);
