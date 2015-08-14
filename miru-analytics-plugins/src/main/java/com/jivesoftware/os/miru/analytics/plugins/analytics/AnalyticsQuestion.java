@@ -59,9 +59,9 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
         // Short-circuit if the time range doesn't live here
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > context.getTimeIndex().getLargestTimestamp();
         if (!context.getTimeIndex().intersects(timeRange)) {
-              solutionLog.log(MiruSolutionLogLevel.WARN,
+            solutionLog.log(MiruSolutionLogLevel.WARN,
                 "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
-          return new MiruPartitionResponse<>(
+            return new MiruPartitionResponse<>(
                 new AnalyticsAnswer(
                     Maps.transformValues(
                         request.query.analyticsFilters,
@@ -168,4 +168,16 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
         }
         return report;
     }
+
+    @Override
+    public String toString() {
+        return "AnalyticsQuestion{"
+            + "analytics=" + analytics
+            + ", request=" + request
+            + ", remotePartition=" + remotePartition
+            + ", bitmapsDebug=" + bitmapsDebug
+            + ", aggregateUtil=" + aggregateUtil
+            + '}';
+    }
+
 }

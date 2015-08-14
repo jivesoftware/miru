@@ -218,4 +218,9 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
         backingIndex.nextId(actualInsertionOrderTimestamps.toArray());
         clear();
     }
+
+    @Override
+    public String toString() {
+        return "MiruDeltaTimeIndex{" + "smallestTimestamp=" + getSmallestTimestamp() + ", largestTimestamp=" + getLargestTimestamp() + '}';
+    }
 }

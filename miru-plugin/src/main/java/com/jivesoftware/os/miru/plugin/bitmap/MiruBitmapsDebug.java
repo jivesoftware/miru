@@ -24,9 +24,9 @@ public class MiruBitmapsDebug {
             int i = 0;
             for (BM bitmap : iter) {
                 buf.append("\n  ").append(++i).append('.')
-                        .append(" cardinality=").append(bitmaps.cardinality(bitmap))
-                        .append(" sizeInBits=").append(bitmaps.sizeInBits(bitmap))
-                        .append(" sizeInBytes=").append(bitmaps.sizeInBytes(bitmap));
+                    .append(" cardinality=").append(bitmaps.cardinality(bitmap))
+                    .append(" sizeInBits=").append(bitmaps.sizeInBits(bitmap))
+                    .append(" sizeInBytes=").append(bitmaps.sizeInBytes(bitmap));
             }
             if (i == 0) {
                 buf.append(" -0-");
@@ -35,4 +35,10 @@ public class MiruBitmapsDebug {
             log.log(MiruSolutionLogLevel.INFO, buf.toString());
         }
     }
+
+    @Override
+    public String toString() {
+        return "MiruBitmapsDebug{" + '}';
+    }
+
 }
