@@ -176,7 +176,7 @@ public class MiruWriterUIServiceNGTest {
             activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        service = new MiruWriterUIServiceInitializer().initialize(renderer, new MiruStats());
+        service = new MiruWriterUIServiceInitializer().initialize(renderer, new MiruStats(), null);
     }
 
     @Test(enabled = false)
