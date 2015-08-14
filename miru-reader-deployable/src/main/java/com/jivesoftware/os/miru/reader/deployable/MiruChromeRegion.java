@@ -48,50 +48,54 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
 
     @Override
     public String render(I input) {
-        Map<String, Object> data = Maps.newHashMap();
-        data.put("header", headerRegion.render(null));
-        data.put("region", region.render(input));
-        data.put("title", region.getTitle());
-        data.put("plugins", Lists.transform(plugins,
-            plugin -> ImmutableMap.of("glyphicon", plugin.glyphicon, "name", plugin.name, "path", plugin.path)));
 
+        Map<String, Object> headerData = Maps.newHashMap();
         try {
 
-            List<List<Map<String, String>>> miruCluster = new ArrayList<>();
-            addPeers(miruCluster, "miru-reader", "main", "/");
-            addPeers(miruCluster, "miru-writer", "main", "/miru/writer");
-            addPeers(miruCluster, "miru-manage", "main", "/miru/manage");
-            addPeers(miruCluster, "miru-tools", "main", "/");
-            data.put("miru", miruCluster);
+            List<Map<String, Object>> services = new ArrayList<>();
+            addPeers(services, "miru-reader", "main", "/");
+            addPeers(services, "miru-writer", "main", "/miru/writer");
+            addPeers(services, "miru-manage", "main", "/miru/manage");
+            addPeers(services, "miru-tools", "main", "/");
+            headerData.put("services", services);
 
         } catch (Exception x) {
             LOG.warn("Failed to build out peers.", x);
         }
 
+        Map<String, Object> data = Maps.newHashMap();
+
+        data.put("header", headerRegion.render(headerData));
+        data.put("region", region.render(input));
+        data.put("title", region.getTitle());
+        data.put("plugins", Lists.transform(plugins,
+            plugin -> ImmutableMap.of("glyphicon", plugin.glyphicon, "name", plugin.name, "path", plugin.path)));
+
         return renderer.render(template, data);
     }
 
-    private void addPeers(List<List<Map<String, String>>> miruCluster, String name, String portName, String path) {
+    private void addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
         TenantsServiceConnectionDescriptorProvider readers = tenantRoutingProvider.getConnections(name, portName);
         ConnectionDescriptors connectionDescriptors = readers.getConnections("");
         if (connectionDescriptors != null) {
-            List<Map<String, String>> peers = new ArrayList<>();
+            List<Map<String, String>> instances = new ArrayList<>();
             for (ConnectionDescriptor connectionDescriptor : connectionDescriptors.getConnectionDescriptors()) {
                 InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
                 InstanceDescriptor.InstanceDescriptorPort port = instanceDescriptor.ports.get(portName);
                 if (port == null) {
-                    peers.add(ImmutableMap.of("name", instanceDescriptor.serviceName + " " + instanceDescriptor.instanceName,
+                    instances.add(ImmutableMap.of("name", instanceDescriptor.serviceName + " " + instanceDescriptor.instanceName,
                         "host", instanceDescriptor.publicHost,
                         "port", String.valueOf(port.port),
                         "path", path
                     ));
 
                 }
-                if (!peers.isEmpty()) {
-                    miruCluster.add(peers);
-                }
             }
-
+            if (!instances.isEmpty()) {
+                services.add(ImmutableMap.of(
+                    "name", name,
+                    "instances", instances));
+            }
         }
     }
 
