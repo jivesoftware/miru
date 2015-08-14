@@ -34,7 +34,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
     private final String service;
     private final String instance;
     private final String version;
-    private final MiruLogSender[] logSenders;
+    private final MiruLogSenderProvider logSenderProvider;
     private final BlockingQueue<MiruLogEvent> queue;
     private final int batchSize;
     private final boolean blocking;
@@ -60,7 +60,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
         String service,
         String instance,
         String version,
-        MiruLogSender[] logSenders,
+        MiruLogSenderProvider logSenderProvider,
         int queueSize,
         int batchSize,
         boolean blocking,
@@ -75,7 +75,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
         this.service = service;
         this.instance = instance;
         this.version = version;
-        this.logSenders = logSenders;
+        this.logSenderProvider = logSenderProvider;
         this.cluster = cluster;
         this.queue = new ArrayBlockingQueue<>(queueSize);
         this.batchSize = batchSize;
@@ -257,6 +257,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                 } else {
                     deliver:
                     while (true) {
+                        MiruLogSender[] logSenders = logSenderProvider.getLogSenders();
                         for (int tries = 0; tries < logSenders.length; tries++) {
                             try {
                                 logSenders[(int) (helperIndex.get() % logSenders.length)].send(events);
