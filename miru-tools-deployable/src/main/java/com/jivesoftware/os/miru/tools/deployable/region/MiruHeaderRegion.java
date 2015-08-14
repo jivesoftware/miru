@@ -32,21 +32,26 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
 
     @Override
     public String render(Void input) {
-        Map<String, Object> data = Maps.newHashMap();
         try {
+            Map<String, Object> data = Maps.newHashMap();
+            try {
 
-            List<Map<String, Object>> services = new ArrayList<>();
-            addPeers(services, "miru-reader", "main", "/");
-            addPeers(services, "miru-writer", "main", "/miru/writer");
-            addPeers(services, "miru-manage", "main", "/miru/manage");
-            addPeers(services, "miru-tools", "main", "/");
-            data.put("services", services);
+                List<Map<String, Object>> services = new ArrayList<>();
+                addPeers(services, "miru-reader", "main", "/");
+                addPeers(services, "miru-writer", "main", "/miru/writer");
+                addPeers(services, "miru-manage", "main", "/miru/manage");
+                addPeers(services, "miru-tools", "main", "/");
+                data.put("services", services);
 
+            } catch (Exception x) {
+                LOG.warn("Failed to build out peers.", x);
+            }
+
+            return renderer.render(template, data);
         } catch (Exception x) {
-            LOG.warn("Failed to build out peers.", x);
+            LOG.error("Faild to render header.", x);
+            return x.getMessage();
         }
-
-        return renderer.render(template, data);
     }
 
     private void addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
