@@ -20,4 +20,10 @@ public class Analytics {
         log.debug("Get analyticing for answer={}", answer);
         return new Waveform(bitmaps.boundedCardinalities(answer, indexes));
     }
+
+    @Override
+    public String toString() {
+        return "Analytics{" + '}';
+    }
+
 }

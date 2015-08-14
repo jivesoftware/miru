@@ -77,7 +77,7 @@ public class MiruAggregateUtil {
 
             MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, streamFieldId);
             if (traceEnabled) {
-                LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
+                LOG.trace("stream: fieldValues={}", new Object[]{fieldValues});
             }
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -212,9 +212,9 @@ public class MiruAggregateUtil {
                                     if (termId != null) {
                                         try {
                                             MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
-                                                fieldId,
-                                                termId,
-                                                considerIfIndexIdGreaterThanN);
+                                            fieldId,
+                                            termId,
+                                            considerIfIndexIdGreaterThanN);
                                             Optional<BM> index = got.getIndex();
                                             if (index.isPresent()) {
                                                 fieldBitmaps.add(index.get());
@@ -285,6 +285,11 @@ public class MiruAggregateUtil {
             throw new UnsupportedOperationException(operation + " isn't currently supported.");
         }
         solutionLog.log(MiruSolutionLogLevel.DEBUG, "executeFilter: aggregate took {} millis.", System.currentTimeMillis() - start);
+    }
+
+    @Override
+    public String toString() {
+        return "MiruAggregateUtil{" + '}';
     }
 
 }
