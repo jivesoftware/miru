@@ -55,7 +55,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (!context.getTimeIndex().intersects(request.query.timeRange)) {
-            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
+            solutionLog.log(MiruSolutionLogLevel.WARN,
+                "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
             return new MiruPartitionResponse<>(
                 collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, bitmaps.create(), bitmaps.create(),
                     removeDistinctsFilter),
