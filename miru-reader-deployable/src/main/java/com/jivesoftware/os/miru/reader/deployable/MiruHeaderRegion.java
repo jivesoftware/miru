@@ -2,10 +2,10 @@ package com.jivesoftware.os.miru.reader.deployable;
 
 import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
-import java.util.Collections;
+import java.util.Map;
 
 // soy.miru.chrome.headerRegion
-public class MiruHeaderRegion implements MiruRegion<Void> {
+public class MiruHeaderRegion implements MiruRegion<Map<String, Object>> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
@@ -16,7 +16,7 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
     }
 
     @Override
-    public String render(Void input) {
-        return renderer.render(template, Collections.<String, Object>emptyMap());
+    public String render(Map<String, Object> input) {
+        return renderer.render(template, input);
     }
 }
