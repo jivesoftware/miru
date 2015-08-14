@@ -3,42 +3,60 @@
 /**
  * Partitions
  *
+ * @param? tenant
  * @param? partitions
  */
 {template .partitionsRegion}
     <div class="panel panel-default">
-        <div class="panel-heading">Partitions</div>
+        <div class="panel-heading">Tenant</div>
         <div class="panel-body">
-            <table class="table table-condensed">
-                <thead>
-                    <tr>
-                        <th>Tenant</th>
-                        <th>Partition</th>
-                        <th>Last Id (Activity)</th>
-                        <th>Last Id (Time)</th>
-                        <th>Smallest Timestamp</th>
-                        <th>Largest Timestamp</th>
-                        <th>Sip</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {foreach $partition in $partitions}
-                        <tr>
-                            <td>{$partition.tenantId}</td>
-                            <td>{$partition.partitionId}</td>
-                            <td>{$partition.activityLastId}</td>
-                            <td>{$partition.timeLastId}</td>
-                            <td>{$partition.smallestTimestamp}</td>
-                            <td>{$partition.largestTimestamp}</td>
-                            <td>{$partition.sip}</td>
-                        </tr>
-                    {ifempty}
-                        <tr>
-                            <td colspan="7">No partitions found</td>
-                        </tr>
-                    {/foreach}
-                </tbody>
-            </table>
+            <label for="tenantPicker">Select Tenant</label>
+            <form id="tenantPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#tenantPicker" data-form-el="#tenantPickerForm"
+                data-jive-ui="jive/ui/typeahead/tenant_typeahead" method="post" name="tenantPickerForm" action="#"
+                //TODO wire this up correctly
+                onsubmit="location.href='/miru/manage/tenants/'+document.getElementById('tenantPicker').value+'#focus'; return false">
+                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                    class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                    name="tenantId" id="tenantPicker" data-original-title="" title="">
+            </form>
         </div>
     </div>
+
+    {if $partitions}
+        <div class="panel panel-default">
+            <div class="panel-heading">Partitions</div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Tenant</th>
+                            <th>Partition</th>
+                            <th>Last Id (Activity)</th>
+                            <th>Last Id (Time)</th>
+                            <th>Smallest Timestamp</th>
+                            <th>Largest Timestamp</th>
+                            <th>Sip</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $partition in $partitions}
+                            <tr>
+                                <td>{$partition.tenantId}</td>
+                                <td>{$partition.partitionId}</td>
+                                <td>{$partition.activityLastId}</td>
+                                <td>{$partition.timeLastId}</td>
+                                <td>{$partition.smallestTimestamp}</td>
+                                <td>{$partition.largestTimestamp}</td>
+                                <td>{$partition.sip}</td>
+                            </tr>
+                        {ifempty}
+                            <tr>
+                                <td colspan="7">No partitions found</td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {/if}
 {/template}

@@ -121,8 +121,8 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     }
 
     @Override
-    public boolean expectedTopologies(CoordinateStream stream) throws Exception {
-        return expectedTenants.expectedTopologies(stream);
+    public boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception {
+        return expectedTenants.expectedTopologies(tenantId, stream);
     }
 
     /** MiruService calls this on a periodic interval */

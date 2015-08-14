@@ -202,12 +202,24 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     }
 
     @Override
-    public boolean expectedTopologies(CoordinateStream stream) throws Exception {
-        for (Map.Entry<MiruTenantId, MiruTenantTopology<?>> entry : localTopologies.entrySet()) {
-            for (MiruLocalHostedPartition<?, ?, ?> hostedPartition : entry.getValue().allPartitions()) {
-                MiruPartitionCoord coord = hostedPartition.getCoord();
-                if (!stream.stream(coord.tenantId, coord.partitionId, coord.host)) {
-                    return false;
+    public boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception {
+        if (tenantId.isPresent()) {
+            MiruTenantTopology<?> tenantTopology = localTopologies.get(tenantId.get());
+            if (tenantTopology != null) {
+                for (MiruLocalHostedPartition<?, ?, ?> hostedPartition : tenantTopology.allPartitions()) {
+                    MiruPartitionCoord coord = hostedPartition.getCoord();
+                    if (!stream.stream(coord.tenantId, coord.partitionId, coord.host)) {
+                        return false;
+                    }
+                }
+            }
+        } else {
+            for (Map.Entry<MiruTenantId, MiruTenantTopology<?>> entry : localTopologies.entrySet()) {
+                for (MiruLocalHostedPartition<?, ?, ?> hostedPartition : entry.getValue().allPartitions()) {
+                    MiruPartitionCoord coord = hostedPartition.getCoord();
+                    if (!stream.stream(coord.tenantId, coord.partitionId, coord.host)) {
+                        return false;
+                    }
                 }
             }
         }

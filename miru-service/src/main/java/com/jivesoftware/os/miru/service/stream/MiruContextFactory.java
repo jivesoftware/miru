@@ -149,13 +149,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     }
 
     public <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
-        ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord);
-        return allocate(bitmaps, coord, chunkStores);
-    }
-
-    private <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ChunkStore[] chunkStores) throws Exception {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
+
+        ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord);
+        return allocate(bitmaps, coord, schema, chunkStores);
+    }
+
+    private <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruSchema schema, ChunkStore[] chunkStores) throws Exception {
         int seed = coord.hashCode();
         TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
         KeyedFilerStore<Long, Void> genericFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("generic"), false,
@@ -314,6 +315,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruContext<BM, S> from,
         MiruBackingStorage toStorage) throws Exception {
 
+        // check for schema first
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
+
         ChunkStore[] fromChunks = from.chunkStores;
         ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord);
         if (fromChunks.length != toChunks.length) {
@@ -322,7 +326,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         for (int i = 0; i < fromChunks.length; i++) {
             fromChunks[i].copyTo(toChunks[i]);
         }
-        return allocate(bitmaps, coord, toChunks);
+        return allocate(bitmaps, coord, schema, toChunks);
     }
 
     public void markStorage(MiruPartitionCoord coord, MiruBackingStorage marked) throws Exception {
