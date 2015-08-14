@@ -55,7 +55,7 @@
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                                 class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$fromTimeAgo?:''}"
                                 name="fromTimeAgo" id="fromTimePicker" data-original-title="" title="">
-                            <select style="width:280px; padding-left:10px;"
+                            <select style="padding-left:10px;"
                                 class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Unit"
                                 name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
                                 <option value="MILLISECONDS" {if $fromTimeUnit == 'MILLISECONDS'}selected="selected"{/if}>Millis</option>
@@ -72,16 +72,16 @@
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                                 class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Time Ago" value="{$toTimeAgo?:''}"
                                 name="toTimeAgo" id="toTimePicker" data-original-title="" title="">
+                            <select style="padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="to Time Unit"
+                                name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
+                                <option value="MILLISECONDS" {if $toTimeUnit == 'MILLISECONDS'}selected="selected"{/if}>Millis</option>
+                                <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>Seconds</option>
+                                <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>Minutes</option>
+                                <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>Hours</option>
+                                <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>Days</option>
+                            </select>
                         </td>
-                        <select style="width:280px; padding-left:10px;"
-                            class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="to Time Unit"
-                            name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
-                            <option value="MILLISECONDS" {if $toTimeUnit == 'MILLISECONDS'}selected="selected"{/if}>Millis</option>
-                            <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>Seconds</option>
-                            <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>Minutes</option>
-                            <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>Hours</option>
-                            <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>Days</option>
-                        </select>
                     </tr>
                     <tr>
                         <td>Buckets</td>

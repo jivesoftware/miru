@@ -641,10 +641,8 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         partitionRebuildBatchSize);
 
                     while (rebuilding.get() && accessorRef.get() == accessor && streamBatch != null) {
-                        log.info("REBUILDING Queue put {} {}", streamBatch.activities.size(), streamBatch.boundaries.size());
                         tryQueuePut(rebuilding, queue, streamBatch);
                         if (streamBatch.activities.isEmpty()) {
-                            log.info("REBUILDING Queue stopped because batch is empty");
                             break;
                         }
                         streamBatch = (streamBatch.cursor != null)
@@ -677,18 +675,13 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     }
 
                     if (streamBatch != null) {
-                        log.info("REBUILDING Consumed {} {}", streamBatch.activities.size(), streamBatch.boundaries.size());
-                        partitionedActivities = new ArrayList<>(streamBatch.activities.size() + streamBatch.boundaries.size());
+                        partitionedActivities = new ArrayList<>(streamBatch.activities.size());
                         for (MiruWALEntry batch : streamBatch.activities) {
-                            partitionedActivities.add(batch.activity);
-                        }
-                        for (MiruWALEntry batch : streamBatch.boundaries) {
                             partitionedActivities.add(batch.activity);
                         }
                         nextCursor = streamBatch.cursor;
                     } else {
                         // end of rebuild
-                        log.info("REBUILDING Consumer reached end of rebuild");
                         log.debug("Ending rebuild for {}", coord);
                         break;
                     }
@@ -696,7 +689,6 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     int count = partitionedActivities.size();
                     totalIndexed += count;
 
-                    log.info("REBUILDING Indexed {} {}", count, totalIndexed);
                     log.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
                     log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                     boolean repair = firstRebuild.compareAndSet(true, false);
@@ -828,8 +820,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     throw new InterruptedException("Interrupted while streaming sip");
                 }
 
-                List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(
-                    sippedActivity.activities.size() + sippedActivity.boundaries.size());
+                List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(sippedActivity.activities.size());
                 for (MiruWALEntry e : sippedActivity.activities) {
                     long version = e.activity.activity.isPresent() ? e.activity.activity.get().version : 0; // Smells!
                     TimeAndVersion timeAndVersion = new TimeAndVersion(e.activity.timestamp, version);
@@ -840,9 +831,6 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     sipTracker.addSeenThisSip(timeAndVersion);
                     sipTracker.track(e.activity);
                 }
-                for (MiruWALEntry e : sippedActivity.boundaries) {
-                    partitionedActivities.add(e.activity);
-                }
 
                 sipCursor = deliver(partitionedActivities, accessor, sipTracker, sipCursor, sippedActivity.cursor);
                 partitionedActivities.clear();
@@ -852,13 +840,11 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     accessor.notifyEndOfStream(threshold);
                 }
 
-                if (sippedActivity.activities.isEmpty()) {
+                if (sipCursor == null || sippedActivity.endOfWAL) {
                     break;
                 }
 
-                sippedActivity = (sipCursor != null)
-                    ? walClient.sipActivity(coord.tenantId, coord.partitionId, sipCursor, partitionSipBatchSize)
-                    : null;
+                sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId, sipCursor, partitionSipBatchSize);
             }
 
             if (!accessor.hasOpenWriters()) {
