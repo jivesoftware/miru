@@ -387,37 +387,54 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         String infoCursorName = ringMember + '/' + partitionInfoName;
         String ingressCursorName = ringMember + '/' + partitionIngressName;
 
-        long registryTransactionId = 0;
-        long infoTransactionId = 0;
-        long ingressTransactionId = 0;
+        long[] registryTransactionId = new long[1];
+        long[] infoTransactionId = new long[1];
+        long[] ingressTransactionId = new long[1];
         Map<String, NamedCursor> cursors = Maps.newHashMap();
         for (NamedCursor sinceCursor : sinceCursors) {
             cursors.put(sinceCursor.name, sinceCursor);
             if (registryCursorName.equals(sinceCursor.name)) {
-                registryTransactionId = sinceCursor.id;
+                registryTransactionId[0] = sinceCursor.id;
             } else if (infoCursorName.equals(sinceCursor.name)) {
-                infoTransactionId = sinceCursor.id;
+                infoTransactionId[0] = sinceCursor.id;
             } else if (ingressCursorName.equals(sinceCursor.name)) {
-                ingressTransactionId = sinceCursor.id;
+                ingressTransactionId[0] = sinceCursor.id;
             }
         }
 
         final Set<RawTenantAndPartition> tenantPartitions = Sets.newHashSet();
-        TakeCursors registryTakeCursors = registryClient.takeFromTransactionId(registryTransactionId, (transactionId, prefix, key, value) -> {
+        int[] registryCount = new int[1];
+        TakeCursors registryTakeCursors = registryClient.takeFromTransactionId(registryTransactionId[0], (transactionId, prefix, key, value) -> {
             RawTenantAndPartition tenantAndPartition = fromTopologyKey(key);
             tenantPartitions.add(tenantAndPartition);
+            registryCount[0]++;
+            if (registryCount[0] % 10_000 == 0) {
+                LOG.info("Found {} registry updates for {} from txId {}", registryCount[0], host, registryTransactionId[0]);
+            }
             return true;
         });
-        TakeCursors infoTakeCursors = topologyInfoClient.takeFromTransactionId(infoTransactionId, (transactionId, prefix, key, value) -> {
+        int[] infoCount = new int[1];
+        TakeCursors infoTakeCursors = topologyInfoClient.takeFromTransactionId(infoTransactionId[0], (transactionId, prefix, key, value) -> {
             RawTenantAndPartition tenantAndPartition = fromTopologyKey(key);
             tenantPartitions.add(tenantAndPartition);
+            infoCount[0]++;
+            if (infoCount[0] % 10_000 == 0) {
+                LOG.info("Found {} info updates for {} from txId {}", infoCount[0], host, infoTransactionId[0]);
+            }
             return true;
         });
-        TakeCursors ingressTakeCursors = ingressClient.takeFromTransactionId(ingressTransactionId, (transactionId, prefix, key, value) -> {
+        int[] ingressCount = new int[1];
+        TakeCursors ingressTakeCursors = ingressClient.takeFromTransactionId(ingressTransactionId[0], (transactionId, prefix, key, value) -> {
             RawTenantAndPartition tenantAndPartition = fromTopologyKey(key);
             tenantPartitions.add(tenantAndPartition);
+            ingressCount[0]++;
+            if (ingressCount[0] % 10_000 == 0) {
+                LOG.info("Found {} ingress updates for {} from txId {}", ingressCount[0], host, ingressTransactionId[0]);
+            }
             return true;
         });
+        LOG.info("Returning {} active updates for {} using registry={} info={} ingress={}",
+            tenantPartitions.size(), host, registryCount[0], infoCount[0], ingressCount[0]);
 
         List<MiruPartitionActiveUpdate> updates = Lists.newArrayList();
         ListMultimap<MiruTenantId, MiruPartitionId> tenantPartitionsMap = ArrayListMultimap.create();
@@ -981,9 +998,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     MiruPartitionId streamPartitionId = ingressKeyToPartitionId(key);
                     if (partitionId == null || partitionId.equals(streamPartitionId)) {
                         IngressType ingressType = ingressKeyToType(key);
-                        if (streamRangeLookup.stream(streamPartitionId, ingressType, value.getTimestampId())) {
-                            return true;
-                        }
+                        return streamRangeLookup.stream(streamPartitionId, ingressType, FilerIO.bytesLong(value.getValue()));
                     }
                 }
                 return false;
