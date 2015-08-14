@@ -55,7 +55,8 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
-        if (!context.getTimeIndex().intersects(request.query.answerTimeRange)) {
+        MiruTimeRange timeRange = request.query.answerTimeRange;
+        if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN,
                 "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
             return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.absent()),
@@ -82,7 +83,6 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         }
 
         if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
-            MiruTimeRange timeRange = request.query.answerTimeRange;
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
