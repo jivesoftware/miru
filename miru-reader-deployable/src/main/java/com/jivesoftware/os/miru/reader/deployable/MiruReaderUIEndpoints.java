@@ -2,10 +2,9 @@ package com.jivesoftware.os.miru.reader.deployable;
 
 import com.google.common.base.Optional;
 import javax.inject.Singleton;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -40,10 +39,10 @@ public class MiruReaderUIEndpoints {
         return Response.ok(rendered).build();
     }
 
-    @POST
-    @Path("/partitions")
+    @GET
+    @Path("/partitions/{tenantId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getPartitions(@FormParam("tenantId") String tenantId) {
+    public Response getPartitions(@PathParam("tenantId") String tenantId) {
         String rendered = service.renderPartitions(Optional.of(tenantId));
         return Response.ok(rendered).build();
     }
