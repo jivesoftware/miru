@@ -57,7 +57,7 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
             for (ConnectionDescriptor connectionDescriptor : connectionDescriptors.getConnectionDescriptors()) {
                 InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
                 InstanceDescriptor.InstanceDescriptorPort port = instanceDescriptor.ports.get(portName);
-                if (port == null) {
+                if (port != null) {
                     instances.add(ImmutableMap.of("name", instanceDescriptor.serviceName + " " + instanceDescriptor.instanceName,
                         "host", instanceDescriptor.publicHost,
                         "port", String.valueOf(port.port),
