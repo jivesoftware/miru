@@ -13,18 +13,20 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
+import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 
 public class MiruManageInitializer {
 
     public MiruManageService initialize(MiruSoyRenderer renderer,
         MiruClusterRegistry clusterRegistry,
         MiruWALClient miruWALClient,
-        MiruStats stats)
+        MiruStats stats,
+        TenantRoutingProvider tenantRoutingProvider)
         throws Exception {
 
         return new MiruManageService(
             renderer,
-            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer),
+            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer, stats),
             new MiruHostsRegion("soy.miru.page.hostsRegion", renderer, clusterRegistry,
                 new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer),

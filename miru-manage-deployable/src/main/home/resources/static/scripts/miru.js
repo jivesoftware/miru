@@ -8,7 +8,6 @@ miru.resetButton = function ($button, value) {
 };
 
 miru.balancer = {
-
     repair: function (ele) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -32,7 +31,6 @@ miru.balancer = {
             }
         });
     },
-
     rebalance: function (ele, host, port, direction) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -60,7 +58,6 @@ miru.balancer = {
             }
         });
     },
-
     remove: function (ele, host, port) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -86,7 +83,6 @@ miru.balancer = {
 };
 
 miru.tenants = {
-
     rebuild: function (ele, host, port, tenantId, partitionId) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -118,7 +114,6 @@ miru.tenants = {
 };
 
 miru.activitywal = {
-
     repair: function (ele) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -142,7 +137,6 @@ miru.activitywal = {
             }
         });
     },
-
     sanitize: function (ele, tenantId, partitionId) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -169,12 +163,10 @@ miru.activitywal = {
 };
 
 miru.realwave = {
-
     input: {},
     lastBucketIndex: -1,
     chart: null,
     requireFocus: true,
-
     fillColors: [
         "rgba(220,220,220,0.5)",
         "rgba(151,187,205,0.5)",
@@ -211,7 +203,6 @@ miru.realwave = {
         "rgba(205,187,151,1)",
         "rgba(187,151,205,1)"
     ],
-
     init: function () {
         $waveform = $('#rw-waveform');
         miru.realwave.input.tenantId = $waveform.data('tenantId');
@@ -227,8 +218,8 @@ miru.realwave = {
         miru.realwave.requireFocus = $waveform.data('requireFocus') != "false";
         miru.realwave.graphType = $waveform.data('graphType');
         miru.realwave.graphProp = (miru.realwave.graphType == 'Line' || miru.realwave.graphType == 'Radar') ? 'points'
-            : (miru.realwave.graphType == 'Bar' || miru.realwave.graphType == 'StackedBar') ? 'bars'
-            : 'unknown';
+                : (miru.realwave.graphType == 'Bar' || miru.realwave.graphType == 'StackedBar') ? 'bars'
+                : 'unknown';
 
         if (miru.realwave.requireFocus) {
             miru.onWindowFocus.push(function () {
@@ -240,7 +231,6 @@ miru.realwave = {
 
         miru.realwave.poll();
     },
-
     poll: function () {
         $.ajax({
             type: "POST",
@@ -266,7 +256,6 @@ miru.realwave = {
             }
         });
     },
-
     draw: function (data) {
         if (data.waveforms) {
             var i;
@@ -325,7 +314,6 @@ miru.realwave = {
         }
         setTimeout(miru.realwave.poll, 1000);
     },
-
     elapsed: function (seconds) {
         var years, months, days, hours, minutes;
         if (seconds < 0) {
@@ -385,6 +373,9 @@ miru.realwave = {
 };
 
 $(document).ready(function () {
+
+    $('.dropdown-toggle').dropdown();
+
     miru.windowFocused = true;
     miru.onWindowFocus = [];
     miru.onWindowBlur = [];

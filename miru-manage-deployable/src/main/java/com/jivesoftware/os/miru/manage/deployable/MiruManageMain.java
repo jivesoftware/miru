@@ -70,6 +70,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
@@ -145,8 +146,9 @@ public class MiruManageMain {
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             mapper.registerModule(new GuavaModule());
 
+            TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider logConnections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main");
+            TenantsServiceConnectionDescriptorProvider logConnections = tenantRoutingProvider.getConnections("miru-stumptown", "main");
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -158,7 +160,7 @@ public class MiruManageMain {
             miruLogAppender.install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-            TenantsServiceConnectionDescriptorProvider metricConnections = deployable.getTenantRoutingProvider().getConnections("miru-anomaly", "main");
+            TenantsServiceConnectionDescriptorProvider metricConnections = tenantRoutingProvider.getConnections("miru-anomaly", "main");
             MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -178,8 +180,7 @@ public class MiruManageMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
+            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
                 .getConnections("miru-wal", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
@@ -229,7 +230,8 @@ public class MiruManageMain {
             MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
                 clusterRegistry,
                 miruWALClient,
-                stats);
+                stats,
+                tenantRoutingProvider);
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
                 new JiveEpochTimestampProvider());

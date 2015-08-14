@@ -106,7 +106,8 @@ public class MiruManageServiceTest {
         miruManageService = new MiruManageInitializer().initialize(renderer,
             clusterRegistry,
             miruWALClient,
-            stats);
+            stats,
+            null);
 
         long electTime = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
         for (int i = 0; i < numberOfReplicas; i++) {
