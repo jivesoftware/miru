@@ -228,9 +228,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
     }
 
     @Override
-    public MiruRequestHandle<BM, S> tryQueryHandle() throws Exception {
-        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
-
+    public MiruRequestHandle<BM, S> inspectRequestHandle() throws Exception {
         if (removed.get()) {
             throw new MiruPartitionUnavailableException("Partition has been removed");
         }

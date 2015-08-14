@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
@@ -14,7 +15,7 @@ public class MiruReaderUIService {
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final MiruAdminRegion adminRegion;
-    private final MiruPageRegion<Void> partitionsRegion;
+    private final MiruPageRegion<Optional<String>> partitionsRegion;
     private final TenantRoutingProvider tenantRoutingProvider;
 
     private final List<MiruReaderUIPlugin> plugins = Lists.newCopyOnWriteArrayList();
@@ -23,7 +24,7 @@ public class MiruReaderUIService {
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
         MiruAdminRegion adminRegion,
-        MiruPageRegion<Void> partitionsRegion,
+        MiruPageRegion<Optional<String>> partitionsRegion,
         TenantRoutingProvider tenantRoutingProvider) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
@@ -48,7 +49,7 @@ public class MiruReaderUIService {
         return chrome(adminRegion).render(null);
     }
 
-    public String renderPartitions() {
-        return chrome(partitionsRegion).render(null);
+    public String renderPartitions(Optional<String> input) {
+        return chrome(partitionsRegion).render(input);
     }
 }

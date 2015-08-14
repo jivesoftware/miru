@@ -14,5 +14,5 @@ public interface MiruQueryablePartition<BM> {
 
     MiruRequestHandle<BM, ?> acquireQueryHandle() throws Exception;
 
-    MiruRequestHandle<BM, ?> tryQueryHandle() throws Exception;
+    MiruRequestHandle<BM, ?> inspectRequestHandle() throws Exception;
 }

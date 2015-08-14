@@ -223,7 +223,7 @@ public class MiruService implements Miru {
     }
 
     private <BM> String inspect(MiruQueryablePartition<BM> partition, String fieldName, String termValue) throws Exception {
-        try (MiruRequestHandle<BM, ?> handle = partition.acquireQueryHandle()) {
+        try (MiruRequestHandle<BM, ?> handle = partition.inspectRequestHandle()) {
             MiruRequestContext<BM, ?> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
@@ -267,15 +267,15 @@ public class MiruService implements Miru {
         return partitionDirector.getQueryablePartition(localPartitionCoord);
     }
 
-    public boolean expectedTopologies(CoordinateStream stream) throws Exception {
-        return partitionDirector.expectedTopologies(stream);
+    public boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception {
+        return partitionDirector.expectedTopologies(tenantId, stream);
     }
 
     public void introspect(MiruTenantId tenantId, MiruPartitionId partitionId, RequestContextCallback callback) throws Exception {
         Optional<? extends MiruQueryablePartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
         if (partition.isPresent()) {
             MiruQueryablePartition<?> hostedPartition = partition.get();
-            try (MiruRequestHandle<?, ? extends MiruSipCursor<?>> handle = hostedPartition.tryQueryHandle()) {
+            try (MiruRequestHandle<?, ? extends MiruSipCursor<?>> handle = hostedPartition.inspectRequestHandle()) {
                 callback.call(handle.getRequestContext());
             }
         }
