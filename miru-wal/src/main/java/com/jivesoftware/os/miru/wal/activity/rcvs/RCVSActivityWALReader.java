@@ -227,6 +227,9 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
             }
             cvats.clear();
         }
+        if (!begins.isEmpty() || !ends.isEmpty()) {
+            streamMiruActivityWAL.stream(-1, null, -1);
+        }
         endOfStream |= !begins.isEmpty() && ends.containsAll(begins);
         return new RCVSSipCursor(nextSort, nextClockTimestamp, nextActivityTimestamp, endOfStream);
     }

@@ -135,6 +135,9 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? extractCursors(sipCursor.cursors) : Maps.newHashMap();
 
         TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, client, sipCursorsByName);
+        if (takeCursors.tookToEnd) {
+            streamMiruActivityWAL.stream(-1, null, -1);
+        }
         boolean endOfStream = takeCursors.tookToEnd && isEndOfStream(client);
 
         amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);

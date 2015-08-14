@@ -280,18 +280,13 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         throws Exception {
 
         List<MiruWALEntry> activities = new ArrayList<>();
-        List<MiruWALEntry> boundaries = new ArrayList<>();
         C nextCursor = activityWALReader.stream(tenantId, partitionId, cursor, batchSize,
             (collisionId, partitionedActivity, timestamp) -> {
-                if (partitionedActivity.type.isBoundaryType()) {
-                    boundaries.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                } else {
-                    activities.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                }
+                activities.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
                 return activities.size() < batchSize;
             });
 
-        return new StreamBatch<>(activities, boundaries, nextCursor, false);
+        return new StreamBatch<>(activities, nextCursor, false);
     }
 
     @Override
@@ -301,18 +296,18 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         final int batchSize) throws Exception {
 
         List<MiruWALEntry> activities = new ArrayList<>();
-        List<MiruWALEntry> boundaries = new ArrayList<>();
+        boolean[] endOfWAL = { false };
         S nextCursor = activityWALReader.streamSip(tenantId, partitionId, cursor, batchSize,
             (collisionId, partitionedActivity, timestamp) -> {
-                if (partitionedActivity.type.isBoundaryType()) {
-                    boundaries.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                } else {
+                if (collisionId != -1) {
                     activities.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
+                } else {
+                    endOfWAL[0] = true;
                 }
                 return activities.size() < batchSize;
             });
 
-        return new StreamBatch<>(activities, boundaries, nextCursor, nextCursor.endOfStream());
+        return new StreamBatch<>(activities, nextCursor, endOfWAL[0]);
     }
 
     @Override
@@ -339,7 +334,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
             return true; // always consume completely
         });
-        return new StreamBatch<>(batch, null, nextCursor, batch.size() < batchSize);
+        return new StreamBatch<>(batch, nextCursor, batch.size() < batchSize);
     }
 
 }

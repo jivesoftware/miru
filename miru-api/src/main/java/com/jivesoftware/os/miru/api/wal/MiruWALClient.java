@@ -62,16 +62,14 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     class StreamBatch<T, C> {
 
         public List<T> activities; // non final for json ser-der
-        public List<T> boundaries; // non final for json ser-der
         public C cursor; // non final for json ser-der
         public boolean endOfWAL; // non final for json ser-der
 
         public StreamBatch() {
         }
 
-        public StreamBatch(List<T> activities, List<T> boundaries, C cursor, boolean endOfWAL) {
+        public StreamBatch(List<T> activities, C cursor, boolean endOfWAL) {
             this.activities = activities;
-            this.boundaries = boundaries;
             this.cursor = cursor;
             this.endOfWAL = endOfWAL;
         }
@@ -80,7 +78,6 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         public String toString() {
             return "StreamBatch{" +
                 "activities=" + activities +
-                ", boundaries=" + boundaries +
                 ", cursor=" + cursor +
                 ", endOfWAL=" + endOfWAL +
                 '}';
