@@ -56,7 +56,8 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
         if (!context.getTimeIndex().intersects(request.query.answerTimeRange)) {
-            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
+            solutionLog.log(MiruSolutionLogLevel.WARN,
+                "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
             return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.absent()),
                 solutionLog.asList());
         }

@@ -72,7 +72,8 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
 
             // Short-circuit if the time range doesn't live here
             if (!context.getTimeIndex().intersects(timeRange)) {
-                solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection");
+                solutionLog.log(MiruSolutionLogLevel.WARN,
+                    "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
                 return new MiruPartitionResponse<>(distinctCount.numberOfDistincts(
                     bitmaps, context, request, report, bitmaps.create()), solutionLog.asList());
             }
