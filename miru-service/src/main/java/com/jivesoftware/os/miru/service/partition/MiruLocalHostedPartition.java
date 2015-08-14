@@ -823,7 +823,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                 sipCursor,
                 partitionSipBatchSize);
 
-            while (accessorRef.get() == accessor && sippedActivity != null && !sippedActivity.activities.isEmpty()) {
+            while (accessorRef.get() == accessor && sippedActivity != null) {
                 if (Thread.interrupted()) {
                     throw new InterruptedException("Interrupted while streaming sip");
                 }
@@ -852,6 +852,10 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     accessor.notifyEndOfStream(threshold);
                 }
 
+                if (sippedActivity.activities.isEmpty()) {
+                    break;
+                }
+
                 sippedActivity = (sipCursor != null)
                     ? walClient.sipActivity(coord.tenantId, coord.partitionId, sipCursor, partitionSipBatchSize)
                     : null;
@@ -873,7 +877,6 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
             S suggestion = sipTracker.suggest(sipCursor, nextSipCursor);
             if (suggestion != null && accessor.setSip(suggestion)) {
-                sipCursor = suggestion;
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
                 sipTracker.metrics(coord, suggestion);
             }

@@ -64,7 +64,9 @@ public class RCVSActivityWALWriter implements MiruActivityWALWriter {
                 continue;
             }
 
-            rangeMinMax.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
+            if (partitionedActivity.type.isActivityType()) {
+                rangeMinMax.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
+            }
 
             long activityCollisionId;
             if (partitionedActivity.type != MiruPartitionedActivity.Type.BEGIN && partitionedActivity.type != MiruPartitionedActivity.Type.END) {
