@@ -10,8 +10,7 @@ public class MiruToolsInitializer {
 
         return new MiruToolsService(
             renderer,
-            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer),
-            new MiruAdminRegion("soy.miru.page.adminRegion", renderer),
-            tenantRoutingProvider);
+            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
+            new MiruAdminRegion("soy.miru.page.adminRegion", renderer));
     }
 }

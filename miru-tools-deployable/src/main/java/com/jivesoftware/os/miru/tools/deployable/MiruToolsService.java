@@ -7,7 +7,6 @@ import com.jivesoftware.os.miru.tools.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruToolsPlugin;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
-import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.util.List;
 
 /**
@@ -18,19 +17,16 @@ public class MiruToolsService {
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final MiruAdminRegion adminRegion;
-    private final TenantRoutingProvider tenantRoutingProvider;
-
+    
     private final List<MiruToolsPlugin> plugins = Lists.newCopyOnWriteArrayList();
 
     public MiruToolsService(
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
-        MiruAdminRegion adminRegion,
-        TenantRoutingProvider tenantRoutingProvider) {
+        MiruAdminRegion adminRegion) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.adminRegion = adminRegion;
-        this.tenantRoutingProvider = tenantRoutingProvider;
     }
 
     public void registerPlugin(MiruToolsPlugin plugin) {
@@ -38,7 +34,7 @@ public class MiruToolsService {
     }
 
     private <I, R extends MiruPageRegion<I>> MiruChromeRegion<I, R> chrome(R region) {
-        return new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion, plugins, region, tenantRoutingProvider);
+        return new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion, plugins, region);
     }
 
     private <I, R extends MiruPageRegion<I>> MiruFrameRegion<I, R> frame(R region) {
