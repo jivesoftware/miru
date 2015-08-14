@@ -34,5 +34,9 @@
             <artifactId>core</artifactId>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-shared</artifactId>
+        </dependency>
     </dependencies>
 </project>
