@@ -14,9 +14,8 @@ public class MiruReaderUIInitializer {
 
         return new MiruReaderUIService(
             renderer,
-            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer),
+            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer, miruStats),
-            new MiruPartitionsRegion("soy.miru.page.partitionsRegion", renderer, service),
-            tenantRoutingProvider);
+            new MiruPartitionsRegion("soy.miru.page.partitionsRegion", renderer, service));
     }
 }
