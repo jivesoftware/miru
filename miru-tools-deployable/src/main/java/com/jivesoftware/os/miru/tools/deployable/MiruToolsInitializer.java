@@ -6,11 +6,14 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 
 public class MiruToolsInitializer {
 
-    public MiruToolsService initialize(MiruSoyRenderer renderer, TenantRoutingProvider tenantRoutingProvider) throws Exception {
+    public MiruToolsService initialize(String cluster,
+        int instance,
+        MiruSoyRenderer renderer,
+        TenantRoutingProvider tenantRoutingProvider) throws Exception {
 
         return new MiruToolsService(
             renderer,
-            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
+            new MiruHeaderRegion(cluster, instance, "soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer));
     }
 }

@@ -157,7 +157,10 @@ public class MiruToolsMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(renderer, tenantRoutingProvider);
+            MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(instanceConfig.getClusterName(),
+                instanceConfig.getInstanceName(),
+                renderer,
+                tenantRoutingProvider);
 
             ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
 

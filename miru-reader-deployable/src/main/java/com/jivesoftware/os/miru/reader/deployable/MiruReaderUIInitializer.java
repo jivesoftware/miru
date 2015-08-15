@@ -7,14 +7,16 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 
 public class MiruReaderUIInitializer {
 
-    public MiruReaderUIService initialize(MiruSoyRenderer renderer,
+    public MiruReaderUIService initialize(String cluster,
+        int instance,
+        MiruSoyRenderer renderer,
         MiruStats miruStats,
         MiruService service,
         TenantRoutingProvider tenantRoutingProvider) throws Exception {
 
         return new MiruReaderUIService(
             renderer,
-            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
+            new MiruHeaderRegion(cluster, instance, "soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer, miruStats),
             new MiruPartitionsRegion("soy.miru.page.partitionsRegion", renderer, service));
     }

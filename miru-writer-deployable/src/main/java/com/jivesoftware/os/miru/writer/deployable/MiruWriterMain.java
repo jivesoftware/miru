@@ -254,7 +254,7 @@ public class MiruWriterMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer()
-                .initialize(renderer, miruStats, tenantRoutingProvider);
+                .initialize(instanceConfig.getClusterName(), instanceConfig.getInstanceName(), renderer, miruStats, tenantRoutingProvider);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);

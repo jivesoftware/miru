@@ -38,11 +38,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -170,6 +173,7 @@ public class MiruRebalanceDirector {
     }
 
     private static class Shift {
+
         private final List<MiruHost> fromHosts;
         private final List<MiruHost> hostsToElect;
 
@@ -191,7 +195,7 @@ public class MiruRebalanceDirector {
                     LOG.warn("Empty removeHost response from {}, trying another", requestHelper);
                 }
             } catch (Exception e) {
-                LOG.warn("Failed removeHost request to {}, trying another", new Object[] { requestHelper }, e);
+                LOG.warn("Failed removeHost request to {}, trying another", new Object[]{requestHelper}, e);
             }
         }
     }
@@ -262,6 +266,7 @@ public class MiruRebalanceDirector {
     }
 
     private static class VisualizeContext {
+
         private final List<MiruHost> allHosts;
         private final Set<MiruHost> unhealthyHosts;
         private final List<List<MiruTenantId>> splitTenantIds;
@@ -381,5 +386,94 @@ public class MiruRebalanceDirector {
         }
 
         ImageIO.write(bi, "PNG", out);
+    }
+
+    public List<Map<String, String>> visualize() throws Exception {
+
+        List<MiruHost> allHosts = Lists.newArrayList();
+        Set<MiruHost> unhealthyHosts = Sets.newHashSet();
+        LinkedHashSet<HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
+        Map<MiruHost,Integer> hostToIndex = new HashMap<>();
+        int i = 0;
+        for (HostHeartbeat heartbeat : heartbeats) {
+            allHosts.add(heartbeat.host);
+            hostToIndex.put(heartbeat.host, i);
+            i++;
+            if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
+                unhealthyHosts.add(heartbeat.host);
+            }
+        }
+
+        Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
+        List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
+        clusterRegistry.topologiesForTenants(tenantIds, status -> {
+            if (status != null) {
+                MiruPartitionCoord coord = status.partition.coord;
+                List<MiruTopologyStatus> statuses = topologies.get(coord.tenantId, coord.partitionId);
+                if (statuses == null) {
+                    statuses = Lists.newArrayList();
+                    topologies.put(coord.tenantId, coord.partitionId, statuses);
+                }
+                statuses.add(status);
+            }
+            return status;
+        });
+
+        int numHosts = allHosts.size();
+        if (numHosts == 0) {
+            throw new IllegalStateException("Not enough data");
+        }
+
+        List<Map<String, String>> rows = new ArrayList<>();
+        for (List<MiruTopologyStatus> statuses : topologies.values()) {
+
+            Color[] statusColors = new Color[numHosts];
+            int unhealthyPartitions = 0;
+            int offlinePartitions = 0;
+            int onlinePartitions = 0;
+            for (MiruTopologyStatus status : statuses) {
+                if (unhealthyHosts.contains(status.partition.coord.host)) {
+                    unhealthyPartitions++;
+                }
+                if (status.partition.info.state == MiruPartitionState.offline) {
+                    offlinePartitions++;
+                }
+                if (status.partition.info.state == MiruPartitionState.online) {
+                    onlinePartitions++;
+                }
+            }
+            Color unhealthyColor = null;
+            if (unhealthyPartitions > 0) {
+                int numReplicas = statuses.size();
+                float unhealthyPct = unhealthyPartitions / numReplicas;
+                if (unhealthyPct < 0.33f) {
+                    unhealthyColor = Color.YELLOW;
+                } else if (unhealthyPct < 0.67f) {
+                    unhealthyColor = Color.ORANGE;
+                } else {
+                    unhealthyColor = Color.RED;
+                }
+            }
+
+            if (offlinePartitions < statuses.size() && onlinePartitions == 0) {
+                Color c = new Color(64, 0, 0);
+            }
+
+            for (MiruTopologyStatus status : statuses) {
+                if (unhealthyHosts.contains(status.partition.coord.host)) {
+                    Color c = unhealthyColor;
+                } else {
+                    Color c = COLORS[status.partition.info.state.ordinal()];
+                }
+            }
+
+//            List<String> row = new ArrayList<>();
+//            row.add(null);
+//            for (int c = 0; c < statusColors.length; c++) {
+//                row.add(null);
+//            }
+//            row.add(null);
+        }
+        return rows;
     }
 }

@@ -12,6 +12,7 @@ import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -19,12 +20,19 @@ import java.util.Map;
 public class MiruHeaderRegion implements MiruRegion<Void> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-
+    private final String cluster;
+    private final int instance;
     private final String template;
     private final MiruSoyRenderer renderer;
     private final TenantRoutingProvider tenantRoutingProvider;
 
-    public MiruHeaderRegion(String template, MiruSoyRenderer renderer, TenantRoutingProvider tenantRoutingProvider) {
+    public MiruHeaderRegion(String cluster,
+        int instance,
+        String template,
+        MiruSoyRenderer renderer,
+        TenantRoutingProvider tenantRoutingProvider) {
+        this.cluster = cluster;
+        this.instance = instance;
         this.template = template;
         this.renderer = renderer;
         this.tenantRoutingProvider = tenantRoutingProvider;
@@ -34,13 +42,15 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
     public String render(Void input) {
         try {
             Map<String, Object> data = Maps.newHashMap();
+            data.put("cluster", cluster);
+            data.put("instance", String.valueOf(instance));
             try {
 
                 List<Map<String, Object>> services = new ArrayList<>();
                 addPeers(services, "miru-reader", "main", "/");
                 addPeers(services, "miru-writer", "main", "/miru/writer");
                 addPeers(services, "miru-manage", "main", "/miru/manage");
-                addPeers(services, "miru-tools", "main", "/");
+                data.put("total", String.valueOf(addPeers(services, "miru-tools", "main", "/")));
                 data.put("services", services);
 
             } catch (Exception x) {
@@ -54,12 +64,16 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
         }
     }
 
-    private void addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
+    private int addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
         TenantsServiceConnectionDescriptorProvider readers = tenantRoutingProvider.getConnections(name, portName);
         ConnectionDescriptors connectionDescriptors = readers.getConnections("");
         if (connectionDescriptors != null) {
             List<Map<String, String>> instances = new ArrayList<>();
-            for (ConnectionDescriptor connectionDescriptor : connectionDescriptors.getConnectionDescriptors()) {
+            List<ConnectionDescriptor> cds = new ArrayList<>(connectionDescriptors.getConnectionDescriptors());
+            Collections.sort(cds, (ConnectionDescriptor o1, ConnectionDescriptor o2) -> {
+                return Integer.compare(o1.getInstanceDescriptor().instanceName, o2.getInstanceDescriptor().instanceName);
+            });
+            for (ConnectionDescriptor connectionDescriptor : cds) {
                 InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
                 InstanceDescriptor.InstanceDescriptorPort port = instanceDescriptor.ports.get(portName);
                 if (port != null) {
@@ -76,6 +90,8 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
                     "name", name,
                     "instances", instances));
             }
+            return instances.size();
         }
+        return 0;
     }
 }
