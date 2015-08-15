@@ -12,6 +12,7 @@ import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -47,7 +48,7 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
 
                 List<Map<String, Object>> services = new ArrayList<>();
                 addPeers(services, "miru-reader", "main", "/");
-                addPeers(services, "miru-writer", "main", "/miru/writer");
+                data.put("total", String.valueOf(addPeers(services, "miru-writer", "main", "/miru/writer")));
                 addPeers(services, "miru-manage", "main", "/miru/manage");
                 addPeers(services, "miru-tools", "main", "/");
                 data.put("services", services);
@@ -63,13 +64,17 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
         }
     }
 
-    private void addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
+    private int addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
         if (tenantRoutingProvider != null) {
             TenantsServiceConnectionDescriptorProvider readers = tenantRoutingProvider.getConnections(name, portName);
             ConnectionDescriptors connectionDescriptors = readers.getConnections("");
             if (connectionDescriptors != null) {
                 List<Map<String, String>> instances = new ArrayList<>();
-                for (ConnectionDescriptor connectionDescriptor : connectionDescriptors.getConnectionDescriptors()) {
+                List<ConnectionDescriptor> cds = new ArrayList<>(connectionDescriptors.getConnectionDescriptors());
+                Collections.sort(cds, (ConnectionDescriptor o1, ConnectionDescriptor o2) -> {
+                    return Integer.compare(o1.getInstanceDescriptor().instanceName, o2.getInstanceDescriptor().instanceName);
+                });
+                for (ConnectionDescriptor connectionDescriptor : cds) {
                     InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
                     InstanceDescriptor.InstanceDescriptorPort port = instanceDescriptor.ports.get(portName);
                     if (port != null) {
@@ -86,7 +91,9 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
                         "name", name,
                         "instances", instances));
                 }
+                return instances.size();
             }
         }
+        return 0;
     }
 }
