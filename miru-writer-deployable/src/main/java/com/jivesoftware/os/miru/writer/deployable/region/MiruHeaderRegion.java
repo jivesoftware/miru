@@ -19,12 +19,19 @@ import java.util.Map;
 public class MiruHeaderRegion implements MiruRegion<Void> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-
+    private final String cluster;
+    private final int instance;
     private final String template;
     private final MiruSoyRenderer renderer;
     private final TenantRoutingProvider tenantRoutingProvider;
 
-    public MiruHeaderRegion(String template, MiruSoyRenderer renderer, TenantRoutingProvider tenantRoutingProvider) {
+    public MiruHeaderRegion(String cluster,
+        int instance,
+        String template,
+        MiruSoyRenderer renderer,
+        TenantRoutingProvider tenantRoutingProvider) {
+        this.cluster = cluster;
+        this.instance = instance;
         this.template = template;
         this.renderer = renderer;
         this.tenantRoutingProvider = tenantRoutingProvider;
@@ -34,6 +41,8 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
     public String render(Void input) {
         try {
             Map<String, Object> data = Maps.newHashMap();
+            data.put("cluster", cluster);
+            data.put("instance", String.valueOf(instance));
             try {
 
                 List<Map<String, Object>> services = new ArrayList<>();

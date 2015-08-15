@@ -17,7 +17,9 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 
 public class MiruManageInitializer {
 
-    public MiruManageService initialize(MiruSoyRenderer renderer,
+    public MiruManageService initialize(String cluster,
+        int instance,
+        MiruSoyRenderer renderer,
         MiruClusterRegistry clusterRegistry,
         MiruWALClient miruWALClient,
         MiruStats stats,
@@ -26,7 +28,7 @@ public class MiruManageInitializer {
 
         return new MiruManageService(
             renderer,
-            new MiruHeaderRegion("soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
+            new MiruHeaderRegion(cluster, instance, "soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer, stats),
             new MiruHostsRegion("soy.miru.page.hostsRegion", renderer, clusterRegistry,
                 new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer),

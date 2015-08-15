@@ -280,7 +280,12 @@ public class MiruReaderMain {
                 .setContext("/static");
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-            MiruReaderUIService uiService = new MiruReaderUIInitializer().initialize(renderer, miruStats, miruService, tenantRoutingProvider);
+            MiruReaderUIService uiService = new MiruReaderUIInitializer().initialize(instanceConfig.getClusterName(),
+                instanceConfig.getInstanceName(),
+                renderer,
+                miruStats,
+                miruService,
+                tenantRoutingProvider);
 
             deployable.addEndpoints(MiruReaderUIEndpoints.class);
             deployable.addInjectables(MiruReaderUIService.class, uiService);

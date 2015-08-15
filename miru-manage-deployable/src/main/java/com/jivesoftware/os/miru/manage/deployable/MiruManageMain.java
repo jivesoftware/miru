@@ -227,7 +227,10 @@ public class MiruManageMain {
 
             MiruStats stats = new MiruStats();
 
-            MiruManageService miruManageService = new MiruManageInitializer().initialize(renderer,
+            MiruManageService miruManageService = new MiruManageInitializer().initialize(
+                instanceConfig.getClusterName(),
+                instanceConfig.getInstanceName(),
+                renderer,
                 clusterRegistry,
                 miruWALClient,
                 stats,

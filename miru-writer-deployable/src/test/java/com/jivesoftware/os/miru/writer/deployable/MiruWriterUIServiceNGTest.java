@@ -111,7 +111,7 @@ public class MiruWriterUIServiceNGTest {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
         WALIndexProviderRegistry indexProviderRegistry = new WALIndexProviderRegistry();
-        String[] walIndexDirs = new String[] { amzaIndexDir.getAbsolutePath() };
+        String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
         indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
@@ -119,7 +119,7 @@ public class MiruWriterUIServiceNGTest {
         RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
-        amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
+        amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
         amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfTakerThreads = 1;
 
@@ -176,7 +176,7 @@ public class MiruWriterUIServiceNGTest {
             activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        service = new MiruWriterUIServiceInitializer().initialize(renderer, new MiruStats(), null);
+        service = new MiruWriterUIServiceInitializer().initialize("test", 1, renderer, new MiruStats(), null);
     }
 
     @Test(enabled = false)
