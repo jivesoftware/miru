@@ -203,51 +203,6 @@
     <div class="panel panel-default">
         <div class="panel-heading">Aggregate</div>
         <div class="panel-body">
-            {if $results}
-                <div class="container" style="margin-bottom:20px;">
-                    <table cellspacing="4">
-                        {foreach $result in $results}
-                            <tr>
-                                <td style="width:32; height:32; background-color:{$result.color}">
-                                    <span class="glyphicon glyphicon-fullscreen"></span>
-                                </td>
-                                <td>
-                                    <div class="anom-wave-toggle" style="background:#ccc;height:20px;width:100%;position:relative;overflow:hidden;">
-                                        <div>
-                                            <form method="get">
-                                                <input type="hidden" name="{$result.field}" value="{$result.value}">
-                                                <input type="hidden" name="fromAgo" value="{$fromAgo}">
-                                                <input type="hidden" name="fromTimeUnit" value="{$fromTimeUnit}">
-                                                <input type="hidden" name="toAgo" value="{$toAgo}">
-                                                <input type="hidden" name="toTimeUnit" value="{$toTimeUnit}">
-
-                                                avg:{$result.avg}&nbsp;&nbsp;&nbsp;{$result.value}
-                                                <input type="submit" value="Focus"/>
-                                            </form>
-                                        </div>
-                                        <br>
-                                        (min:{$result.min}  max:{$result.max})
-                                        <div>
-                                            <canvas class="anom-single-wave" height="200" width="1070"
-                                                data-anom-wave-id="singleRate{$result.id|noAutoescape}"
-                                                data-anom-wave-type="{$graphType}"></canvas>
-                                        </div>
-                                        <div>
-                                            <canvas class="anom-single-wave" height="200" width="1070"
-                                                data-anom-wave-id="singleValue{$result.id|noAutoescape}"
-                                                data-anom-wave-type="{$graphType}"></canvas>
-                                        </div>
-                                        <script>
-                                            anomaly.query.data['singleRate{$result.id|noAutoescape}'] = {$result.rates|noAutoescape};
-                                            anomaly.query.data['singleValue{$result.id|noAutoescape}'] = {$result.values|noAutoescape};
-                                        </script>
-                                    </div>
-                                </td>
-                            </tr>
-                        {/foreach}
-                    </table>
-                </div>
-            {/if}
             <div class="container">
 
                 <div id="content">
@@ -273,6 +228,52 @@
                     </div>
                 </div>
             </div>
+            {if $results}
+                <div class="container" style="margin-bottom:20px;">
+                    <table cellspacing="4">
+                        {foreach $result in $results}
+                            <tr>
+                                <td style="width:32; height:32; background-color:{$result.color}">
+                                    <span class="glyphicon glyphicon-fullscreen"></span>
+                                </td>
+                                <td>
+                                    <div class="anom-wave-toggle" style="background:#ccc;height:20px;width:100%;position:relative;overflow:hidden;">
+                                        <div>
+                                            <form method="get">
+                                                <input type="hidden" name="{$result.field}" value="{$result.value}">
+                                                <input type="hidden" name="fromAgo" value="{$fromAgo}">
+                                                <input type="hidden" name="fromTimeUnit" value="{$fromTimeUnit}">
+                                                <input type="hidden" name="toAgo" value="{$toAgo}">
+                                                <input type="hidden" name="toTimeUnit" value="{$toTimeUnit}">
+
+                                                avg:{$result.avg}&nbsp;&nbsp;&nbsp;{$result.value}
+                                                <input class="btn btn-default" type="submit" value="Focus"/>
+                                            </form>
+                                        </div>
+                                        <br>
+                                        (min:{$result.min}  max:{$result.max})
+                                        <div>
+                                            <canvas class="anom-single-wave" height="200" width="1070"
+                                                data-anom-wave-id="singleRate{$result.id|noAutoescape}"
+                                                data-anom-wave-type="{$graphType}"></canvas>
+                                        </div>
+                                        <div>
+                                            <canvas class="anom-single-wave" height="200" width="1070"
+                                                data-anom-wave-id="singleValue{$result.id|noAutoescape}"
+                                                data-anom-wave-type="{$graphType}"></canvas>
+                                        </div>
+                                        <script>
+                                            anomaly.query.data['singleRate{$result.id|noAutoescape}'] = {$result.rates|noAutoescape};
+                                            anomaly.query.data['singleValue{$result.id|noAutoescape}'] = {$result.values|noAutoescape};
+                                        </script>
+                                    </div>
+                                </td>
+                            </tr>
+                        {/foreach}
+                    </table>
+                </div>
+            {/if}
+            
         </div>
     </div>
 
