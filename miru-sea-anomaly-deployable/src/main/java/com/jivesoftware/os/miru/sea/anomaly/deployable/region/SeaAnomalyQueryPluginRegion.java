@@ -261,7 +261,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                     long maxTime = TimeUnit.valueOf(input.toTimeUnit).toMillis(input.toAgo);
                     long ft = Math.min(minTime, maxTime);
                     long tt = Math.max(minTime, maxTime);
-                    int numLabels = 10;
+                    int numLabels = input.buckets;
                     long ts = (tt - ft) / (numLabels - 1);
 
                     ArrayList<Map<String, Object>> results = new ArrayList<>();
@@ -376,6 +376,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
         Long last = null;
         for (long v : values) {
             if (last == null) {
+                ints.add(0);
                 last = v;
             } else {
                 ints.add((int) (last - v));
