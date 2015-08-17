@@ -227,12 +227,12 @@
                                         </div>
                                         <br>
                                         (min:{$result.min}  max:{$result.max})
-                                        <div style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
+                                        <div>
                                             <canvas class="anom-single-wave" height="200" width="1070"
                                                 data-anom-wave-id="singleRate{$result.id|noAutoescape}"
                                                 data-anom-wave-type="{$graphType}"></canvas>
                                         </div>
-                                        <div style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
+                                        <div>
                                             <canvas class="anom-single-wave" height="200" width="1070"
                                                 data-anom-wave-id="singleValue{$result.id|noAutoescape}"
                                                 data-anom-wave-type="{$graphType}"></canvas>
@@ -255,7 +255,7 @@
                         <li><a href="#rate-tab" data-toggle="tab">Rates</a></li>
                         <li><a href="#value-tab" data-toggle="tab">Values</a></li>
                     </ul>
-                    <div id="my-tab-content" class="tab-content well" style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
+                    <div id="my-tab-content" class="tab-content well">
                         <div class="tab-pane active" id="rate-tab">
                             <canvas id="rates" height="400" width="1070"
                                 data-anom-wave-id="myRates" data-anom-wave-type="{$graphType}"></canvas>
