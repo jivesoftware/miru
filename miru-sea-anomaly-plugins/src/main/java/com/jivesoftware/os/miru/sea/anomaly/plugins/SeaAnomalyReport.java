@@ -14,6 +14,6 @@ public class SeaAnomalyReport implements Serializable {
 
     @Override
     public String toString() {
-        return "StumptownReport{}";
+        return "AnomalyReport{}";
     }
 }

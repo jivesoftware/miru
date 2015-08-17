@@ -17,20 +17,22 @@
             <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
                 data-jive-ui="jive/ui/typeahead/request_typeahead" method="post" name="requestPickerForm">
                 <label for="tenantPicker">Select Tenant</label>
+                <br/>
                 <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                     class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenantId?:''}"
                     name="tenantId" id="tenantPicker" data-original-title="" title="">
                 <br/>
                 <br/>
-                <label for="tenantPicker">Lookup Schema</label>
-                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                <label for="lookupNamePicker">Lookup Schema</label>
+                <br/>
+                <input type="text" autocomplete="off" role="combobox" style="width:200px; padding-left:10px;"
                     class="j-name-autocomplete j-autocomplete-input j-ui-elem" placeholder="Name" value="{$lookupName?:''}"
                     name="lookupName" id="lookupNamePicker" data-original-title="" title="">
                 &nbsp;
-                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                <input type="text" autocomplete="off" role="combobox" style="width:60px; padding-left:10px;"
                     class="j-name-autocomplete j-autocomplete-input j-ui-elem" placeholder="Version" value="{$lookupVersion?:''}"
                     name="lookupVersion" id="lookupVersionPicker" data-original-title="" title="">
-                <input type="submit" value="Run"/>
+                <input type="submit" value="Submit" style="display:none;"/>
             </form>
         </div>
     </div>

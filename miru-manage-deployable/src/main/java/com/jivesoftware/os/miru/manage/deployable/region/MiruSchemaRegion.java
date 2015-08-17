@@ -68,19 +68,19 @@ public class MiruSchemaRegion implements MiruPageRegion<MiruSchemaRegion.SchemaI
             }
             if (input.lookupName != null) {
                 List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
+                int matchingCount = 0;
                 int missingCount = 0;
-                List<MiruTenantId> matching = Lists.newArrayList();
                 for (MiruTenantId tenantId : tenantIds) {
                     MiruSchema schema = clusterRegistry.getSchema(tenantId);
-                    if (schema != null) {
-                        if (schema.getName().equals(input.lookupName) && (input.lookupVersion == -1 || schema.getVersion() == input.lookupVersion)) {
-                            matching.add(tenantId);
-                        }
+                    if (schema != null &&
+                        schema.getName().equals(input.lookupName) &&
+                        (input.lookupVersion == -1 || schema.getVersion() == input.lookupVersion)) {
+                        matchingCount++;
                     } else {
                         missingCount++;
                     }
                 }
-                data.put("lookupMatching", Joiner.on(", ").join(matching));
+                data.put("lookupMatching", matchingCount);
                 data.put("lookupMissing", missingCount);
             }
         } catch (Exception e) {

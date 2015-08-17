@@ -48,10 +48,10 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
-    public SeaAnomalyQuestion(SeaAnomaly stumptown,
+    public SeaAnomalyQuestion(SeaAnomaly anomaly,
         MiruRequest<SeaAnomalyQuery> request,
         MiruRemotePartition<SeaAnomalyQuery, SeaAnomalyAnswer, SeaAnomalyReport> remotePartition) {
-        this.seaAnomaly = stumptown;
+        this.seaAnomaly = anomaly;
         this.request = request;
         this.remotePartition = remotePartition;
     }
@@ -82,17 +82,17 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
         long start = System.currentTimeMillis();
         ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
-        solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown timeRangeMask: {} millis.", System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly timeRangeMask: {} millis.", System.currentTimeMillis() - start);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
         if (MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown filter: no constraints.");
+            solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: no constraints.");
         } else {
             BM filtered = bitmaps.create();
             start = System.currentTimeMillis();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
                 solutionLog, filtered, context.getActivityIndex().lastId(), -1);
-            solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown filter: {} millis.", System.currentTimeMillis() - start);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
 
@@ -104,17 +104,17 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
-        solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown indexMask: {} millis.", System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
         BM constrained = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         start = System.currentTimeMillis();
         bitmaps.and(constrained, ands);
-        solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown constrained: {} millis.", System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly constrained: {} millis.", System.currentTimeMillis() - start);
 
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown constrained {} items.", bitmaps.cardinality(constrained));
+            solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly constrained {} items.", bitmaps.cardinality(constrained));
         }
 
         MiruTimeIndex timeIndex = context.getTimeIndex();
