@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -47,10 +48,10 @@ public class MiruManageServiceTest {
     private MiruPartitionId partitionId;
 
     private MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
-        new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-    })
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+        })
         .setPairedLatest(ImmutableMap.of(
             "user", Arrays.asList("doc"),
             "doc", Arrays.asList("user")))
@@ -109,7 +110,8 @@ public class MiruManageServiceTest {
             clusterRegistry,
             miruWALClient,
             stats,
-            null);
+            null,
+            mapper);
 
         long electTime = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
         for (int i = 0; i < numberOfReplicas; i++) {
@@ -150,9 +152,7 @@ public class MiruManageServiceTest {
 
     @Test
     public void testRenderSchemaWithLookup() throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
-        String lookupJSON = objectMapper.writeValueAsString(miruSchema);
-        String rendered = miruManageService.renderSchemaWithLookup(lookupJSON);
+        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, "test", 1));
         System.out.println(rendered);
         assertTrue(rendered.contains("<td>" + tenantId.toString() + "</td>"));
     }
