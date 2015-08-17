@@ -40,13 +40,13 @@ public class SeaAnomalyEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT)
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response scoreStumptowning(MiruRequest<SeaAnomalyQuery> request) {
+    public Response scoreAnomalying(MiruRequest<SeaAnomalyQuery> request) {
         try {
             long t = System.currentTimeMillis();
             MiruResponse<SeaAnomalyAnswer> response = injectable.score(request);
 
             if (response.answer != null && response.answer.waveforms != null) {
-                log.info("scoreStumptowning: " + response.answer.waveforms.size()
+                log.info("scoreeAnomaly: " + response.answer.waveforms.size()
                     + " in " + (System.currentTimeMillis() - t) + " ms");
             }
             return responseHelper.jsonResponse(response);
@@ -62,7 +62,7 @@ public class SeaAnomalyEndpoints {
     @Path(CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response scoreStumptowning(@PathParam("partitionId") int id, MiruRequestAndReport<SeaAnomalyQuery, SeaAnomalyReport> requestAndReport) {
+    public Response scoreAnomalying(@PathParam("partitionId") int id, MiruRequestAndReport<SeaAnomalyQuery, SeaAnomalyReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
             MiruPartitionResponse<SeaAnomalyAnswer> result = injectable.score(partitionId, requestAndReport);

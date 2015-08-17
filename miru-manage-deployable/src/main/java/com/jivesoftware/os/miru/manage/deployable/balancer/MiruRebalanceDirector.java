@@ -328,10 +328,9 @@ public class MiruRebalanceDirector {
         }
 
         int visualHostWidth = (width - VISUAL_PADDING) / context.allHosts.size() - VISUAL_PADDING;
-        BufferedImage bi = new BufferedImage(
-            VISUAL_PADDING + (visualHostWidth + VISUAL_PADDING) * numHosts,
-            VISUAL_PADDING + (VISUAL_PARTITION_HEIGHT + VISUAL_PADDING) * numPartitions,
-            BufferedImage.TYPE_INT_RGB);
+        int w = VISUAL_PADDING + (visualHostWidth + VISUAL_PADDING) * numHosts;
+        int h = VISUAL_PADDING + (VISUAL_PARTITION_HEIGHT + VISUAL_PADDING) * numPartitions;
+        BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         Graphics2D ig2 = bi.createGraphics();
 
         int y = VISUAL_PADDING;
@@ -393,7 +392,7 @@ public class MiruRebalanceDirector {
         List<MiruHost> allHosts = Lists.newArrayList();
         Set<MiruHost> unhealthyHosts = Sets.newHashSet();
         LinkedHashSet<HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
-        Map<MiruHost,Integer> hostToIndex = new HashMap<>();
+        Map<MiruHost, Integer> hostToIndex = new HashMap<>();
         int i = 0;
         for (HostHeartbeat heartbeat : heartbeats) {
             allHosts.add(heartbeat.host);

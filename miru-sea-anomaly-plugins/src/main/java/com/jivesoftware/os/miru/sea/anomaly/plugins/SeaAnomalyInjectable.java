@@ -36,7 +36,7 @@ public class SeaAnomalyInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "scoreStumptown", new SeaAnomalyQuestion(seaAnomaly,
+                new MiruSolvableFactory<>(provider.getStats(), "scoreAnomaly", new SeaAnomalyQuestion(seaAnomaly,
                     request,
                     provider.getRemotePartition(SeaAnomalyRemotePartition.class))),
                 new SeaAnomalyAnswerEvaluator(),
