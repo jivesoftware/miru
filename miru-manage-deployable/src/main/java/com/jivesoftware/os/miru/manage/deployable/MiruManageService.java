@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruFrameRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.List;
@@ -22,7 +23,7 @@ public class MiruManageService {
     private final MiruPageRegion<Void> adminRegion;
     private final MiruPageRegion<Optional<MiruHost>> hostsRegion;
     private final MiruPageRegion<Void> balancerRegion;
-    private final MiruPageRegion<Optional<String>> schemaRegion;
+    private final MiruPageRegion<MiruSchemaRegion.SchemaInput> schemaRegion;
     private final MiruPageRegion<Optional<MiruTenantId>> tenantsRegion;
 
     private final List<MiruManagePlugin> plugins = Lists.newCopyOnWriteArrayList();
@@ -33,7 +34,7 @@ public class MiruManageService {
         MiruPageRegion<Void> adminRegion,
         MiruPageRegion<Optional<MiruHost>> hostsRegion,
         MiruPageRegion<Void> balancerRegion,
-        MiruPageRegion<Optional<String>> schemaRegion,
+        MiruPageRegion<MiruSchemaRegion.SchemaInput> schemaRegion,
         MiruPageRegion<Optional<MiruTenantId>> tenantsRegion) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
@@ -72,12 +73,8 @@ public class MiruManageService {
         return chrome(balancerRegion).render(null);
     }
 
-    public String renderSchema() {
-        return chrome(schemaRegion).render(Optional.<String>absent());
-    }
-
-    public String renderSchemaWithLookup(String lookupJSON) {
-        return chrome(schemaRegion).render(Optional.of(lookupJSON));
+    public String renderSchema(MiruSchemaRegion.SchemaInput input) {
+        return chrome(schemaRegion).render(input);
     }
 
     public String renderTenants() {

@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.manage.deployable.balancer.CaterpillarSelectHost
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
 import com.jivesoftware.os.miru.manage.deployable.balancer.ShiftPredicate;
 import com.jivesoftware.os.miru.manage.deployable.balancer.UnhealthyTopologyShiftPredicate;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
@@ -109,7 +110,7 @@ public class MiruManageEndpoints {
     @Path("/schema")
     @Produces(MediaType.TEXT_HTML)
     public Response getSchema() {
-        String rendered = miruManageService.renderSchema();
+        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, null, -1));
         return Response.ok(rendered).build();
     }
 
@@ -117,13 +118,13 @@ public class MiruManageEndpoints {
     @Path("/schema")
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response getSchemaWithLookup(@FormParam("lookupJSON") @DefaultValue("") String lookupJSON) {
-        String rendered;
-        if (lookupJSON.trim().isEmpty()) {
-            rendered = miruManageService.renderSchema();
-        } else {
-            rendered = miruManageService.renderSchemaWithLookup(lookupJSON);
-        }
+    public Response getSchemaWithLookup(@FormParam("tenantId") @DefaultValue("") String tenantId,
+        @FormParam("lookupName") String lookupName,
+        @FormParam("lookupVersion") @DefaultValue("-1") String lookupVersion) {
+        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(
+            tenantId != null && !tenantId.trim().isEmpty() ? new MiruTenantId(tenantId.trim().getBytes(Charsets.UTF_8)) : null,
+            lookupName != null && !lookupName.trim().isEmpty() ? lookupName.trim() : null,
+            lookupVersion != null && !lookupVersion.trim().isEmpty() ? Integer.parseInt(lookupVersion.trim()) : -1));
         return Response.ok(rendered).build();
     }
 

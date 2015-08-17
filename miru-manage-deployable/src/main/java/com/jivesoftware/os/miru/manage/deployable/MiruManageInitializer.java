@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
@@ -23,7 +24,8 @@ public class MiruManageInitializer {
         MiruClusterRegistry clusterRegistry,
         MiruWALClient miruWALClient,
         MiruStats stats,
-        TenantRoutingProvider tenantRoutingProvider)
+        TenantRoutingProvider tenantRoutingProvider,
+        ObjectMapper mapper)
         throws Exception {
 
         return new MiruManageService(
@@ -34,7 +36,7 @@ public class MiruManageInitializer {
                 new MiruHostEntryRegion("soy.miru.section.hostEntryRegion", renderer),
                 new MiruHostFocusRegion("soy.miru.section.hostFocusRegion", renderer, clusterRegistry)),
             new MiruBalancerRegion("soy.miru.page.balancerRegion", renderer, clusterRegistry, miruWALClient),
-            new MiruSchemaRegion("soy.miru.page.schemaRegion", renderer, clusterRegistry, miruWALClient),
+            new MiruSchemaRegion("soy.miru.page.schemaRegion", renderer, clusterRegistry, miruWALClient, mapper),
             new MiruTenantsRegion("soy.miru.page.tenantsRegion", renderer,
                 new MiruTenantEntryRegion("soy.miru.section.tenantEntryRegion", renderer, clusterRegistry, miruWALClient)));
     }
