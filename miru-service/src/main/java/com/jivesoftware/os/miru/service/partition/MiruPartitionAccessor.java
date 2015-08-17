@@ -367,6 +367,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         ExecutorService indexExecutor) throws Exception {
 
         int count = 0;
+        int total = batch.size();
         if (!batch.isEmpty()) {
             long start = System.currentTimeMillis();
             if (batchType == MiruPartitionedActivity.Type.BEGIN) {
@@ -380,7 +381,11 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             } else {
                 log.warn("Attempt to index unsupported type {}", batchType);
             }
-            miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId(), batch.size(),
+            miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId() + ">index", count,
+                System.currentTimeMillis() - start);
+            miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId() + ">total", total,
+                System.currentTimeMillis() - start);
+            miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId() + ">calls", 1,
                 System.currentTimeMillis() - start);
             batch.clear();
 

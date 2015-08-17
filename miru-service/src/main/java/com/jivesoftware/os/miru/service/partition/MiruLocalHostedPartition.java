@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -36,6 +37,7 @@ import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthChecker;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -802,6 +804,8 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             }
         }
 
+        private final MiruTenantId GLOBAL_TENANT = new MiruTenantId("global".getBytes(Charsets.UTF_8));
+
         private boolean sip(final MiruPartitionAccessor<BM, C, S> accessor) throws Exception {
 
             final MiruSipTracker<S> sipTracker = sipTrackerFactory.create(accessor.seenLastSip.get());
@@ -830,15 +834,32 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     sipTracker.track(e.activity);
                 }
 
+                S lastCursor = sipCursor;
                 sipCursor = deliver(partitionedActivities, accessor, sipTracker, sipCursor, sippedActivity.cursor);
                 partitionedActivities.clear();
 
                 if (sippedActivity.cursor != null && sippedActivity.cursor.endOfStream()) {
+                    if (GLOBAL_TENANT.equals(coord.tenantId)) {
+                        log.info("Sipped to end of stream for {}", coord);
+                    }
                     long threshold = first ? 0 : timings.partitionSipNotifyEndOfStreamMillis;
                     accessor.notifyEndOfStream(threshold);
                 }
 
-                if (sipCursor == null || sippedActivity.endOfWAL) {
+                if (sipCursor == null) {
+                    if (GLOBAL_TENANT.equals(coord.tenantId)) {
+                        log.info("No cursor for {}", coord);
+                    }
+                    break;
+                } else if (sipCursor.equals(lastCursor)) {
+                    if (GLOBAL_TENANT.equals(coord.tenantId)) {
+                        log.info("Sipped same cursor for {}", coord);
+                    }
+                    break;
+                } else if (sippedActivity.endOfWAL) {
+                    if (GLOBAL_TENANT.equals(coord.tenantId)) {
+                        log.info("Sipped to end of WAL for {}", coord);
+                    }
                     break;
                 }
 
