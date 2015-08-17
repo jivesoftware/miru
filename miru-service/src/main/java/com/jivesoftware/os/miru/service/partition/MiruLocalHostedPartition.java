@@ -844,9 +844,8 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     }
                     long threshold = first ? 0 : timings.partitionSipNotifyEndOfStreamMillis;
                     accessor.notifyEndOfStream(threshold);
-                }
-
-                if (sipCursor == null) {
+                    break;
+                } else if (sipCursor == null) {
                     if (GLOBAL_TENANT.equals(coord.tenantId)) {
                         log.info("No cursor for {}", coord);
                     }
