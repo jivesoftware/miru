@@ -273,7 +273,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                             }
                         }
 
-                        Color c = indexColor((float) id / (float) (rawWaveforms.size()), 1f);
+                        Color c = indexColor((float) id / (float) (rawWaveforms.size()), 0.5f);
 
                         Map<String, Object> w = waveform(t.getKey().key, c, 0.2f, t.getValue());
                         Map<String, Object> r = rates(t.getKey().key, c, 0.2f, t.getValue());
