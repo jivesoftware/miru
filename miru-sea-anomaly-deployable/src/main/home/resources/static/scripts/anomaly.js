@@ -20,7 +20,7 @@ anomaly.query = {
                 tooltipFillColor: "rgba(0,0,0,1)",
                 pointDot: false,
                 bezierCurve: false,
-                datasetFill: false,
+                datasetFill: true,
                 responsive: true,
                 animation: false
             });
