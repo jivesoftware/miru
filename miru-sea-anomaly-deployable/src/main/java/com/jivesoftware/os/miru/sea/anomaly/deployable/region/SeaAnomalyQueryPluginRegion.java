@@ -217,7 +217,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                                 MiruSolutionLogLevel.INFO),
                             SeaAnomalyConstants.SEA_ANOMALY_PREFIX + SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT,
                             MiruResponse.class,
-                            new Class[] { SeaAnomalyAnswer.class },
+                            new Class[]{SeaAnomalyAnswer.class},
                             null);
                         response = miruResponse;
                         if (response != null && response.answer != null) {
@@ -226,7 +226,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                             log.warn("Empty seaAnomaly response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed seaAnomaly request to {}, trying another", new Object[] { requestHelper }, e);
+                        log.warn("Failed seaAnomaly request to {}, trying another", new Object[]{requestHelper}, e);
                     }
                 }
 
@@ -273,7 +273,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                             }
                         }
 
-                        Color c = new Color(Color.HSBtoRGB((float) id / (float) (rawWaveforms.size()), 1f, 1f));
+                        Color c = indexColor((float) id / (float) (rawWaveforms.size()), 1f);
+
                         Map<String, Object> w = waveform(t.getKey().key, c, 0.2f, t.getValue());
                         Map<String, Object> r = rates(t.getKey().key, c, 0.2f, t.getValue());
 
@@ -339,6 +340,13 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
             return c;
         }
 
+    }
+
+    public static Color indexColor(double value, float sat) {
+        //String s = Integer.toHexString(Color.HSBtoRGB(0.6f, 1f - ((float) value), sat) & 0xffffff);
+        float hue = (float) value / 3f;
+        hue = (1f / 3f) + (hue * 2);
+        return new Color(Color.HSBtoRGB(hue, sat, 1f));
     }
 
     public String hexColor(Color color) {
