@@ -48,7 +48,7 @@ public class SeaAnomalyQueryPluginEndpoints {
         @QueryParam("tags") @DefaultValue("") String tags,
         @QueryParam("type") @DefaultValue("VALUE") String type,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("graphType") @DefaultValue("Default") String graphType,
+        @QueryParam("graphType") @DefaultValue("Line") String graphType,
         @QueryParam("expansionField") @DefaultValue("metric") String expansionField,
         @QueryParam("expansionValue") @DefaultValue("*") String expansionValue
     ) {
