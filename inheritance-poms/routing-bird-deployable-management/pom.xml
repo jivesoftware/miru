@@ -123,6 +123,7 @@
                                     <repositoryId>${project.distributionManagement.repository.id}</repositoryId>
                                     <url>${project.distributionManagement.repository.url}</url>
                                     <file>target/build.properties</file>
+                                    <generatePom>false</generatePom>
                                 </configuration>
                             </execution>
                             <execution>
