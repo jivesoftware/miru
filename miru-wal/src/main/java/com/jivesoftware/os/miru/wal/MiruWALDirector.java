@@ -96,7 +96,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         }
     }
 
-    public void repairRanges() throws Exception {
+    public void repairRanges(boolean fast) throws Exception {
         List<MiruTenantId> tenantIds = getAllTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             final Set<MiruPartitionId> found = Sets.newHashSet();
@@ -116,15 +116,24 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             for (MiruPartitionId checkPartitionId = latestPartitionId; checkPartitionId != null; checkPartitionId = checkPartitionId.prev()) {
                 if (!found.contains(checkPartitionId) || broken.contains(checkPartitionId)) {
                     count++;
-                    final RangeMinMax minMax = new RangeMinMax();
-                    activityWALReader.stream(tenantId, checkPartitionId, null, 1_000,
-                        (collisionId, partitionedActivity, timestamp) -> {
-                            if (partitionedActivity.type.isActivityType()) {
-                                minMax.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
-                            }
-                            return true;
-                        });
-                    clusterClient.updateIngress(new MiruIngressUpdate(tenantId, checkPartitionId, minMax, -1, true));
+                    if (fast) {
+                        long clockMax = activityWALReader.clockMax(tenantId, checkPartitionId);
+                        if (clockMax > 0) {
+                            RangeMinMax minMax = new RangeMinMax();
+                            minMax.clockMax = clockMax;
+                            clusterClient.updateIngress(new MiruIngressUpdate(tenantId, checkPartitionId, minMax, -1, false));
+                        }
+                    } else {
+                        RangeMinMax minMax = new RangeMinMax();
+                        activityWALReader.stream(tenantId, checkPartitionId, null, 1_000,
+                            (collisionId, partitionedActivity, timestamp) -> {
+                                if (partitionedActivity.type.isActivityType()) {
+                                    minMax.put(partitionedActivity.clockTimestamp, partitionedActivity.timestamp);
+                                }
+                                return true;
+                            });
+                        clusterClient.updateIngress(new MiruIngressUpdate(tenantId, checkPartitionId, minMax, -1, true));
+                    }
                 }
             }
 
@@ -139,7 +148,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             List<MiruPartitionStatus> status = getAllPartitionStatus(tenantId);
             int count = 0;
             for (MiruPartitionStatus partitionStatus : status) {
-                if (System.currentTimeMillis() > partitionStatus.getDestroyAfterTimestamp()) {
+                if (partitionStatus.getDestroyAfterTimestamp() > 0 && System.currentTimeMillis() > partitionStatus.getDestroyAfterTimestamp()) {
                     removePartition(tenantId, partitionStatus.getPartitionId());
                     count++;
                 }

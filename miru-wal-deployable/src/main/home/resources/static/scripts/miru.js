@@ -60,13 +60,13 @@ miru.repair = {
         });
     },
 
-    repairRanges: function (ele) {
+    repairRanges: function (ele, fast) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/wal/repair/repairRanges",
+            url: "/miru/wal/repair/repairRanges/" + (fast ? "true" : "false"),
             data: {},
             //contentType: "application/json",
             success: function () {

@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.rcvs.api.CallbackStream;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
@@ -335,5 +336,19 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
             }
             return tenantIdAndRow;
         });
+    }
+
+    @Override
+    public long clockMax(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        long[] clockTimestamp = { -1L };
+        activityWAL.getEntrys(tenantId, new MiruActivityWALRow(partitionId.getId()),
+            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE), null, 10_000, false, null, null,
+            value -> {
+                if (value != null) {
+                    clockTimestamp[0] = Math.max(clockTimestamp[0], value.getValue().clockTimestamp);
+                }
+                return value;
+            });
+        return clockTimestamp[0];
     }
 }

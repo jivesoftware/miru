@@ -117,12 +117,12 @@ public class AmzaWALEndpoints {
     }
 
     @POST
-    @Path("/repairRanges")
+    @Path("/repairRanges/{fast}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response repairRanges() throws Exception {
+    public Response repairRanges(@PathParam("fast") boolean fast) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            walDirector.repairRanges();
+            walDirector.repairRanges(fast);
             stats.ingressed("/repairRanges", 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {

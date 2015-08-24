@@ -39,6 +39,8 @@ public interface MiruActivityWALReader<C, S> {
 
     void allPartitions(PartitionsStream partitionsStream) throws Exception;
 
+    long clockMax(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     interface StreamMiruActivityWAL {
 
         boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception;
