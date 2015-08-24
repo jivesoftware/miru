@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.589</version>
+        <version>0.590</version>
         <relativePath>../global-build-management/pom.xml</relativePath>
     </parent>
     <artifactId>routing-bird-deployable-management</artifactId>
@@ -110,9 +110,6 @@
                         <version>2.8.2</version>
                         <executions>
                             <execution>
-                                <phase>deploy</phase>
-                            </execution>
-                            <execution>
                                 <id>executable pom</id>
                                 <phase>deploy</phase>
                                 <goals>
@@ -127,6 +124,9 @@
                                     <url>${project.distributionManagement.repository.url}</url>
                                     <file>target/build.properties</file>
                                 </configuration>
+                            </execution>
+                            <execution>
+                                <phase>deploy</phase>
                             </execution>
                         </executions>
                         <configuration>
