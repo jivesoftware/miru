@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.588</version>
+        <version>0.589-SNAPSHOT</version>
         <relativePath>../global-build-management/pom.xml</relativePath>
     </parent>
     <artifactId>routing-bird-deployable-management</artifactId>
@@ -112,14 +112,6 @@
                             <execution>
                                 <phase>deploy</phase>
                             </execution>
-                        </executions>
-                        <configuration>
-                            <file>${project.build.directory}/${project.name}-${project.version}.tar.gz</file>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <executions>
                             <execution>
                                 <id>executable pom</id>
                                 <phase>deploy</phase>
@@ -137,6 +129,9 @@
                                 </configuration>
                             </execution>
                         </executions>
+                        <configuration>
+                            <file>${project.build.directory}/${project.name}-${project.version}.tar.gz</file>
+                        </configuration>
                     </plugin>
                     <plugin>
                         <groupId>pl.project13.maven</groupId>
@@ -147,21 +142,6 @@
                                 <goals>
                                     <goal>revision</goal>
                                 </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>properties-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <phase>generate-resources</phase>
-                                <goals>
-                                    <goal>write-project-properties</goal>
-                                </goals>
-                                <configuration>
-                                    <outputFile>target/build.properties</outputFile>
-                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
