@@ -153,8 +153,8 @@ public class MiruManageServiceTest {
     @Test
     public void testRenderSchemaWithLookup() throws Exception {
         String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, "test", 1));
-        System.out.println(rendered);
-        assertTrue(rendered.contains("<td>" + tenantId.toString() + "</td>"));
+        //System.out.println(rendered);
+        assertTrue(rendered.contains("<tr><td>1</td><td>0</td></tr>"));
     }
 
 }

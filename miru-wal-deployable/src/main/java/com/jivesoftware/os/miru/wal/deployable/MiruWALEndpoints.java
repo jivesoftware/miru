@@ -161,12 +161,12 @@ public class MiruWALEndpoints {
     }
 
     @POST
-    @Path("/repair/repairRanges")
+    @Path("/repair/repairRanges/{fast}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
-    public Response repairRanges() {
+    public Response repairRanges(@PathParam("fast") boolean fast) {
         try {
-            miruWALDirector.repairRanges();
+            miruWALDirector.repairRanges(fast);
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("POST /repair/repairRanges", t);

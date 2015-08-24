@@ -49,7 +49,7 @@ public class MiruCleanupRegion implements MiruPageRegion<Void> {
                 List<MiruPartitionStatus> status = miruWALDirector.getAllPartitionStatus(tenantId);
                 List<Map<String, Object>> partitions = Lists.newArrayList();
                 for (MiruPartitionStatus partitionStatus : status) {
-                    if (System.currentTimeMillis() > partitionStatus.getDestroyAfterTimestamp()) {
+                    if (partitionStatus.getDestroyAfterTimestamp() > 0 && System.currentTimeMillis() > partitionStatus.getDestroyAfterTimestamp()) {
                         partitions.add(ImmutableMap.of(
                             "partitionId", String.valueOf(partitionStatus.getPartitionId()),
                             "lastIngressTimestamp", dateFormat.format(new Date(partitionStatus.getLastIngressTimestamp())),

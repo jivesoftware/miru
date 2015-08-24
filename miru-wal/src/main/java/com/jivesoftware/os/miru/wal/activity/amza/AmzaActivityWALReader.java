@@ -245,4 +245,23 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     public void allPartitions(PartitionsStream partitionsStream) throws Exception {
         amzaWALUtil.allActivityPartitions(partitionsStream);
     }
+
+    @Override
+    public long clockMax(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        AmzaClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        long[] clockTimestamp = { -1L };
+        if (client != null) {
+            byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));
+            client.scan(null, fromKey, null, null, (rowTxId, prefix, key, value) -> {
+                if (value != null) {
+                    MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
+                    if (partitionedActivity != null) {
+                        clockTimestamp[0] = Math.max(clockTimestamp[0], partitionedActivity.clockTimestamp);
+                    }
+                }
+                return true;
+            });
+        }
+        return clockTimestamp[0];
+    }
 }
