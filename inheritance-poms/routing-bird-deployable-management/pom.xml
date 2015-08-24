@@ -110,9 +110,6 @@
                         <version>2.8.2</version>
                         <executions>
                             <execution>
-                                <phase>deploy</phase>
-                            </execution>
-                            <execution>
                                 <id>executable pom</id>
                                 <phase>deploy</phase>
                                 <goals>
@@ -127,6 +124,9 @@
                                     <url>${project.distributionManagement.repository.url}</url>
                                     <file>target/build.properties</file>
                                 </configuration>
+                            </execution>
+                            <execution>
+                                <phase>deploy</phase>
                             </execution>
                         </executions>
                         <configuration>
