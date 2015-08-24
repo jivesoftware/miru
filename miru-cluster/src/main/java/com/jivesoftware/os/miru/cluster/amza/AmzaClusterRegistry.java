@@ -272,6 +272,18 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     @Override
+    public void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        AmzaClient ingressClient = ingressClient();
+        AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
+        updates.remove(toIngressKey(tenantId, partitionId, IngressType.ingressTimestamp));
+        updates.remove(toIngressKey(tenantId, partitionId, IngressType.clockMin));
+        updates.remove(toIngressKey(tenantId, partitionId, IngressType.clockMax));
+        updates.remove(toIngressKey(tenantId, partitionId, IngressType.orderIdMin));
+        updates.remove(toIngressKey(tenantId, partitionId, IngressType.orderIdMax));
+        ingressClient.commit(null, updates, replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
     public void updateTopologies(MiruHost host, Collection<TopologyUpdate> topologyUpdates) throws Exception {
         final AmzaClient topologyInfoClient = topologyInfoClient(host);
         AmzaPartitionUpdates updates = new AmzaPartitionUpdates();

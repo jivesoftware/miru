@@ -75,6 +75,25 @@ public class MiruTopologyEndpoints {
         }
     }
 
+    @POST
+    @Path("/remove/ingress/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response removeIngress(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        try {
+            long start = System.currentTimeMillis();
+            registry.removeIngress(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            Response r = ResponseHelper.INSTANCE.jsonResponse("ok");
+            stats.ingressed("/remove/ingress/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to remove ingress";
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
     @GET
     @Path("/partition/status/{tenantId}/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)

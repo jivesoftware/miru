@@ -78,6 +78,17 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        sendRoundRobin("removeIngress", client -> {
+            long start = System.currentTimeMillis();
+            HttpResponse response = client.postJson("/miru/topology/remove/ingress/" + tenantId.toString() + "/" + partitionId.toString(), null, null);
+            String r = responseMapper.extractResultFromResponse(response, String.class, null);
+            miruStats.egressed("/miru/topology/remove/ingress/" + tenantId.toString() + "/" + partitionId.toString(), 1, System.currentTimeMillis() - start);
+            return new ClientResponse<>(r, true);
+        });
+    }
+
+    @Override
     public List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception {
         return sendRoundRobin("getPartitionStatus", client -> {
             long start = System.currentTimeMillis();

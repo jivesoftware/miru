@@ -167,6 +167,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         activityWALWriter.removePartition(tenantId, partitionId);
+        clusterClient.removeIngress(tenantId, partitionId);
     }
 
     private long packTimestamp(long millisIntoTheFuture) {

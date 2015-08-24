@@ -119,6 +119,14 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        clusterRegistry.removeIngress(tenantId, partitionId);
+
+        TenantAndPartition tenantAndPartition = new TenantAndPartition(tenantId, partitionId);
+        replicationCache.invalidate(tenantAndPartition);
+    }
+
+    @Override
     public List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception {
         return clusterRegistry.getPartitionStatusForTenant(tenantId, largestPartitionId);
     }
