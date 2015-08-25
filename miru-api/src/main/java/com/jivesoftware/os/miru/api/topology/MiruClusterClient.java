@@ -47,6 +47,8 @@ public interface MiruClusterClient {
 
     void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
+    void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception;
 
     MiruHeartbeatResponse thumpthump(final MiruHost host, final MiruHeartbeatRequest heartbeatRequest) throws Exception;

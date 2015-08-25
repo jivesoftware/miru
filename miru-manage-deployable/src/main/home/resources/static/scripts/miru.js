@@ -110,6 +110,34 @@ miru.tenants = {
                 }, 2000);
             }
         });
+    },
+
+    destroy: function (ele, tenantId, partitionId) {
+        if (!confirm('Are you sure you want to destroy this partition?')) {
+            return;
+        }
+
+        var $button = $(ele);
+        $button.attr('disabled', 'disabled');
+        var value = $button.val();
+        $.ajax({
+            type: "POST",
+            url: "/miru/topology/destroy/partition/" + tenantId + "/" + partitionId,
+            data: {},
+            //contentType: "application/json",
+            success: function () {
+                $button.val('Success');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            },
+            error: function () {
+                $button.val('Failure');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            }
+        });
     }
 };
 

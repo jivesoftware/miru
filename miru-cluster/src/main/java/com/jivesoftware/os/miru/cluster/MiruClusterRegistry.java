@@ -62,6 +62,8 @@ public interface MiruClusterRegistry {
 
     void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
+    void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     void updateTopologies(MiruHost host, Collection<TopologyUpdate> topologyUpdates) throws Exception;
 
     NamedCursorsResult<Collection<MiruTenantTopologyUpdate>> getTopologyUpdatesForHost(MiruHost host,
