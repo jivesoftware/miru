@@ -63,46 +63,73 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         try {
             List<MiruTopologyStatus> statusForTenant = clusterRegistry.getTopologyStatusForTenant(tenant);
 
-            MiruPartitionId latestPartitionId = miruWALClient.getLargestPartitionId(tenant);
-
-            if (latestPartitionId != null) {
-                for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
-                    MiruActivityWALStatus status = miruWALClient.getActivityWALStatusForTenant(tenant, latest);
-                    if (status != null) {
-                        partitionsMap.put(status.partitionId,
-                            new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size()));
-                    }
-                }
-            }
-
             for (MiruTopologyStatus topologyStatus : statusForTenant) {
                 MiruPartition partition = topologyStatus.partition;
                 MiruPartitionId partitionId = partition.coord.partitionId;
-                PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
-                MiruPartitionState state = partition.info.state;
-                String lastIngress = timeAgo(System.currentTimeMillis() - topologyStatus.lastIngressTimestamp);
-                String lastQuery = timeAgo(System.currentTimeMillis() - topologyStatus.lastQueryTimestamp);
-                PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, lastIngress, lastQuery);
-                if (state == MiruPartitionState.online) {
-                    partitionBean.getOnline().add(partitionCoordBean);
-                } else if (state == MiruPartitionState.rebuilding) {
-                    partitionBean.getRebuilding().add(partitionCoordBean);
-                } else if (state == MiruPartitionState.bootstrap) {
-                    partitionBean.getBootstrap().add(partitionCoordBean);
-                } else if (state == MiruPartitionState.offline) {
-                    partitionBean.getOffline().add(partitionCoordBean);
+                partitionsMap.compute(partitionId, (key, partitionBean) -> {
+                    if (partitionBean == null) {
+                        partitionBean = new PartitionBean(partitionId.getId());
+                    }
+                    MiruPartitionState state = partition.info.state;
+                    String lastIngress = timeAgo(System.currentTimeMillis() - topologyStatus.lastIngressTimestamp);
+                    String lastQuery = timeAgo(System.currentTimeMillis() - topologyStatus.lastQueryTimestamp);
+                    PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, lastIngress, lastQuery);
+                    if (state == MiruPartitionState.online) {
+                        partitionBean.getOnline().add(partitionCoordBean);
+                    } else if (state == MiruPartitionState.rebuilding) {
+                        partitionBean.getRebuilding().add(partitionCoordBean);
+                    } else if (state == MiruPartitionState.bootstrap) {
+                        partitionBean.getBootstrap().add(partitionCoordBean);
+                    } else if (state == MiruPartitionState.offline) {
+                        partitionBean.getOffline().add(partitionCoordBean);
+                    }
+                    if (topologyStatus.destroyAfterTimestamp > 0 && System.currentTimeMillis() > topologyStatus.destroyAfterTimestamp) {
+                        partitionBean.setDestroyed(true);
+                    }
+                    return partitionBean;
+                });
+            }
+
+            MiruPartitionId latestPartitionId = miruWALClient.getLargestPartitionId(tenant);
+            if (latestPartitionId != null) {
+                for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
+                    partitionsMap.compute(latest, (partitionId, partitionBean) -> {
+                        if (partitionBean == null) {
+                            partitionBean = new PartitionBean(partitionId.getId());
+                        }
+                        if (!partitionBean.isDestroyed()) {
+                            try {
+                                MiruActivityWALStatus status = miruWALClient.getActivityWALStatusForTenant(tenant, partitionId);
+                                if (status != null) {
+                                    partitionBean.setActivityCount(String.valueOf(status.count));
+                                    partitionBean.setBegins(status.begins.size());
+                                    partitionBean.setEnds(status.ends.size());
+                                }
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                        return partitionBean;
+                    });
                 }
             }
 
             Map<MiruPartitionId, RangeMinMax> lookupRanges = clusterRegistry.getIngressRanges(tenant);
             for (Map.Entry<MiruPartitionId, RangeMinMax> entry : lookupRanges.entrySet()) {
                 MiruPartitionId partitionId = entry.getKey();
-                RangeMinMax lookupRange = entry.getValue();
-                PartitionBean partitionBean = getPartitionBean(tenant, partitionsMap, partitionId);
-                partitionBean.setMinClock(String.valueOf(lookupRange.clockMin));
-                partitionBean.setMaxClock(String.valueOf(lookupRange.clockMax));
-                partitionBean.setMinOrderId(String.valueOf(lookupRange.orderIdMin));
-                partitionBean.setMaxOrderId(String.valueOf(lookupRange.orderIdMax));
+                partitionsMap.compute(partitionId, (key, partitionBean) -> {
+                    if (partitionBean == null) {
+                        partitionBean = new PartitionBean(partitionId.getId());
+                    }
+                    if (!partitionBean.isDestroyed()) {
+                        RangeMinMax lookupRange = entry.getValue();
+                        partitionBean.setMinClock(String.valueOf(lookupRange.clockMin));
+                        partitionBean.setMaxClock(String.valueOf(lookupRange.clockMax));
+                        partitionBean.setMinOrderId(String.valueOf(lookupRange.orderIdMin));
+                        partitionBean.setMaxOrderId(String.valueOf(lookupRange.orderIdMax));
+                    }
+                    return partitionBean;
+                });
             }
         } catch (Exception e) {
             log.error("Unable to get partitions for tenant: " + tenant);
@@ -112,23 +139,6 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
         data.put("partitions", partitionsMap.values());
 
         return renderer.render(template, data);
-    }
-
-    private PartitionBean getPartitionBean(MiruTenantId tenant,
-        SortedMap<MiruPartitionId, PartitionBean> partitionsMap,
-        MiruPartitionId partitionId) throws Exception {
-        PartitionBean partitionBean = partitionsMap.get(partitionId);
-        if (partitionBean == null) {
-            MiruActivityWALStatus status = miruWALClient.getActivityWALStatusForTenant(tenant, partitionId);
-            if (status != null && status.partitionId.equals(partitionId)) {
-                partitionBean = new PartitionBean(status.partitionId.getId(), status.count, status.begins.size(), status.ends.size());
-            }
-            if (partitionBean == null) {
-                partitionBean = new PartitionBean(partitionId.getId(), -1, -1, -1);
-            }
-            partitionsMap.put(partitionId, partitionBean);
-        }
-        return partitionBean;
     }
 
     private static String timeAgo(long millis) {

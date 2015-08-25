@@ -94,6 +94,25 @@ public class MiruTopologyEndpoints {
         }
     }
 
+    @POST
+    @Path("/destroy/partition/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response destroyPartition(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        try {
+            long start = System.currentTimeMillis();
+            registry.destroyPartition(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            Response r = ResponseHelper.INSTANCE.jsonResponse("ok");
+            stats.ingressed("/destroy/partition/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to destroy partition";
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
     @GET
     @Path("/partition/status/{tenantId}/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)

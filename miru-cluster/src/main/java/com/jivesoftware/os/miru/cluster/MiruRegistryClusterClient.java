@@ -119,6 +119,12 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        LOG.info("Marking partition for destruction: {} {}", tenantId, partitionId);
+        clusterRegistry.destroyPartition(tenantId, partitionId);
+    }
+
+    @Override
     public void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         clusterRegistry.removeIngress(tenantId, partitionId);
 

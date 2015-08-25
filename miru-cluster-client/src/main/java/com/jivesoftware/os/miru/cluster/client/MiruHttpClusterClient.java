@@ -89,6 +89,17 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        sendRoundRobin("destroyPartition", client -> {
+            long start = System.currentTimeMillis();
+            HttpResponse response = client.postJson("/miru/topology/destroy/partition/" + tenantId.toString() + "/" + partitionId.toString(), null, null);
+            String r = responseMapper.extractResultFromResponse(response, String.class, null);
+            miruStats.egressed("/miru/topology/destroy/partition/" + tenantId.toString() + "/" + partitionId.toString(), 1, System.currentTimeMillis() - start);
+            return new ClientResponse<>(r, true);
+        });
+    }
+
+    @Override
     public List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception {
         return sendRoundRobin("getPartitionStatus", client -> {
             long start = System.currentTimeMillis();

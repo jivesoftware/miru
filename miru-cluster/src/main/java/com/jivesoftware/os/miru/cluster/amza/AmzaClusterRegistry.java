@@ -74,6 +74,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 
 /**
  * @author jonathan.colt
@@ -86,6 +87,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private static final byte[] CLUSTER_REGISTRY_RING_NAME = "clusterRegistry".getBytes(Charsets.UTF_8);
 
     private static final String INGRESS_PARTITION_NAME = "partition-ingress";
+    private static final String DESTRUCTION_PARTITION_NAME = "partition-destruction";
     private static final String HOSTS_PARTITION_NAME = "hosts";
     private static final String SCHEMAS_PARTITION_NAME = "schemas";
 
@@ -159,6 +161,10 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
 
     private AmzaClient ingressClient() throws Exception {
         return ensureClient(INGRESS_PARTITION_NAME);
+    }
+
+    private AmzaClient destructionClient() throws Exception {
+        return ensureClient(DESTRUCTION_PARTITION_NAME);
     }
 
     private AmzaClient schemasClient() throws Exception {
@@ -281,6 +287,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         updates.remove(toIngressKey(tenantId, partitionId, IngressType.orderIdMin));
         updates.remove(toIngressKey(tenantId, partitionId, IngressType.orderIdMax));
         ingressClient.commit(null, updates, replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        AmzaClient destructionClient = destructionClient();
+        AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
+        updates.set(toTopologyKey(tenantId, partitionId), FilerIO.longBytes(System.currentTimeMillis()));
+        destructionClient.commit(null, updates, replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -874,12 +888,17 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     private long getDestroyAfterTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        long destroyAfterTimestamp = -1;
+        AmzaClient destructionClient = destructionClient();
+        byte[] destructionValue = destructionClient.getValue(null, toTopologyKey(tenantId, partitionId));
+        if (destructionValue != null) {
+            return FilerIO.bytesLong(destructionValue);
+        }
+
         long clockMax = getIngressUpdate(tenantId, partitionId, IngressType.clockMax, -1);
         if (clockMax > 0) {
-            destroyAfterTimestamp = clockMax + defaultTopologyDestroyAfterMillis;
+            return clockMax + defaultTopologyDestroyAfterMillis;
         }
-        return destroyAfterTimestamp;
+        return -1;
     }
 
     @Override
@@ -1000,7 +1019,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return ingressUpdate;
     }
 
-    private void streamRanges(MiruTenantId tenantId, MiruPartitionId partitionId, StreamRangeLookup streamRangeLookup) throws Exception {
+    private void streamRanges(MiruTenantId tenantId, MiruPartitionId partitionId, @Nonnull StreamRangeLookup streamRangeLookup) throws Exception {
         byte[] fromKey = toIngressKey(tenantId, partitionId, null);
         byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
         AmzaClient ingressClient = ingressClient();
