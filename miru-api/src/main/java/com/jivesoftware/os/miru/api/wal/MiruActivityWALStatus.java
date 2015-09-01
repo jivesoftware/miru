@@ -9,17 +9,31 @@ import java.util.List;
 public class MiruActivityWALStatus {
 
     public MiruPartitionId partitionId;
-    public long count;
+    public List<WriterCount> counts;
     public List<Integer> begins;
     public List<Integer> ends;
 
     public MiruActivityWALStatus() {
     }
 
-    public MiruActivityWALStatus(MiruPartitionId partitionId, long count, List<Integer> begins, List<Integer> ends) {
+    public MiruActivityWALStatus(MiruPartitionId partitionId, List<WriterCount> counts, List<Integer> begins, List<Integer> ends) {
         this.partitionId = partitionId;
-        this.count = count;
+        this.counts = counts;
         this.begins = begins;
         this.ends = ends;
+    }
+
+    public static class WriterCount {
+
+        public int writerId;
+        public int count;
+
+        public WriterCount() {
+        }
+
+        public WriterCount(int writerId, int count) {
+            this.writerId = writerId;
+            this.count = count;
+        }
     }
 }

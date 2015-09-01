@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus.WriterCount;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
@@ -163,7 +164,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
 
     @Override
     public MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        final MutableLong count = new MutableLong(0);
+        final Map<Integer, WriterCount> counts = Maps.newHashMap();
         final List<Integer> begins = Lists.newArrayList();
         final List<Integer> ends = Lists.newArrayList();
         AmzaClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
@@ -174,7 +175,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                 if (value != null) {
                     MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
                     if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                        count.add(partitionedActivity.index);
+                        counts.put(partitionedActivity.writerId, new WriterCount(partitionedActivity.writerId, partitionedActivity.index));
                         begins.add(partitionedActivity.writerId);
                     } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
                         ends.add(partitionedActivity.writerId);
@@ -183,7 +184,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                 return true;
             });
         }
-        return new MiruActivityWALStatus(partitionId, count.longValue(), begins, ends);
+        return new MiruActivityWALStatus(partitionId, Lists.newArrayList(counts.values()), begins, ends);
     }
 
     @Override
