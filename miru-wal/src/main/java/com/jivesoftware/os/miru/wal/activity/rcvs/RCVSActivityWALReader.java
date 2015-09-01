@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.wal.activity.rcvs;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -8,6 +9,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus.WriterCount;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
@@ -16,12 +18,12 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.rcvs.api.CallbackStream;
 import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang.mutable.MutableLong;
 
@@ -237,7 +239,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     @Override
     public MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        final MutableLong count = new MutableLong(0);
+        final Map<Integer, WriterCount> counts = Maps.newHashMap();
         final List<Integer> begins = Lists.newArrayList();
         final List<Integer> ends = Lists.newArrayList();
         activityWAL.getValues(tenantId,
@@ -246,7 +248,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
             null, 1_000, false, null, null, partitionedActivity -> {
                 if (partitionedActivity != null) {
                     if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                        count.add(partitionedActivity.index);
+                        counts.put(partitionedActivity.writerId, new WriterCount(partitionedActivity.writerId, partitionedActivity.index));
                         begins.add(partitionedActivity.writerId);
                     } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
                         ends.add(partitionedActivity.writerId);
@@ -254,7 +256,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
                 }
                 return partitionedActivity;
             });
-        return new MiruActivityWALStatus(partitionId, count.longValue(), begins, ends);
+        return new MiruActivityWALStatus(partitionId, Lists.newArrayList(counts.values()), begins, ends);
     }
 
     @Override

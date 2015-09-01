@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererCon
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -95,11 +96,14 @@ public class MiruManageServiceTest {
         clusterRegistry.registerSchema(tenantId, miruSchema);
 
         MiruWALClient miruWALClient = Mockito.mock(MiruWALClient.class);
-        Mockito.when(miruWALClient.getAllTenantIds()).thenReturn(Arrays.asList(tenantId));
+        Mockito.when(miruWALClient.getAllTenantIds()).thenReturn(Collections.singletonList(tenantId));
         Mockito.when(miruWALClient.getLargestPartitionId(Mockito.<MiruTenantId>any())).thenReturn(partitionId);
 
         Mockito.when(miruWALClient.getActivityWALStatusForTenant(Mockito.<MiruTenantId>any(), Mockito.any(MiruPartitionId.class)))
-            .thenReturn(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0)));
+            .thenReturn(new MiruActivityWALStatus(partitionId,
+                Collections.singletonList(new MiruActivityWALStatus.WriterCount(1, 10)),
+                Collections.singletonList(0),
+                Collections.singletonList(0)));
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         MiruStats stats = new MiruStats();

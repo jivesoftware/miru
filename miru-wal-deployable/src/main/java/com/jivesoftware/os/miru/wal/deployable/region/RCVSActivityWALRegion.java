@@ -69,9 +69,13 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
 
                 List<Map<String, String>> partitions = Lists.newArrayList();
                 for (MiruActivityWALStatus status : partitionStatuses) {
-                    partitions.add(ImmutableMap.<String, String>of(
+                    long count = 0;
+                    for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                        count += writerCount.count;
+                    }
+                    partitions.add(ImmutableMap.of(
                         "id", status.partitionId.toString(),
-                        "count", String.valueOf(status.count),
+                        "count", String.valueOf(count),
                         "begins", String.valueOf(status.begins.size()),
                         "ends", String.valueOf(status.ends.size())));
                 }

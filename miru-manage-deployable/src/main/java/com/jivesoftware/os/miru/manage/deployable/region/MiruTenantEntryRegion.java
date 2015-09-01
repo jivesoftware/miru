@@ -101,7 +101,11 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                             try {
                                 MiruActivityWALStatus status = miruWALClient.getActivityWALStatusForTenant(tenant, partitionId);
                                 if (status != null) {
-                                    partitionBean.setActivityCount(String.valueOf(status.count));
+                                    long count = 0;
+                                    for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                                        count += writerCount.count;
+                                    }
+                                    partitionBean.setActivityCount(String.valueOf(count));
                                     partitionBean.setBegins(status.begins.size());
                                     partitionBean.setEnds(status.ends.size());
                                 }

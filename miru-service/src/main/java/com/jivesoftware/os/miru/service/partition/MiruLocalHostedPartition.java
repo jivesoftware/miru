@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -41,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -570,7 +572,11 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
                     MiruActivityWALStatus status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
-                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, status.count);
+                    long count = -1;
+                    for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                        count += writerCount.count;
+                    }
+                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, count);
                     if (token.isPresent()) {
                         try {
                             MiruPartitionAccessor<BM, C, S> rebuilding;
@@ -614,7 +620,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                             rebuildDirector.release(token.get());
                         }
                     } else {
-                        log.debug("Skipped rebuild because count={} available={}", status.count, rebuildDirector.available());
+                        log.debug("Skipped rebuild because count={} available={}", count, rebuildDirector.available());
                     }
                 }
             } catch (MiruSchemaUnvailableException e) {
@@ -759,6 +765,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.online) {
                     boolean forceRebuild = false;
+                    MiruActivityWALStatus status = null;
                     if (!accessor.context.isPresent()) {
                         log.info("Forcing rebuild because context is missing for {}", coord);
                         forceRebuild = true;
@@ -766,15 +773,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         log.info("Forcing rebuild because context is corrupt for {}", coord);
                         forceRebuild = true;
                     } else if (firstSip.get()) {
-                        MiruActivityWALStatus status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
-                        if (status != null) {
-                            long currentCount = accessor.context.get().activityIndex.lastId();
-                            long behindByCount = status.count - currentCount;
-                            if (behindByCount > partitionRebuildIfBehindByCount) {
-                                log.info("Forcing rebuild because partition is behind by {} for {}", behindByCount, coord);
-                                forceRebuild = true;
-                            }
-                        }
+                        status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
                     }
 
                     if (forceRebuild) {
@@ -791,7 +790,26 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     }
                     try {
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
-                            sip(accessor);
+                            int maxWriterId = -1;
+                            if (status != null) {
+                                for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                                    maxWriterId = Math.max(maxWriterId, writerCount.writerId);
+                                }
+                            }
+                            int[] counts = sip(accessor, maxWriterId);
+                            if (counts != null && status != null) {
+                                for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                                    int currentCount = counts[writerCount.writerId];
+                                    if (currentCount > 0) {
+                                        int behindByCount = writerCount.count - currentCount;
+                                        if (behindByCount > partitionRebuildIfBehindByCount) {
+                                            log.info("Forcing rebuild because partition is behind by {} for {}", behindByCount, coord);
+                                            updateStorage(accessor, MiruBackingStorage.memory, true);
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
                         } else {
                             accessor.refundChits(mergeChits);
                         }
@@ -806,12 +824,14 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
         private final MiruTenantId GLOBAL_TENANT = new MiruTenantId("global".getBytes(Charsets.UTF_8));
 
-        private boolean sip(final MiruPartitionAccessor<BM, C, S> accessor) throws Exception {
+        private int[] sip(final MiruPartitionAccessor<BM, C, S> accessor, int maxWriterId) throws Exception {
 
             final MiruSipTracker<S> sipTracker = sipTrackerFactory.create(accessor.seenLastSip.get());
 
             S sipCursor = accessor.getSipCursor().orNull();
             boolean first = firstSip.get();
+            int[] counts = new int[maxWriterId + 1];
+            Arrays.fill(counts, -1);
 
             MiruWALClient.StreamBatch<MiruWALEntry, S> sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId,
                 sipCursor,
@@ -832,6 +852,10 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     }
                     sipTracker.addSeenThisSip(timeAndVersion);
                     sipTracker.track(e.activity);
+
+                    if (counts.length > e.activity.writerId) {
+                        counts[e.activity.writerId] = Math.max(counts[e.activity.writerId], e.activity.index);
+                    }
                 }
 
                 S lastCursor = sipCursor;
@@ -869,7 +893,11 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                 accessor.merge(mergeChits, mergeExecutor);
             }
 
-            return accessorRef.get() == accessor;
+            if (accessorRef.get() == accessor) {
+                return counts;
+            } else {
+                return null;
+            }
         }
 
         private S deliver(final List<MiruPartitionedActivity> partitionedActivities, final MiruPartitionAccessor<BM, C, S> accessor,
