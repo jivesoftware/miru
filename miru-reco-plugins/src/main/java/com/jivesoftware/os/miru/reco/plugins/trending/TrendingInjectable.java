@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
 import com.jivesoftware.os.miru.reco.trending.WaveformRegression;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -122,20 +123,22 @@ public class TrendingInjectable {
                     request,
                     provider.getRemotePartition(TrendingRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
-                new AnalyticsAnswerMerger(combinedTimeRange),
+                new AnalyticsAnswerMerger(combinedTimeRange, request.query.divideTimeRangeIntoNSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 request.logLevel);
 
             Map<String, Waveform> waveforms = (analyticsResponse.answer != null && analyticsResponse.answer.waveforms != null)
                 ? analyticsResponse.answer.waveforms
                 : Collections.<String, Waveform>emptyMap();
+            long[] waveform = new long[divideTimeRangeIntoNSegments];
 
             double bucket95 = 0;
             if (request.query.strategies.contains(Strategy.PEAKS)) {
                 double[] highestBuckets = new double[waveforms.size()];
                 int i = 0;
                 for (Map.Entry<String, Waveform> entry : waveforms.entrySet()) {
-                    long[] waveform = entry.getValue().waveform;
+                    Arrays.fill(waveform, 0);
+                    entry.getValue().mergeWaveform(waveform);
                     for (long w : waveform) {
                         highestBuckets[i] = Math.max(highestBuckets[i], w);
                     }
@@ -155,7 +158,8 @@ public class TrendingInjectable {
             }
 
             for (Map.Entry<String, Waveform> entry : waveforms.entrySet()) {
-                long[] waveform = entry.getValue().waveform;
+                Arrays.fill(waveform, 0);
+                entry.getValue().mergeWaveform(waveform);
                 boolean hasCounts = false;
                 double highestBucket = Double.MIN_VALUE;
                 for (long w : waveform) {

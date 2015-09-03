@@ -100,6 +100,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
 
                 MiruResponse<TrendingAnswer> response = null;
                 MiruTenantId tenantId = SeaAnomalySchemaConstants.TENANT_ID;
+                int numberOfBuckets = 30;
                 try {
                     for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
                         try {
@@ -111,7 +112,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                                     new TrendingQuery(Collections.singleton(Strategy.LINEAR_REGRESSION),
                                         new MiruTimeRange(fromTime, toTime),
                                         null,
-                                        30,
+                                        numberOfBuckets,
                                         constraintsFilter,
                                         input.service != null ? "instance" : "service",
                                         MiruFilter.NO_FILTER,
@@ -148,11 +149,14 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
 
                     final MinMaxDouble mmd = new MinMaxDouble();
                     mmd.value(0);
+                    Map<String, long[]> pngWaveforms = Maps.newHashMap();
                     for (Trendy t : results) {
-                        long[] waveform = waveforms.get(t.distinctValue).waveform;
+                        long[] waveform = new long[numberOfBuckets];
+                        waveforms.get(t.distinctValue).mergeWaveform(waveform);
                         for (long w : waveform) {
                             mmd.value(w);
                         }
+                        pngWaveforms.put(t.distinctValue, waveform);
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
@@ -160,7 +164,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                         "rank", String.valueOf(Math.round(trendy.rank * 100.0) / 100.0),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                ImmutableMap.of(trendy.distinctValue, waveforms.get(trendy.distinctValue).waveform),
+                                ImmutableMap.of(trendy.distinctValue, pngWaveforms.get(trendy.distinctValue)),
                                 Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

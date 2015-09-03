@@ -168,11 +168,14 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
 
                     final MinMaxDouble mmd = new MinMaxDouble();
                     mmd.value(0);
+                    Map<String, long[]> pngWaveforms = Maps.newHashMap();
                     for (Trendy t : results) {
-                        long[] waveform = waveforms.get(t.distinctValue).waveform;
+                        long[] waveform = new long[input.buckets];
+                        waveforms.get(t.distinctValue).mergeWaveform(waveform);
                         for (long w : waveform) {
                             mmd.value(w);
                         }
+                        pngWaveforms.put(t.distinctValue, waveform);
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
@@ -180,7 +183,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         "rank", String.valueOf(trendy.rank),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 128, 10,
-                                ImmutableMap.of(trendy.distinctValue, waveforms.get(trendy.distinctValue)),
+                                ImmutableMap.of(trendy.distinctValue, pngWaveforms.get(trendy.distinctValue)),
                                 Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

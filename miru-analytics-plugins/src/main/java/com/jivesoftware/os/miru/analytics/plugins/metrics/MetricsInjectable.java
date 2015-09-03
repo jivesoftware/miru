@@ -41,7 +41,7 @@ public class MetricsInjectable {
                     request,
                     provider.getRemotePartition(MetricsRemotePartition.class))),
                 new MetricsAnswerEvaluator(),
-                new MetricsAnswerMerger(request.query.timeRange),
+                new MetricsAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments),
                 MetricsAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
