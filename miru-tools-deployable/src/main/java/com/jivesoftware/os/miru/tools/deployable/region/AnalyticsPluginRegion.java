@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -225,10 +226,12 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 }
 
                 if (response != null && response.answer != null) {
-                    Map<String, Waveform> waveforms = response.answer.waveforms;
-                    if (waveforms == null) {
-                        waveforms = Collections.emptyMap();
-                    }
+                    Map<String, Waveform> answerWaveforms = Objects.firstNonNull(response.answer.waveforms, Collections.emptyMap());
+                    Map<String, long[]> waveforms = Maps.transformValues(answerWaveforms, w -> {
+                        long[] waveform = new long[input.buckets];
+                        w.mergeWaveform(waveform);
+                        return waveform;
+                    });
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     //data.put("waveform", waveform == null ? "" : waveform.toString());
 

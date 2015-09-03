@@ -16,9 +16,11 @@ import java.util.Map;
 public class MetricsAnswerMerger implements MiruAnswerMerger<MetricsAnswer> {
 
     private final MiruTimeRange timeRange;
+    private final int divideTimeRangeIntoNSegments;
 
-    public MetricsAnswerMerger(MiruTimeRange timeRange) {
+    public MetricsAnswerMerger(MiruTimeRange timeRange, int divideTimeRangeIntoNSegments) {
         this.timeRange = timeRange;
+        this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
     }
 
     /**
@@ -58,21 +60,29 @@ public class MetricsAnswerMerger implements MiruAnswerMerger<MetricsAnswer> {
     }
 
     private void mergeWaveform(Map<String, Waveform> mergedWaveforms, MetricsAnswer addAnswer, MiruSolutionLog solutionLog) {
+        long[] waveform = new long[divideTimeRangeIntoNSegments];
         for (Map.Entry<String, Waveform> addEntry : addAnswer.waveforms.entrySet()) {
+            Arrays.fill(waveform, 0);
             String key = addEntry.getKey();
             Waveform addWaveform = addEntry.getValue();
-            Waveform mergedWaveform = mergedWaveforms.get(key);
-            if (mergedWaveform == null) {
-                mergedWaveform = new Waveform(new long[addWaveform.waveform.length]);
-                mergedWaveforms.put(key, mergedWaveform);
-            }
-            for (int i = 0; i < mergedWaveform.waveform.length; i++) {
-                mergedWaveform.waveform[i] += addWaveform.waveform[i];
-            }
-            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
-                solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merged {} into {}",
-                    key, Arrays.toString(addWaveform.waveform), Arrays.toString(mergedWaveform.waveform));
-            }
+            mergedWaveforms.compute(key, (s, existing) -> {
+                if (existing != null) {
+                    addWaveform.mergeWaveform(waveform);
+                    existing.mergeWaveform(waveform);
+                    Waveform mergedWaveform = new Waveform(waveform);
+                    if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merged {} into {}",
+                            key, addWaveform, mergedWaveform);
+                    }
+                    return mergedWaveform;
+                } else {
+                    if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merged {} into {}",
+                            key, addWaveform, addWaveform);
+                    }
+                    return addWaveform;
+                }
+            });
         }
     }
 

@@ -169,7 +169,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
                             }
                         }
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "metrics answer: {} items.", cardinality);
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "metrics name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "metrics name: {}, waveform: {}.", entry.getKey(), waveform);
                     }
                 } else {
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "metrics empty answer.");

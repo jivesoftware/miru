@@ -236,8 +236,10 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             }
 
             Map<String, Object> waveformData = Maps.newHashMap();
+            long[] waveform = new long[input.buckets];
             for (Map.Entry<String, Waveform> entry : waveforms.entrySet()) {
-                long[] waveform = entry.getValue().waveform;
+                Arrays.fill(waveform, 0);
+                entry.getValue().mergeWaveform(waveform);
                 int[] counts = new int[waveform.length];
                 for (int i = 0; i < counts.length; i++) {
                     counts[i] = (int) Math.min(waveform[i], Integer.MAX_VALUE);

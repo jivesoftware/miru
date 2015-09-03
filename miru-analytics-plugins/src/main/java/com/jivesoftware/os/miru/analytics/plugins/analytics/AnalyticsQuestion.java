@@ -134,7 +134,7 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
                     waveform = analytics.analyticing(bitmaps, answer, indexes);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics answer: {} items.", bitmaps.cardinality(answer));
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics name: {}, waveform: {}.", entry.getKey(), waveform);
                     }
                 } else {
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics empty answer.");

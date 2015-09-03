@@ -41,7 +41,7 @@ public class AnalyticsInjectable {
                     request,
                     miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
-                new AnalyticsAnswerMerger(request.query.timeRange),
+                new AnalyticsAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
