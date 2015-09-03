@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
@@ -49,6 +50,16 @@ public class Waveform implements Serializable {
     public static Waveform fromJson(@JsonProperty("offset") int offset,
         @JsonProperty("waveform") byte[] waveform) throws Exception {
         return new Waveform(offset, waveform);
+    }
+
+    @JsonGetter("offset")
+    public int getRawOffset() {
+        return offset;
+    }
+
+    @JsonGetter("waveform")
+    public byte[] getRawBytes() {
+        return waveform;
     }
 
     @JsonIgnore
