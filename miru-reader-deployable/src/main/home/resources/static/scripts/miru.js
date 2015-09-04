@@ -218,7 +218,9 @@ miru.realwave = {
 
 $(document).ready(function () {
 
-    $('.dropdown-toggle').dropdown();
+    if ($.fn.dropdown) {
+        $('.dropdown-toggle').dropdown();
+    }
 
     miru.windowFocused = true;
     miru.onWindowFocus = [];
