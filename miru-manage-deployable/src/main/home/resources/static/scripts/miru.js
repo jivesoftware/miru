@@ -246,8 +246,8 @@ miru.realwave = {
         miru.realwave.requireFocus = $waveform.data('requireFocus') != "false";
         miru.realwave.graphType = $waveform.data('graphType');
         miru.realwave.graphProp = (miru.realwave.graphType == 'Line' || miru.realwave.graphType == 'Radar') ? 'points'
-                : (miru.realwave.graphType == 'Bar' || miru.realwave.graphType == 'StackedBar') ? 'bars'
-                : 'unknown';
+            : (miru.realwave.graphType == 'Bar' || miru.realwave.graphType == 'StackedBar') ? 'bars'
+            : 'unknown';
 
         if (miru.realwave.requireFocus) {
             miru.onWindowFocus.push(function () {
@@ -402,7 +402,9 @@ miru.realwave = {
 
 $(document).ready(function () {
 
-    $('.dropdown-toggle').dropdown();
+    if ($.fn.dropdown) {
+        $('.dropdown-toggle').dropdown();
+    }
 
     miru.windowFocused = true;
     miru.onWindowFocus = [];
