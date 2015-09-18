@@ -1,4 +1,4 @@
-Miru
+![Miru](https://github.com/jivesoftware/miru/wiki/images/miru-logo.png)
 =========
 
 #### What It Is
