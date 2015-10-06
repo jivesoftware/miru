@@ -1,0 +1,193 @@
+package com.jivesoftware.os.miru.service.query;
+
+import com.google.common.base.Optional;
+import com.google.common.primitives.UnsignedBytes;
+import com.jivesoftware.os.filer.io.api.KeyRange;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.TermIdStream;
+import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
+import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import org.roaringbitmap.RoaringBitmap;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+
+/**
+ *
+ */
+public class MiruQueryParserTest {
+
+    private final MiruSchema schema = new MiruSchema.Builder("test", 0)
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
+            new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
+        })
+        .build();
+
+    private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
+    private final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+    private final MiruTermComposer termComposer = new MiruTermComposer(StandardCharsets.UTF_8);
+
+    private TestFieldIndex fieldIndex;
+    private MiruFieldIndexProvider<RoaringBitmap> fieldIndexProvider;
+
+    @BeforeMethod
+    public void setUp() throws Exception {
+        fieldIndex = new TestFieldIndex(2);
+        @SuppressWarnings("unchecked")
+        MiruFieldIndex<RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap>[]) new MiruFieldIndex[] {
+            fieldIndex,
+            null,
+            null,
+            null
+        };
+        fieldIndexProvider = new MiruFieldIndexProvider<>(indexes);
+    }
+
+    @Test
+    public void testBooleanExpression() throws Exception {
+        fieldIndex.put(0, term("red"), RoaringBitmap.bitmapOf(0, 2, 4, 6, 8));
+        fieldIndex.put(0, term("green"), RoaringBitmap.bitmapOf(1, 3, 5, 7, 9));
+        fieldIndex.put(0, term("blue"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
+        fieldIndex.put(0, term("yellow"), RoaringBitmap.bitmapOf(2, 3, 6, 7));
+
+        fieldIndex.put(1, term("yellow"), RoaringBitmap.bitmapOf(0, 2, 4, 6, 8));
+        fieldIndex.put(1, term("red"), RoaringBitmap.bitmapOf(1, 3, 5, 7, 9));
+        fieldIndex.put(1, term("green"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
+        fieldIndex.put(1, term("blue"), RoaringBitmap.bitmapOf(2, 3, 6, 7));
+
+        MiruQueryParser parser = new MiruQueryParser("a");
+
+        MiruFilter filter = parser.parse("(red AND b:blue) OR (b:yellow NOT yellow)");
+        // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
+        // (2, 6) OR (0, 4, 8)
+        // (0, 2, 4, 6, 8)
+        RoaringBitmap storage = new RoaringBitmap();
+        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, 9, -1);
+        assertEquals(storage.getCardinality(), 5);
+        assertTrue(storage.contains(0));
+        assertTrue(storage.contains(2));
+        assertTrue(storage.contains(4));
+        assertTrue(storage.contains(6));
+        assertTrue(storage.contains(8));
+    }
+
+    @Test
+    public void testWildcardExpression() throws Exception {
+        fieldIndex.put(0, term("red"), RoaringBitmap.bitmapOf(0, 2, 4, 6, 8));
+        fieldIndex.put(0, term("green"), RoaringBitmap.bitmapOf(1, 3, 5, 7, 9));
+        fieldIndex.put(0, term("blue"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
+        fieldIndex.put(0, term("yellow"), RoaringBitmap.bitmapOf(2, 3, 6, 7));
+
+        fieldIndex.put(1, term("yellow"), RoaringBitmap.bitmapOf(0, 2, 4, 6, 8));
+        fieldIndex.put(1, term("red"), RoaringBitmap.bitmapOf(1, 3, 5, 7, 9));
+        fieldIndex.put(1, term("green"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
+        fieldIndex.put(1, term("blue"), RoaringBitmap.bitmapOf(2, 3, 6, 7));
+
+        MiruQueryParser parser = new MiruQueryParser("a");
+
+        MiruFilter filter = parser.parse("(re* AND b:bl*) OR (b:ye* NOT ye*)");
+        // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
+        // (2, 6) OR (0, 4, 8)
+        // (0, 2, 4, 6, 8)
+        RoaringBitmap storage = new RoaringBitmap();
+        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, 9, -1);
+        assertEquals(storage.getCardinality(), 5);
+        assertTrue(storage.contains(0));
+        assertTrue(storage.contains(2));
+        assertTrue(storage.contains(4));
+        assertTrue(storage.contains(6));
+        assertTrue(storage.contains(8));
+    }
+
+    private MiruTermId term(String term) {
+        return new MiruTermId(term.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static class TestFieldIndex implements MiruFieldIndex<RoaringBitmap> {
+
+        private final NavigableMap<MiruTermId, RoaringBitmap>[] indexes;
+
+        public TestFieldIndex(int numFields) {
+            indexes = new NavigableMap[numFields];
+            for (int i = 0; i < numFields; i++) {
+                Comparator<byte[]> comparator = UnsignedBytes.lexicographicalComparator();
+                indexes[i] = new ConcurrentSkipListMap<>((o1, o2) -> {
+                    return comparator.compare(o1.getBytes(), o2.getBytes());
+                });
+            }
+        }
+
+        public void put(int fieldId, MiruTermId termId, RoaringBitmap bitmap) {
+            indexes[fieldId].put(termId, bitmap);
+        }
+
+        @Override
+        public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
+            @SuppressWarnings("unchecked")
+            MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) mock(MiruInvertedIndex.class);
+            when(mockInvertedIndex.getIndex()).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
+            return mockInvertedIndex;
+        }
+
+        @Override
+        public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+            @SuppressWarnings("unchecked")
+            MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) mock(MiruInvertedIndex.class);
+            when(mockInvertedIndex.getIndex()).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
+            return mockInvertedIndex;
+        }
+
+        @Override
+        public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream) throws Exception {
+            for (KeyRange range : ranges) {
+                MiruTermId fromKey = new MiruTermId(range.getStartInclusiveKey());
+                MiruTermId toKey = new MiruTermId(range.getStopExclusiveKey());
+                for (MiruTermId termId : indexes[fieldId].subMap(fromKey, toKey).keySet()) {
+                    if (!termIdStream.stream(termId)) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        @Override
+        public MiruInvertedIndex<RoaringBitmap> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public void append(int fieldId, MiruTermId termId, int... ids) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public void set(int fieldId, MiruTermId termId, int... ids) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public void remove(int fieldId, MiruTermId termId, int id) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+    }
+
+}

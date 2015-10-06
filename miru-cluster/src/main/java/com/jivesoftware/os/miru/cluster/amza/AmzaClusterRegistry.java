@@ -74,7 +74,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 
 /**
  * @author jonathan.colt
@@ -1019,7 +1018,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return ingressUpdate;
     }
 
-    private void streamRanges(MiruTenantId tenantId, MiruPartitionId partitionId, @Nonnull StreamRangeLookup streamRangeLookup) throws Exception {
+    private void streamRanges(MiruTenantId tenantId, MiruPartitionId partitionId, StreamRangeLookup streamRangeLookup) throws Exception {
         byte[] fromKey = toIngressKey(tenantId, partitionId, null);
         byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
         AmzaClient ingressClient = ingressClient();
