@@ -17,7 +17,7 @@ public class MiruToolsService {
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final MiruAdminRegion adminRegion;
-    
+
     private final List<MiruToolsPlugin> plugins = Lists.newCopyOnWriteArrayList();
 
     public MiruToolsService(
