@@ -51,7 +51,7 @@ public interface MiruBitmaps<BM> {
      * Returns cardinalities for the bitmap bounded by the given indexes. The number of cardinalities returned will be 1 less than
      * the number of boundaries, e.g. indexBoundaries { 0, 10, 20, 30 } returns cardinalities for buckets [ 0-9, 10-19, 20-29 ].
      *
-     * @param container the bitmap
+     * @param container       the bitmap
      * @param indexBoundaries lower boundary is inclusive, upper boundary is exclusive
      * @return the cardinalities
      */
@@ -90,6 +90,8 @@ public interface MiruBitmaps<BM> {
     BM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp);
 
     MiruIntIterator intIterator(BM bitmap);
+
+    MiruIntIterator descendingIntIterator(BM bitmap);
 
     int[] indexes(BM bitmap);
 

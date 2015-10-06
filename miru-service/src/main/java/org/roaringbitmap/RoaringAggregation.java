@@ -10,14 +10,14 @@ import java.util.PriorityQueue;
 public class RoaringAggregation {
 
     public static void and(final RoaringBitmap answer, final RoaringBitmap x1,
-            final RoaringBitmap x2) {
+        final RoaringBitmap x2) {
         int pos1 = 0, pos2 = 0;
         final int length1 = x1.highLowContainer.size(), length2 = x2.highLowContainer
-                .size();
-                /*
-                 * TODO: This could be optimized quite a bit when one bitmap is
-                 * much smaller than the other one.
-                 */
+            .size();
+        /*
+         * TODO: This could be optimized quite a bit when one bitmap is
+         * much smaller than the other one.
+         */
         main:
         if (pos1 < length1 && pos2 < length2) {
             short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
@@ -37,8 +37,8 @@ public class RoaringAggregation {
                     s2 = x2.highLowContainer.getKeyAtIndex(pos2);
                 } else {
                     final Container c = x1.highLowContainer
-                            .getContainerAtIndex(pos1)
-                            .and(x2.highLowContainer.getContainerAtIndex(pos2));
+                        .getContainerAtIndex(pos1)
+                        .and(x2.highLowContainer.getContainerAtIndex(pos2));
                     if (c.getCardinality() > 0) {
                         answer.highLowContainer.append(s1, c);
                     }
@@ -85,16 +85,16 @@ public class RoaringAggregation {
      * @param x2 other bitmap
      * @return result of the operation
      */
-    public static void andNot(final RoaringBitmap answer, final RoaringBitmap x1,
-            final RoaringBitmap x2) {
+    public static void andNot(final RoaringBitmap answer,
+        final RoaringBitmap x1,
+        final RoaringBitmap x2) {
+
         int pos1 = 0, pos2 = 0;
         final int length1 = x1.highLowContainer.size(), length2 = x2.highLowContainer.size();
         main:
         if (pos1 < length1 && pos2 < length2) {
-            RoaringArray.Element[] xa1 = x1.highLowContainer.array;
-            RoaringArray.Element[] xa2 = x2.highLowContainer.array;
-            short s1 = xa1[pos1].key;
-            short s2 = xa2[pos2].key;
+            short s1 = x1.highLowContainer.keys[pos1];
+            short s2 = x2.highLowContainer.keys[pos2];
             do {
                 if (s1 < s2) {
                     answer.highLowContainer.appendCopy(x1.highLowContainer, pos1);
@@ -102,15 +102,15 @@ public class RoaringAggregation {
                     if (pos1 == length1) {
                         break main;
                     }
-                    s1 = xa1[pos1].key;
+                    s1 = x1.highLowContainer.keys[pos1];
                 } else if (s1 > s2) {
                     pos2++;
                     if (pos2 == length2) {
                         break main;
                     }
-                    s2 = xa2[pos2].key;
+                    s2 = x2.highLowContainer.keys[pos2];
                 } else {
-                    final Container c = xa1[pos1].value.andNot(xa2[pos2].value);
+                    final Container c = x1.highLowContainer.values[pos1].andNot(x2.highLowContainer.values[pos2]);
                     if (c.getCardinality() > 0) {
                         answer.highLowContainer.append(s1, c);
                     }
@@ -119,8 +119,8 @@ public class RoaringAggregation {
                     if ((pos1 == length1) || (pos2 == length2)) {
                         break main;
                     }
-                    s1 = xa1[pos1].key;
-                    s2 = xa2[pos2].key;
+                    s1 = x1.highLowContainer.keys[pos1];
+                    s2 = x2.highLowContainer.keys[pos2];
                 }
             }
             while (true);
@@ -134,7 +134,7 @@ public class RoaringAggregation {
      * Bitwise OR (union) operation. The provided bitmaps are *not*
      * modified. This operation is thread-safe as long as the provided
      * bitmaps remain unchanged.
-     * <p/>
+     * <p>
      * If you have more than 2 bitmaps, consider using the
      * FastAggregation class.
      *
@@ -145,7 +145,7 @@ public class RoaringAggregation {
      * @see FastAggregation#horizontal_or(RoaringBitmap...)
      */
     public static void or(final RoaringBitmap answer, final RoaringBitmap x1,
-            final RoaringBitmap x2) {
+        final RoaringBitmap x2) {
         int pos1 = 0, pos2 = 0;
         final int length1 = x1.highLowContainer.size(), length2 = x2.highLowContainer.size();
         main:
@@ -170,7 +170,7 @@ public class RoaringAggregation {
                     s2 = x2.highLowContainer.getKeyAtIndex(pos2);
                 } else {
                     answer.highLowContainer.append(s1, x1.highLowContainer.getContainerAtIndex(pos1).or(
-                                    x2.highLowContainer.getContainerAtIndex(pos2))
+                            x2.highLowContainer.getContainerAtIndex(pos2))
                     );
                     pos1++;
                     pos2++;
@@ -214,7 +214,7 @@ public class RoaringAggregation {
      * Bitwise XOR (symmetric difference) operation. The provided bitmaps
      * are *not* modified. This operation is thread-safe as long as the
      * provided bitmaps remain unchanged.
-     * <p/>
+     * <p>
      * If you have more than 2 bitmaps, consider using the
      * FastAggregation class.
      *
@@ -250,14 +250,14 @@ public class RoaringAggregation {
                     s2 = x2.highLowContainer.getKeyAtIndex(pos2);
                 } else {
                     final Container c = x1.highLowContainer.getContainerAtIndex(pos1).xor(
-                            x2.highLowContainer.getContainerAtIndex(pos2));
+                        x2.highLowContainer.getContainerAtIndex(pos2));
                     if (c.getCardinality() > 0) {
                         answer.highLowContainer.append(s1, c);
                     }
                     pos1++;
                     pos2++;
                     if ((pos1 == length1)
-                            || (pos2 == length2)) {
+                        || (pos2 == length2)) {
                         break main;
                     }
                     s1 = x1.highLowContainer.getKeyAtIndex(pos1);

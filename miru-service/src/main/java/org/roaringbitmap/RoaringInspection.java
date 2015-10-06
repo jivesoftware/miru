@@ -11,7 +11,7 @@ public class RoaringInspection {
         int pos = bitmap.highLowContainer.size() - 1;
         int lastSetBit = -1;
         while (pos >= 0) {
-            Container lastContainer = bitmap.highLowContainer.array[pos].value;
+            Container lastContainer = bitmap.highLowContainer.values[pos];
             lastSetBit = lastSetBit(bitmap, lastContainer, pos);
             if (lastSetBit >= 0) {
                 break;
@@ -31,6 +31,14 @@ public class RoaringInspection {
                 int hs = Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
                 short last = arrayContainer.content[cardinality - 1];
                 return Util.toIntUnsigned(last) | hs;
+            }
+        } else if (container instanceof RunContainer) {
+            RunContainer runContainer = (RunContainer) container;
+            if (runContainer.nbrruns > 0) {
+                int hs = Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
+                int maxlength = Util.toIntUnsigned(runContainer.getLength(runContainer.nbrruns - 1));
+                int base = Util.toIntUnsigned(runContainer.getValue(runContainer.nbrruns - 1));
+                return (base + maxlength) | hs;
             }
         } else {
             // <-- trailing              leading -->
@@ -83,7 +91,7 @@ public class RoaringInspection {
             }
 
             if (min < currentBucketEnd) {
-                Container container = bitmap.highLowContainer.array[pos].value;
+                Container container = bitmap.highLowContainer.values[pos];
                 int max = min + (1 << 16);
                 boolean bucketContainsPos = (currentBucketStart <= min && max <= currentBucketEnd);
                 if (bucketContainsPos) {
@@ -108,10 +116,33 @@ public class RoaringInspection {
                                 buckets[currentBucket]++;
                             }
                         }
+                    } else if (container instanceof RunContainer) {
+                        RunContainer runContainer = (RunContainer) container;
+                        for (int i = 0; i < runContainer.nbrruns; i++) {
+                            int maxlength = Util.toIntUnsigned(runContainer.getLength(i));
+                            int base = Util.toIntUnsigned(runContainer.getValue(i));
+                            int index = (maxlength + base) | min;
+                            while (index >= currentBucketEnd) {
+                                //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                                currentBucket++;
+                                if (currentBucket == buckets.length) {
+                                    break done;
+                                }
+                                currentBucketStart = indexes[currentBucket];
+                                currentBucketEnd = indexes[currentBucket + 1];
+                            }
+                            if (index >= currentBucketStart) {
+                                buckets[currentBucket]++;
+                            }
+                        }
                     } else {
                         //System.out.println("BitmapContainer");
                         BitmapContainer bitmapContainer = (BitmapContainer) container;
-                        for (int i = bitmapContainer.nextSetBit(0); i >= 0; i = bitmapContainer.nextSetBit(i + 1)) {
+                        // nextSetBit no longer performs a bounds check
+                        int maxIndex = bitmapContainer.bitmap.length << 6;
+                        for (int i = bitmapContainer.nextSetBit(0);
+                             i >= 0;
+                             i = (i + 1 >= maxIndex) ? -1 : bitmapContainer.nextSetBit(i + 1)) {
                             int index = Util.toIntUnsigned((short) i) | min;
                             while (index >= currentBucketEnd) {
                                 //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);

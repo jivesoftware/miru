@@ -33,7 +33,7 @@ import static org.testng.Assert.assertTrue;
 /**
  *
  */
-public class MiruQueryParserTest {
+public class LuceneBackedQueryParserTest {
 
     private final MiruSchema schema = new MiruSchema.Builder("test", 0)
         .setFieldDefinitions(new MiruFieldDefinition[] {
@@ -74,7 +74,7 @@ public class MiruQueryParserTest {
         fieldIndex.put(1, term("green"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
         fieldIndex.put(1, term("blue"), RoaringBitmap.bitmapOf(2, 3, 6, 7));
 
-        MiruQueryParser parser = new MiruQueryParser("a");
+        LuceneBackedQueryParser parser = new LuceneBackedQueryParser("a");
 
         MiruFilter filter = parser.parse("(red AND b:blue) OR (b:yellow NOT yellow)");
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
@@ -102,7 +102,7 @@ public class MiruQueryParserTest {
         fieldIndex.put(1, term("green"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
         fieldIndex.put(1, term("blue"), RoaringBitmap.bitmapOf(2, 3, 6, 7));
 
-        MiruQueryParser parser = new MiruQueryParser("a");
+        LuceneBackedQueryParser parser = new LuceneBackedQueryParser("a");
 
         MiruFilter filter = parser.parse("(re* AND b:bl*) OR (b:ye* NOT ye*)");
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))

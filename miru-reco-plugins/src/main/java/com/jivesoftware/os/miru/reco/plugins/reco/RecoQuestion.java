@@ -57,8 +57,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         MiruTimeRange timeRange = request.query.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
-            solutionLog.log(MiruSolutionLogLevel.WARN,
-                "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
+            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
+                handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
                 collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, bitmaps.create(), bitmaps.create(),
                     removeDistinctsFilter),

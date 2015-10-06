@@ -36,7 +36,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
             carryOverCounts.put(aggregateCount.distinctValue, aggregateCount);
         }
 
-        List<AggregateCount> mergedResults = Lists.newLinkedList();
+        List<AggregateCount> mergedResults = Lists.newArrayListWithCapacity(lastAnswer.results.size() + currentAnswer.results.size());
         for (AggregateCount aggregateCount : lastAnswer.results) {
             AggregateCount had = carryOverCounts.remove(aggregateCount.distinctValue);
             if (had == null) {

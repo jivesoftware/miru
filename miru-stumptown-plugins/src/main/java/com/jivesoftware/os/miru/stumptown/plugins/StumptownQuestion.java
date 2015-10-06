@@ -60,8 +60,8 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
         // Short-circuit if the time range doesn't live here
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > context.getTimeIndex().getLargestTimestamp();
         if (!context.getTimeIndex().intersects(timeRange)) {
-            solutionLog.log(MiruSolutionLogLevel.WARN,
-                "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
+            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
+                handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
                 new StumptownAnswer(
                     Maps.transformValues(request.query.stumptownFilters,

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.stream.plugins.filter;
+package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
@@ -28,51 +28,51 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class AggregateCountsCustomQuestion implements Question<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> {
+public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextAnswer, FullTextReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final AggregateCounts aggregateCounts;
-    private final MiruRequest<AggregateCountsQuery> request;
-    private final MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition;
+    private final FullText fullText;
+    private final MiruRequest<FullTextQuery> request;
+    private final MiruRemotePartition<FullTextQuery, FullTextAnswer, FullTextReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
-    public AggregateCountsCustomQuestion(AggregateCounts aggregateCounts,
-        MiruRequest<AggregateCountsQuery> request,
-        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition) {
-        this.aggregateCounts = aggregateCounts;
+    public FullTextCustomQuestion(FullText fullText,
+        MiruRequest<FullTextQuery> request,
+        MiruRemotePartition<FullTextQuery, FullTextAnswer, FullTextReport> remotePartition) {
+        this.fullText = fullText;
         this.request = request;
         this.remotePartition = remotePartition;
     }
 
     @Override
-    public <BM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, ?> handle,
-        Optional<AggregateCountsReport> report)
+    public <BM> MiruPartitionResponse<FullTextAnswer> askLocal(MiruRequestHandle<BM, ?> handle,
+        Optional<FullTextReport> report)
         throws Exception {
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
-        MiruTimeRange timeRange = request.query.answerTimeRange;
+        MiruTimeRange timeRange = request.query.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.absent()),
+            return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, bitmaps.create()),
                 solutionLog.asList());
         }
 
-        MiruFilter combinedFilter = request.query.streamFilter;
+        MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.query);
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            combinedFilter = new MiruFilter(MiruFilterOperation.and, false, null,
-                Arrays.asList(request.query.streamFilter, request.query.constraintsFilter));
+            filter = new MiruFilter(MiruFilterOperation.and, false, null,
+                Arrays.asList(filter, request.query.constraintsFilter));
         }
 
         List<BM> ands = new ArrayList<>();
 
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), combinedFilter, solutionLog, filtered,
+        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog, filtered,
             context.getActivityIndex().lastId(), -1);
         ands.add(filtered);
 
@@ -82,7 +82,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
         }
 
-        if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
+        if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
         }
 
@@ -90,32 +90,32 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        BM counter = null;
-        if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
-            counter = bitmaps.create();
-            bitmaps.and(counter, Arrays.asList(answer, bitmaps.buildTimeRangeMask(
-                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp)));
-        }
-
-        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(bitmaps, context, request, report, answer, Optional.fromNullable(counter)),
+        return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, answer),
             solutionLog.asList());
     }
 
     @Override
-    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<FullTextAnswer> askRemote(HttpClient httpClient,
         MiruPartitionId partitionId,
-        Optional<AggregateCountsReport> report) throws MiruQueryServiceException {
+        Optional<FullTextReport> report) throws MiruQueryServiceException {
         return remotePartition.askRemote(httpClient, partitionId, request, report);
     }
 
     @Override
-    public Optional<AggregateCountsReport> createReport(Optional<AggregateCountsAnswer> answer) {
-        Optional<AggregateCountsReport> report = Optional.absent();
+    public Optional<FullTextReport> createReport(Optional<FullTextAnswer> answer) {
+        Optional<FullTextReport> report = Optional.absent();
         if (answer.isPresent()) {
-            report = Optional.of(new AggregateCountsReport(
-                answer.get().aggregateTerms,
-                answer.get().skippedDistincts,
-                answer.get().collectedDistincts));
+            float lowestScore = Float.MAX_VALUE;
+            float highestScore = -Float.MAX_VALUE;
+            for (FullTextAnswer.ActivityScore result : answer.get().results) {
+                lowestScore = Math.min(lowestScore, result.score);
+                highestScore = Math.max(highestScore, result.score);
+            }
+
+            report = Optional.of(new FullTextReport(
+                answer.get().results.size(),
+                lowestScore,
+                highestScore));
         }
         return report;
     }
