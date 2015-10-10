@@ -327,7 +327,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         MiruPartitionAccessor<BM, C, S> accessor = accessorRef.get();
         if (accessor.isOpenForWrites()) {
             ExecutorService sameThreadExecutor = MoreExecutors.sameThreadExecutor();
-            int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress, true, mergeChits,
+            int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress, false, mergeChits,
                 sameThreadExecutor, sameThreadExecutor);
             if (count > 0) {
                 log.inc("indexIngress>written", count);

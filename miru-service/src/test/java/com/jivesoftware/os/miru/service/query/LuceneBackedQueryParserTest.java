@@ -81,7 +81,7 @@ public class LuceneBackedQueryParserTest {
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
         RoaringBitmap storage = new RoaringBitmap();
-        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, 9, -1);
+        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1);
         assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -109,7 +109,7 @@ public class LuceneBackedQueryParserTest {
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
         RoaringBitmap storage = new RoaringBitmap();
-        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, 9, -1);
+        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1);
         assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -175,17 +175,37 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public void append(int fieldId, MiruTermId termId, int... ids) throws Exception {
+        public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public void set(int fieldId, MiruTermId termId, int... ids) throws Exception {
+        public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
         public void remove(int fieldId, MiruTermId termId, int id) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public long getCardinality(int fieldId, MiruTermId termId, int id) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public long getGlobalCardinality(int fieldId, MiruTermId termId) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
     }

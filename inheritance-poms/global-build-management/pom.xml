@@ -16,7 +16,7 @@
         <mlogger-version>0.13</mlogger-version>
         <jive-utils-version>0.93</jive-utils-version>
         <rcvs-version>0.18</rcvs-version>
-        <filer-version>0.75</filer-version>
+        <filer-version>0.76</filer-version>
         <routing-bird-version>0.27</routing-bird-version>
         <amza-version>0.126</amza-version>
         <jackson-version>2.5.3</jackson-version>
@@ -38,6 +38,11 @@
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
                 <version>1.1.1.7</version>
+            </dependency>
+            <dependency>
+                <groupId>net.sf.trove4j</groupId>
+                <artifactId>trove4j</artifactId>
+                <version>3.0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.amza</groupId>

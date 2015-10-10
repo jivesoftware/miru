@@ -1,14 +1,15 @@
 package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.solution.FieldAndTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -22,8 +23,9 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang.mutable.MutableInt;
 
 /**
  * @author jonathan
@@ -59,24 +61,27 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, bitmaps.create()),
+            return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, bitmaps.create(), null),
                 solutionLog.asList());
         }
 
         MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.query);
-        if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            filter = new MiruFilter(MiruFilterOperation.and, false, null,
-                Arrays.asList(filter, request.query.constraintsFilter));
-        }
-
-        List<BM> ands = new ArrayList<>();
+        Map<FieldAndTermId, MutableInt> termCollector = request.query.strategy == FullTextQuery.Strategy.TF_IDF ? Maps.newHashMap() : null;
 
         BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog, filtered,
-            context.getActivityIndex().lastId(), -1);
-        ands.add(filtered);
+        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
+            filtered, termCollector, context.getActivityIndex().lastId(), -1);
 
+        List<BM> ands = new ArrayList<>();
+        ands.add(filtered);
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
+
+        if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
+            BM constrained = bitmaps.create();
+            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
+                solutionLog, constrained, null, context.getActivityIndex().lastId(), -1);
+            ands.add(constrained);
+        }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
@@ -90,7 +95,7 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         bitmaps.and(answer, ands);
 
-        return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, answer),
+        return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, answer, termCollector),
             solutionLog.asList());
     }
 

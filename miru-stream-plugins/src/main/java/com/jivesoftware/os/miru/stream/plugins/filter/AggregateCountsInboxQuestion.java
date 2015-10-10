@@ -102,7 +102,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, context.getActivityIndex().lastId(), -1);
+                solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
             ands.add(filtered);
         }
 

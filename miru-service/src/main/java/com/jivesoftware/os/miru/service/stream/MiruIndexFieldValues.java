@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multiset;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -11,7 +13,9 @@ import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import gnu.trove.list.TIntList;
+import gnu.trove.list.TLongList;
 import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.list.array.TLongArrayList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,32 +39,49 @@ public class MiruIndexFieldValues<BM> {
         MiruFieldDefinition[] fieldDefinitions = context.schema.getFieldDefinitions();
         List<Future<List<FieldValuesWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
         for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-            if (fieldDefinition.type == MiruFieldDefinition.Type.nonIndexed) {
+            if (!fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)) {
                 continue;
             }
+            boolean hasCardinality = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
             workFutures.add(indexExecutor.submit(() -> {
-                Map<MiruTermId, TIntList> fieldWork = Maps.newHashMap();
+                Map<MiruTermId, TermWork> fieldWork = Maps.newHashMap();
                 for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                     MiruInternalActivity activity = internalActivityAndId.activity;
                     MiruTermId[] fieldValues = activity.fieldsValues[fieldDefinition.fieldId];
                     if (fieldValues != null) {
-                        if (fieldValues.length > 1 && fieldDefinition.type != MiruFieldDefinition.Type.multiTerm) {
-                            log.warn("Activity {} field {} type {} != {} but was given {} terms", internalActivityAndId.activity.time,
-                                fieldDefinition.name, fieldDefinition.type, MiruFieldDefinition.Type.multiTerm, fieldValues.length);
+                        if (fieldValues.length > 1 && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.multiValued)) {
+                            log.warn("Activity {} field {} type {} is not multi-valued but was given {} terms", internalActivityAndId.activity.time,
+                                fieldDefinition.name, fieldDefinition.type, fieldValues.length);
                         }
-                        for (MiruTermId term : fieldValues) {
-                            TIntList ids = fieldWork.get(term);
-                            if (ids == null) {
-                                ids = new TIntArrayList();
-                                fieldWork.put(term, ids);
+                        if (hasCardinality) {
+                            HashMultiset<MiruTermId> multiset = HashMultiset.create();
+                            Collections.addAll(multiset, fieldValues);
+                            for (Multiset.Entry<MiruTermId> entry : multiset.entrySet()) {
+                                MiruTermId term = entry.getElement();
+                                TermWork work = fieldWork.get(term);
+                                if (work == null) {
+                                    work = new TermWork(true);
+                                    fieldWork.put(term, work);
+                                }
+                                work.ids.add(internalActivityAndId.id);
+                                work.counts.add(entry.getCount());
                             }
-                            ids.add(internalActivityAndId.id);
+                        } else {
+                            for (MiruTermId term : fieldValues) {
+                                TermWork work = fieldWork.get(term);
+                                if (work == null) {
+                                    work = new TermWork(false);
+                                    fieldWork.put(term, work);
+                                }
+                                work.ids.add(internalActivityAndId.id);
+                            }
                         }
                     }
                 }
                 List<FieldValuesWork> workList = Lists.newArrayListWithCapacity(fieldWork.size());
-                for (Map.Entry<MiruTermId, TIntList> entry : fieldWork.entrySet()) {
-                    workList.add(new FieldValuesWork(entry.getKey(), entry.getValue()));
+                for (Map.Entry<MiruTermId, TermWork> entry : fieldWork.entrySet()) {
+                    TermWork work = entry.getValue();
+                    workList.add(new FieldValuesWork(entry.getKey(), work.ids, work.counts));
                 }
                 return workList;
             }));
@@ -85,9 +106,15 @@ public class MiruIndexFieldValues<BM> {
             for (final FieldValuesWork fieldValuesWork : fieldWork) {
                 futures.add(indexExecutor.submit(() -> {
                     if (repair) {
-                        fieldIndex.set(finalFieldId, fieldValuesWork.fieldValue, fieldValuesWork.ids.toArray());
+                        fieldIndex.set(finalFieldId,
+                            fieldValuesWork.fieldValue,
+                            fieldValuesWork.ids.toArray(),
+                            fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null);
                     } else {
-                        fieldIndex.append(finalFieldId, fieldValuesWork.fieldValue, fieldValuesWork.ids.toArray());
+                        fieldIndex.append(finalFieldId,
+                            fieldValuesWork.fieldValue,
+                            fieldValuesWork.ids.toArray(),
+                            fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null);
                     }
                     return null;
                 }));
@@ -106,6 +133,15 @@ public class MiruIndexFieldValues<BM> {
             Collections.sort(fieldsWork[i]);
         }
         return fieldsWork;
+    }
+
+    private static class TermWork {
+        private final TIntList ids = new TIntArrayList();
+        private final TLongList counts;
+
+        public TermWork(boolean hasCardinality) {
+            this.counts = hasCardinality ? new TLongArrayList() : null;
+        }
     }
 
 }

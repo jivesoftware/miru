@@ -73,7 +73,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
 
         BM filtered = bitmaps.create();
         aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), combinedFilter, solutionLog, filtered,
-            context.getActivityIndex().lastId(), -1);
+            null, context.getActivityIndex().lastId(), -1);
         ands.add(filtered);
 
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));

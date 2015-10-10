@@ -13,12 +13,12 @@ public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
 
     private final MiruBitmaps<BM> bitmaps;
     private final long indexId;
-    private final KeyedFilerStore store;
+    private final KeyedFilerStore<Long, Void> store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public MiruFilerInboxIndex(MiruBitmaps<BM> bitmaps,
         long indexId,
-        KeyedFilerStore store,
+        KeyedFilerStore<Long, Void> store,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
