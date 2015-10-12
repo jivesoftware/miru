@@ -30,4 +30,9 @@ public class AggregateCountsAnswerEvaluator implements MiruAnswerEvaluator<Aggre
     public boolean stopOnUnsolvablePartition() {
         return true;
     }
+
+    @Override
+    public boolean useParallelSolver() {
+        return false;
+    }
 }

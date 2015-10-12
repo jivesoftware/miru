@@ -19,4 +19,9 @@ public class DistinctsAnswerEvaluator implements MiruAnswerEvaluator<DistinctsAn
     public boolean stopOnUnsolvablePartition() {
         return false;
     }
+
+    @Override
+    public boolean useParallelSolver() {
+        return false;
+    }
 }

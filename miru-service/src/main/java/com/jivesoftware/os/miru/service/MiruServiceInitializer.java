@@ -103,6 +103,9 @@ public class MiruServiceInitializer {
         final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads(),
             new NamedThreadFactory(threadGroup, "solver"));
 
+        final ExecutorService parallelExecutor = Executors.newFixedThreadPool(config.getParallelSolversExecutorThreads(),
+            new NamedThreadFactory(threadGroup, "parallel_solvers"));
+
         final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
             new NamedThreadFactory(threadGroup, "rebuild_wal_consumer"));
 
@@ -247,7 +250,8 @@ public class MiruServiceInitializer {
             partitionDirector,
             partitionComparison,
             solver,
-            schemaProvider);
+            schemaProvider,
+            parallelExecutor);
 
         return new MiruLifecyle<MiruService>() {
 
@@ -269,6 +273,7 @@ public class MiruServiceInitializer {
                 scheduledRebuildExecutor.shutdownNow();
                 scheduledSipMigrateExecutor.shutdownNow();
                 solverExecutor.shutdownNow();
+                parallelExecutor.shutdownNow();
                 streamFactoryExecutor.shutdownNow();
             }
         };

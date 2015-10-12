@@ -33,11 +33,13 @@ import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProv
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AggregateCountsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AnalyticsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.DistinctsPluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.FullTextPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.MiruToolsEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.RealwavePluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.AggregateCountsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.DistinctsPluginRegion;
+import com.jivesoftware.os.miru.tools.deployable.region.FullTextPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruToolsPlugin;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwaveFramePluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwavePluginRegion;
@@ -149,7 +151,7 @@ public class MiruToolsMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                .getConnections("miru-manage", "main"),
+                    .getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
@@ -165,31 +167,35 @@ public class MiruToolsMain {
             ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
 
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
-                new MiruToolsPlugin("asterisk", "Distincts",
-                    "/miru/tools/distincts",
-                    DistinctsPluginEndpoints.class,
-                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
-                new MiruToolsPlugin("stats", "Analytics",
-                    "/miru/tools/analytics",
-                    AnalyticsPluginEndpoints.class,
-                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
-                new MiruToolsPlugin("list", "Trending",
-                    "/miru/tools/trending",
-                    TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)),
-                new MiruToolsPlugin("thumbs-up", "Reco",
-                    "/miru/tools/reco",
-                    RecoPluginEndpoints.class,
-                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)),
                 new MiruToolsPlugin("road", "Aggregate Counts",
                     "/miru/tools/aggregate",
                     AggregateCountsPluginEndpoints.class,
                     new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruToolsPlugin("stats", "Analytics",
+                    "/miru/tools/analytics",
+                    AnalyticsPluginEndpoints.class,
+                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruToolsPlugin("asterisk", "Distincts",
+                    "/miru/tools/distincts",
+                    DistinctsPluginEndpoints.class,
+                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruToolsPlugin("search", "Full Text",
+                    "/miru/tools/fulltext",
+                    FullTextPluginEndpoints.class,
+                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, readerRequestHelpers)),
                 new MiruToolsPlugin("flash", "Realwave",
                     "/miru/tools/realwave",
                     RealwavePluginEndpoints.class,
                     new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, readerRequestHelpers),
-                    new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)));
+                    new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)),
+                new MiruToolsPlugin("thumbs-up", "Reco",
+                    "/miru/tools/reco",
+                    RecoPluginEndpoints.class,
+                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)),
+                new MiruToolsPlugin("list", "Trending",
+                    "/miru/tools/trending",
+                    TrendingPluginEndpoints.class,
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

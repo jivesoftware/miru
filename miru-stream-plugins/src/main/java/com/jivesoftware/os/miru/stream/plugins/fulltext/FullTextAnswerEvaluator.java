@@ -33,4 +33,9 @@ public class FullTextAnswerEvaluator implements MiruAnswerEvaluator<FullTextAnsw
     public boolean stopOnUnsolvablePartition() {
         return (query.strategy == FullTextQuery.Strategy.TIME);
     }
+
+    @Override
+    public boolean useParallelSolver() {
+        return (query.strategy == FullTextQuery.Strategy.TF_IDF);
+    }
 }

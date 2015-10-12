@@ -182,9 +182,9 @@ public class MiruFullTextNGTest {
         if (!batch.isEmpty()) {
             service.writeToIndex(batch);
             batch.clear();
-            System.out.println("Indexed " + numberOfActivities + " / " + numberOfActivities + " activities");
         }
 
+        System.out.println("Indexed " + numberOfActivities + " / " + numberOfActivities + " activities");
         System.out.println("Running queries...");
 
         runQueries(rand, timespan, time.get(), FullTextQuery.Strategy.TIME);
