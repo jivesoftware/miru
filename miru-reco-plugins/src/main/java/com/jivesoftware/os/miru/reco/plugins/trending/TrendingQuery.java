@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
@@ -25,8 +26,7 @@ public class TrendingQuery implements Serializable {
     public final int divideTimeRangeIntoNSegments;
     public final MiruFilter constraintsFilter;
     public final String aggregateCountAroundField;
-    public final MiruFilter distinctsFilter;
-    public final List<String> distinctPrefixes;
+    public final List<DistinctsQuery> distinctQueries;
     public final int desiredNumberOfDistincts;
 
     @JsonCreator
@@ -37,8 +37,7 @@ public class TrendingQuery implements Serializable {
         @JsonProperty("divideTimeRangeIntoNSegments") int divideTimeRangeIntoNSegments,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
-        @JsonProperty("distinctsFilter") MiruFilter distinctsFilter,
-        @JsonProperty("distinctPrefixes") List<String> distinctPrefixes,
+        @JsonProperty("distinctQueries") List<DistinctsQuery> distinctQueries,
         @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
         Preconditions.checkArgument(strategies != null && !strategies.isEmpty(), "Must specify at least one strategy");
         this.strategies = strategies;
@@ -50,8 +49,7 @@ public class TrendingQuery implements Serializable {
         this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
-        this.distinctsFilter = Preconditions.checkNotNull(distinctsFilter);
-        this.distinctPrefixes = distinctPrefixes;
+        this.distinctQueries = Preconditions.checkNotNull(distinctQueries);
         Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
         this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
@@ -65,8 +63,7 @@ public class TrendingQuery implements Serializable {
             + ", divideTimeRangeIntoNSegments=" + divideTimeRangeIntoNSegments
             + ", constraintsFilter=" + constraintsFilter
             + ", aggregateCountAroundField='" + aggregateCountAroundField + '\''
-            + ", distinctsFilter=" + distinctsFilter
-            + ", distinctPrefixes=" + distinctPrefixes
+            + ", distinctQueries=" + distinctQueries
             + ", desiredNumberOfDistincts=" + desiredNumberOfDistincts
             + '}';
     }

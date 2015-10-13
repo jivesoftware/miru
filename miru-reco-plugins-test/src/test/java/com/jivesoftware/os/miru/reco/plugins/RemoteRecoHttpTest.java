@@ -123,16 +123,20 @@ public class RemoteRecoHttpTest {
             final int index = i;
             executorService.submit(() -> {
                 MiruTenantId tenantId = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
+                MiruTimeRange timeRange = new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime);
                 MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new byte[] { 3 }),
                     MiruAuthzExpression.NOT_PROVIDED,
                     new TrendingQuery(Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),
-                        new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
+                        timeRange,
                         null,
                         32,
                         constraintsFilter,
                         "parent",
-                        MiruFilter.NO_FILTER,
-                        Arrays.asList("102", "2", "38"),
+                        Collections.singletonList(new DistinctsQuery(
+                            timeRange,
+                            "parent",
+                            MiruFilter.NO_FILTER,
+                            Arrays.asList("102", "2", "38"))),
                         100),
                     MiruSolutionLogLevel.INFO);
 

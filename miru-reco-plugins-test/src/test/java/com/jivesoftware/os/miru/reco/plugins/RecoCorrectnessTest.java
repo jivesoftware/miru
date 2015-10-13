@@ -35,6 +35,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
@@ -279,8 +280,11 @@ public class RecoCorrectnessTest {
                     27,
                     constraintsFilter,
                     "parent",
-                    MiruFilter.NO_FILTER,
-                    Lists.newArrayList(docTypes),
+                    Collections.singletonList(new DistinctsQuery(
+                        timeRange,
+                        "parent",
+                        MiruFilter.NO_FILTER,
+                        Lists.newArrayList(docTypes))),
                     10),
                 MiruSolutionLogLevel.INFO));
 

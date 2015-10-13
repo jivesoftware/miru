@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -179,8 +180,11 @@ public class MiruTrendingNGTest {
                     32,
                     filter,
                     "obj",
-                    MiruFilter.NO_FILTER,
-                    Arrays.asList("0", "2", "8", "-1"),
+                    Collections.singletonList(new DistinctsQuery(
+                        timeRange,
+                        "obj",
+                        MiruFilter.NO_FILTER,
+                        Arrays.asList("0", "2", "8", "-1"))),
                     10),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);
