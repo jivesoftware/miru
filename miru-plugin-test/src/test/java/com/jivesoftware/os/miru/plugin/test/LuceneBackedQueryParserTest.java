@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.query;
+package com.jivesoftware.os.miru.plugin.test;
 
 import com.google.common.base.Optional;
 import com.google.common.primitives.UnsignedBytes;
@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
+import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -21,12 +22,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import org.mockito.Mockito;
 import org.roaringbitmap.RoaringBitmap;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -82,7 +83,7 @@ public class LuceneBackedQueryParserTest {
         // (0, 2, 4, 6, 8)
         RoaringBitmap storage = new RoaringBitmap();
         aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1);
-        assertEquals(storage.getCardinality(), 5);
+        Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
         assertTrue(storage.contains(4));
@@ -110,7 +111,7 @@ public class LuceneBackedQueryParserTest {
         // (0, 2, 4, 6, 8)
         RoaringBitmap storage = new RoaringBitmap();
         aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1);
-        assertEquals(storage.getCardinality(), 5);
+        Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
         assertTrue(storage.contains(4));
@@ -143,16 +144,16 @@ public class LuceneBackedQueryParserTest {
         @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
             @SuppressWarnings("unchecked")
-            MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) mock(MiruInvertedIndex.class);
-            when(mockInvertedIndex.getIndex()).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
+            MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) Mockito.mock(MiruInvertedIndex.class);
+            Mockito.when(mockInvertedIndex.getIndex()).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
             return mockInvertedIndex;
         }
 
         @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
             @SuppressWarnings("unchecked")
-            MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) mock(MiruInvertedIndex.class);
-            when(mockInvertedIndex.getIndex()).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
+            MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) Mockito.mock(MiruInvertedIndex.class);
+            Mockito.when(mockInvertedIndex.getIndex()).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
             return mockInvertedIndex;
         }
 

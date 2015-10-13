@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.query;
+package com.jivesoftware.os.miru.plugin.query;
 
 import java.io.Reader;
 import org.apache.lucene.analysis.Analyzer;
