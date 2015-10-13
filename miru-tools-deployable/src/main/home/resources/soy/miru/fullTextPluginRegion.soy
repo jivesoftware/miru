@@ -125,8 +125,7 @@
                     Showing first {$maxCount} of {$count} results:<br/>
                 {/if}
                 {foreach $r in $results}
-                    {if not isFirst($r)}, {/if}
-                    {$r.id} ({$r.score})
+                    <p>({$r.score})&nbsp;{$r.activity}</p>
                 {ifempty}
                     No results found
                 {/foreach}

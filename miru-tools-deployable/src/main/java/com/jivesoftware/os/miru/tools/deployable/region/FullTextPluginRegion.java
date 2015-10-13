@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
@@ -27,6 +28,8 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -131,7 +134,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT,
                                 MiruResponse.class,
-                                new Class[] { FullTextAnswer.class },
+                                new Class[]{FullTextAnswer.class},
                                 null);
                             response = fullTextResponse;
                             if (response != null && response.answer != null) {
@@ -140,7 +143,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                                 log.warn("Empty full text response from {}, trying another", requestHelper);
                             }
                         } catch (Exception e) {
-                            log.warn("Failed full text request to {}, trying another", new Object[] { requestHelper }, e);
+                            log.warn("Failed full text request to {}, trying another", new Object[]{requestHelper}, e);
                         }
                     }
                 }
@@ -148,7 +151,15 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     data.put("count", response.answer.results.size());
-                    data.put("results", response.answer.results.subList(0, Math.min(1_000, response.answer.results.size())));
+                    ImmutableList<FullTextAnswer.ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
+                    List<Map<String, Object>> results = new ArrayList<>();
+                    for (FullTextAnswer.ActivityScore score : scores) {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("activity", score.activity.toString());
+                        result.put("score", String.valueOf(score.score));
+                        results.add(result);
+                    }
+                    data.put("results", results);
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
