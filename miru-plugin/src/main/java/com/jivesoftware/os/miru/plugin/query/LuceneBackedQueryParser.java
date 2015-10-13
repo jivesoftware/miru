@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.query;
+package com.jivesoftware.os.miru.plugin.query;
 
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
