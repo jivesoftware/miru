@@ -38,7 +38,7 @@ public class FullTextPluginEndpoints {
         @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
         @QueryParam("defaultField") @DefaultValue("") String defaultField,
         @QueryParam("queryString") @DefaultValue("") String queryString,
-        @QueryParam("strategy") @DefaultValue("") String strategy,
+        @QueryParam("strategy") @DefaultValue("TIME") String strategy,
         @QueryParam("filters") @DefaultValue("") String filters,
         @QueryParam("maxCount") @DefaultValue("1000") int maxCount,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
