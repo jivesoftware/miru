@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -126,18 +127,22 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
                     for (HttpRequestHelper requestHelper : requestHelpers) {
                         try {
+                            MiruTimeRange timeRange = new MiruTimeRange(fromTime, toTime);
                             @SuppressWarnings("unchecked")
                             MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
                                 new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
                                     new TrendingQuery(
                                         Collections.singleton(Strategy.LINEAR_REGRESSION),
-                                        new MiruTimeRange(fromTime, toTime),
+                                        timeRange,
                                         null,
                                         input.buckets,
                                         constraintsFilter,
                                         input.field,
-                                        MiruFilter.NO_FILTER,
-                                        input.fieldPrefixes,
+                                        Collections.singletonList(new DistinctsQuery(
+                                            timeRange,
+                                            input.field,
+                                            MiruFilter.NO_FILTER,
+                                            input.fieldPrefixes)),
                                         100),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
