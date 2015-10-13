@@ -5,6 +5,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.plugin.solution.MiruQueryParser;
 import java.util.Collections;
 import java.util.List;
 import org.apache.lucene.index.Term;
@@ -16,21 +17,22 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 
 /**
- * Due to its reliance on {@link QueryParser}, this class is NOT thread-safe.
+ * Due to its reliance on the Lucene {@link QueryParser}, this class is NOT thread-safe.
  */
-public class MiruQueryParser {
+public class LuceneBackedQueryParser implements MiruQueryParser {
 
     private final QueryParser parser;
 
-    public MiruQueryParser(String defaultField) {
+    public LuceneBackedQueryParser(String defaultField) {
         this.parser = new QueryParser(defaultField, new MiruBodyAnalyzer());
     }
 
+    @Override
     public MiruFilter parse(String queryString) throws Exception {
         return makeFilter(parser.parse(queryString));
     }
 
-    public MiruFilter makeFilter(Query query) {
+    private MiruFilter makeFilter(Query query) {
         if (query instanceof BooleanQuery) {
             BooleanQuery bq = (BooleanQuery) query;
             List<MiruFilter> musts = Lists.newArrayList();

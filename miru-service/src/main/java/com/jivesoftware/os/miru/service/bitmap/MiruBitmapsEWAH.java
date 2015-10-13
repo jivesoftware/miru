@@ -352,6 +352,23 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
+    public MiruIntIterator descendingIntIterator(EWAHCompressedBitmap bitmap) {
+        final IntIterator intIterator = bitmap.reverseIntIterator();
+        return new MiruIntIterator() {
+
+            @Override
+            public boolean hasNext() {
+                return intIterator.hasNext();
+            }
+
+            @Override
+            public int next() {
+                return intIterator.next();
+            }
+        };
+    }
+
+    @Override
     public int[] indexes(EWAHCompressedBitmap bitmap) {
         return bitmap.toArray();
     }

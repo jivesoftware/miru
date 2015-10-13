@@ -29,4 +29,9 @@ public class DistinctCountAnswerEvaluator implements MiruAnswerEvaluator<Distinc
     public boolean stopOnUnsolvablePartition() {
         return true;
     }
+
+    @Override
+    public boolean useParallelSolver() {
+        return false;
+    }
 }

@@ -57,8 +57,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         MiruTimeRange timeRange = request.query.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
-            solutionLog.log(MiruSolutionLogLevel.WARN,
-                "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
+            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
+                handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
                 collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, bitmaps.create(), bitmaps.create(),
                     removeDistinctsFilter),
@@ -71,7 +71,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
         aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.scorableFilter,
-            solutionLog, filtered, context.getActivityIndex().lastId(), -1);
+            solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained scorable down to {} items.", bitmaps.cardinality(filtered));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained scorable down bitmap {}", filtered);
@@ -108,7 +108,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         BM allMyActivity = bitmaps.create();
         aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-            solutionLog, allMyActivity, context.getActivityIndex().lastId(), -1);
+            solutionLog, allMyActivity, null, context.getActivityIndex().lastId(), -1);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained mine down to {} items.", bitmaps.cardinality(allMyActivity));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained mine down bitmap {}", allMyActivity);

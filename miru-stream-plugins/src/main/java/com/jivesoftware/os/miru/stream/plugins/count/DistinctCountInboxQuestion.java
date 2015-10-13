@@ -72,8 +72,8 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
 
             // Short-circuit if the time range doesn't live here
             if (!context.getTimeIndex().intersects(timeRange)) {
-                solutionLog.log(MiruSolutionLogLevel.WARN,
-                    "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
+                solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
+                    handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
                 return new MiruPartitionResponse<>(distinctCount.numberOfDistincts(
                     bitmaps, context, request, report, bitmaps.create()), solutionLog.asList());
             }
@@ -92,7 +92,7 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM filtered = bitmaps.create();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, context.getActivityIndex().lastId(), -1);
+                solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
             ands.add(filtered);
         }
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {

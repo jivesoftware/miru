@@ -5,13 +5,17 @@ import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapBackedKeyedFPIndex;
+import com.jivesoftware.os.filer.chunk.store.transaction.MapCreator;
+import com.jivesoftware.os.filer.chunk.store.transaction.MapOpener;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCog;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
+import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
+import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
@@ -190,10 +194,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         for (MiruFieldType fieldType : MiruFieldType.values()) {
             @SuppressWarnings("unchecked")
             KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
+            @SuppressWarnings("unchecked")
+            KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
             long[] indexIds = new long[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 int fieldId = fieldDefinition.fieldId;
-                if (fieldType == MiruFieldType.latest && fieldDefinition.type != MiruFieldDefinition.Type.singleTermIndexLatest
+                if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
                     || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
                     || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
                     indexes[fieldId] = null;
@@ -206,12 +212,23 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                         TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
                 }
                 indexIds[fieldId] = fieldIndexIdProvider.incrementAndGet();
+                if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
+                    cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
+                        seed,
+                        chunkStores,
+                        keyBytes("field-c-" + fieldType.name() + "-" + fieldId),
+                        false,
+                        new MapCreator(100, 4, false, 8, false),
+                        MapOpener.INSTANCE,
+                        TxMapGrower.MAP_OVERWRITE_GROWER,
+                        TxMapGrower.MAP_REWRITE_GROWER);
+                }
             }
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
                 indexIds,
-                new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, fieldIndexStripingLocksProvider),
-                schema.fieldCount(),
+                new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, cardinalities, 1_024, fieldIndexStripingLocksProvider),
+                schema.getFieldDefinitions(),
                 fieldIndexCache);
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);

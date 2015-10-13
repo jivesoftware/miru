@@ -58,6 +58,7 @@ import com.jivesoftware.os.miru.plugin.marshaller.AmzaSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.solution.MiruQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
@@ -69,6 +70,7 @@ import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorInitializer;
 import com.jivesoftware.os.miru.service.partition.AmzaSipTrackerFactory;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
+import com.jivesoftware.os.miru.service.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -318,6 +320,11 @@ public class MiruReaderMain {
                 @Override
                 public MiruTermComposer getTermComposer() {
                     return termComposer;
+                }
+
+                @Override
+                public MiruQueryParser getQueryParser(String defaultField) {
+                    return new LuceneBackedQueryParser(defaultField);
                 }
 
                 @Override

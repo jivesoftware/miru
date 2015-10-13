@@ -59,8 +59,8 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
         // Short-circuit if the time range doesn't live here
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > context.getTimeIndex().getLargestTimestamp();
         if (!context.getTimeIndex().intersects(timeRange)) {
-            solutionLog.log(MiruSolutionLogLevel.WARN,
-                "No time index intersection. p=" + handle.getCoord().partitionId + " " + context.getTimeIndex() + " doesn't intersect with " + timeRange);
+            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
+                handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
                 new AnalyticsAnswer(
                     Maps.transformValues(
@@ -81,7 +81,7 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             BM filtered = bitmaps.create();
             start = System.currentTimeMillis();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, context.getActivityIndex().lastId(), -1);
+                solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -127,7 +127,7 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), entry.getValue(), solutionLog,
-                    waveformFiltered, context.getActivityIndex().lastId(), -1);
+                    waveformFiltered, null, context.getActivityIndex().lastId(), -1);
                 BM answer = bitmaps.create();
                 bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {

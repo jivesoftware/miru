@@ -141,7 +141,7 @@ public class CollaborativeFiltering {
         if (!MiruFilter.NO_FILTER.equals(removeDistinctsFilter)) {
             BM remove = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                removeDistinctsFilter, solutionLog, remove, requestContext.getActivityIndex().lastId(), -1);
+                removeDistinctsFilter, solutionLog, remove, null, requestContext.getActivityIndex().lastId(), -1);
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "remove {}.", bitmaps.cardinality(remove));
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);

@@ -136,9 +136,9 @@ public class MiruIndexPairedLatest<BM> {
 
                 ids.reverse(); // we built in reverse order, so flip back to ascending
                 if (repair) {
-                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray());
+                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null);
                 } else {
-                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray());
+                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null);
                 }
 
                 return null;

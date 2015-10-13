@@ -19,4 +19,9 @@ public class AnalyticsAnswerEvaluator implements MiruAnswerEvaluator<AnalyticsAn
     public boolean stopOnUnsolvablePartition() {
         return false;
     }
+
+    @Override
+    public boolean useParallelSolver() {
+        return false;
+    }
 }

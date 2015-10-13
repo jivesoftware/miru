@@ -32,7 +32,7 @@ public class MiruReadTracker {
             BM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp);
             BM filtered = bitmaps.create();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog, filtered,
-                context.getActivityIndex().lastId(), -1);
+                null, context.getActivityIndex().lastId(), -1);
 
             BM result = bitmaps.create();
             bitmaps.and(result, Arrays.asList(filtered, indexMask, timeMask));
@@ -55,7 +55,7 @@ public class MiruReadTracker {
             BM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp);
             BM filtered = bitmaps.create();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog, filtered,
-                context.getActivityIndex().lastId(), -1);
+                null, context.getActivityIndex().lastId(), -1);
 
             BM result = bitmaps.create();
             bitmaps.and(result, Arrays.asList(filtered, indexMask, timeMask));

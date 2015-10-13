@@ -52,9 +52,9 @@ public class MiruIndexLatest<BM> {
                             }
                         }
                         if (repair) {
-                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
+                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null);
                         } else {
-                            latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, internalActivityAndId.id);
+                            latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null);
                         }
                         return null;
                     }));

@@ -76,7 +76,7 @@ public class Distincts {
                 List<BM> ands = Lists.newArrayList();
                 BM constrained = bitmaps.create();
                 aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), query.constraintsFilter,
-                    solutionLog, constrained, requestContext.getActivityIndex().lastId(), -1);
+                    solutionLog, constrained, null, requestContext.getActivityIndex().lastId(), -1);
                 ands.add(constrained);
 
                 if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {

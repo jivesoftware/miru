@@ -242,7 +242,7 @@ public class MiruSchema {
             for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
                 fieldIdsBuilder.add(fieldDefinition.fieldId);
 
-                if (fieldDefinition.type == MiruFieldDefinition.Type.singleTermIndexLatest) {
+                if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)) {
                     fieldsWithLatestBuilder.add(fieldDefinition);
                 }
 
@@ -252,7 +252,7 @@ public class MiruSchema {
                     fieldsWithPairedLatestBuilder.add(fieldDefinition);
                     for (String pairedLatestFieldName : pairedLatestFieldNames) {
                         MiruFieldDefinition pairedLatestFieldDefinition = fieldDefinitions[fieldNameToId.get(pairedLatestFieldName)];
-                        if (pairedLatestFieldDefinition.type == MiruFieldDefinition.Type.multiTerm) {
+                        if (pairedLatestFieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.multiValued)) {
                             throw new IllegalArgumentException("Paired latest cannot be applied to multi-term field: " +
                                 fieldDefinition.name + " -> " + pairedLatestFieldName);
                         }

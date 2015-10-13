@@ -28,8 +28,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.lang.mutable.MutableInt;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -77,7 +79,7 @@ public class MiruAggregateUtil {
 
             MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, streamFieldId);
             if (traceEnabled) {
-                LOG.trace("stream: fieldValues={}", new Object[]{fieldValues});
+                LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
             }
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -186,6 +188,23 @@ public class MiruAggregateUtil {
         MiruFilter filter,
         MiruSolutionLog solutionLog,
         BM bitmapStorage,
+        Map<FieldAndTermId, MutableInt> termCollector,
+        int largestIndex,
+        final int considerIfIndexIdGreaterThanN)
+        throws Exception {
+        filterInOut(bitmaps, schema, termComposer, fieldIndexProvider, filter, solutionLog, bitmapStorage, termCollector, true,
+            largestIndex, considerIfIndexIdGreaterThanN);
+    }
+
+    private <BM> void filterInOut(MiruBitmaps<BM> bitmaps,
+        MiruSchema schema,
+        final MiruTermComposer termComposer,
+        final MiruFieldIndexProvider<BM> fieldIndexProvider,
+        MiruFilter filter,
+        MiruSolutionLog solutionLog,
+        BM bitmapStorage,
+        Map<FieldAndTermId, MutableInt> termCollector,
+        boolean termIn,
         int largestIndex,
         final int considerIfIndexIdGreaterThanN)
         throws Exception {
@@ -200,6 +219,7 @@ public class MiruAggregateUtil {
                 final MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
                 if (fieldId >= 0) {
                     final List<BM> fieldBitmaps = new ArrayList<>();
+                    boolean fieldTermIn = filter.operation == MiruFilterOperation.pButNotQ && !filterBitmaps.isEmpty() ? !termIn : termIn;
                     long start = System.currentTimeMillis();
                     for (final String term : fieldFilter.values) {
                         if (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none && term.endsWith("*")) {
@@ -212,13 +232,16 @@ public class MiruAggregateUtil {
                                     if (termId != null) {
                                         try {
                                             MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
-                                            fieldId,
-                                            termId,
-                                            considerIfIndexIdGreaterThanN);
+                                                fieldId,
+                                                termId,
+                                                considerIfIndexIdGreaterThanN);
                                             Optional<BM> index = got.getIndex();
+
                                             if (index.isPresent()) {
                                                 fieldBitmaps.add(index.get());
                                             }
+
+                                            collectTerm(fieldId, termId, fieldTermIn, termCollector);
                                         } catch (Exception e) {
                                             throw new RuntimeException("Failed to get wildcard index", e);
                                         }
@@ -226,9 +249,10 @@ public class MiruAggregateUtil {
                                     return true;
                                 });
                         } else {
+                            MiruTermId termId = termComposer.compose(fieldDefinition, term);
                             MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
                                 fieldId,
-                                termComposer.compose(fieldDefinition, term),
+                                termId,
                                 considerIfIndexIdGreaterThanN);
                             Optional<BM> index = got.getIndex();
                             if (index.isPresent()) {
@@ -240,6 +264,8 @@ public class MiruAggregateUtil {
                                 }
                                 fieldBitmaps.add(index.get());
                             }
+
+                            collectTerm(fieldId, termId, fieldTermIn, termCollector);
                         }
                     }
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} values={} lookup took {} millis.",
@@ -261,11 +287,24 @@ public class MiruAggregateUtil {
         if (filter.subFilters != null) {
             for (MiruFilter subFilter : filter.subFilters) {
                 BM subStorage = bitmaps.create();
-                filter(bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog, subStorage, largestIndex, considerIfIndexIdGreaterThanN);
+                boolean subTermIn = (filter.operation == MiruFilterOperation.pButNotQ && !filterBitmaps.isEmpty()) ? !termIn : termIn;
+                filterInOut(bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog, subStorage,
+                    termCollector, subTermIn, largestIndex, considerIfIndexIdGreaterThanN);
                 filterBitmaps.add(subStorage);
             }
         }
         executeFilter(bitmaps, filter.operation, solutionLog, bitmapStorage, filterBitmaps);
+    }
+
+    private void collectTerm(int fieldId, MiruTermId termId, boolean termIn, Map<FieldAndTermId, MutableInt> termCollector) {
+        if (termCollector != null) {
+            MutableInt count = termCollector.computeIfAbsent(new FieldAndTermId(fieldId, termId), key -> new MutableInt());
+            if (termIn) {
+                count.increment();
+            } else {
+                count.decrement();
+            }
+        }
     }
 
     private <BM> void executeFilter(MiruBitmaps<BM> bitmaps,

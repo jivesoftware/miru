@@ -230,11 +230,13 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         }
     }
 
+    //private final AtomicLong merges = new AtomicLong(0);
     void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception {
         if (context.isPresent()) {
             final MiruContext<BM, S> got = context.get();
             long elapsed;
             synchronized (got.writeLock) {
+                //System.out.println("Merging... (remaining: " + chits.remaining() + ") (merges: " + merges.incrementAndGet() + ")");
                 long start = System.currentTimeMillis();
 
                 List<Future<?>> futures = Lists.newArrayList();
@@ -259,6 +261,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
                 }
 
                 elapsed = System.currentTimeMillis() - start;
+                //System.out.println("Merged in " + elapsed + " ms");
 
                 chits.refundAll(coord);
                 timestampOfLastMerge.set(System.currentTimeMillis());

@@ -33,7 +33,7 @@ import static org.testng.Assert.assertTrue;
 /**
  *
  */
-public class MiruQueryParserTest {
+public class LuceneBackedQueryParserTest {
 
     private final MiruSchema schema = new MiruSchema.Builder("test", 0)
         .setFieldDefinitions(new MiruFieldDefinition[] {
@@ -74,14 +74,14 @@ public class MiruQueryParserTest {
         fieldIndex.put(1, term("green"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
         fieldIndex.put(1, term("blue"), RoaringBitmap.bitmapOf(2, 3, 6, 7));
 
-        MiruQueryParser parser = new MiruQueryParser("a");
+        LuceneBackedQueryParser parser = new LuceneBackedQueryParser("a");
 
         MiruFilter filter = parser.parse("(red AND b:blue) OR (b:yellow NOT yellow)");
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
         RoaringBitmap storage = new RoaringBitmap();
-        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, 9, -1);
+        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1);
         assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -102,14 +102,14 @@ public class MiruQueryParserTest {
         fieldIndex.put(1, term("green"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
         fieldIndex.put(1, term("blue"), RoaringBitmap.bitmapOf(2, 3, 6, 7));
 
-        MiruQueryParser parser = new MiruQueryParser("a");
+        LuceneBackedQueryParser parser = new LuceneBackedQueryParser("a");
 
         MiruFilter filter = parser.parse("(re* AND b:bl*) OR (b:ye* NOT ye*)");
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
         RoaringBitmap storage = new RoaringBitmap();
-        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, 9, -1);
+        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1);
         assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -175,17 +175,37 @@ public class MiruQueryParserTest {
         }
 
         @Override
-        public void append(int fieldId, MiruTermId termId, int... ids) throws Exception {
+        public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public void set(int fieldId, MiruTermId termId, int... ids) throws Exception {
+        public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
         public void remove(int fieldId, MiruTermId termId, int id) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public long getCardinality(int fieldId, MiruTermId termId, int id) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public long getGlobalCardinality(int fieldId, MiruTermId termId) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
     }

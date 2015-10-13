@@ -19,4 +19,9 @@ public class MetricsAnswerEvaluator implements MiruAnswerEvaluator<MetricsAnswer
     public boolean stopOnUnsolvablePartition() {
         return false;
     }
+
+    @Override
+    public boolean useParallelSolver() {
+        return false;
+    }
 }

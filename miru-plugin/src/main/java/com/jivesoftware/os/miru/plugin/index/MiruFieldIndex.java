@@ -17,13 +17,21 @@ public interface MiruFieldIndex<BM> {
 
     MiruInvertedIndex<BM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
 
-    void append(int fieldId, MiruTermId termId, int... ids) throws Exception;
+    void append(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception;
 
-    void set(int fieldId, MiruTermId termId, int... ids) throws Exception;
+    void set(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception;
 
     void remove(int fieldId, MiruTermId termId, int id) throws Exception;
 
     void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream) throws Exception;
+
+    long getCardinality(int fieldId, MiruTermId termId, int id) throws Exception;
+
+    long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids) throws Exception;
+
+    long getGlobalCardinality(int fieldId, MiruTermId termId) throws Exception;
+
+    void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception;
 
     class IndexKey {
         public final long id;

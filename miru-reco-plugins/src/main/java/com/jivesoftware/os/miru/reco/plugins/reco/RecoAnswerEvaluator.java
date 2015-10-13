@@ -33,4 +33,9 @@ public class RecoAnswerEvaluator implements MiruAnswerEvaluator<RecoAnswer> {
     public boolean stopOnUnsolvablePartition() {
         return false;
     }
+
+    @Override
+    public boolean useParallelSolver() {
+        return false;
+    }
 }

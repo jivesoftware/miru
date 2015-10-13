@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.600</version>
+        <version>0.601</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-service</artifactId>
-    <version>0.600</version>
+    <version>0.601</version>
     <properties>
         <module.type>service_lib</module.type>
     </properties>
@@ -52,12 +52,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.600</version>
+            <version>0.601</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.600</version>
+            <version>0.601</version>
         </dependency>
         <dependency>
             <groupId>com.googlecode.javaewah</groupId>
@@ -112,7 +112,6 @@
         <dependency>
             <groupId>net.sf.trove4j</groupId>
             <artifactId>trove4j</artifactId>
-            <version>3.0.3</version>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
@@ -160,25 +159,25 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.600</version>
+            <version>0.601</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-amza</artifactId>
-            <version>0.600</version>
+            <version>0.601</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
-            <version>0.600</version>
+            <version>0.601</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-writer</artifactId>
-            <version>0.600</version>
+            <version>0.601</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

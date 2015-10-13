@@ -31,7 +31,6 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Collections;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -85,7 +84,6 @@ public class MiruDistinctsNGTest {
     @Test(enabled = true)
     public void basicTest() throws Exception {
 
-        Random rand = new Random(1_234);
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
         long timespan = numberOfBuckets * snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(3), 0, 0);
         long intervalPerActivity = timespan / numberOfActivities;
