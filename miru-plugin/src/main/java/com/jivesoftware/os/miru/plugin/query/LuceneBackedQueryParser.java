@@ -7,6 +7,9 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import java.util.Collections;
 import java.util.List;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.snowball.SnowballAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
@@ -14,6 +17,7 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.util.Version;
 
 /**
  * Due to its reliance on the Lucene {@link QueryParser}, this class is NOT thread-safe.
@@ -21,9 +25,11 @@ import org.apache.lucene.search.TermQuery;
 public class LuceneBackedQueryParser implements MiruQueryParser {
 
     private final QueryParser parser;
+    //TODO it would be lovely if this was passed in
+    private final Analyzer analyzer = new SnowballAnalyzer(Version.LUCENE_4_10_3, "English", StandardAnalyzer.STOP_WORDS_SET);
 
     public LuceneBackedQueryParser(String defaultField) {
-        this.parser = new QueryParser(defaultField, new MiruBodyAnalyzer());
+        this.parser = new QueryParser(defaultField, analyzer);
     }
 
     @Override
