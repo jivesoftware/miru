@@ -5,7 +5,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
-import com.jivesoftware.os.miru.plugin.solution.MiruQueryParser;
+import com.jivesoftware.os.miru.plugin.query.MiruQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 
 /**

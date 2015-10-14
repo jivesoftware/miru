@@ -47,7 +47,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
-import com.jivesoftware.os.miru.plugin.solution.MiruQueryParser;
+import com.jivesoftware.os.miru.plugin.query.MiruQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
