@@ -5,7 +5,6 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.plugin.solution.MiruQueryParser;
 import java.util.Collections;
 import java.util.List;
 import org.apache.lucene.index.Term;
