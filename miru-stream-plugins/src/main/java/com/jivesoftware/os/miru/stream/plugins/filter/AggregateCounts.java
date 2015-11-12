@@ -6,23 +6,29 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
-import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -34,13 +40,16 @@ public class AggregateCounts {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
+    private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruProvider miruProvider;
 
     public AggregateCounts(MiruProvider miruProvider) {
         this.miruProvider = miruProvider;
     }
 
-    public <BM> AggregateCountsAnswer getAggregateCounts(MiruBitmaps<BM> bitmaps,
+    public <BM> AggregateCountsAnswer getAggregateCounts(MiruSolutionLog solutionLog,
+        MiruBitmaps<BM> bitmaps,
         MiruRequestContext<BM, ?> requestContext,
         MiruRequest<AggregateCountsQuery> request,
         Optional<AggregateCountsReport> lastReport,
@@ -49,6 +58,42 @@ public class AggregateCounts {
         throws Exception {
 
         log.debug("Get aggregate counts for answer={} request={}", answer, request);
+
+        Map<String, AggregateCountsAnswerConstraint> results = new HashMap<>();
+        for (Map.Entry<String, AggregateCountsQueryConstraint> entry : request.query.constraints.entrySet()) {
+
+            Optional<AggregateCountsReportConstraint> lastReportConstraint = Optional.absent();
+            if (lastReport.isPresent()) {
+                lastReportConstraint = Optional.of(lastReport.get().constraints.get(entry.getKey()));
+            }
+
+            results.put(entry.getKey(),
+                answerConstraint(solutionLog,
+                    bitmaps,
+                    requestContext,
+                    request.tenantId,
+                    request.query.streamId,
+                    entry.getValue(),
+                    lastReportConstraint,
+                    answer,
+                    counter));
+        }
+
+        boolean resultsExhausted = request.query.answerTimeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        AggregateCountsAnswer result = new AggregateCountsAnswer(results, resultsExhausted);
+        log.debug("result={}", result);
+        return result;
+    }
+
+    private final <BM> AggregateCountsAnswerConstraint answerConstraint(MiruSolutionLog solutionLog,
+        MiruBitmaps<BM> bitmaps,
+        MiruRequestContext<BM, ?> requestContext,
+        MiruTenantId tenantId,
+        MiruStreamId streamId,
+        AggregateCountsQueryConstraint constraint,
+        Optional<AggregateCountsReportConstraint> lastReport,
+        BM answer,
+        Optional<BM> counter) throws Exception {
 
         int collectedDistincts = 0;
         int skippedDistincts = 0;
@@ -61,16 +106,37 @@ public class AggregateCounts {
             aggregateTerms = Sets.newHashSet();
         }
 
+        if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
+            BM filtered = bitmaps.create();
+            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
+                constraint.constraintsFilter,
+                solutionLog, filtered, null, requestContext.getActivityIndex().lastId(), -1);
+
+            BM constrained = bitmaps.create();
+            List<BM> ands = Arrays.asList(answer, filtered);
+            bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
+            bitmaps.and(constrained, ands);
+            answer = constrained;
+
+            if (counter.isPresent()) {
+                constrained = bitmaps.create();
+                ands = Arrays.asList(answer, filtered);
+                bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
+                bitmaps.and(constrained, ands);
+                counter = Optional.of(constrained);
+            }
+        }
+
         List<AggregateCount> aggregateCounts = new ArrayList<>();
         MiruTermComposer termComposer = requestContext.getTermComposer();
         MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
+        int fieldId = requestContext.getSchema().getFieldId(constraint.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             BM unreadIndex = null;
-            if (!MiruStreamId.NULL.equals(request.query.streamId)) {
-                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex();
+            if (!MiruStreamId.NULL.equals(streamId)) {
+                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex();
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }
@@ -124,7 +190,7 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruInternalActivity activity = requestContext.getActivityIndex().get(request.tenantId, lastSetBit);
+                MiruInternalActivity activity = requestContext.getActivityIndex().get(tenantId, lastSetBit);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
@@ -160,7 +226,7 @@ public class AggregateCounts {
                     }
 
                     collectedDistincts++;
-                    if (collectedDistincts > request.query.startFromDistinctN) {
+                    if (collectedDistincts > constraint.startFromDistinctN) {
                         boolean unread = false;
                         if (unreadIndex != null) {
                             BM unreadAnswer = reusable.next();
@@ -171,13 +237,13 @@ public class AggregateCounts {
                         }
 
                         AggregateCount aggregateCount = new AggregateCount(
-                            miruProvider.getActivityInternExtern(request.tenantId).extern(activity, requestContext.getSchema()),
+                            miruProvider.getActivityInternExtern(tenantId).extern(activity, requestContext.getSchema()),
                             aggregateTerm,
                             beforeCount - afterCount,
                             unread);
                         aggregateCounts.add(aggregateCount);
 
-                        if (aggregateCounts.size() >= request.query.desiredNumberOfDistincts) {
+                        if (aggregateCounts.size() >= constraint.desiredNumberOfDistincts) {
                             break;
                         }
                     } else {
@@ -187,12 +253,8 @@ public class AggregateCounts {
                 }
             }
         }
-
-        boolean resultsExhausted = request.query.answerTimeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
-        AggregateCountsAnswer result = new AggregateCountsAnswer(ImmutableList.copyOf(aggregateCounts), ImmutableSet.copyOf(aggregateTerms),
-            skippedDistincts, collectedDistincts, resultsExhausted);
-        log.debug("result={}", result);
-        return result;
+        return new AggregateCountsAnswerConstraint(ImmutableList.copyOf(aggregateCounts),
+            ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
     }
 
 }

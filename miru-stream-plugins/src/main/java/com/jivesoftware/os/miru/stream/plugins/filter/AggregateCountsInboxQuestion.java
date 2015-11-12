@@ -6,12 +6,10 @@ import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -23,7 +21,9 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author jonathan
@@ -38,7 +38,6 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     private final MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition;
     private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
-    private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public AggregateCountsInboxQuestion(AggregateCounts aggregateCounts,
         MiruJustInTimeBackfillerizer backfillerizer,
@@ -74,7 +73,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         if (!context.getTimeIndex().intersects(request.query.answerTimeRange)) {
             LOG.debug("No answer time index intersection");
             return new MiruPartitionResponse<>(
-                aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.absent()),
+                aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, report, bitmaps.create(), Optional.absent()),
                 solutionLog.asList());
         }
 
@@ -95,15 +94,8 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
             return new MiruPartitionResponse<>(
-                aggregateCounts.getAggregateCounts(bitmaps, context, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
+                aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, report, bitmaps.create(), Optional.of(bitmaps.create())),
                 solutionLog.asList());
-        }
-
-        if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
-            ands.add(filtered);
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
@@ -135,7 +127,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         bitmaps.and(counter, counterAnds);
 
         return new MiruPartitionResponse<>(
-            aggregateCounts.getAggregateCounts(bitmaps, context, request, report, answer, Optional.of(counter)),
+            aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, report, answer, Optional.of(counter)),
             solutionLog.asList());
     }
 
@@ -150,10 +142,15 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     public Optional<AggregateCountsReport> createReport(Optional<AggregateCountsAnswer> answer) {
         Optional<AggregateCountsReport> report = Optional.absent();
         if (answer.isPresent()) {
-            report = Optional.of(new AggregateCountsReport(
-                answer.get().aggregateTerms,
-                answer.get().skippedDistincts,
-                answer.get().collectedDistincts));
+
+            Map<String, AggregateCountsReportConstraint> constraintReport = new HashMap<>();
+            for (Map.Entry<String, AggregateCountsAnswerConstraint> entry : answer.get().constraints.entrySet()) {
+                AggregateCountsAnswerConstraint value = entry.getValue();
+                constraintReport.put(entry.getKey(),
+                    new AggregateCountsReportConstraint(value.aggregateTerms, value.skippedDistincts, value.collectedDistincts));
+            }
+
+            report = Optional.of(new AggregateCountsReport(constraintReport));
         }
         return report;
     }

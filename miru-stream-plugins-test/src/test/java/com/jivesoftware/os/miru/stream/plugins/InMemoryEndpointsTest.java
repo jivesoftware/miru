@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -35,6 +36,7 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsEndpoints;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQueryConstraint;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -85,22 +87,22 @@ public class InMemoryEndpointsTest {
 
         List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
-                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                    .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
-                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                    .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
-                    .putFieldValue(OBJECT_ID.getFieldName(), "value2")
-                    .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
-                    .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
+                .putFieldValue(OBJECT_ID.getFieldName(), "value2")
+                .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
+                .build()
             )
         );
         Response addResponse = miruWriterEndpoints.addActivities(partitionedActivities);
@@ -122,14 +124,15 @@ public class InMemoryEndpointsTest {
                     Arrays.asList(
                         new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2"))),
                     null),
-                MiruFilter.NO_FILTER,
-                OBJECT_ID.getFieldName(),
-                0,
-                100),
+                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(
+                    MiruFilter.NO_FILTER,
+                    OBJECT_ID.getFieldName(),
+                    0,
+                    100))),
             MiruSolutionLogLevel.NONE));
         assertNotNull(getResponse);
         MiruResponse<AggregateCountsAnswer> result = objectMapper.readValue(getResponse.getEntity().toString(), type);
-        assertEquals(result.answer.collectedDistincts, 1);
+        assertEquals(result.answer.constraints.get("blah").collectedDistincts, 1);
 
         // Request 2
         getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>(tenantId,
@@ -145,14 +148,15 @@ public class InMemoryEndpointsTest {
                         new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
                         new MiruFieldFilter(MiruFieldType.primary, AUTHOR_ID.getFieldName(), ImmutableList.of("value2"))),
                     null),
-                MiruFilter.NO_FILTER,
-                OBJECT_ID.getFieldName(),
-                0,
-                100),
+                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(
+                    MiruFilter.NO_FILTER,
+                    OBJECT_ID.getFieldName(),
+                    0,
+                    100))),
             MiruSolutionLogLevel.NONE));
         assertNotNull(getResponse);
         result = objectMapper.readValue(getResponse.getEntity().toString(), type);
-        assertEquals(result.answer.collectedDistincts, 2);
+        assertEquals(result.answer.constraints.get("blah").collectedDistincts, 2);
     }
 
 }
