@@ -23,9 +23,11 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCount;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQueryConstraint;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
@@ -151,17 +153,17 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                             timeRange,
                                             MiruTimeRange.ALL_TIME,
                                             streamFilter,
-                                            constraintsFilter,
-                                            input.field,
-                                            0,
-                                            input.count),
+                                            ImmutableMap.of(input.field, new AggregateCountsQueryConstraint(constraintsFilter,
+                                                input.field,
+                                                0,
+                                                input.count))),
                                         MiruSolutionLogLevel.valueOf(input.logLevel)),
                                     endpoint,
                                     MiruResponse.class,
-                                    new Class[] { AggregateCountsAnswer.class },
+                                    new Class[]{AggregateCountsAnswer.class},
                                     null);
                                 if (aggregatesResponse != null && aggregatesResponse.answer != null) {
-                                    ImmutableList<AggregateCountsAnswer.AggregateCount> results = aggregatesResponse.answer.results;
+                                    ImmutableList<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
                                     if (results.size() < input.count) {
                                         timeRange = null;
                                     } else {
@@ -174,7 +176,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                     log.warn("Empty aggregate counts response from {}, trying another", requestHelper);
                                 }
                             } catch (Exception e) {
-                                log.warn("Failed aggregate counts request to {}, trying another", new Object[] { requestHelper }, e);
+                                log.warn("Failed aggregate counts request to {}, trying another", new Object[]{requestHelper}, e);
                             }
                         }
                     }
@@ -188,7 +190,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                     List<Map<String, Object>> summaries = Lists.newArrayList();
                     for (MiruResponse<AggregateCountsAnswer> response : responses) {
                         List<Map<String, Object>> page = Lists.newArrayList();
-                        for (AggregateCountsAnswer.AggregateCount result : response.answer.results) {
+                        for (AggregateCount result : response.answer.constraints.get(input.field).results) {
                             long time = result.mostRecentActivity.time;
                             long jiveEpochTime = snowflakeIdPacker.unpack(time)[0];
                             String clockTime = new ISO8601DateFormat().format(new Date(jiveEpochTime + JiveEpochTimestampProvider.JIVE_EPOCH));

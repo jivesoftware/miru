@@ -6,6 +6,7 @@
 package com.jivesoftware.os.miru.stream.plugins;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -37,11 +38,12 @@ import com.jivesoftware.os.miru.stream.plugins.count.DistinctCount;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountAnswer;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountInjectable;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCount;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCounts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
-import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQueryConstraint;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -89,7 +91,7 @@ public class MiruStreamServiceNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
 
-        this.fieldDefinitions = new MiruFieldDefinition[] {
+        this.fieldDefinitions = new MiruFieldDefinition[]{
             new MiruFieldDefinition(0, "verb", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(1, "container", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
             new MiruFieldDefinition(2, "target", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
@@ -169,9 +171,9 @@ public class MiruStreamServiceNGTest {
                         new MiruTimeRange(0, capacity),
                         new MiruTimeRange(0, capacity),
                         filter,
-                        MiruFilter.NO_FILTER,
-                        "container",
-                        0, 51),
+                        ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
+                            "container",
+                            0, 51))),
                     MiruSolutionLogLevel.NONE);
 
                 long start = System.currentTimeMillis();
@@ -182,8 +184,8 @@ public class MiruStreamServiceNGTest {
                 //                    System.out.println(a);
                 //                }
                 System.out.println("\t\t\tQuery:" + (q + 1) + " latency:" + elapse
-                    + " count:" + results.answer.results.size()
-                    + " all:" + formatter.format(count(results.answer.results))
+                    + " count:" + results.answer.constraints.get("blah").results.size()
+                    + " all:" + formatter.format(count(results.answer.constraints.get("blah").results))
                     + " indexSizeToLatencyRatio:" + (indexSize / elapse));
             }
         }
@@ -207,8 +209,8 @@ public class MiruStreamServiceNGTest {
      * schema.put("tag", 3); <br>
      * schema.put("author", 4); <br>
      */
-    private final int[] fieldCardinality = new int[] { 10, 10_000, 1_000_000, 10_000, 1_000 };
-    private final int[] fieldFrequency = new int[] { 1, 1, 1, 10, 1 };
+    private final int[] fieldCardinality = new int[]{10, 10_000, 1_000_000, 10_000, 1_000};
+    private final int[] fieldFrequency = new int[]{1, 1, 1, 10, 1};
 
     private MiruPartitionedActivity generateActivity(int time, Random rand) {
         Map<String, List<String>> fieldsValues = Maps.newHashMap();
@@ -271,15 +273,15 @@ public class MiruStreamServiceNGTest {
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
-                streamId,
-                new MiruTimeRange(0, 1_000),
-                new MiruTimeRange(0, 1_000),
-                filter,
-                MiruFilter.NO_FILTER,
-                "container", 0, 10),
+                    streamId,
+                    new MiruTimeRange(0, 1_000),
+                    new MiruTimeRange(0, 1_000),
+                    filter,
+                    ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
+                        "container", 0, 10))),
                 MiruSolutionLogLevel.NONE);
             MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
-            for (AggregateCount a : results.answer.results) {
+            for (AggregateCount a : results.answer.constraints.get("blah").results) {
                 System.out.println(a);
             }
         }
@@ -314,15 +316,15 @@ public class MiruStreamServiceNGTest {
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
-                streamId,
-                new MiruTimeRange(0, 1_000),
-                new MiruTimeRange(0, 1_000),
-                filter,
-                MiruFilter.NO_FILTER,
-                "container", 0, 10),
+                    streamId,
+                    new MiruTimeRange(0, 1_000),
+                    new MiruTimeRange(0, 1_000),
+                    filter,
+                    ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
+                        "container", 0, 10))),
                 MiruSolutionLogLevel.NONE);
             MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
-            for (AggregateCount a : results.answer.results) {
+            for (AggregateCount a : results.answer.constraints.get("blah").results) {
                 System.out.println(a);
             }
         }
@@ -360,7 +362,7 @@ public class MiruStreamServiceNGTest {
             fieldsValues.put("tag", Arrays.asList(String.valueOf(tag)));
         }
         fieldsValues.put("author", Arrays.asList(String.valueOf(author)));
-        String[] authz = new String[] { "aaabbbcccddd" };
+        String[] authz = new String[]{"aaabbbcccddd"};
         MiruActivity activity = new MiruActivity(tenant1, time, authz, 0, fieldsValues, Collections.<String, List<String>>emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }
