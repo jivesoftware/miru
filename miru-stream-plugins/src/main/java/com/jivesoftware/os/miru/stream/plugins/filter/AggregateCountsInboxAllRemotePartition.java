@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.FILTER_PREFIX;
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.INBOX_ALL_QUERY_ENDPOINT;
@@ -39,7 +38,8 @@ public class AggregateCountsInboxAllRemotePartition implements MiruRemotePartiti
         MiruPartitionId partitionId,
         MiruRequest<AggregateCountsQuery> request,
         Optional<AggregateCountsReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(host,
+        return remotePartitionReader.read("aggregateCountsInboxAll",
+            host,
             getEndpoint(partitionId),
             request,
             AggregateCountsAnswer.class,

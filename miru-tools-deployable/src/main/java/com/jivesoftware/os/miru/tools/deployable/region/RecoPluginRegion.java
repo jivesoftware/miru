@@ -147,7 +147,10 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                         try {
                             @SuppressWarnings("unchecked")
                             MiruResponse<RecoAnswer> recoResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                new MiruRequest<>("toolsReco",
+                                    tenantId,
+                                    MiruActorId.NOT_PROVIDED,
+                                    MiruAuthzExpression.NOT_PROVIDED,
                                     new RecoQuery(
                                         timeRange,
                                         removeDistinctsQuery,

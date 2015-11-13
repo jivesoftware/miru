@@ -203,7 +203,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
 
                         @SuppressWarnings("unchecked")
                         MiruResponse<SeaAnomalyAnswer> miruResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(tenantId,
+                            new MiruRequest<>("anomalyQuery",
+                                tenantId,
                                 MiruActorId.NOT_PROVIDED,
                                 MiruAuthzExpression.NOT_PROVIDED,
                                 new SeaAnomalyQuery(

@@ -14,7 +14,8 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 
 public interface MiruRemotePartitionReader {
 
-    <Q, A, P> MiruPartitionResponse<A> read(MiruHost host,
+    <Q, A, P> MiruPartitionResponse<A> read(String queryKey,
+        MiruHost host,
         String endpoint,
         MiruRequest<Q> request,
         Class<A> answerClass,

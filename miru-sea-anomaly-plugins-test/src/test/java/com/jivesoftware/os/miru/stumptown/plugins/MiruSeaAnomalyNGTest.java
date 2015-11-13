@@ -124,7 +124,8 @@ public class MiruSeaAnomalyNGTest {
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.primary, "user", ImmutableList.of(user));
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
-            MiruRequest<SeaAnomalyQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<SeaAnomalyQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new SeaAnomalyQuery(

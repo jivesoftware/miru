@@ -213,7 +213,7 @@ public class RecoCorrectnessTest {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruResponse<RecoAnswer> response = recoInjectable.collaborativeFilteringRecommendations(new MiruRequest<>(
+            MiruResponse<RecoAnswer> response = recoInjectable.collaborativeFilteringRecommendations(new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
@@ -270,7 +270,7 @@ public class RecoCorrectnessTest {
                 null);
 
             long s = System.currentTimeMillis();
-            MiruResponse<TrendingAnswer> response = trendingInjectable.scoreTrending(new MiruRequest<>(
+            MiruResponse<TrendingAnswer> response = trendingInjectable.scoreTrending(new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,

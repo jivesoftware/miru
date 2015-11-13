@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 /**
  *
@@ -37,7 +36,8 @@ public class TrendingRemotePartition implements MiruRemotePartition<TrendingQuer
         MiruPartitionId partitionId,
         MiruRequest<TrendingQuery> request,
         Optional<TrendingReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(host,
+        return remotePartitionReader.read("trending",
+            host,
             getEndpoint(partitionId),
             request,
             AnalyticsAnswer.class,

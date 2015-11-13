@@ -41,7 +41,8 @@ public class UniquesInjectable {
                 uniquesQuery.constraintsFilter,
                 uniquesQuery.prefixes);
 
-            MiruRequest<DistinctsQuery> distinctsRequest = new MiruRequest<>(request.tenantId,
+            MiruRequest<DistinctsQuery> distinctsRequest = new MiruRequest<>(request.name,
+                request.tenantId,
                 request.actorId,
                 request.authzExpression,
                 distinctsQuery, request.logLevel);

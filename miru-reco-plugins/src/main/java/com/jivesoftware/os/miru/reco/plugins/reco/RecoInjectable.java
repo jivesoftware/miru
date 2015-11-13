@@ -57,6 +57,7 @@ public class RecoInjectable {
                     new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringDistincts",
                         new DistinctsQuestion(distincts,
                             new MiruRequest<>(
+                                request.name,
                                 request.tenantId,
                                 request.actorId,
                                 request.authzExpression,

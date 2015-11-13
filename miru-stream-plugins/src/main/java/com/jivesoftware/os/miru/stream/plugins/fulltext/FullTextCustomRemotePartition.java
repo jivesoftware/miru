@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 import static com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextConstants.FULLTEXT_PREFIX;
@@ -39,7 +38,13 @@ public class FullTextCustomRemotePartition implements MiruRemotePartition<FullTe
         MiruPartitionId partitionId,
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(host, getEndpoint(partitionId), request, FullTextAnswer.class, report, endPointMetrics,
+        return remotePartitionReader.read("fullText",
+            host,
+            getEndpoint(partitionId),
+            request,
+            FullTextAnswer.class,
+            report,
+            endPointMetrics,
             FullTextAnswer.EMPTY_RESULTS);
     }
 }

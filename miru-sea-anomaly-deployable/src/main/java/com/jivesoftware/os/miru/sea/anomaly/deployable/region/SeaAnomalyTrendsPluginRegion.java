@@ -106,7 +106,8 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                         try {
                             @SuppressWarnings("unchecked")
                             MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId,
+                                new MiruRequest<>("anomalyTrends",
+                                    tenantId,
                                     MiruActorId.NOT_PROVIDED,
                                     MiruAuthzExpression.NOT_PROVIDED,
                                     new TrendingQuery(Collections.singleton(Strategy.LINEAR_REGRESSION),

@@ -87,22 +87,22 @@ public class InMemoryEndpointsTest {
 
         List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                    .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                    .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value2")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value2")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
+                    .build()
             )
         );
         Response addResponse = miruWriterEndpoints.addActivities(partitionedActivities);
@@ -112,7 +112,8 @@ public class InMemoryEndpointsTest {
         JavaType type = objectMapper.getTypeFactory().constructParametricType(MiruResponse.class, AggregateCountsAnswer.class);
 
         // Request 1
-        Response getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>(tenantId,
+        Response getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>("test",
+            tenantId,
             MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new AggregateCountsQuery(
@@ -135,7 +136,8 @@ public class InMemoryEndpointsTest {
         assertEquals(result.answer.constraints.get("blah").collectedDistincts, 1);
 
         // Request 2
-        getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>(tenantId,
+        getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>("test",
+            tenantId,
             MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new AggregateCountsQuery(

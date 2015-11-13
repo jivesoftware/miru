@@ -204,7 +204,10 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
 
                     @SuppressWarnings("unchecked")
                     MiruResponse<AnalyticsAnswer> analyticsResponse = requestHelper.executeRequest(
-                        new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                        new MiruRequest<>("toolsRealwave",
+                            tenantId,
+                            MiruActorId.NOT_PROVIDED,
+                            MiruAuthzExpression.NOT_PROVIDED,
                             new AnalyticsQuery(
                                 new MiruTimeRange(packLookbackTime, packCeilingTime),
                                 input.buckets,

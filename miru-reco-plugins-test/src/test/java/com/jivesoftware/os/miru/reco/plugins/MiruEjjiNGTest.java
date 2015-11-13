@@ -153,7 +153,8 @@ public class MiruEjjiNGTest {
             List<String> sources = Arrays.asList(
                 String.valueOf(rand.nextInt(numberOfStreamSources)),
                 String.valueOf(rand.nextInt(numberOfStreamSources)));
-            MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<DistinctsQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctsQuery(new MiruTimeRange(initialTime - 1, time.get() + 1),
