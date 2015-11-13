@@ -33,7 +33,8 @@ public class RecoPlugin implements MiruPlugin<RecoEndpoints, RecoInjectable> {
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        return Collections.singletonList(new RecoRemotePartition(new JsonRemotePartitionReader()));
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        return Collections.singletonList(new RecoRemotePartition(
+            new JsonRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache())));
     }
 }

@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -11,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.Question;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 /**
  *
@@ -40,10 +40,10 @@ public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnsw
     }
 
     @Override
-    public MiruPartitionResponse<DistinctsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<DistinctsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<DistinctsReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override

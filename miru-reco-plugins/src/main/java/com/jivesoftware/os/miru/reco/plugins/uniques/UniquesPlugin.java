@@ -30,7 +30,7 @@ public class UniquesPlugin implements MiruPlugin<UniquesEndpoints, UniquesInject
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
         return Collections.emptyList();
     }
 }

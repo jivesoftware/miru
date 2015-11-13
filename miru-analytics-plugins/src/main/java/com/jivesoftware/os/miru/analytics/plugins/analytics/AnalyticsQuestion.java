@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -20,7 +21,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -154,10 +154,10 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
     }
 
     @Override
-    public MiruPartitionResponse<AnalyticsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<AnalyticsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<AnalyticsReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override

@@ -61,7 +61,7 @@ public class AnalyticsInjectable {
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreTrending", new AnalyticsQuestion(trending,
+                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending,
                     requestAndReport.request,
                     miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),

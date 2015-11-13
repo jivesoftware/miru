@@ -30,7 +30,8 @@ public class AnalyticsPlugin implements MiruPlugin<AnalyticsEndpoints, Analytics
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        return Collections.singletonList(new AnalyticsRemotePartition(new SnappyJsonRemotePartitionReader()));
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        return Collections.singletonList(new AnalyticsRemotePartition(
+            new SnappyJsonRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache())));
     }
 }

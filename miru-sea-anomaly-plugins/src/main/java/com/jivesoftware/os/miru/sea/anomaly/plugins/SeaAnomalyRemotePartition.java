@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.sea.anomaly.plugins;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -33,11 +34,11 @@ public class SeaAnomalyRemotePartition implements MiruRemotePartition<SeaAnomaly
     }
 
     @Override
-    public MiruPartitionResponse<SeaAnomalyAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<SeaAnomalyAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<SeaAnomalyQuery> request,
         Optional<SeaAnomalyReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient,
+        return remotePartitionReader.read(host,
             getEndpoint(partitionId),
             request,
             SeaAnomalyAnswer.class,

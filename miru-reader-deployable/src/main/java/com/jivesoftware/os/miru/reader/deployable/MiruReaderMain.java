@@ -86,9 +86,7 @@ import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.DirectBufferHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
@@ -99,7 +97,6 @@ import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescripto
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import org.reflections.Reflections;
@@ -183,9 +180,6 @@ public class MiruReaderMain {
             MiruServiceConfig miruServiceConfig = deployable.config(MiruServiceConfig.class);
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
 
-            HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-                .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
-
             MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
 
             final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
@@ -214,6 +208,11 @@ public class MiruReaderMain {
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
+            TenantAwareHttpClient<String> readerHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
+                    .getConnections("miru-reader", "main"),
+                clientHealthProvider,
+                10, 10_000);  // TODO expose to conf
+
             // TODO add fall back to config
             final MiruStats miruStats = new MiruStats();
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
@@ -236,7 +235,6 @@ public class MiruReaderMain {
                     rcvsWALClient,
                     new RCVSSipTrackerFactory(),
                     new RCVSSipIndexMarshaller(),
-                    httpClientFactory,
                     miruResourceLocator,
                     termComposer,
                     internExtern,
@@ -255,7 +253,6 @@ public class MiruReaderMain {
                     amzaWALClient,
                     new AmzaSipTrackerFactory(),
                     new AmzaSipIndexMarshaller(),
-                    httpClientFactory,
                     miruResourceLocator,
                     termComposer,
                     internExtern,
@@ -301,6 +298,8 @@ public class MiruReaderMain {
 
             Map<Class<?>, MiruRemotePartition<?, ?, ?>> pluginRemotesMap = Maps.newConcurrentMap();
 
+            Map<MiruHost, ConnectionDescriptorSelectiveStrategy> readerStrategyCache = Maps.newConcurrentMap();
+
             MiruProvider<Miru> miruProvider = new MiruProvider<Miru>() {
                 @Override
                 public Miru getMiru(MiruTenantId tenantId) {
@@ -336,6 +335,16 @@ public class MiruReaderMain {
                 public <R extends MiruRemotePartition<?, ?, ?>> R getRemotePartition(Class<R> remotePartitionClass) {
                     return (R) pluginRemotesMap.get(remotePartitionClass);
                 }
+
+                @Override
+                public TenantAwareHttpClient<String> getReaderHttpClient() {
+                    return readerHttpClient;
+                }
+
+                @Override
+                public Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache() {
+                    return readerStrategyCache;
+                }
             };
 
             for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {
@@ -370,7 +379,7 @@ public class MiruReaderMain {
         for (MiruEndpointInjectable<?> miruEndpointInjectable : injectables) {
             deployable.addInjectables(miruEndpointInjectable.getInjectableClass(), miruEndpointInjectable.getInjectable());
         }
-        for (MiruRemotePartition<?, ?, ?> remotePartition : plugin.getRemotePartitions()) {
+        for (MiruRemotePartition<?, ?, ?> remotePartition : plugin.getRemotePartitions(miruProvider)) {
             pluginRemotesMap.put(remotePartition.getClass(), remotePartition);
         }
     }

@@ -30,7 +30,8 @@ public class MetricsPlugin implements MiruPlugin<MetricsEndpoints, MetricsInject
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        return Collections.singletonList(new MetricsRemotePartition(new JsonRemotePartitionReader()));
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        return Collections.singletonList(new MetricsRemotePartition(
+            new JsonRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache())));
     }
 }

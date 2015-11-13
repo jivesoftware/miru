@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -34,11 +35,11 @@ public class RecoRemotePartition implements MiruRemotePartition<RecoQuery, RecoA
     }
 
     @Override
-    public MiruPartitionResponse<RecoAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<RecoAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<RecoQuery> request,
         Optional<RecoReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient, getEndpoint(partitionId), request, RecoAnswer.class, report, endPointMetrics, RecoAnswer.EMPTY_RESULTS);
+        return remotePartitionReader.read(host, getEndpoint(partitionId), request, RecoAnswer.class, report, endPointMetrics, RecoAnswer.EMPTY_RESULTS);
     }
 
 }

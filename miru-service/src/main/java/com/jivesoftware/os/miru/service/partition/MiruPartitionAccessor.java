@@ -589,11 +589,6 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             }
 
             @Override
-            public HttpClient getHttpClient() {
-                return null; // never talk to a local partition via reader
-            }
-
-            @Override
             public void close() throws Exception {
                 readSemaphore.release();
             }

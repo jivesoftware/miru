@@ -46,8 +46,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
-import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.plugin.query.MiruQueryParser;
+import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
@@ -71,13 +71,16 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall;
+import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.io.File;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -124,9 +127,6 @@ public class MiruPluginTestBootstrap {
             LoggerConfig loggerConfig = context.getConfiguration().getLoggerConfig("");
             loggerConfig.setLevel(Level.WARN);
         }
-
-        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
 
         ObjectMapper mapper = new ObjectMapper();
 
@@ -205,7 +205,6 @@ public class MiruPluginTestBootstrap {
             walClient,
             new RCVSSipTrackerFactory(),
             new RCVSSipIndexMarshaller(),
-            httpClientFactory,
             new MiruTempDirectoryResourceLocator(),
             termComposer,
             activityInternExtern,
@@ -256,6 +255,16 @@ public class MiruPluginTestBootstrap {
 
             @Override
             public <R extends MiruRemotePartition<?, ?, ?>> R getRemotePartition(Class<R> remotePartitionClass) {
+                return null;
+            }
+
+            @Override
+            public TenantAwareHttpClient<String> getReaderHttpClient() {
+                return null;
+            }
+
+            @Override
+            public Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache() {
                 return null;
             }
         };

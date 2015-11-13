@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stumptown.plugins;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -34,11 +35,11 @@ public class StumptownRemotePartition implements MiruRemotePartition<StumptownQu
     }
 
     @Override
-    public MiruPartitionResponse<StumptownAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<StumptownAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<StumptownQuery> request,
         Optional<StumptownReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient,
+        return remotePartitionReader.read(host,
             getEndpoint(partitionId),
             request,
             StumptownAnswer.class,
