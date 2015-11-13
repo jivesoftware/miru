@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 import static com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT;
 
@@ -38,7 +37,8 @@ public class SeaAnomalyRemotePartition implements MiruRemotePartition<SeaAnomaly
         MiruPartitionId partitionId,
         MiruRequest<SeaAnomalyQuery> request,
         Optional<SeaAnomalyReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(host,
+        return remotePartitionReader.read("anomaly",
+            host,
             getEndpoint(partitionId),
             request,
             SeaAnomalyAnswer.class,

@@ -58,7 +58,7 @@ public class RemoteStreamHttpTest {
     }
 
     private void query(HttpRequestHelper requestHelper, MiruTenantId tenantId) throws Exception {
-        MiruRequest<AggregateCountsQuery> query = new MiruRequest<>("test",
+        MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
             tenantId,
             MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,

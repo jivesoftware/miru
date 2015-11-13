@@ -60,6 +60,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             distinctTerms = Collections.emptyList();
         } else if (request.query.distinctQueries.size() == 1) {
             DistinctsQuestion distinctsQuestion = new DistinctsQuestion(distincts, new MiruRequest<>(
+                request.name,
                 request.tenantId,
                 request.actorId,
                 request.authzExpression,
@@ -74,6 +75,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             Set<String> joinTerms = null;
             for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
                 DistinctsQuestion distinctsQuestion = new DistinctsQuestion(distincts, new MiruRequest<>(
+                    request.name,
                     request.tenantId,
                     request.actorId,
                     request.authzExpression,
@@ -104,6 +106,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         }
 
         AnalyticsQuestion analyticsQuestion = new AnalyticsQuestion(analytics, new MiruRequest<>(
+            request.name,
             request.tenantId,
             request.actorId,
             request.authzExpression,

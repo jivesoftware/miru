@@ -197,7 +197,8 @@ public class MiruFullTextNGTest {
 
         for (int i = 0; i < numberOfQueries; i++) {
             long s = System.currentTimeMillis();
-            MiruRequest<FullTextQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<FullTextQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new FullTextQuery(timeRange, "text", queryAnd(rand, numberOfTermsPerQuery), MiruFilter.NO_FILTER, strategy, 100),

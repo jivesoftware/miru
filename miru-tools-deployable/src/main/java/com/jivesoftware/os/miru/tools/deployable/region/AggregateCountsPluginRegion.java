@@ -147,7 +147,10 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                             try {
                                 @SuppressWarnings("unchecked")
                                 MiruResponse<AggregateCountsAnswer> aggregatesResponse = requestHelper.executeRequest(
-                                    new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                    new MiruRequest<>("toolsAggregateCounts",
+                                        tenantId,
+                                        MiruActorId.NOT_PROVIDED,
+                                        MiruAuthzExpression.NOT_PROVIDED,
                                         new AggregateCountsQuery(
                                             streamId,
                                             timeRange,
@@ -160,7 +163,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                         MiruSolutionLogLevel.valueOf(input.logLevel)),
                                     endpoint,
                                     MiruResponse.class,
-                                    new Class[]{AggregateCountsAnswer.class},
+                                    new Class[] { AggregateCountsAnswer.class },
                                     null);
                                 if (aggregatesResponse != null && aggregatesResponse.answer != null) {
                                     ImmutableList<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
@@ -176,7 +179,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                     log.warn("Empty aggregate counts response from {}, trying another", requestHelper);
                                 }
                             } catch (Exception e) {
-                                log.warn("Failed aggregate counts request to {}, trying another", new Object[]{requestHelper}, e);
+                                log.warn("Failed aggregate counts request to {}, trying another", new Object[] { requestHelper }, e);
                             }
                         }
                     }

@@ -163,7 +163,8 @@ public class MiruDistinctsNGTest {
 
         for (MiruFieldDefinition fieldDefinition : miruSchema.getFieldDefinitions()) {
             long s = System.currentTimeMillis();
-            MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<DistinctsQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, null),
@@ -198,7 +199,8 @@ public class MiruDistinctsNGTest {
 
         long s = System.currentTimeMillis();
         Set<String> types = Sets.newHashSet("0", "1", "2", "3", "8", "-1");
-        MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+        MiruRequest<DistinctsQuery> request = new MiruRequest<>("test",
+            tenant1,
             MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(types)),
@@ -237,7 +239,8 @@ public class MiruDistinctsNGTest {
 
         long s = System.currentTimeMillis();
         Set<String> wildcards = Sets.newHashSet("ca", "do", "el", "mo");
-        MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+        MiruRequest<DistinctsQuery> request = new MiruRequest<>("test",
+            tenant1,
             MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(wildcards)),

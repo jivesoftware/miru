@@ -119,7 +119,8 @@ public class MiruAnalyticsNGTest {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruRequest<AnalyticsQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<AnalyticsQuery> request = new MiruRequest<>("test",
+                tenant1,
                 new MiruActorId(new byte[] { 1 }),
                 MiruAuthzExpression.NOT_PROVIDED,
                 new AnalyticsQuery(

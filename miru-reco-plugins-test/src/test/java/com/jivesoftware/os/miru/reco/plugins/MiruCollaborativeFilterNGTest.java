@@ -185,7 +185,7 @@ public class MiruCollaborativeFilterNGTest {
             MiruFilter scorableFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(docTypesFieldFilter, activityTypesFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(new MiruRequest<>(
+            MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,

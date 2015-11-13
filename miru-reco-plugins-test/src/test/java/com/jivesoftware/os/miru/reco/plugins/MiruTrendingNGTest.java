@@ -171,7 +171,8 @@ public class MiruTrendingNGTest {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruRequest<TrendingQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<TrendingQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new TrendingQuery(Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),

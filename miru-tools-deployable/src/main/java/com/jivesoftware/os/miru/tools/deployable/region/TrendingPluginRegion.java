@@ -130,7 +130,10 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                             MiruTimeRange timeRange = new MiruTimeRange(fromTime, toTime);
                             @SuppressWarnings("unchecked")
                             MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                new MiruRequest<>("toolsTrending",
+                                    tenantId,
+                                    MiruActorId.NOT_PROVIDED,
+                                    MiruAuthzExpression.NOT_PROVIDED,
                                     new TrendingQuery(
                                         Collections.singleton(Strategy.LINEAR_REGRESSION),
                                         timeRange,

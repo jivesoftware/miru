@@ -143,7 +143,10 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                     try {
                         @SuppressWarnings("unchecked")
                         MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                            new MiruRequest<>("stumptownTrends",
+                                tenantId,
+                                MiruActorId.NOT_PROVIDED,
+                                MiruAuthzExpression.NOT_PROVIDED,
                                 new TrendingQuery(Collections.singleton(strategy),
                                     miruTimeRange,
                                     null,

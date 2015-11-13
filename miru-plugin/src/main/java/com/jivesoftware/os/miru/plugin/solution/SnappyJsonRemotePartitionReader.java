@@ -47,7 +47,8 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
         this.strategyPerHost = strategyPerHost;
     }
 
-    public <Q, A, P> MiruPartitionResponse<A> read(MiruHost host,
+    public <Q, A, P> MiruPartitionResponse<A> read(String queryKey,
+        MiruHost host,
         String endpoint,
         MiruRequest<Q> request,
         Class<A> answerClass,
@@ -64,7 +65,7 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
             byte[] postBytes = pack(requestAndReport);
             return unpack(
                 readerHttpClient.call("", strategy,
-                    endpoint,
+                    queryKey + ":" + request.name + ":snappyJson",
                     httpClient1 -> {
                         HttpResponse httpResponse = httpClient1.postBytes(endpoint, postBytes, null);
                         if (RESPONSE_MAPPER.isSuccessStatusCode(httpResponse.getStatusCode())) {

@@ -123,7 +123,10 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                         try {
                             @SuppressWarnings("unchecked")
                             MiruResponse<FullTextAnswer> fullTextResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                new MiruRequest<>("toolsFullText",
+                                    tenantId,
+                                    MiruActorId.NOT_PROVIDED,
+                                    MiruAuthzExpression.NOT_PROVIDED,
                                     new FullTextQuery(
                                         new MiruTimeRange(fromTime, toTime),
                                         input.defaultField,
@@ -134,7 +137,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT,
                                 MiruResponse.class,
-                                new Class[]{FullTextAnswer.class},
+                                new Class[] { FullTextAnswer.class },
                                 null);
                             response = fullTextResponse;
                             if (response != null && response.answer != null) {
@@ -143,7 +146,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                                 log.warn("Empty full text response from {}, trying another", requestHelper);
                             }
                         } catch (Exception e) {
-                            log.warn("Failed full text request to {}, trying another", new Object[]{requestHelper}, e);
+                            log.warn("Failed full text request to {}, trying another", new Object[] { requestHelper }, e);
                         }
                     }
                 }

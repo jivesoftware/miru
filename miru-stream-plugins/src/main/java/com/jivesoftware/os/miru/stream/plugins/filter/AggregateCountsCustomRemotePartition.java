@@ -38,7 +38,13 @@ public class AggregateCountsCustomRemotePartition implements MiruRemotePartition
         MiruPartitionId partitionId,
         MiruRequest<AggregateCountsQuery> request,
         Optional<AggregateCountsReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(host, getEndpoint(partitionId), request, AggregateCountsAnswer.class, report, endPointMetrics,
+        return remotePartitionReader.read("aggregateCountsCustom",
+            host,
+            getEndpoint(partitionId),
+            request,
+            AggregateCountsAnswer.class,
+            report,
+            endPointMetrics,
             AggregateCountsAnswer.EMPTY_RESULTS);
     }
 }

@@ -46,7 +46,8 @@ public class JsonRemotePartitionReader implements MiruRemotePartitionReader {
     }
 
     @Override
-    public <Q, A, P> MiruPartitionResponse<A> read(MiruHost host,
+    public <Q, A, P> MiruPartitionResponse<A> read(String queryKey,
+        MiruHost host,
         String endpoint,
         MiruRequest<Q> request,
         Class<A> answerClass,
@@ -61,7 +62,7 @@ public class JsonRemotePartitionReader implements MiruRemotePartitionReader {
             MiruRequestAndReport<Q, P> params = new MiruRequestAndReport<>(request, report.orNull());
             String jsonParams = MAPPER.writeValueAsString(params);
             return readerHttpClient.call("", strategy,
-                endpoint,
+                queryKey + ":" + request.name + ":json",
                 httpClient1 -> {
                     HttpResponse httpResponse = httpClient1.postJson(endpoint, jsonParams, null);
                     if (RESPONSE_MAPPER.isSuccessStatusCode(httpResponse.getStatusCode())) {

@@ -202,7 +202,10 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
                             @SuppressWarnings("unchecked")
                             MiruResponse<AnalyticsAnswer> analyticsResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                new MiruRequest<>("toolsAnalytics",
+                                    tenantId,
+                                    MiruActorId.NOT_PROVIDED,
+                                    MiruAuthzExpression.NOT_PROVIDED,
                                     new AnalyticsQuery(
                                         new MiruTimeRange(fromTime, toTime),
                                         input.buckets,
