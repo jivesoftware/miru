@@ -14,5 +14,5 @@ public interface MiruPlugin<E, I> {
 
     Collection<MiruEndpointInjectable<I>> getInjectables(MiruProvider<? extends Miru> miruProvider);
 
-    Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions();
+    Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider);
 }

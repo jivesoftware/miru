@@ -55,6 +55,7 @@ import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +79,6 @@ public class MiruServiceInitializer {
         MiruWALClient<C, S> walClient,
         MiruSipTrackerFactory<S> sipTrackerFactory,
         MiruSipIndexMarshaller<S> sipIndexMarshaller,
-        HttpClientFactory httpClientFactory,
         MiruResourceLocator resourceLocator,
         MiruTermComposer termComposer,
         MiruActivityInternExtern internExtern,
@@ -222,7 +222,7 @@ public class MiruServiceInitializer {
             indexRepairs,
             miruMergeChits);
 
-        MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory(httpClientFactory);
+        MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory();
 
         MiruTenantTopologyFactory tenantTopologyFactory = new MiruTenantTopologyFactory(config,
             bitmapsProvider,

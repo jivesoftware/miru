@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -34,11 +35,11 @@ public class AnalyticsRemotePartition implements MiruRemotePartition<AnalyticsQu
     }
 
     @Override
-    public MiruPartitionResponse<AnalyticsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<AnalyticsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<AnalyticsQuery> request,
         Optional<AnalyticsReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient,
+        return remotePartitionReader.read(host,
             getEndpoint(partitionId),
             request,
             AnalyticsAnswer.class,

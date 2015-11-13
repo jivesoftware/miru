@@ -31,8 +31,9 @@ public class DistinctCountPlugin implements MiruPlugin<DistinctCountEndpoints, D
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        JsonRemotePartitionReader remotePartitionReader = new JsonRemotePartitionReader();
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        JsonRemotePartitionReader remotePartitionReader = new JsonRemotePartitionReader(miruProvider.getReaderHttpClient(),
+            miruProvider.getReaderStrategyCache());
         return Arrays.asList(new DistinctCountCustomRemotePartition(remotePartitionReader),
             new DistinctCountInboxAllRemotePartition(remotePartitionReader),
             new DistinctCountInboxUnreadRemotePartition(remotePartitionReader));

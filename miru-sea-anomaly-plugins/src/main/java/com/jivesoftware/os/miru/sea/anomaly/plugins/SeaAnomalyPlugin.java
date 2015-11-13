@@ -30,7 +30,8 @@ public class SeaAnomalyPlugin implements MiruPlugin<SeaAnomalyEndpoints, SeaAnom
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        return Collections.singletonList(new SeaAnomalyRemotePartition(new JsonRemotePartitionReader()));
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        return Collections.singletonList(new SeaAnomalyRemotePartition(
+            new JsonRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache())));
     }
 }

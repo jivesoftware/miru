@@ -33,7 +33,8 @@ public class TrendingPlugin implements MiruPlugin<TrendingEndpoints, TrendingInj
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        return Collections.singletonList(new TrendingRemotePartition(new SnappyJsonRemotePartitionReader()));
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        return Collections.singletonList(new TrendingRemotePartition(
+            new SnappyJsonRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache())));
     }
 }

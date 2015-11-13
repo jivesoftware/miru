@@ -124,7 +124,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                             return partition.orNull();
                         }
                     } else {
-                        return remotePartitionFactory.create(key, new MiruPartitionCoordInfo(routablePartition.state, routablePartition.storage));
+                        return remotePartitionFactory.create(key);
                     }
                 });
             return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, Predicates.notNull()));

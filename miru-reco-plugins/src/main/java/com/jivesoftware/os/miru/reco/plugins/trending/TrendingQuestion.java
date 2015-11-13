@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuestion;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsReport;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -25,8 +26,6 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuestion;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -118,10 +117,10 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
     }
 
     @Override
-    public MiruPartitionResponse<AnalyticsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<AnalyticsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<TrendingReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override

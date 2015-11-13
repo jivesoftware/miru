@@ -30,7 +30,8 @@ public class DistinctsPlugin implements MiruPlugin<DistinctsEndpoints, Distincts
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        return Collections.singletonList(new DistinctsRemotePartition(new SnappyJsonRemotePartitionReader()));
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        return Collections.singletonList(new DistinctsRemotePartition(
+            new SnappyJsonRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache())));
     }
 }

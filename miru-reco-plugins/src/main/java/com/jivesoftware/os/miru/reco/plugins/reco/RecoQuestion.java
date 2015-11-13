@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -20,7 +21,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -120,10 +120,10 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
     }
 
     @Override
-    public MiruPartitionResponse<RecoAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<RecoAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<RecoReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.analytics.plugins.metrics;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -26,7 +27,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -189,10 +189,10 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
     }
 
     @Override
-    public MiruPartitionResponse<MetricsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<MetricsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<MetricsReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override

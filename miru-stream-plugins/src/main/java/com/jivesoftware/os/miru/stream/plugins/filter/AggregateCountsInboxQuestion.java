@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -19,7 +20,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -132,10 +132,10 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     }
 
     @Override
-    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<AggregateCountsReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override
