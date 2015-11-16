@@ -20,11 +20,13 @@ import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import java.io.BufferedReader;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.File;
+import java.io.FileReader;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringAggregation;
@@ -142,6 +144,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
+    public void andNot(RoaringBitmap container, RoaringBitmap original, RoaringBitmap bitmap) {
+        RoaringAggregation.andNot(container, original, bitmap);
+    }
+
+    @Override
     public void andNot(RoaringBitmap container, RoaringBitmap original, List<RoaringBitmap> bitmaps) {
 
         if (bitmaps.isEmpty()) {
@@ -159,7 +166,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
 
     @Override
     public CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(RoaringBitmap container, RoaringBitmap original, RoaringBitmap not) {
-        andNot(container, original, Collections.singletonList(not));
+        andNot(container, original, not);
         return RoaringInspection.cardinalityAndLastSetBit(container);
     }
 
@@ -172,6 +179,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     @Override
     public void orToSourceSize(RoaringBitmap container, RoaringBitmap source, RoaringBitmap mask) {
         or(container, Arrays.asList(source, mask));
+    }
+
+    @Override
+    public void andNotToSourceSize(RoaringBitmap container, RoaringBitmap source, RoaringBitmap mask) {
+        andNot(container, source, mask);
     }
 
     @Override
@@ -292,4 +304,78 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
         }
         return last;
     }
+
+    /*public static void main(String[] args) throws Exception {
+        FileReader fileReader = new FileReader("/Users/kevin.karpenske/Desktop/data.txt");
+        BufferedReader buf = new BufferedReader(fileReader);
+
+        String line1;
+        do {
+            line1 = buf.readLine();
+        } while (line1 == null || line1.trim().isEmpty());
+
+        String line2;
+        do {
+            line2 = buf.readLine();
+        } while (line2 == null || line2.trim().isEmpty());
+
+        String[] line1split = line1.split(",");
+        String[] line2split = line2.split(",");
+
+        int[] indexes1 = new int[line1split.length];
+        int[] indexes2 = new int[line2split.length];
+
+        for (int i = 0; i < indexes1.length; i++) {
+            indexes1[i] = Integer.parseInt(line1split[i]);
+        }
+
+        for (int i = 0; i < indexes2.length; i++) {
+            indexes2[i] = Integer.parseInt(line2split[i]);
+        }
+
+        System.out.println("1: " + indexes1.length);
+        System.out.println("2: " + indexes2.length);
+
+        RoaringBitmap bitmap1 = RoaringBitmap.bitmapOf(indexes1);
+        RoaringBitmap bitmap2 = RoaringBitmap.bitmapOf(indexes2);
+
+        RoaringBitmap container = new RoaringBitmap();
+        RoaringAggregation.or(container, bitmap1, bitmap2);
+    }*/
+
+    /*public static void main(String[] args) throws Exception {
+        RoaringBitmap bitmap = new RoaringBitmap();
+        int[] indexes = { 343798, 343799, 343800, 343801, 343803, 343804, 343805, 343807, 343809, 343811, 343812, 343815, 343816, 343817, 343818, 343819,
+            343821, 343825, 343827, 343828, 343830, 343831, 343832, 343833, 343835, 343836, 343837, 343838,
+            343839, 343840, 343841, 343842, 343843, 343844, 343845, 343847, 343848, 343849, 343850, 343851, 343853, 343854, 343855, 343856, 343858, 343859,
+            343860, 343861, 343862, 343863, 343864, 343865, 343866, 343868, 343869, 343874, 343875,
+            343877, 343879, 343880, 343881, 343882, 343883, 343887, 343889, 343890, 343891, 343894, 343895, 343898, 343899, 343900, 343901, 343902, 343904,
+            343906, 343907, 343908, 343909, 343910, 343911, 343912, 343913, 343914, 343915, 343916,
+            343917, 343918, 343919, 343921, 343922, 343923, 343924, 343927, 343928, 343929, 343930, 343931, 343932, 343933, 343934, 343935, 343938, 343939,
+            343941, 343942, 343943, 343944, 343945, 343946, 343949, 343951, 343953, 343954, 343955,
+            343956, 343958, 343959, 343961, 343962, 343964, 343965, 343966, 343967, 343968, 343969, 343971, 343972, 343973, 343974, 343976, 343978, 343979,
+            343981, 343982, 343983, 343985, 343987, 343988, 343989, 343992, 343993, 343994, 343995,
+            343996, 343997, 343998, 344000, 344001, 344002, 344003, 344004, 344006, 344008, 344009, 344011, 344012, 344013, 344015, 344017, 344019, 344020,
+            344021, 344023, 344025, 344026, 344027, 344028, 344029, 344030, 344031, 344034, 344035,
+            344036, 344037, 344038, 344039, 344040, 344042, 344043, 344046, 344047 };
+
+        int rangeStart = 0;
+        for (int rangeEnd = 1; rangeEnd < indexes.length; rangeEnd++) {
+            if (indexes[rangeEnd - 1] + 1 != indexes[rangeEnd]) {
+                if (rangeStart == rangeEnd - 1) {
+                    System.out.println("add " + indexes[rangeStart]);
+                    bitmap.add(indexes[rangeStart]);
+                } else {
+                    System.out.println("flip " + indexes[rangeStart] + " to " + (indexes[rangeEnd - 1] + 1));
+                    bitmap.flip(indexes[rangeStart], indexes[rangeEnd - 1] + 1);
+                }
+                rangeStart = rangeEnd;
+            }
+        }
+        if (rangeStart == indexes.length - 1) {
+            bitmap.add(indexes[rangeStart]);
+        } else {
+            bitmap.flip(indexes[rangeStart], indexes[indexes.length - 1] + 1);
+        }
+    }*/
 }

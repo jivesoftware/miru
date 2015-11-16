@@ -63,7 +63,7 @@ public class DistinctCount {
                 BM termIndex = optionalTermIndex.get();
 
                 BM revisedAnswer = reusable.next();
-                bitmaps.andNot(revisedAnswer, answer, Collections.singletonList(termIndex));
+                bitmaps.andNot(revisedAnswer, answer, termIndex);
                 answer = revisedAnswer;
             }
 

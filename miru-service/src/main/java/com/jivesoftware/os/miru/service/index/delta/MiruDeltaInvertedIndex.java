@@ -43,7 +43,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
                 BM exclude = delta.andNot;
                 if (exclude != null) {
                     BM container = bitmaps.create();
-                    bitmaps.andNot(container, got, Collections.singletonList(exclude));
+                    bitmaps.andNot(container, got, exclude);
                     got = container;
                 }
                 BM include = delta.or;
@@ -239,7 +239,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
             // technically removing from delta.andNot is unnecessary (since delta.or is applied on top), but reducing its size saves memory
             if (delta.andNot != null) {
                 BM container = bitmaps.create();
-                bitmaps.andNotToSourceSize(container, delta.andNot, Collections.singletonList(mask));
+                bitmaps.andNotToSourceSize(container, delta.andNot, mask);
                 delta.andNot = container;
             }
 
@@ -256,7 +256,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
                 // reduce size of delta
                 BM got = index.get();
                 BM actualBits = bitmaps.create();
-                bitmaps.andNotToSourceSize(actualBits, container, Collections.singletonList(got));
+                bitmaps.andNotToSourceSize(actualBits, container, got);
                 container = actualBits;
             }
 
@@ -270,7 +270,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
         synchronized (delta) {
             if (delta.or != null) {
                 BM container = bitmaps.create();
-                bitmaps.andNot(container, delta.or, Collections.singletonList(mask));
+                bitmaps.andNot(container, delta.or, mask);
                 delta.or = container;
             }
 
@@ -306,7 +306,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
             // technically removing from delta.andNot is unnecessary (since delta.or is applied on top), but reducing its size saves memory
             if (delta.andNot != null) {
                 BM container = bitmaps.create();
-                bitmaps.andNot(container, delta.andNot, Collections.singletonList(mask));
+                bitmaps.andNot(container, delta.andNot, mask);
                 delta.andNot = container;
             }
 
@@ -323,7 +323,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
                 // reduce size of delta
                 BM got = index.get();
                 BM actualBits = bitmaps.create();
-                bitmaps.andNot(actualBits, container, Collections.singletonList(got));
+                bitmaps.andNot(actualBits, container, got);
                 container = actualBits;
             }
 

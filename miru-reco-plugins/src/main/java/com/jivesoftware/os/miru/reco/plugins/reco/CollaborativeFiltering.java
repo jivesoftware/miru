@@ -113,7 +113,7 @@ public class CollaborativeFiltering {
 
         // otherOkField1Activity: all activity *except mine* for the distinct parents <field1>
         BM otherOkField1Activity = bitmaps.create();
-        bitmaps.andNot(otherOkField1Activity, okField1Activity, Arrays.asList(myOkActivity));
+        bitmaps.andNot(otherOkField1Activity, okField1Activity, myOkActivity);
         log.trace("otherOkField1Activity: otherOkField1Activity={}", otherOkField1Activity);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "otherOkField1Activity {}.", bitmaps.cardinality(otherOkField1Activity));

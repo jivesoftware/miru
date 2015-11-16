@@ -227,7 +227,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
                 indexIds,
-                new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, cardinalities, 1_024, fieldIndexStripingLocksProvider),
+                new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, cardinalities, fieldIndexStripingLocksProvider),
                 schema.getFieldDefinitions(),
                 fieldIndexCache);
         }

@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
@@ -11,6 +10,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
@@ -39,12 +39,29 @@ public class Distincts {
         MiruSolutionLog solutionLog)
         throws Exception {
 
+        int fieldId = requestContext.getSchema().getFieldId(query.gatherDistinctsForField);
+        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
+
+        List<String> results = Lists.newArrayList();
+        gatherDirect(bitmaps, requestContext, query, solutionLog, input -> results.add(termComposer.decompose(fieldDefinition, input)));
+
+        boolean resultsExhausted = query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        int collectedDistincts = results.size();
+        DistinctsAnswer result = new DistinctsAnswer(results, collectedDistincts, resultsExhausted);
+        log.debug("result={}", result);
+        return result;
+    }
+
+    public <BM> void gatherDirect(MiruBitmaps<BM> bitmaps,
+        MiruRequestContext<BM, ?> requestContext,
+        DistinctsQuery query,
+        MiruSolutionLog solutionLog,
+        TermIdStream termIdStream) throws Exception {
         log.debug("Gather distincts for query={}", query);
 
         int fieldId = requestContext.getSchema().getFieldId(query.gatherDistinctsForField);
-        final MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
+        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
 
-        final List<String> results = Lists.newArrayList();
         if (requestContext.getTimeIndex().intersects(query.timeRange)) {
             if (MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
                 List<KeyRange> ranges = null;
@@ -57,10 +74,7 @@ public class Distincts {
                     }
                 }
 
-                requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).streamTermIdsForField(fieldId, ranges, termId -> {
-                    results.add(termComposer.decompose(fieldDefinition, termId));
-                    return true;
-                });
+                requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).streamTermIdsForField(fieldId, ranges, termIdStream);
             } else {
                 final byte[][] prefixesAsBytes;
                 if (query.prefixes != null) {
@@ -110,15 +124,11 @@ public class Distincts {
                     });
                 }
 
-                results.addAll(Collections2.transform(termIds, input -> termComposer.decompose(fieldDefinition, input)));
+                for (MiruTermId termId : termIds) {
+                    termIdStream.stream(termId);
+                }
             }
         }
-
-        boolean resultsExhausted = query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
-        int collectedDistincts = results.size();
-        DistinctsAnswer result = new DistinctsAnswer(results, collectedDistincts, resultsExhausted);
-        log.debug("result={}", result);
-        return result;
     }
 
     private boolean arrayStartsWith(byte[] termBytes, byte[] prefixAsBytes) {
