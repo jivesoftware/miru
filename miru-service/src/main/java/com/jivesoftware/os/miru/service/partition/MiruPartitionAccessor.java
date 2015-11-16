@@ -35,7 +35,6 @@ import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
