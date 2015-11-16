@@ -20,6 +20,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.nustaq.serialization.FSTConfiguration;
 import org.xerial.snappy.Snappy;
 
 import static com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants.CUSTOM_QUERY_ENDPOINT;
@@ -30,6 +31,7 @@ import static com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants
 public class DistinctsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final FSTConfiguration conf = FSTConfiguration.createDefaultConfiguration();
 
     private final DistinctsInjectable injectable;
     private final ObjectMapper objectMapper;
@@ -53,8 +55,8 @@ public class DistinctsEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<DistinctsAnswer> response = injectable.gatherDistincts(request);
 
-            log.info("gatherDistincts: " + response.answer.results.size() + " / " + response.answer.collectedDistincts +
-                " in " + (System.currentTimeMillis() - t) + " ms");
+            log.info("gatherDistincts: " + response.answer.results.size() + " / " + response.answer.collectedDistincts
+                + " in " + (System.currentTimeMillis() - t) + " ms");
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
@@ -71,9 +73,10 @@ public class DistinctsEndpoints {
     public Response gatherDistincts(@PathParam("partitionId") int id, byte[] rawBytes) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            byte[] jsonBytes = Snappy.uncompress(rawBytes);
-            MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
-            MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
+            //byte[] jsonBytes = Snappy.uncompress(rawBytes);
+            //MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
+            //MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
+            MiruPartitionResponse<DistinctsAnswer> result = (MiruPartitionResponse<DistinctsAnswer>) conf.asObject(rawBytes);
             byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException e) {

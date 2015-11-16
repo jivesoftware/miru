@@ -16,6 +16,10 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>de.ruedigermoeller</groupId>
+            <artifactId>fst</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>base</artifactId>
         </dependency>
