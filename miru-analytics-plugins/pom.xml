@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.617</version>
+        <version>0.618</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-analytics-plugins</artifactId>
-    <version>0.617</version>
+    <version>0.618</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -38,12 +38,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.617</version>
+            <version>0.618</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.617</version>
+            <version>0.618</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -60,6 +60,10 @@
         <dependency>
             <groupId>org.xerial.snappy</groupId>
             <artifactId>snappy-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>de.ruedigermoeller</groupId>
+            <artifactId>fst</artifactId>
         </dependency>
     </dependencies>
 </project>

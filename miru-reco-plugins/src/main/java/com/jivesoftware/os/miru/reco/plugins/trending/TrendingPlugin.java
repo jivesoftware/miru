@@ -5,8 +5,8 @@ import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
-import com.jivesoftware.os.miru.plugin.solution.SnappyJsonRemotePartitionReader;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import java.util.Collection;
 import java.util.Collections;
@@ -35,6 +35,6 @@ public class TrendingPlugin implements MiruPlugin<TrendingEndpoints, TrendingInj
     @Override
     public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
         return Collections.singletonList(new TrendingRemotePartition(
-            new SnappyJsonRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache())));
+            new FstRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache(), false)));
     }
 }
