@@ -96,15 +96,22 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
             return;
         }
         synchronized (delta) {
+
             BM container;
             if (delta.or != null) {
                 container = bitmaps.create();
                 bitmaps.append(container, delta.or, ids);
             } else {
-                container = bitmaps.createWithBits(ids);
+                try {
+                    container = bitmaps.createWithBits(ids);
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    System.out.println("NEW WTF:" + Arrays.toString(ids) + e.getMessage() + " indexKey:" + indexKey);
+                    throw e;
+                }
             }
             delta.or = container;
             delta.lastId = Math.max(delta.lastId, ids[ids.length - 1]);
+
         }
         invalidateCache();
     }
