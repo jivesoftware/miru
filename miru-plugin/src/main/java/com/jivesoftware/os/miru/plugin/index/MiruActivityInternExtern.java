@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -147,7 +148,7 @@ public class MiruActivityInternExtern {
     }
 
     private Map<String, List<String>> externFields(MiruTermId[][] fields, MiruSchema schema) {
-        Map<String, List<String>> externFields = new HashMap<>();
+        Map<String, List<String>> externFields = Maps.newHashMapWithExpectedSize(fields.length);
         for (int i = 0; i < fields.length; i++) {
             MiruTermId[] values = fields[i];
             if (values != null) {
@@ -163,7 +164,7 @@ public class MiruActivityInternExtern {
     }
 
     private Map<String, List<String>> externProps(MiruIBA[][] properties, MiruSchema schema) {
-        Map<String, List<String>> externProperties = new HashMap<>();
+        Map<String, List<String>> externProperties = Maps.newHashMapWithExpectedSize(properties.length);
         for (int i = 0; i < properties.length; i++) {
             MiruIBA[] values = properties[i];
             if (values != null) {

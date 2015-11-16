@@ -10,22 +10,18 @@ public class DistinctCountAnswer {
 
     public static final DistinctCountAnswer EMPTY_RESULTS = new DistinctCountAnswer(ImmutableSet.<String>of(), 0, true);
 
-    public final ImmutableSet<String> aggregateTerms;
+    public final Set<String> aggregateTerms;
     public final int collectedDistincts;
     public final boolean resultsExhausted;
 
-    public DistinctCountAnswer(ImmutableSet<String> aggregateTerms, int collectedDistincts, boolean resultsExhausted) {
-        this.aggregateTerms = aggregateTerms;
-        this.collectedDistincts = collectedDistincts;
-        this.resultsExhausted = resultsExhausted;
-    }
-
     @JsonCreator
-    public static DistinctCountAnswer fromJson(
+    public DistinctCountAnswer(
         @JsonProperty("aggregateTerms") Set<String> aggregateTerms,
         @JsonProperty("collectedDistincts") int collectedDistincts,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
-        return new DistinctCountAnswer(ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
+        this.aggregateTerms = aggregateTerms;
+        this.collectedDistincts = collectedDistincts;
+        this.resultsExhausted = resultsExhausted;
     }
 
     @Override

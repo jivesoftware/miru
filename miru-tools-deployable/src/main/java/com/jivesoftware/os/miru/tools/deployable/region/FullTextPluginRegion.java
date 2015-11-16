@@ -154,7 +154,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     data.put("count", response.answer.results.size());
-                    ImmutableList<FullTextAnswer.ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
+                    List<FullTextAnswer.ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
                     List<Map<String, Object>> results = new ArrayList<>();
                     for (FullTextAnswer.ActivityScore score : scores) {
                         Map<String, Object> result = new HashMap<>();

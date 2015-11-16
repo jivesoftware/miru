@@ -187,7 +187,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
             powerBitIndexes.add(invertedIndex.getIndex());
         }
 
-        Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMap();
+        Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMapWithExpectedSize(expand.size());
         start = System.currentTimeMillis();
         int producedWaveformCount = 0;
         for (Map.Entry<String, MiruFilter> entry : expand.entrySet()) {

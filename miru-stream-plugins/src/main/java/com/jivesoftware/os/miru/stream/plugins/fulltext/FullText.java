@@ -63,11 +63,10 @@ public class FullText {
             activityScores = Collections.emptyList();
         }
 
-        ImmutableList<ActivityScore> results = ImmutableList.copyOf(activityScores);
         boolean resultsExhausted = request.query.strategy == FullTextQuery.Strategy.TIME &&
             request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
 
-        FullTextAnswer result = new FullTextAnswer(results, resultsExhausted);
+        FullTextAnswer result = new FullTextAnswer(activityScores, resultsExhausted);
         log.debug("result={}", result);
         return result;
     }
@@ -87,7 +86,7 @@ public class FullText {
 
         List<ActivityScore> activityScores = Lists.newArrayListWithCapacity(request.query.desiredNumberOfResults);
 
-        Map<FieldAndTermId, Float> termMultipliers = Maps.newHashMap();
+        Map<FieldAndTermId, Float> termMultipliers = Maps.newHashMapWithExpectedSize(termCollector.size());
         for (Map.Entry<FieldAndTermId, MutableInt> entry : termCollector.entrySet()) {
             FieldAndTermId fieldAndTermId = entry.getKey();
             long idf = primaryFieldIndex.getGlobalCardinality(fieldAndTermId.fieldId, fieldAndTermId.termId);

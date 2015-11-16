@@ -49,7 +49,7 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
                 mergedWaveforms = lastAnswer.waveforms;
             }
         } else {
-            mergedWaveforms = Maps.newHashMap();
+            mergedWaveforms = Maps.newHashMapWithExpectedSize(Math.max(lastAnswer.waveforms.size(), currentAnswer.waveforms.size()));
             mergeWaveform(mergedWaveforms, lastAnswer, solutionLog);
             mergeWaveform(mergedWaveforms, currentAnswer, solutionLog);
             solutionLog.log(MiruSolutionLogLevel.INFO, "merge: merged last answer size={}, with current answer size={}.",

@@ -121,7 +121,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
             currentTime += segmentDuration;
         }
 
-        Map<String, StumptownAnswer.Waveform> waveforms = Maps.newHashMap();
+        Map<String, StumptownAnswer.Waveform> waveforms = Maps.newHashMapWithExpectedSize(request.query.stumptownFilters.size());
         start = System.currentTimeMillis();
         for (Map.Entry<String, MiruFilter> entry : request.query.stumptownFilters.entrySet()) {
             StumptownAnswer.Waveform waveform = null;

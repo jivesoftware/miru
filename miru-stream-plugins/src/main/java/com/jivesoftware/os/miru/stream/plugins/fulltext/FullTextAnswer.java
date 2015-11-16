@@ -11,21 +11,15 @@ public class FullTextAnswer {
 
     public static final FullTextAnswer EMPTY_RESULTS = new FullTextAnswer(ImmutableList.<ActivityScore>of(), true);
 
-    public final ImmutableList<ActivityScore> results;
+    public final List<ActivityScore> results;
     public final boolean resultsExhausted;
 
-    public FullTextAnswer(
-        ImmutableList<ActivityScore> results,
-        boolean resultsExhausted) {
-        this.results = results;
-        this.resultsExhausted = resultsExhausted;
-    }
-
     @JsonCreator
-    public static FullTextAnswer fromJson(
+    public FullTextAnswer(
         @JsonProperty("results") List<ActivityScore> results,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
-        return new FullTextAnswer(ImmutableList.copyOf(results), resultsExhausted);
+        this.results = results;
+        this.resultsExhausted = resultsExhausted;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Predicates;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ArrayListMultimap;
@@ -125,9 +126,9 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                         return remotePartitionFactory.create(key);
                     }
                 });
-            // TODO remove!!!!!
-            return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, input1 -> input1 != null && !input1.isLocal()));
-            //return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, Predicates.notNull()));
+            // uncomment to prevent local queries
+            //return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, input1 -> input1 != null && !input1.isLocal()));
+            return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, Predicates.notNull()));
         });
     }
 
