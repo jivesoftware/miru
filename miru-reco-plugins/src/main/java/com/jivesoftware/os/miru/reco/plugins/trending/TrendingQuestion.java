@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
@@ -28,6 +29,7 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -67,6 +69,34 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         int fieldId = schema.getFieldId(request.query.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
 
+        Iterable<MiruTermId> termIds = Collections.emptyList();
+        if (request.query.distinctQueries.size() == 1) {
+            ArrayList<MiruTermId> termIdsList = Lists.newArrayList();
+            distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), request.query.distinctQueries.get(0), solutionLog, termId -> {
+                termIdsList.add(termId);
+                return true;
+            });
+            termIds = termIdsList;
+        } else if (request.query.distinctQueries.size() > 1) {
+            Set<MiruTermId> joinTerms = null;
+            for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
+                Set<MiruTermId> queryTerms = Sets.newHashSet();
+                distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), distinctQuery, solutionLog, termId -> {
+                    queryTerms.add(termId);
+                    return true;
+                });
+                if (joinTerms == null) {
+                    joinTerms = queryTerms;
+                } else {
+                    joinTerms.retainAll(queryTerms);
+                }
+            }
+            if (joinTerms != null) {
+                termIds = joinTerms;
+            }
+        }
+
+        Iterable<MiruTermId> _termIds = termIds;
         boolean resultsExhausted = analytics.analyze(solutionLog,
             handle,
             context,
@@ -75,38 +105,12 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             request.query.constraintsFilter,
             request.query.divideTimeRangeIntoNSegments,
             (Analytics.ToAnalyze<MiruTermId> toAnalyze) -> {
-                if (request.query.distinctQueries.size() == 1) {
-                    distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), request.query.distinctQueries.get(0), solutionLog, termId -> {
-                        toAnalyze.analyze(termId, new MiruFilter(MiruFilterOperation.and,
-                            false,
-                            Collections.singletonList(MiruFieldFilter.raw(
-                                MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(termId))),
-                            null));
-                        return true;
-                    });
-                } else if (request.query.distinctQueries.size() > 1) {
-                    Set<MiruTermId> joinTerms = null;
-                    for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
-                        Set<MiruTermId> queryTerms = Sets.newHashSet();
-                        distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), distinctQuery, solutionLog, termId -> {
-                            queryTerms.add(termId);
-                            return true;
-                        });
-                        if (joinTerms == null) {
-                            joinTerms = queryTerms;
-                        } else {
-                            joinTerms.retainAll(queryTerms);
-                        }
-                    }
-                    if (joinTerms != null) {
-                        for (MiruTermId termId : joinTerms) {
-                            toAnalyze.analyze(termId, new MiruFilter(MiruFilterOperation.and,
-                                false,
-                                Collections.singletonList(MiruFieldFilter.raw(
-                                    MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(termId))),
-                                null));
-                        }
-                    }
+                for (MiruTermId termId : _termIds) {
+                    toAnalyze.analyze(termId, new MiruFilter(MiruFilterOperation.and,
+                        false,
+                        Collections.singletonList(MiruFieldFilter.raw(
+                            MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(termId))),
+                        null));
                 }
                 return true;
             },
