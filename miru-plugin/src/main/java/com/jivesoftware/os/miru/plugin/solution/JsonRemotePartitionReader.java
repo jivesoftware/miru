@@ -18,7 +18,6 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.apache.http.HttpStatus;
 
 /**
@@ -65,7 +64,7 @@ public class JsonRemotePartitionReader implements MiruRemotePartitionReader {
                 queryKey + ":" + request.name + ":json",
                 httpClient1 -> {
                     HttpResponse httpResponse = httpClient1.postJson(endpoint, jsonParams, null);
-                    if (RESPONSE_MAPPER.isSuccessStatusCode(httpResponse.getStatusCode())) {
+                    if (!RESPONSE_MAPPER.isSuccessStatusCode(httpResponse.getStatusCode())) {
                         throw new NonSuccessStatusCodeException(httpResponse.getStatusCode(), "Non success status code: " + httpResponse.getStatusCode());
                     }
                     @SuppressWarnings("unchecked")
