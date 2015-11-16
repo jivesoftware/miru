@@ -75,9 +75,10 @@ public class TrendingEndpoints {
         try {
             //byte[] jsonBytes = Snappy.uncompress(rawBytes);
             //MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
-            //MiruPartitionResponse<AnalyticsAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
-            MiruPartitionResponse<AnalyticsAnswer> result = (MiruPartitionResponse<AnalyticsAnswer>) conf.asObject(rawBytes);
+            MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = (MiruRequestAndReport<TrendingQuery, TrendingReport>) conf.asObject(
+                rawBytes);
 
+            MiruPartitionResponse<AnalyticsAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
             //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
             byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();

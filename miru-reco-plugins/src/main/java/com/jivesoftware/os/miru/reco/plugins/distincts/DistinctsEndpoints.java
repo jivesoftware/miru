@@ -75,7 +75,9 @@ public class DistinctsEndpoints {
             //byte[] jsonBytes = Snappy.uncompress(rawBytes);
             //MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
             //MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
-            MiruPartitionResponse<DistinctsAnswer> result = (MiruPartitionResponse<DistinctsAnswer>) conf.asObject(rawBytes);
+            MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport = (MiruRequestAndReport<DistinctsQuery, DistinctsReport>) conf.asObject(
+                rawBytes);
+            MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
             //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
             byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
