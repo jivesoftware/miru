@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.partition.cluster;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Predicates;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ArrayListMultimap;
@@ -13,7 +12,6 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.CoordinateStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -127,7 +125,9 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                         return remotePartitionFactory.create(key);
                     }
                 });
-            return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, Predicates.notNull()));
+            // TODO remove!!!!!
+            return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, input1 -> input1 != null && !input1.isLocal()));
+            //return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, Predicates.notNull()));
         });
     }
 
