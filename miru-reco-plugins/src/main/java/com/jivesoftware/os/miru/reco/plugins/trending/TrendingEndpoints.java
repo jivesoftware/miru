@@ -22,7 +22,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.nustaq.serialization.FSTConfiguration;
-import org.xerial.snappy.Snappy;
 
 import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.TRENDING_PREFIX;
@@ -79,7 +78,8 @@ public class TrendingEndpoints {
             //MiruPartitionResponse<AnalyticsAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
             MiruPartitionResponse<AnalyticsAnswer> result = (MiruPartitionResponse<AnalyticsAnswer>) conf.asObject(rawBytes);
 
-            byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
+            //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
+            byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
