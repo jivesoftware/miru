@@ -68,7 +68,7 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
                     queryKey + ":" + request.name + ":snappyJson",
                     httpClient1 -> {
                         HttpResponse httpResponse = httpClient1.postBytes(endpoint, postBytes, null);
-                        if (RESPONSE_MAPPER.isSuccessStatusCode(httpResponse.getStatusCode())) {
+                        if (!RESPONSE_MAPPER.isSuccessStatusCode(httpResponse.getStatusCode())) {
                             throw new NonSuccessStatusCodeException(httpResponse.getStatusCode(), "Non success status code: " + httpResponse.getStatusCode());
                         }
 
