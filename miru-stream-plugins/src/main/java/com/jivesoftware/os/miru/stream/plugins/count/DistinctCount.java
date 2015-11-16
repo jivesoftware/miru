@@ -105,7 +105,7 @@ public class DistinctCount {
         }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
-        DistinctCountAnswer result = new DistinctCountAnswer(ImmutableSet.copyOf(aggregateTerms), collectedDistincts, resultsExhausted);
+        DistinctCountAnswer result = new DistinctCountAnswer(aggregateTerms, collectedDistincts, resultsExhausted);
         log.debug("result={}", result);
         return result;
     }

@@ -12,7 +12,7 @@ public class RecoAnswer {
 
     public static final RecoAnswer EMPTY_RESULTS = new RecoAnswer(ImmutableList.<Recommendation>of(), 0, true);
 
-    public final ImmutableList<Recommendation> results;
+    public final List<Recommendation> results;
     public final int partitionsVisited;
     public final boolean resultsExhausted;
 
@@ -20,7 +20,7 @@ public class RecoAnswer {
     public RecoAnswer(@JsonProperty("results") List<Recommendation> results,
         @JsonProperty("partitionsVisited") int partitionsVisited,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
-        this.results = ImmutableList.copyOf(results);
+        this.results = results;
         this.partitionsVisited = partitionsVisited;
         this.resultsExhausted = resultsExhausted;
     }

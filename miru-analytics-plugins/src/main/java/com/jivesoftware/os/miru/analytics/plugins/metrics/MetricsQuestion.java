@@ -135,7 +135,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             powerBitIndexes.add(invertedIndex.getIndex());
         }
 
-        Map<String, Waveform> waveforms = Maps.newHashMap();
+        Map<String, Waveform> waveforms = Maps.newHashMapWithExpectedSize(request.query.filters.size());
         start = System.currentTimeMillis();
         for (Map.Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
             Waveform waveform = null;

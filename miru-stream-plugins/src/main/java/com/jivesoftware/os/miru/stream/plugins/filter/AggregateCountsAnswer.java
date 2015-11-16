@@ -13,19 +13,12 @@ public class AggregateCountsAnswer {
     public final Map<String, AggregateCountsAnswerConstraint> constraints;
     public final boolean resultsExhausted;
 
-    public AggregateCountsAnswer(
-        Map<String, AggregateCountsAnswerConstraint> constraints,
-        boolean resultsExhausted) {
-        this.constraints = constraints;
-        this.resultsExhausted = resultsExhausted;
-    }
-
     @JsonCreator
-    public static AggregateCountsAnswer fromJson(
+    public AggregateCountsAnswer(
         @JsonProperty("constraints") Map<String, AggregateCountsAnswerConstraint> constraints,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
-        return new AggregateCountsAnswer(ImmutableMap.copyOf(constraints),
-            resultsExhausted);
+        this.constraints = constraints;
+        this.resultsExhausted = resultsExhausted;
     }
 
     @Override

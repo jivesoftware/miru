@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -62,14 +63,13 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
 
-        Map<String, Waveform> waveforms = Maps.newHashMap();
         MiruTermComposer termComposer = context.getTermComposer();
 
         MiruSchema schema = context.getSchema();
         int fieldId = schema.getFieldId(request.query.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
 
-        Iterable<MiruTermId> termIds = Collections.emptyList();
+        Collection<MiruTermId> termIds = Collections.emptyList();
         if (request.query.distinctQueries.size() == 1) {
             ArrayList<MiruTermId> termIdsList = Lists.newArrayList();
             distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), request.query.distinctQueries.get(0), solutionLog, termId -> {
@@ -96,7 +96,8 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             }
         }
 
-        Iterable<MiruTermId> _termIds = termIds;
+        Collection<MiruTermId> _termIds = termIds;
+        Map<String, Waveform> waveforms = Maps.newHashMapWithExpectedSize(termIds.size());
         boolean resultsExhausted = analytics.analyze(solutionLog,
             handle,
             context,

@@ -148,8 +148,8 @@ public class TrendingInjectable {
                 bucket95 = percentile.evaluate(highestBuckets, 0.95);
             }
 
-            Map<String, Waveform> distinctWaveforms = Maps.newHashMap();
-            Map<Strategy, MinMaxPriorityQueue<Trendy>> strategyResults = Maps.newHashMap();
+            Map<String, Waveform> distinctWaveforms = Maps.newHashMapWithExpectedSize(waveforms.size());
+            Map<Strategy, MinMaxPriorityQueue<Trendy>> strategyResults = Maps.newHashMapWithExpectedSize(request.query.strategies.size());
             for (Strategy strategy : request.query.strategies) {
                 strategyResults.put(strategy,
                     MinMaxPriorityQueue
@@ -245,7 +245,7 @@ public class TrendingInjectable {
             }
 
             Set<String> retainKeys = Sets.newHashSet();
-            Map<String, List<Trendy>> strategySortedTrendies = Maps.newHashMap();
+            Map<String, List<Trendy>> strategySortedTrendies = Maps.newHashMapWithExpectedSize(strategyResults.size());
             for (Map.Entry<Strategy, MinMaxPriorityQueue<Trendy>> entry : strategyResults.entrySet()) {
                 List<Trendy> sortedTrendies = Lists.newArrayList(entry.getValue());
                 Collections.sort(sortedTrendies);

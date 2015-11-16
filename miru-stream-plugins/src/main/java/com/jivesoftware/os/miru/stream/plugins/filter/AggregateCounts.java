@@ -1,8 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -59,7 +58,7 @@ public class AggregateCounts {
 
         log.debug("Get aggregate counts for answer={} request={}", answer, request);
 
-        Map<String, AggregateCountsAnswerConstraint> results = new HashMap<>();
+        Map<String, AggregateCountsAnswerConstraint> results = Maps.newHashMapWithExpectedSize(request.query.constraints.size());
         for (Map.Entry<String, AggregateCountsQueryConstraint> entry : request.query.constraints.entrySet()) {
 
             Optional<AggregateCountsReportConstraint> lastReportConstraint = Optional.absent();
@@ -253,8 +252,7 @@ public class AggregateCounts {
                 }
             }
         }
-        return new AggregateCountsAnswerConstraint(ImmutableList.copyOf(aggregateCounts),
-            ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
+        return new AggregateCountsAnswerConstraint(aggregateCounts, aggregateTerms, skippedDistincts, collectedDistincts);
     }
 
 }

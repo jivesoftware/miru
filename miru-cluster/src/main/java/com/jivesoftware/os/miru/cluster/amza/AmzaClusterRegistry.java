@@ -62,7 +62,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -415,7 +414,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         long[] registryTransactionId = new long[1];
         long[] infoTransactionId = new long[1];
         long[] ingressTransactionId = new long[1];
-        Map<String, NamedCursor> cursors = Maps.newHashMap();
+        Map<String, NamedCursor> cursors = Maps.newHashMapWithExpectedSize(sinceCursors.size());
         for (NamedCursor sinceCursor : sinceCursors) {
             cursors.put(sinceCursor.name, sinceCursor);
             if (registryCursorName.equals(sinceCursor.name)) {
@@ -849,7 +848,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             }
         }
 
-        Map<MiruPartitionId, MiruReplicaSet> replicaSets = new HashMap<>();
+        Map<MiruPartitionId, MiruReplicaSet> replicaSets = Maps.newHashMapWithExpectedSize(requiredPartitionId.size());
         for (MiruPartitionId partitionId : requiredPartitionId) {
             List<MiruPartition> partitions = partitionsPartitions.get(partitionId);
             Set<MiruHost> replicaHosts = partitionHosts.get(partitionId);

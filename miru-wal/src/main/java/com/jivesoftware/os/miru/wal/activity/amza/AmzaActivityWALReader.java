@@ -52,7 +52,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     private Map<String, NamedCursor> extractCursors(List<NamedCursor> cursors) {
-        Map<String, NamedCursor> cursorsByName = Maps.newHashMap();
+        Map<String, NamedCursor> cursorsByName = Maps.newHashMapWithExpectedSize(cursors.size());
         for (NamedCursor namedCursor : cursors) {
             cursorsByName.put(namedCursor.name, namedCursor);
         }

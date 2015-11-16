@@ -166,7 +166,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                     new Class[] { AggregateCountsAnswer.class },
                                     null);
                                 if (aggregatesResponse != null && aggregatesResponse.answer != null) {
-                                    ImmutableList<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
+                                    List<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
                                     if (results.size() < input.count) {
                                         timeRange = null;
                                     } else {

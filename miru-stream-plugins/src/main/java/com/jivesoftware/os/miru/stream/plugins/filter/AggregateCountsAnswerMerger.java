@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -30,7 +31,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
 
         AggregateCountsAnswer lastAnswer = last.get();
 
-        Map<String, AggregateCountsAnswerConstraint> mergedConstraints = new HashMap<>();
+        Map<String, AggregateCountsAnswerConstraint> mergedConstraints = Maps.newHashMapWithExpectedSize(currentAnswer.constraints.size());
         for (Map.Entry<String, AggregateCountsAnswerConstraint> entry : currentAnswer.constraints.entrySet()) {
 
             AggregateCountsAnswerConstraint currentConstraint = entry.getValue();
@@ -61,7 +62,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                 }
 
                 AggregateCountsAnswerConstraint mergedAnswerConstraint = new AggregateCountsAnswerConstraint(
-                    ImmutableList.copyOf(mergedResults),
+                    mergedResults,
                     currentConstraint.aggregateTerms,
                     currentConstraint.skippedDistincts,
                     currentConstraint.collectedDistincts);

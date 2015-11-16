@@ -305,7 +305,7 @@ public class MiruPartitioner {
             if (partitionRanges == null) {
                 throw new IllegalStateException("Partition ranges not available");
             }
-            Map<MiruPartitionId, RangeMinMax> result = Maps.newHashMap();
+            Map<MiruPartitionId, RangeMinMax> result = Maps.newHashMapWithExpectedSize(partitionRanges.size());
             for (MiruClusterClient.PartitionRange partitionRange : partitionRanges) {
                 result.put(partitionRange.partitionId, partitionRange.rangeMinMax);
             }

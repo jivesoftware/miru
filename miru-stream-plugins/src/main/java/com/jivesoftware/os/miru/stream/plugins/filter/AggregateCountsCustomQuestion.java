@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -21,7 +22,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -107,8 +107,9 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         Optional<AggregateCountsReport> report = Optional.absent();
         if (answer.isPresent()) {
 
-            Map<String, AggregateCountsReportConstraint> constraintReport = new HashMap<>();
-            for (Map.Entry<String, AggregateCountsAnswerConstraint> entry : answer.get().constraints.entrySet()) {
+            AggregateCountsAnswer currentAnswer = answer.get();
+            Map<String, AggregateCountsReportConstraint> constraintReport = Maps.newHashMapWithExpectedSize(currentAnswer.constraints.size());
+            for (Map.Entry<String, AggregateCountsAnswerConstraint> entry : currentAnswer.constraints.entrySet()) {
                 AggregateCountsAnswerConstraint value = entry.getValue();
                 constraintReport.put(entry.getKey(),
                     new AggregateCountsReportConstraint(value.aggregateTerms, value.skippedDistincts, value.collectedDistincts));
