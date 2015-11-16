@@ -73,6 +73,8 @@ public interface MiruBitmaps<BM> {
 
     void and(BM container, Collection<BM> bitmaps);
 
+    void andNot(BM container, BM original, BM not);
+
     void andNot(BM container, BM original, List<BM> not);
 
     void copy(BM container, BM original);
@@ -82,6 +84,8 @@ public interface MiruBitmaps<BM> {
     CardinalityAndLastSetBit andWithCardinalityAndLastSetBit(BM container, List<BM> ands);
 
     void orToSourceSize(BM container, BM source, BM mask);
+
+    void andNotToSourceSize(BM container, BM source, BM mask);
 
     void andNotToSourceSize(BM container, BM source, List<BM> masks);
 

@@ -5,27 +5,29 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuestion;
-import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsReport;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuestion;
-import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsReport;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -55,68 +57,66 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
 
     @Override
     public <BM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<TrendingReport> report) throws Exception {
-        Iterable<String> distinctTerms = null;
-        if (request.query.distinctQueries.isEmpty()) {
-            distinctTerms = Collections.emptyList();
-        } else if (request.query.distinctQueries.size() == 1) {
-            DistinctsQuestion distinctsQuestion = new DistinctsQuestion(distincts, new MiruRequest<>(
-                request.name,
-                request.tenantId,
-                request.actorId,
-                request.authzExpression,
-                request.query.distinctQueries.get(0),
-                request.logLevel),
-                null); //TODO hacky
-            MiruPartitionResponse<DistinctsAnswer> distinctsResponse = distinctsQuestion.askLocal(handle, Optional.<DistinctsReport>absent());
-            distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
-                ? Sets.newHashSet(distinctsResponse.answer.results)
-                : Collections.<String>emptySet();
-        } else {
-            Set<String> joinTerms = null;
-            for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
-                DistinctsQuestion distinctsQuestion = new DistinctsQuestion(distincts, new MiruRequest<>(
-                    request.name,
-                    request.tenantId,
-                    request.actorId,
-                    request.authzExpression,
-                    distinctQuery,
-                    request.logLevel),
-                    null); //TODO hacky
-                MiruPartitionResponse<DistinctsAnswer> distinctsResponse = distinctsQuestion.askLocal(handle, Optional.<DistinctsReport>absent());
-                Set<String> queryTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
-                    ? Sets.newHashSet(distinctsResponse.answer.results)
-                    : Collections.<String>emptySet();
-                if (joinTerms == null) {
-                    joinTerms = queryTerms;
-                } else {
-                    joinTerms.retainAll(queryTerms);
-                }
-            }
-            distinctTerms = joinTerms == null ? Collections.emptySet() : joinTerms;
-        }
+        MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
+        MiruRequestContext<BM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
 
-        Map<String, MiruFilter> constraintsFilters = Maps.newHashMap();
-        for (String term : distinctTerms) {
-            constraintsFilters.put(term,
-                new MiruFilter(MiruFilterOperation.and,
-                    false,
-                    Collections.singletonList(new MiruFieldFilter(
-                        MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(term))),
-                    null));
-        }
+        Map<String, Waveform> waveforms = Maps.newHashMap();
+        MiruTermComposer termComposer = context.getTermComposer();
 
-        AnalyticsQuestion analyticsQuestion = new AnalyticsQuestion(analytics, new MiruRequest<>(
-            request.name,
-            request.tenantId,
-            request.actorId,
+        MiruSchema schema = context.getSchema();
+        int fieldId = schema.getFieldId(request.query.aggregateCountAroundField);
+        MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
+
+        boolean resultsExhausted = analytics.analyze(solutionLog,
+            handle,
+            context,
             request.authzExpression,
-            new AnalyticsQuery(combinedTimeRange,
-                request.query.divideTimeRangeIntoNSegments,
-                request.query.constraintsFilter,
-                constraintsFilters),
-            request.logLevel),
-            null); //TODO hacky
-        return analyticsQuestion.askLocal(handle, Optional.<AnalyticsReport>absent());
+            combinedTimeRange,
+            request.query.constraintsFilter,
+            request.query.divideTimeRangeIntoNSegments,
+            (Analytics.ToAnalyze<MiruTermId> toAnalyze) -> {
+                if (request.query.distinctQueries.size() == 1) {
+                    distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), request.query.distinctQueries.get(0), solutionLog, termId -> {
+                        toAnalyze.analyze(termId, new MiruFilter(MiruFilterOperation.and,
+                            false,
+                            Collections.singletonList(MiruFieldFilter.raw(
+                                MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(termId))),
+                            null));
+                        return true;
+                    });
+                } else if (request.query.distinctQueries.size() > 1) {
+                    Set<MiruTermId> joinTerms = null;
+                    for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
+                        Set<MiruTermId> queryTerms = Sets.newHashSet();
+                        distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), distinctQuery, solutionLog, termId -> {
+                            queryTerms.add(termId);
+                            return true;
+                        });
+                        if (joinTerms == null) {
+                            joinTerms = queryTerms;
+                        } else {
+                            joinTerms.retainAll(queryTerms);
+                        }
+                    }
+                    if (joinTerms != null) {
+                        for (MiruTermId termId : joinTerms) {
+                            toAnalyze.analyze(termId, new MiruFilter(MiruFilterOperation.and,
+                                false,
+                                Collections.singletonList(MiruFieldFilter.raw(
+                                    MiruFieldType.primary, request.query.aggregateCountAroundField, Collections.singletonList(termId))),
+                                null));
+                        }
+                    }
+                }
+                return true;
+            },
+            (MiruTermId term, Waveform waveform) -> {
+                waveforms.put(termComposer.decompose(fieldDefinition, term), waveform);
+                return true;
+            });
+
+        AnalyticsAnswer result = new AnalyticsAnswer(waveforms, resultsExhausted);
+        return new MiruPartitionResponse<>(result, solutionLog.asList());
     }
 
     @Override

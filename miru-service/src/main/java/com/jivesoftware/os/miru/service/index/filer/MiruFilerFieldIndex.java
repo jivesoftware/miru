@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
@@ -24,7 +23,6 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
     private final long[] indexIds;
     private final KeyedFilerStore<Long, Void>[] indexes;
     private final KeyedFilerStore<Integer, MapContext>[] cardinalities;
-    private final int cardinalityInitialCapacity;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
 
@@ -32,13 +30,11 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
         long[] indexIds,
         KeyedFilerStore<Long, Void>[] indexes,
         KeyedFilerStore<Integer, MapContext>[] cardinalities,
-        int cardinalityInitialCapacity,
         StripingLocksProvider<MiruTermId> stripingLocksProvider) throws Exception {
         this.bitmaps = bitmaps;
         this.indexIds = indexIds;
         this.indexes = indexes;
         this.cardinalities = cardinalities;
-        this.cardinalityInitialCapacity = cardinalityInitialCapacity;
         this.stripingLocksProvider = stripingLocksProvider;
     }
 
@@ -62,7 +58,13 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
 
     @Override
     public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream) throws Exception {
-        indexes[fieldId].streamKeys(ranges, iba -> termIdStream.stream(new MiruTermId(iba.getBytes())));
+        indexes[fieldId].streamKeys(ranges, iba -> {
+            try {
+                return termIdStream.stream(new MiruTermId(iba.getBytes()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Override
@@ -157,16 +159,5 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
                 return null;
             });
         }
-    }
-
-    private IBA cardinalityKey(MiruTermId termId, int id) {
-        if (id < 0) {
-            return null;
-        }
-        byte[] termBytes = termId.getBytes();
-        byte[] keyBytes = new byte[termBytes.length + 4];
-        System.arraycopy(termBytes, 0, keyBytes, 0, termBytes.length);
-        FilerIO.intBytes(id, keyBytes, termBytes.length);
-        return new IBA(keyBytes);
     }
 }

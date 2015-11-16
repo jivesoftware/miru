@@ -60,7 +60,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
 
     @Override
     public void remove(EWAHCompressedBitmap container, EWAHCompressedBitmap bitmap, int... indexes) {
-        andNot(container, bitmap, Arrays.asList(createWithBits(indexes)));
+        andNot(container, bitmap, createWithBits(indexes));
     }
 
     @Override
@@ -136,6 +136,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
+    public void andNot(EWAHCompressedBitmap container, EWAHCompressedBitmap original, EWAHCompressedBitmap bitmap) {
+        original.andNotToContainer(bitmap, container);
+    }
+
+    @Override
     public void andNot(EWAHCompressedBitmap container, EWAHCompressedBitmap original, List<EWAHCompressedBitmap> bitmaps) {
 
         if (bitmaps.isEmpty()) {
@@ -188,6 +193,12 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     public void orToSourceSize(EWAHCompressedBitmap container, EWAHCompressedBitmap source, EWAHCompressedBitmap mask) {
         MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(container, source.sizeInBits());
         source.orToContainer(mask, matchNoMoreThanNBitmapStorage);
+    }
+
+    @Override
+    public void andNotToSourceSize(EWAHCompressedBitmap container, EWAHCompressedBitmap source, EWAHCompressedBitmap mask) {
+        MatchNoMoreThanNBitmapStorage matchNoMoreThanNBitmapStorage = new MatchNoMoreThanNBitmapStorage(container, source.sizeInBits());
+        source.andNotToContainer(mask, matchNoMoreThanNBitmapStorage);
     }
 
     @Override

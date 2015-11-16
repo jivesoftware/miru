@@ -70,7 +70,7 @@ public class MiruBitmapsAggregationTest {
         BM original = bitmaps.createWithBits(originalBits.toArray());
         BM not = bitmaps.createWithBits(notBits.toArray());
         BM container = bitmaps.create();
-        bitmaps.andNot(container, original, Collections.singletonList(not));
+        bitmaps.andNot(container, original, not);
         for (int i = 0; i < numOriginal; i++) {
             if (i < numNot) {
                 assertFalse(bitmaps.isSet(container, i * 137));

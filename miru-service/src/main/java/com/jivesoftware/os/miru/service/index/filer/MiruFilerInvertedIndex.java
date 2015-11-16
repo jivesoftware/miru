@@ -218,7 +218,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         synchronized (mutationLock) {
             BM index = getOrCreateIndex();
             BM r = bitmaps.create();
-            bitmaps.andNot(r, index, Collections.singletonList(mask));
+            bitmaps.andNot(r, index, mask);
             setIndex(r, lastId);
         }
     }

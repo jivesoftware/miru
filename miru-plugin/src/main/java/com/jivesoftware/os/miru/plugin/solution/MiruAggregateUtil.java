@@ -26,6 +26,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -214,6 +215,7 @@ public class MiruAggregateUtil {
             filterBitmaps.add(bitmaps.buildIndexMask(largestIndex, Optional.<BM>absent()));
         }
         if (filter.fieldFilters != null) {
+            boolean abortIfEmpty = filter.operation == MiruFilterOperation.and;
             for (final MiruFieldFilter fieldFilter : filter.fieldFilters) {
                 final int fieldId = schema.getFieldId(fieldFilter.fieldName);
                 final MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
@@ -221,56 +223,35 @@ public class MiruAggregateUtil {
                     final List<BM> fieldBitmaps = new ArrayList<>();
                     boolean fieldTermIn = filter.operation == MiruFilterOperation.pButNotQ && !filterBitmaps.isEmpty() ? !termIn : termIn;
                     long start = System.currentTimeMillis();
-                    for (final String term : fieldFilter.values) {
+                    List<String> values = fieldFilter.values != null ? fieldFilter.values : Collections.emptyList();
+                    for (final String term : values) {
                         if (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none && term.endsWith("*")) {
                             String baseTerm = term.substring(0, term.length() - 1);
                             byte[] lowerInclusive = termComposer.prefixLowerInclusive(fieldDefinition.prefix, baseTerm);
                             byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
                             fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).streamTermIdsForField(fieldId,
-                                Arrays.asList(new KeyRange(lowerInclusive, upperExclusive)),
+                                Collections.singletonList(new KeyRange(lowerInclusive, upperExclusive)),
                                 termId -> {
                                     if (termId != null) {
-                                        try {
-                                            MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
-                                                fieldId,
-                                                termId,
-                                                considerIfIndexIdGreaterThanN);
-                                            Optional<BM> index = got.getIndex();
-
-                                            if (index.isPresent()) {
-                                                fieldBitmaps.add(index.get());
-                                            }
-
-                                            collectTerm(fieldId, termId, fieldTermIn, termCollector);
-                                        } catch (Exception e) {
-                                            throw new RuntimeException("Failed to get wildcard index", e);
-                                        }
+                                        getAndCollectTerm(fieldIndexProvider, fieldFilter, fieldId, termId,
+                                            considerIfIndexIdGreaterThanN, fieldTermIn, termCollector, fieldBitmaps);
                                     }
                                     return true;
                                 });
                         } else {
                             MiruTermId termId = termComposer.compose(fieldDefinition, term);
-                            MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
-                                fieldId,
-                                termId,
-                                considerIfIndexIdGreaterThanN);
-                            Optional<BM> index = got.getIndex();
-                            if (index.isPresent()) {
-                                if (filter.operation == MiruFilterOperation.and && bitmaps.isEmpty(index.get())) {
-                                    // implicitly empty results, "and" operation would also be empty
-                                    solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: short circuit to 'and' empty bitmap after {} millis.",
-                                        System.currentTimeMillis() - start);
-                                    return;
-                                }
-                                fieldBitmaps.add(index.get());
-                            }
-
-                            collectTerm(fieldId, termId, fieldTermIn, termCollector);
+                            getAndCollectTerm(fieldIndexProvider, fieldFilter, fieldId, termId,
+                                considerIfIndexIdGreaterThanN, fieldTermIn, termCollector, fieldBitmaps);
                         }
                     }
-                    solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} values={} lookup took {} millis.",
-                        fieldId, fieldFilter.values.size(), System.currentTimeMillis() - start);
-                    if (fieldBitmaps.isEmpty() && filter.operation == MiruFilterOperation.and) {
+                    List<MiruTermId> rawValues = fieldFilter.rawValues != null ? fieldFilter.rawValues : Collections.emptyList();
+                    for (MiruTermId termId : rawValues) {
+                        getAndCollectTerm(fieldIndexProvider, fieldFilter, fieldId, termId,
+                            considerIfIndexIdGreaterThanN, fieldTermIn, termCollector, fieldBitmaps);
+                    }
+                    solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} values={} rawValues={} lookup took {} millis.",
+                        fieldId, values.size(), rawValues.size(), System.currentTimeMillis() - start);
+                    if (abortIfEmpty && fieldBitmaps.isEmpty()) {
                         // implicitly empty results, "and" operation would also be empty
                         return;
                     } else if (!fieldBitmaps.isEmpty()) {
@@ -294,6 +275,27 @@ public class MiruAggregateUtil {
             }
         }
         executeFilter(bitmaps, filter.operation, solutionLog, bitmapStorage, filterBitmaps);
+    }
+
+    private <BM> void getAndCollectTerm(MiruFieldIndexProvider<BM> fieldIndexProvider,
+        MiruFieldFilter fieldFilter,
+        int fieldId,
+        MiruTermId termId,
+        int considerIfIndexIdGreaterThanN,
+        boolean fieldTermIn,
+        Map<FieldAndTermId, MutableInt> termCollector,
+        List<BM> fieldBitmaps) throws Exception {
+
+        MiruInvertedIndex<BM> got = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType).get(
+            fieldId,
+            termId,
+            considerIfIndexIdGreaterThanN);
+        Optional<BM> index = got.getIndex();
+        if (index.isPresent()) {
+            fieldBitmaps.add(index.get());
+        }
+
+        collectTerm(fieldId, termId, fieldTermIn, termCollector);
     }
 
     private void collectTerm(int fieldId, MiruTermId termId, boolean termIn, Map<FieldAndTermId, MutableInt> termCollector) {
