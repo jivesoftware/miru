@@ -16,6 +16,8 @@
 package com.jivesoftware.os.miru.service.bitmap;
 
 import com.google.common.base.Optional;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -23,7 +25,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import java.io.BufferedReader;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.File;
 import java.io.FileReader;
 import java.util.Arrays;
 import java.util.Collection;
@@ -306,18 +307,20 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     /*public static void main(String[] args) throws Exception {
-        FileReader fileReader = new FileReader("/Users/kevin.karpenske/Desktop/data.txt");
+        FileReader fileReader = new FileReader("/Users/kevin.karpenske/Desktop/roaring-xor.out");
         BufferedReader buf = new BufferedReader(fileReader);
 
         String line1;
         do {
             line1 = buf.readLine();
-        } while (line1 == null || line1.trim().isEmpty());
+        }
+        while (line1 == null || line1.trim().isEmpty());
 
         String line2;
         do {
             line2 = buf.readLine();
-        } while (line2 == null || line2.trim().isEmpty());
+        }
+        while (line2 == null || line2.trim().isEmpty());
 
         String[] line1split = line1.split(",");
         String[] line2split = line2.split(",");
@@ -336,11 +339,42 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
         System.out.println("1: " + indexes1.length);
         System.out.println("2: " + indexes2.length);
 
-        RoaringBitmap bitmap1 = RoaringBitmap.bitmapOf(indexes1);
-        RoaringBitmap bitmap2 = RoaringBitmap.bitmapOf(indexes2);
+
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+
+        RoaringBitmap bitmap1 = new RoaringBitmap();
+        bitmaps.append(bitmap1, new RoaringBitmap(), indexes1);
+        ByteArrayDataOutput dataOutput = ByteStreams.newDataOutput();
+        bitmaps.serialize(bitmap1, dataOutput);
+        bitmap1 = bitmaps.deserialize(ByteStreams.newDataInput(dataOutput.toByteArray()));
+
+        int run = 0;
+        for (int i = 0; i < indexes2.length; i++) {
+            if (i > 0) {
+                if (indexes2[i - 1] == indexes2[i] - 1) {
+                    run++;
+                } else {
+                    if (run > 1000) {
+                        System.out.println("run of " + run);
+                    }
+                    run = 0;
+                }
+            }
+        }
+
+        RoaringBitmap bitmap2 = new RoaringBitmap();
+        bitmaps.append(bitmap2, new RoaringBitmap(), indexes2);
+        dataOutput = ByteStreams.newDataOutput();
+        bitmaps.serialize(bitmap2, dataOutput);
+        bitmap2 = bitmaps.deserialize(ByteStreams.newDataInput(dataOutput.toByteArray()));
 
         RoaringBitmap container = new RoaringBitmap();
+        RoaringAggregation.or(container, new RoaringBitmap[] { bitmap1, bitmap2 });
+        System.out.println("c1: " + container.getCardinality());
+
+        container = new RoaringBitmap();
         RoaringAggregation.or(container, bitmap1, bitmap2);
+        System.out.println("c2: " + container.getCardinality());
     }*/
 
     /*public static void main(String[] args) throws Exception {

@@ -50,7 +50,8 @@ public class RoaringAggregation {
                     s1 = x1.highLowContainer.getKeyAtIndex(pos1);
                     s2 = x2.highLowContainer.getKeyAtIndex(pos2);
                 }
-            } while (true);
+            }
+            while (true);
         }
     }
 
@@ -121,7 +122,8 @@ public class RoaringAggregation {
                     s1 = x1.highLowContainer.keys[pos1];
                     s2 = x2.highLowContainer.keys[pos2];
                 }
-            } while (true);
+            }
+            while (true);
         }
         if (pos2 == length2) {
             answer.highLowContainer.appendCopy(x1.highLowContainer, pos1, length1);
@@ -168,7 +170,7 @@ public class RoaringAggregation {
                     s2 = x2.highLowContainer.getKeyAtIndex(pos2);
                 } else {
                     answer.highLowContainer.append(s1, x1.highLowContainer.getContainerAtIndex(pos1).or(
-                        x2.highLowContainer.getContainerAtIndex(pos2))
+                            x2.highLowContainer.getContainerAtIndex(pos2))
                     );
                     pos1++;
                     pos2++;
@@ -203,12 +205,7 @@ public class RoaringAggregation {
         while (pq.size() > 1) {
             RoaringBitmap x1 = pq.poll();
             RoaringBitmap x2 = pq.poll();
-            try {
-                pq.add(RoaringBitmap.or(x1, x2));
-            } catch (ArrayIndexOutOfBoundsException aioobe) {
-                System.out.println("WTF2: issues when oring: x1:" + x1 + " x2" + x2);
-                throw aioobe;
-            }
+            pq.add(RoaringBitmap.or(x1, x2));
         }
         container.or(pq.poll());
     }
