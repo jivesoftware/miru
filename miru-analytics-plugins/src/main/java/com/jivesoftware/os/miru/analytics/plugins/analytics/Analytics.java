@@ -119,7 +119,12 @@ public class Analytics {
         analysis.consume((term, filter) -> {
             Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = bitmaps.create();
+                long[] bogus = new long[divideTimeRangeIntoNSegments];
+                for (int i = 0; i < bogus.length; i++) {
+                    bogus[i] += i * bogus.length;
+                }
+                waveform = new Waveform(bogus);
+                /*BM waveformFiltered = bitmaps.create();
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
                     waveformFiltered, null, context.getActivityIndex().lastId(), -1);
                 BM answer = bitmaps.create();
@@ -132,7 +137,7 @@ public class Analytics {
                     }
                 } else {
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics empty answer.");
-                }
+                }*/
             }
             if (waveform == null) {
                 waveform = new Waveform(new long[divideTimeRangeIntoNSegments]);
