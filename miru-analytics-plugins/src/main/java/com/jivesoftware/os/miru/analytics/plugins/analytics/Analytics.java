@@ -109,12 +109,15 @@ public class Analytics {
             throw new RuntimeException("Time range is insufficient to be divided into " + divideTimeRangeIntoNSegments + " segments");
         }
 
+        start = System.currentTimeMillis();
         int[] indexes = new int[divideTimeRangeIntoNSegments + 1];
         for (int i = 0; i < indexes.length; i++) {
             indexes[i] = Math.abs(timeIndex.getClosestId(currentTime)); // handle negative "theoretical insertion" index
             currentTime += segmentDuration;
         }
+        solutionLog.log(MiruSolutionLogLevel.INFO, "analytics bucket boundaries: {} millis.", System.currentTimeMillis() - start);
 
+        start = System.currentTimeMillis();
         int[] count = new int[1];
         analysis.consume((term, filter) -> {
             Waveform waveform = null;
