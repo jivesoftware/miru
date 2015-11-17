@@ -50,12 +50,17 @@ public class Analytics {
         int divideTimeRangeIntoNSegments,
         Analysis<T> analysis,
         Analyzed<T> analyzed) throws Exception {
-        // Start building up list of bitmap operations to run
-        List<BM> ands = new ArrayList<>();
 
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
         MiruPartitionCoord coord = handle.getCoord();
         MiruTimeIndex timeIndex = context.getTimeIndex();
+
+        // Short-circuit if this is not a properly bounded query
+        if (timeRange.largestTimestamp == Long.MAX_VALUE || timeRange.smallestTimestamp == 0) {
+            solutionLog.log(MiruSolutionLogLevel.WARN, "Improperly bounded query: {}", timeRange);
+            analysis.consume((termId, version, filter) -> analyzed.analyzed(termId, version, new Waveform(new long[divideTimeRangeIntoNSegments])));
+            return true;
+        }
 
         // Short-circuit if the time range doesn't live here
         boolean resultsExhausted = timeRange.smallestTimestamp > timeIndex.getLargestTimestamp();
@@ -65,6 +70,9 @@ public class Analytics {
             analysis.consume((termId, version, filter) -> analyzed.analyzed(termId, version, new Waveform(new long[divideTimeRangeIntoNSegments])));
             return resultsExhausted;
         }
+
+        // Start building up list of bitmap operations to run
+        List<BM> ands = new ArrayList<>();
 
         long start = System.currentTimeMillis();
         ands.add(bitmaps.buildTimeRangeMask(timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));

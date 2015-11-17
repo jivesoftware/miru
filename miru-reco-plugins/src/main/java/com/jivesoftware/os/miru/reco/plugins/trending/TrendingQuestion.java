@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
+import com.google.common.collect.Interner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -44,27 +45,28 @@ import java.util.Set;
  */
 public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer, TrendingReport> {
 
-    private static final String CACHE_NAME = TrendingQuestion.class.getSimpleName();
-
     private final Distincts distincts;
     private final Analytics analytics;
     private final MiruRequest<TrendingQuery> request;
     private final MiruTimeRange combinedTimeRange;
     private final MiruRemotePartition<TrendingQuery, AnalyticsAnswer, TrendingReport> remotePartition;
     private final Cache<TrendingWaveformKey, TrendingVersionedWaveform> queryCache;
+    private final Interner<MiruFilter> constraintsInterner;
 
     public TrendingQuestion(Distincts distincts,
         Analytics analytics,
         MiruTimeRange combinedTimeRange,
         MiruRequest<TrendingQuery> request,
         MiruRemotePartition<TrendingQuery, AnalyticsAnswer, TrendingReport> remotePartition,
-        Cache<TrendingWaveformKey, TrendingVersionedWaveform> queryCache) {
+        Cache<TrendingWaveformKey, TrendingVersionedWaveform> queryCache,
+        Interner<MiruFilter> constraintsInterner) {
         this.distincts = distincts;
         this.analytics = analytics;
         this.combinedTimeRange = combinedTimeRange;
         this.request = request;
         this.remotePartition = remotePartition;
         this.queryCache = queryCache;
+        this.constraintsInterner = constraintsInterner;
     }
 
     private Waveform getCachedWaveform(Cache<TrendingWaveformKey, TrendingVersionedWaveform> cache, TrendingWaveformKey key, long version) {
@@ -88,7 +90,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         long upperTime = combinedTimeRange.largestTimestamp;
         long lowerTime = combinedTimeRange.smallestTimestamp;
         if (upperTime == Long.MAX_VALUE || lowerTime == 0) {
-            return null;
+            return new MiruPartitionResponse<>(new AnalyticsAnswer(Collections.emptyMap(), true), solutionLog.asList());
         }
 
         long timePerSegment = (upperTime - lowerTime) / request.query.divideTimeRangeIntoNSegments;
@@ -96,6 +98,8 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         long jiveModulusTime = upperTime % timePerSegment;
         long jiveCeilingTime = upperTime - jiveModulusTime + timePerSegment;
         long jiveFloorTime = jiveCeilingTime - (request.query.divideTimeRangeIntoNSegments * timePerSegment);
+
+        MiruFilter internedConstraintsFilter = constraintsInterner.intern(request.query.constraintsFilter);
 
         long start = System.currentTimeMillis();
         Collection<MiruTermId> termIds = Collections.emptyList();
@@ -140,7 +144,13 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             request.query.divideTimeRangeIntoNSegments,
             (Analytics.ToAnalyze<TrendingWaveformKey> toAnalyze) -> {
                 for (MiruTermId termId : _termIds) {
-                    TrendingWaveformKey key = new TrendingWaveformKey(coord, fieldId, jiveCeilingTime, jiveFloorTime, request.query.divideTimeRangeIntoNSegments, termId);
+                    TrendingWaveformKey key = new TrendingWaveformKey(coord,
+                        fieldId,
+                        jiveCeilingTime,
+                        jiveFloorTime,
+                        request.query.divideTimeRangeIntoNSegments,
+                        termId,
+                        internedConstraintsFilter);
                     long version = fieldIndex.getVersion(fieldId, termId);
                     Waveform waveform = getCachedWaveform(queryCache, key, version);
                     if (waveform != null) {
