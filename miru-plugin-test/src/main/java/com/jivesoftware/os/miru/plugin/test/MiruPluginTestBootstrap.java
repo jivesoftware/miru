@@ -88,6 +88,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.merlin.config.BindInterfaceToConfiguration;
+import org.merlin.config.Config;
 import org.testng.Assert;
 
 /**
@@ -266,6 +267,11 @@ public class MiruPluginTestBootstrap {
             @Override
             public Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache() {
                 return null;
+            }
+
+            @Override
+            public <C extends Config> C getConfig(Class<C> configClass) {
+                return BindInterfaceToConfiguration.bindDefault(configClass);
             }
         };
     }

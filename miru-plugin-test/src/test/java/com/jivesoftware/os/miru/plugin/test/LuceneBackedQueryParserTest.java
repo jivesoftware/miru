@@ -142,6 +142,11 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
+        public long getVersion(int fieldId, MiruTermId termId) throws Exception {
+            return -1;
+        }
+
+        @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
             @SuppressWarnings("unchecked")
             MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) Mockito.mock(MiruInvertedIndex.class);

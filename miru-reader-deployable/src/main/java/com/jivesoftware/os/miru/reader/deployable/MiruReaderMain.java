@@ -99,6 +99,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import org.merlin.config.Config;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.scanners.TypesScanner;
@@ -344,6 +345,11 @@ public class MiruReaderMain {
                 @Override
                 public Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache() {
                     return readerStrategyCache;
+                }
+
+                @Override
+                public <C extends Config> C getConfig(Class<C> configClass) {
+                    return deployable.config(configClass);
                 }
             };
 

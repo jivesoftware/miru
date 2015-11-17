@@ -39,6 +39,11 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
     }
 
     @Override
+    public long getVersion(int fieldId, MiruTermId termId) throws Exception {
+        return -1;
+    }
+
+    @Override
     public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
         getIndex(fieldId, termId, -1).append(ids);
         mergeCardinalities(fieldId, termId, ids, counts);

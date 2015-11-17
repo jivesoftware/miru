@@ -43,7 +43,7 @@ public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM>, Mergeable {
         MiruDeltaInvertedIndex<BM> delta = inboxDeltas.get(streamId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getInbox(streamId), new MiruDeltaInvertedIndex.Delta<BM>(),
-                new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache);
+                new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache, null);
             MiruDeltaInvertedIndex<BM> existing = inboxDeltas.putIfAbsent(streamId, delta);
             if (existing != null) {
                 delta = existing;

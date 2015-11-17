@@ -54,8 +54,6 @@ import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -155,6 +153,11 @@ public class MiruServiceInitializer {
             .softValues()
             .build();
 
+        Cache<MiruFieldIndex.IndexKey, Long> versionCache = CacheBuilder.newBuilder()
+            .maximumSize(config.getVersionCacheMaxSize())
+            .concurrencyLevel(config.getVersionCacheConcurrencyLevel())
+            .build();
+
         TxCogs cogs = new TxCogs(256, 64,
             new ConcurrentKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory(),
@@ -173,6 +176,7 @@ public class MiruServiceInitializer {
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
             fieldIndexCache,
+            versionCache,
             new AtomicLong(0),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,

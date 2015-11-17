@@ -218,6 +218,7 @@ public class MiruLocalHostedPartitionTest {
             defaultStorage,
             config.getPartitionAuthzCacheSize(),
             null,
+            null,
             new AtomicLong(0),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),

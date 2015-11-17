@@ -94,6 +94,7 @@ public class IndexTestUtil {
             MiruBackingStorage.memory,
             1024,
             null,
+            null,
             new AtomicLong(0),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,

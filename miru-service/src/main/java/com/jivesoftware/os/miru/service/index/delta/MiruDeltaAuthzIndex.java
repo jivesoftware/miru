@@ -75,7 +75,7 @@ public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM>, Mergeable {
         MiruDeltaInvertedIndex<BM> delta = authzDeltas.get(authz);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getAuthz(authz), new MiruDeltaInvertedIndex.Delta<BM>(),
-                new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), fieldIndexCache);
+                new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), fieldIndexCache, null);
             MiruDeltaInvertedIndex<BM> existing = authzDeltas.putIfAbsent(authz, delta);
             if (existing != null) {
                 delta = existing;

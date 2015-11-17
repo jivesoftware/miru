@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.Map;
+import org.merlin.config.Config;
 
 /**
  *
@@ -34,4 +35,6 @@ public interface MiruProvider<T extends Miru> {
     TenantAwareHttpClient<String> getReaderHttpClient();
 
     Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache();
+
+    <C extends Config> C getConfig(Class<C> configClass);
 }
