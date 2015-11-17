@@ -1,13 +1,11 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 
 /** @author jonathan */
 public class MiruRemoteQueryablePartitionFactory {

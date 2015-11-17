@@ -12,6 +12,8 @@ public class MiruPartitionCoord {
     public final MiruPartitionId partitionId;
     public final MiruHost host;
 
+    private int hash = 0;
+
     @JsonCreator
     public MiruPartitionCoord(@JsonProperty("tenantId") MiruTenantId tenantId,
         @JsonProperty("partitionId") MiruPartitionId partitionId,
@@ -52,9 +54,12 @@ public class MiruPartitionCoord {
 
     @Override
     public int hashCode() {
-        int result = tenantId != null ? tenantId.hashCode() : 0;
-        result = 31 * result + (partitionId != null ? partitionId.hashCode() : 0);
-        result = 31 * result + (host != null ? host.hashCode() : 0);
-        return result;
+        if (hash == 0) {
+            int result = tenantId != null ? tenantId.hashCode() : 0;
+            result = 31 * result + (partitionId != null ? partitionId.hashCode() : 0);
+            result = 31 * result + (host != null ? host.hashCode() : 0);
+            hash = result;
+        }
+        return hash;
     }
 }

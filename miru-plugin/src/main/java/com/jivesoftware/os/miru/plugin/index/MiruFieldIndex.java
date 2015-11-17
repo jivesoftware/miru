@@ -17,6 +17,8 @@ public interface MiruFieldIndex<BM> {
 
     MiruInvertedIndex<BM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
 
+    long getVersion(int fieldId, MiruTermId termId) throws Exception;
+
     void append(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception;
 
     void set(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception;

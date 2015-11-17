@@ -11,10 +11,11 @@ public class MiruDeltaRemovalIndex<BM> extends MiruDeltaInvertedIndex<BM> implem
 
     public MiruDeltaRemovalIndex(MiruBitmaps<BM> bitmaps,
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        Cache<MiruFieldIndex.IndexKey, Long> versionCache,
         long indexId,
         byte[] keyBytes,
         MiruInvertedIndex<BM> backingIndex,
         Delta<BM> delta) {
-        super(bitmaps, backingIndex, delta, new MiruFieldIndex.IndexKey(indexId, keyBytes), fieldIndexCache);
+        super(bitmaps, backingIndex, delta, new MiruFieldIndex.IndexKey(indexId, keyBytes), fieldIndexCache, versionCache);
     }
 }

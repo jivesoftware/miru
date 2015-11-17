@@ -42,7 +42,7 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
         MiruDeltaInvertedIndex<BM> delta = unreadDeltas.get(streamId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<BM>(),
-                new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache);
+                new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache, null);
             MiruDeltaInvertedIndex<BM> existing = unreadDeltas.putIfAbsent(streamId, delta);
             if (existing != null) {
                 delta = existing;

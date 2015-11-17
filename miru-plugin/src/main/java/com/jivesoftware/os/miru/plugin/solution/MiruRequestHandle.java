@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import java.util.function.Function;
 
 /**
  *

@@ -51,14 +51,14 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             request.query.divideTimeRangeIntoNSegments,
             (Analytics.ToAnalyze<String> toAnalyze) -> {
                 for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
-                    if (!toAnalyze.analyze(entry.getKey(), entry.getValue())) {
+                    if (!toAnalyze.analyze(entry.getKey(), -1L, entry.getValue())) {
                         return false;
                     }
                 }
                 return true;
             },
-            (String termId, Waveform waveform) -> {
-                waveforms.put(termId, waveform);
+            (String term, long version, Waveform waveform) -> {
+                waveforms.put(term, waveform);
                 return true;
             });
 

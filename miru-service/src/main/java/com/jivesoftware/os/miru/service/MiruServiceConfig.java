@@ -176,4 +176,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(512)
     int getFieldIndexCacheConcurrencyLevel();
 
+    @LongDefault(1_000_000)
+    long getVersionCacheMaxSize();
+
+    @IntDefault(512)
+    int getVersionCacheConcurrencyLevel();
 }

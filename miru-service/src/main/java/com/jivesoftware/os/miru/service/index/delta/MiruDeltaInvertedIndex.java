@@ -7,7 +7,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -21,17 +20,20 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
     private final Delta<BM> delta;
     private final MiruFieldIndex.IndexKey indexKey;
     private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
+    private final Cache<MiruFieldIndex.IndexKey, Long> versionCache;
 
     public MiruDeltaInvertedIndex(MiruBitmaps<BM> bitmaps,
         MiruInvertedIndex<BM> backingIndex,
         Delta<BM> delta,
         MiruFieldIndex.IndexKey indexKey,
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        Cache<MiruFieldIndex.IndexKey, Long> versionCache) {
         this.bitmaps = bitmaps;
         this.backingIndex = backingIndex;
         this.delta = delta;
         this.indexKey = indexKey;
         this.fieldIndexCache = fieldIndexCache;
+        this.versionCache = versionCache;
     }
 
     private final Callable<Optional<BM>> indexLoader = new Callable<Optional<BM>>() {
@@ -71,6 +73,9 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
     private void invalidateCache() {
         if (fieldIndexCache != null) {
             fieldIndexCache.invalidate(indexKey);
+        }
+        if (versionCache != null) {
+            versionCache.invalidate(indexKey);
         }
     }
 

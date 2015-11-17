@@ -255,6 +255,7 @@ public class MiruInvertedIndexTest {
             buildFilerInvertedIndex(bitmaps),
             new MiruDeltaInvertedIndex.Delta<BM>(),
             new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
+            null,
             null);
     }
 

@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -53,6 +55,7 @@ public class TrendingInjectable {
     private final Analytics analytics;
 
     private final PeakDet peakDet = new PeakDet();
+    private final Cache<TrendingWaveformKey, TrendingVersionedWaveform> queryCache;
 
     public TrendingInjectable(MiruProvider<? extends Miru> miruProvider,
         Distincts distincts,
@@ -60,6 +63,9 @@ public class TrendingInjectable {
         this.provider = miruProvider;
         this.distincts = distincts;
         this.analytics = analytics;
+
+        TrendingPluginConfig config = miruProvider.getConfig(TrendingPluginConfig.class);
+        this.queryCache = CacheBuilder.newBuilder().maximumSize(config.getQueryCacheMaxSize()).build();
     }
 
     double zeroToOne(long _min, long _max, long _long) {
@@ -121,7 +127,7 @@ public class TrendingInjectable {
                     analytics,
                     combinedTimeRange,
                     request,
-                    provider.getRemotePartition(TrendingRemotePartition.class))),
+                    provider.getRemotePartition(TrendingRemotePartition.class), queryCache)),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(combinedTimeRange, request.query.divideTimeRangeIntoNSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
@@ -311,7 +317,8 @@ public class TrendingInjectable {
                         analytics,
                         combinedTimeRange,
                         request,
-                        provider.getRemotePartition(TrendingRemotePartition.class))),
+                        provider.getRemotePartition(TrendingRemotePartition.class),
+                        queryCache)),
                 Optional.fromNullable(requestAndReport.report),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);

@@ -94,6 +94,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final MiruBackingStorage defaultStorage;
     private final int partitionAuthzCacheSize;
     private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
+    private final Cache<MiruFieldIndex.IndexKey, Long> versionCache;
     private final AtomicLong fieldIndexIdProvider;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
@@ -109,6 +110,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage defaultStorage,
         int partitionAuthzCacheSize,
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        Cache<MiruFieldIndex.IndexKey, Long> versionCache,
         AtomicLong fieldIndexIdProvider,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
@@ -124,6 +126,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.defaultStorage = defaultStorage;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.fieldIndexCache = fieldIndexCache;
+        this.versionCache = versionCache;
         this.fieldIndexIdProvider = fieldIndexIdProvider;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
         this.streamStripingLocksProvider = streamStripingLocksProvider;
@@ -229,7 +232,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 indexIds,
                 new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, cardinalities, fieldIndexStripingLocksProvider),
                 schema.getFieldDefinitions(),
-                fieldIndexCache);
+                fieldIndexCache,
+                versionCache,
+                new AtomicLong());
         }
         MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -265,6 +270,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruRemovalIndex<BM> removalIndex = new MiruDeltaRemovalIndex<>(
             bitmaps,
             fieldIndexCache,
+            versionCache,
             removalIndexId,
             new byte[] { 0 },
             new MiruFilerRemovalIndex<>(
