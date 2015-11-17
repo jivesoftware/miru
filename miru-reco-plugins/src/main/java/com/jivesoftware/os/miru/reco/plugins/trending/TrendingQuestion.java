@@ -130,6 +130,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         start = System.currentTimeMillis();
         Collection<MiruTermId> _termIds = termIds;
         Map<String, Waveform> waveforms = Maps.newHashMapWithExpectedSize(termIds.size());
+        int[] cacheHits = new int[1];
         boolean resultsExhausted = analytics.analyze(solutionLog,
             handle,
             context,
@@ -144,6 +145,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                     Waveform waveform = getCachedWaveform(queryCache, key, version);
                     if (waveform != null) {
                         waveforms.put(termComposer.decompose(fieldDefinition, termId), waveform);
+                        cacheHits[0]++;
                     } else {
                         toAnalyze.analyze(key, version, new MiruFilter(MiruFilterOperation.and,
                             false,
@@ -159,8 +161,8 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                 queryCache.put(key, new TrendingVersionedWaveform(version, waveform));
                 return true;
             });
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Analyzed {} waveforms in {} ms.",
-            waveforms.size(), (System.currentTimeMillis() - start));
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Collected cached:{} analyzed:{} waveforms in {} ms.",
+            cacheHits[0], (waveforms.size() - cacheHits[0]), (System.currentTimeMillis() - start));
 
         AnalyticsAnswer result = new AnalyticsAnswer(waveforms, resultsExhausted);
         return new MiruPartitionResponse<>(result, solutionLog.asList());
