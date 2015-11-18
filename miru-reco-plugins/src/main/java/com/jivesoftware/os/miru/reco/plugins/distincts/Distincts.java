@@ -112,7 +112,7 @@ public class Distincts {
                 start = System.currentTimeMillis();
                 Set<MiruTermId> termIds = Sets.newHashSet();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, 100, termIds);
+                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, 100, solutionLog, termIds);
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
 
                 if (prefixesAsBytes.length > 0) {
