@@ -9,7 +9,8 @@
  * @param? toHoursAgo
  * @param? buckets
  * @param? field
- * @param? fieldPrefixes
+ * @param? typeField
+ * @param? types
  * @param? results
  * @param? summary
  * @param? elapse
@@ -77,11 +78,19 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Field Prefixes</td>
+                        <td>Type Field</td>
                         <td>
                         <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field Prefixes" value="{$fieldPrefixes?:''}"
-                            name="fieldPrefixes" id="fieldPrefixesPicker" data-original-title="" title="">
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Type Field" value="{$typeField?:''}"
+                            name="typeField" id="typeFieldPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Types</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Types" value="{$types?:''}"
+                            name="types" id="typesPicker" data-original-title="" title="">
                         </td>
                     </tr>
                 </table>

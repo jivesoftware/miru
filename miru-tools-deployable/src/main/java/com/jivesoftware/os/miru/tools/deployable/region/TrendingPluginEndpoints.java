@@ -39,25 +39,27 @@ public class TrendingPluginEndpoints {
         @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("field") @DefaultValue("authors") String field,
-        @QueryParam("fieldPrefixes") @DefaultValue("") String fieldPrefixesString,
+        @QueryParam("typeField") @DefaultValue("") String typeField,
+        @QueryParam("types") @DefaultValue("") String typesString,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
-        List<String> fieldPrefixes = null;
-        if (fieldPrefixesString != null && !fieldPrefixesString.isEmpty()) {
-            fieldPrefixes = Lists.newArrayList(Splitter.onPattern("\\s*,\\s*").split(fieldPrefixesString));
-            if (fieldPrefixes.isEmpty()) {
-                fieldPrefixes = null;
+        List<String> types = null;
+        if (typesString != null && !typesString.isEmpty()) {
+            types = Lists.newArrayList(Splitter.onPattern("\\s*,\\s*").split(typesString));
+            if (types.isEmpty()) {
+                types = null;
             }
         }
         String rendered = toolsService.renderPlugin(trendingPluginRegion,
             Optional.of(new TrendingPluginRegionInput(
-                    tenantId,
-                    fromHoursAgo,
-                    toHoursAgo,
-                    buckets,
-                    field,
-                    fieldPrefixes,
-                    logLevel)));
+                tenantId,
+                fromHoursAgo,
+                toHoursAgo,
+                buckets,
+                field,
+                typeField,
+                types,
+                logLevel)));
         return Response.ok(rendered).build();
     }
 }
