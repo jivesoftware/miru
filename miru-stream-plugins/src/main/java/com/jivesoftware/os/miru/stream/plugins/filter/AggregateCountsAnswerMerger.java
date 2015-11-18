@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
@@ -99,9 +98,9 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                 if (lastConstraint != null) {
 
                     solutionLog.log(MiruSolutionLogLevel.INFO, " Merged: {}"
-                        + "\n  From: terms={} results={} collected={} skipped={}"
-                        + "\n  With: terms={} results={} collected={} skipped={}"
-                        + "\n  To:   terms={} results={} collected={} skipped={}",
+                            + "\n  From: terms={} results={} collected={} skipped={}"
+                            + "\n  With: terms={} results={} collected={} skipped={}"
+                            + "\n  To:   terms={} results={} collected={} skipped={}",
                         entry.getKey(),
                         lastConstraint.aggregateTerms.size(), lastConstraint.results.size(), lastConstraint.collectedDistincts, lastConstraint.skippedDistincts,
                         currentConstraint.aggregateTerms.size(), currentConstraint.results.size(), currentConstraint.collectedDistincts,

@@ -42,7 +42,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -196,7 +195,7 @@ public class MiruRebalanceDirector {
                     LOG.warn("Empty removeHost response from {}, trying another", requestHelper);
                 }
             } catch (Exception e) {
-                LOG.warn("Failed removeHost request to {}, trying another", new Object[]{requestHelper}, e);
+                LOG.warn("Failed removeHost request to {}, trying another", new Object[] { requestHelper }, e);
             }
         }
     }

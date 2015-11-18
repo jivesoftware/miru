@@ -70,7 +70,7 @@ public class Waveform implements Serializable {
     @Override
     public String toString() {
         byte precision = waveform[waveform.length - 1];
-        long[] longs = new long[(waveform.length - 1) / precision];
+        long[] longs = precision > 0 ? new long[(waveform.length - 1) / precision] : new long[0];
         mergeBytesLongs(waveform, longs, 0);
         return "Waveform{"
             + "offset=" + offset

@@ -4,12 +4,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.631</version>
+        <version>0.632</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.631</version>
+    <version>0.632</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -100,7 +100,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.631</version>
+                <version>0.632</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -136,16 +136,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>log4j-over-slf4j</artifactId>
                 <version>1.6.1</version>
-            </dependency>
-            <dependency>
-                <groupId>com.googlecode.javaewah</groupId>
-                <artifactId>JavaEWAH</artifactId>
-                <version>0.9.0</version>
-            </dependency>
-            <dependency>
-                <groupId>org.roaringbitmap</groupId>
-                <artifactId>RoaringBitmap</artifactId>
-                <version>0.5.11</version>
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.routing.bird</groupId>

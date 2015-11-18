@@ -50,6 +50,7 @@ import com.jivesoftware.os.miru.plugin.backfill.AmzaInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.backfill.MiruInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.backfill.RCVSInboxReadTracker;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
@@ -64,7 +65,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
@@ -192,7 +192,7 @@ public class MiruReaderMain {
                 Interners.<String>newWeakInterner(),
                 termComposer);
 
-            final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+            MiruBitmaps<?> bitmaps = miruServiceConfig.getBitmapsClass().newInstance();
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
