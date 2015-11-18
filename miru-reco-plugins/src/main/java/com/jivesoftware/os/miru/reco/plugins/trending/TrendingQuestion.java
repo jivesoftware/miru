@@ -99,7 +99,8 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         long jiveCeilingTime = upperTime - jiveModulusTime + timePerSegment;
         long jiveFloorTime = jiveCeilingTime - (request.query.divideTimeRangeIntoNSegments * timePerSegment);
 
-        MiruFilter internedConstraintsFilter = constraintsInterner.intern(request.query.constraintsFilter);
+        MiruFilter internedConstraintsFilter = constraintsInterner != null ? constraintsInterner.intern(request.query.constraintsFilter)
+            : request.query.constraintsFilter;
 
         long start = System.currentTimeMillis();
         Collection<MiruTermId> termIds = Collections.emptyList();
@@ -152,7 +153,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                         termId,
                         internedConstraintsFilter);
                     long version = fieldIndex.getVersion(fieldId, termId);
-                    Waveform waveform = getCachedWaveform(queryCache, key, version);
+                    Waveform waveform = queryCache != null ? getCachedWaveform(queryCache, key, version) : null;
                     if (waveform != null) {
                         waveforms.put(termComposer.decompose(fieldDefinition, termId), waveform);
                         cacheHits[0]++;
@@ -168,14 +169,18 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             },
             (TrendingWaveformKey key, long version, Waveform waveform) -> {
                 waveforms.put(termComposer.decompose(fieldDefinition, key.termId), waveform);
-                queryCache.put(key, new TrendingVersionedWaveform(version, waveform));
+                if (queryCache != null) {
+                    queryCache.put(key, new TrendingVersionedWaveform(version, waveform));
+                }
                 return true;
             });
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "Collected cached:{} analyzed:{} waveforms in {} ms.",
                 cacheHits[0], (waveforms.size() - cacheHits[0]), (System.currentTimeMillis() - start));
-            solutionLog.log(MiruSolutionLogLevel.INFO, "Cache size:{} floor:{} ceiling:{} buckets:{}",
-                queryCache.size(), jiveFloorTime, jiveCeilingTime, request.query.divideTimeRangeIntoNSegments);
+            if (queryCache != null) {
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Cache size:{} floor:{} ceiling:{} buckets:{}",
+                    queryCache.size(), jiveFloorTime, jiveCeilingTime, request.query.divideTimeRangeIntoNSegments);
+            }
         }
 
         AnalyticsAnswer result = new AnalyticsAnswer(waveforms, resultsExhausted);

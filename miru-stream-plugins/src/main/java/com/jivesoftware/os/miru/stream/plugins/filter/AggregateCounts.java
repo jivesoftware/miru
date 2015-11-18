@@ -110,18 +110,26 @@ public class AggregateCounts {
                 constraint.constraintsFilter,
                 solutionLog, filtered, null, requestContext.getActivityIndex().lastId(), -1);
 
-            BM constrained = bitmaps.create();
-            List<BM> ands = Arrays.asList(answer, filtered);
-            bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-            bitmaps.and(constrained, ands);
-            answer = constrained;
+            if (bitmaps.supportsInPlace()) {
+                bitmaps.inPlaceAnd(answer, filtered);
 
-            if (counter.isPresent()) {
-                constrained = bitmaps.create();
-                ands = Arrays.asList(answer, filtered);
+                if (counter.isPresent()) {
+                    bitmaps.inPlaceAnd(counter.get(), filtered);
+                }
+            } else {
+                BM constrained = bitmaps.create();
+                List<BM> ands = Arrays.asList(answer, filtered);
                 bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
                 bitmaps.and(constrained, ands);
-                counter = Optional.of(constrained);
+                answer = constrained;
+
+                if (counter.isPresent()) {
+                    constrained = bitmaps.create();
+                    ands = Arrays.asList(counter.get(), filtered);
+                    bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
+                    bitmaps.and(constrained, ands);
+                    counter = Optional.of(constrained);
+                }
             }
         }
 
@@ -154,22 +162,33 @@ public class AggregateCounts {
                 }
 
                 BM termIndex = optionalTermIndex.get();
-                BM revisedAnswer = reusable.next();
-                answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
-                answer = revisedAnswer;
+
+                if (bitmaps.supportsInPlace()) {
+                    answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
+                } else {
+                    BM revisedAnswer = reusable.next();
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
+                    answer = revisedAnswer;
+                }
 
                 long afterCount;
                 if (counter.isPresent()) {
-                    BM revisedCounter = reusable.next();
-                    CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
-                    counter = Optional.of(revisedCounter);
-                    afterCount = counterCollector.cardinality;
+                    if (bitmaps.supportsInPlace()) {
+                        CardinalityAndLastSetBit counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
+                        afterCount = counterCollector.cardinality;
+                    } else {
+                        BM revisedCounter = reusable.next();
+                        CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
+                        counter = Optional.of(revisedCounter);
+                        afterCount = counterCollector.cardinality;
+                    }
                 } else {
                     afterCount = answerCollector.cardinality;
                 }
 
                 boolean unread = false;
                 if (unreadIndex != null) {
+                    //TODO much more efficient to add a bitmaps.intersects() to test for first bit in common
                     BM unreadAnswer = reusable.next();
                     CardinalityAndLastSetBit storage = bitmaps.andWithCardinalityAndLastSetBit(unreadAnswer, Arrays.asList(unreadIndex, termIndex));
                     if (storage.cardinality > 0) {
@@ -193,10 +212,15 @@ public class AggregateCounts {
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
-                    BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
-                    BM revisedAnswer = reusable.next();
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
-                    answer = revisedAnswer;
+                    if (bitmaps.supportsInPlace()) {
+                        BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
+                        answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
+                    } else {
+                        BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
+                        BM revisedAnswer = reusable.next();
+                        answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
+                        answer = revisedAnswer;
+                    }
                     beforeCount--;
 
                 } else {
@@ -209,16 +233,25 @@ public class AggregateCounts {
 
                     BM termIndex = optionalTermIndex.get();
 
-                    BM revisedAnswer = reusable.next();
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
-                    answer = revisedAnswer;
+                    if (bitmaps.supportsInPlace()) {
+                        answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
+                    } else {
+                        BM revisedAnswer = reusable.next();
+                        answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
+                        answer = revisedAnswer;
+                    }
 
                     long afterCount;
                     if (counter.isPresent()) {
-                        BM revisedCounter = reusable.next();
-                        CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
-                        counter = Optional.of(revisedCounter);
-                        afterCount = counterCollector.cardinality;
+                        if (bitmaps.supportsInPlace()) {
+                            CardinalityAndLastSetBit counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
+                            afterCount = counterCollector.cardinality;
+                        } else {
+                            BM revisedCounter = reusable.next();
+                            CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
+                            counter = Optional.of(revisedCounter);
+                            afterCount = counterCollector.cardinality;
+                        }
                     } else {
                         afterCount = answerCollector.cardinality;
                     }
@@ -227,6 +260,7 @@ public class AggregateCounts {
                     if (collectedDistincts > constraint.startFromDistinctN) {
                         boolean unread = false;
                         if (unreadIndex != null) {
+                            //TODO much more efficient to add a bitmaps.intersects() to test for first bit in common
                             BM unreadAnswer = reusable.next();
                             CardinalityAndLastSetBit storage = bitmaps.andWithCardinalityAndLastSetBit(unreadAnswer, Arrays.asList(unreadIndex, termIndex));
                             if (storage.cardinality > 0) {

@@ -89,10 +89,13 @@ public class MiruAggregateUtil {
                     bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(removeUnknownField)));
                 }
 
-                BM revisedAnswer = reusable.next();
-                answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
-                answer = revisedAnswer;
-
+                if (bitmaps.supportsInPlace()) {
+                    answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
+                } else {
+                    BM revisedAnswer = reusable.next();
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
+                    answer = revisedAnswer;
+                }
             } else {
                 //TODO Ideally we should prohibit streaming of multi-term fields because the operation is inherently lossy/ambiguous.
                 //TODO Each andNot iteration can potentially mask/remove other distincts which will therefore never be streamed.
@@ -107,16 +110,25 @@ public class MiruAggregateUtil {
                     bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(termIndex)));
                 }
 
-                BM revisedAnswer = reusable.next();
-                answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
-                answer = revisedAnswer;
+                if (bitmaps.supportsInPlace()) {
+                    answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
+                } else {
+                    BM revisedAnswer = reusable.next();
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
+                    answer = revisedAnswer;
+                }
 
                 long afterCount;
                 if (counter.isPresent()) {
-                    BM revisedCounter = reusable.next();
-                    CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
-                    counter = Optional.of(revisedCounter);
-                    afterCount = counterCollector.cardinality;
+                    if (bitmaps.supportsInPlace()) {
+                        CardinalityAndLastSetBit counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
+                        afterCount = counterCollector.cardinality;
+                    } else {
+                        BM revisedCounter = reusable.next();
+                        CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
+                        counter = Optional.of(revisedCounter);
+                        afterCount = counterCollector.cardinality;
+                    }
                 } else {
                     afterCount = answerCollector.cardinality;
                 }
@@ -158,27 +170,49 @@ public class MiruAggregateUtil {
             System.arraycopy(ids, 0, actualIds, 0, added);
             BM seen = bitmaps.createWithBits(actualIds);
 
-            List<BM> andNots = new ArrayList<>();
-            andNots.add(seen);
-            List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId);
-            for (MiruTermId[] termIds : all) {
-                if (termIds != null && termIds.length > 0) {
-                    for (MiruTermId termId : termIds) {
-                        if (distincts.add(termId)) {
-                            result.add(termId);
-                            MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
-                            Optional<BM> gotIndex = invertedIndex.getIndex();
-                            if (gotIndex.isPresent()) {
-                                andNots.add(gotIndex.get());
+            if (bitmaps.supportsInPlace()) {
+                List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId);
+                done:
+                for (MiruTermId[] termIds : all) {
+                    if (termIds != null && termIds.length > 0) {
+                        for (MiruTermId termId : termIds) {
+                            if (distincts.add(termId)) {
+                                result.add(termId);
+                                MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
+                                Optional<BM> gotIndex = invertedIndex.getIndex();
+                                if (gotIndex.isPresent()) {
+                                    bitmaps.inPlaceAndNot(answer, gotIndex.get());
+                                    if (bitmaps.isEmpty(answer)) {
+                                        break done;
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
+            } else {
+                List<BM> andNots = new ArrayList<>();
+                andNots.add(seen);
+                List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId);
+                for (MiruTermId[] termIds : all) {
+                    if (termIds != null && termIds.length > 0) {
+                        for (MiruTermId termId : termIds) {
+                            if (distincts.add(termId)) {
+                                result.add(termId);
+                                MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
+                                Optional<BM> gotIndex = invertedIndex.getIndex();
+                                if (gotIndex.isPresent()) {
+                                    andNots.add(gotIndex.get());
+                                }
+                            }
+                        }
+                    }
+                }
 
-            BM reduced = bitmaps.create();
-            bitmaps.andNot(reduced, answer, andNots);
-            answer = reduced;
+                BM reduced = bitmaps.create();
+                bitmaps.andNot(reduced, answer, andNots);
+                answer = reduced;
+            }
         }
     }
 

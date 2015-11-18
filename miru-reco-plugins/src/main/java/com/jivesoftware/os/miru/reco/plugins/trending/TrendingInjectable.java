@@ -59,7 +59,7 @@ public class TrendingInjectable {
 
     private final PeakDet peakDet = new PeakDet();
     private final Cache<TrendingWaveformKey, TrendingVersionedWaveform> queryCache;
-    private final Interner<MiruFilter> constraintsInterner = Interners.newWeakInterner();
+    private final Interner<MiruFilter> constraintsInterner;
 
     public TrendingInjectable(MiruProvider<? extends Miru> miruProvider,
         Distincts distincts,
@@ -69,7 +69,13 @@ public class TrendingInjectable {
         this.analytics = analytics;
 
         TrendingPluginConfig config = miruProvider.getConfig(TrendingPluginConfig.class);
-        this.queryCache = CacheBuilder.newBuilder().maximumSize(config.getQueryCacheMaxSize()).build();
+        if (config.getQueryCacheMaxSize() > 0) {
+            this.queryCache = CacheBuilder.newBuilder().maximumSize(config.getQueryCacheMaxSize()).build();
+            this.constraintsInterner = Interners.newWeakInterner();
+        } else {
+            this.queryCache = null;
+            this.constraintsInterner = null;
+        }
     }
 
     double zeroToOne(long _min, long _max, long _long) {
@@ -131,7 +137,9 @@ public class TrendingInjectable {
                     analytics,
                     combinedTimeRange,
                     request,
-                    provider.getRemotePartition(TrendingRemotePartition.class), queryCache, constraintsInterner)),
+                    provider.getRemotePartition(TrendingRemotePartition.class),
+                    queryCache,
+                    constraintsInterner)),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(combinedTimeRange, request.query.divideTimeRangeIntoNSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
