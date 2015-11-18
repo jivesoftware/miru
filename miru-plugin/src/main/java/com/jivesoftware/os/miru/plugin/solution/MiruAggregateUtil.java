@@ -150,6 +150,7 @@ public class MiruAggregateUtil {
         BM answer,
         int pivotFieldId,
         int batchSize,
+        MiruSolutionLog solutionLog,
         Collection<MiruTermId> result) throws Exception {
 
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
@@ -157,6 +158,9 @@ public class MiruAggregateUtil {
 
         Set<MiruTermId> distincts = new HashSet<>();
         int[] ids = new int[batchSize];
+        int gets = 0;
+        int fetched = 0;
+        int used = 0;
         while (!bitmaps.isEmpty(answer)) {
             MiruIntIterator intIterator = bitmaps.intIterator(answer);
             int added = 0;
@@ -165,16 +169,19 @@ public class MiruAggregateUtil {
                 ids[added] = intIterator.next();
                 added++;
             }
+            fetched += added;
 
             int[] actualIds = new int[added];
             System.arraycopy(ids, 0, actualIds, 0, added);
             BM seen = bitmaps.createWithBits(actualIds);
 
+            gets++;
             if (bitmaps.supportsInPlace()) {
                 List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId);
                 done:
                 for (MiruTermId[] termIds : all) {
                     if (termIds != null && termIds.length > 0) {
+                        used++;
                         for (MiruTermId termId : termIds) {
                             if (distincts.add(termId)) {
                                 result.add(termId);
@@ -196,6 +203,7 @@ public class MiruAggregateUtil {
                 List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId);
                 for (MiruTermId[] termIds : all) {
                     if (termIds != null && termIds.length > 0) {
+                        used++;
                         for (MiruTermId termId : termIds) {
                             if (distincts.add(termId)) {
                                 result.add(termId);
@@ -214,6 +222,7 @@ public class MiruAggregateUtil {
                 answer = reduced;
             }
         }
+        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} results:{}", gets, fetched, used, result.size());
     }
 
     public <BM> void filter(MiruBitmaps<BM> bitmaps,

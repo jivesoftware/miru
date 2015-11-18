@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -76,6 +77,7 @@ public class Distincts {
 
                 requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).streamTermIdsForField(fieldId, ranges, termIdStream);
             } else {
+                long start = System.currentTimeMillis();
                 final byte[][] prefixesAsBytes;
                 if (query.prefixes != null) {
                     prefixesAsBytes = new byte[query.prefixes.size()][];
@@ -105,12 +107,16 @@ public class Distincts {
                     result = bitmaps.create();
                     bitmaps.and(result, ands);
                 }
+                solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: setup {} ms.", System.currentTimeMillis() - start);
 
+                start = System.currentTimeMillis();
                 Set<MiruTermId> termIds = Sets.newHashSet();
                 //TODO expose batch size to query?
                 aggregateUtil.gather(bitmaps, requestContext, result, fieldId, 100, termIds);
+                solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
 
                 if (prefixesAsBytes.length > 0) {
+                    start = System.currentTimeMillis();
                     termIds = Sets.filter(termIds, input -> {
                         if (input != null) {
                             byte[] termBytes = input.getBytes();
@@ -122,11 +128,14 @@ public class Distincts {
                         }
                         return false;
                     });
+                    solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: prefix {} ms.", System.currentTimeMillis() - start);
                 }
 
+                start = System.currentTimeMillis();
                 for (MiruTermId termId : termIds) {
                     termIdStream.stream(termId);
                 }
+                solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: stream {} ms.", System.currentTimeMillis() - start);
             }
         }
     }
