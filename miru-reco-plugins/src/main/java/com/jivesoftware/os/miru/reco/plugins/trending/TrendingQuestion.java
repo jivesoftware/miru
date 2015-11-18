@@ -171,8 +171,12 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                 queryCache.put(key, new TrendingVersionedWaveform(version, waveform));
                 return true;
             });
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Collected cached:{} analyzed:{} waveforms in {} ms.",
-            cacheHits[0], (waveforms.size() - cacheHits[0]), (System.currentTimeMillis() - start));
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+            solutionLog.log(MiruSolutionLogLevel.INFO, "Collected cached:{} analyzed:{} waveforms in {} ms.",
+                cacheHits[0], (waveforms.size() - cacheHits[0]), (System.currentTimeMillis() - start));
+            solutionLog.log(MiruSolutionLogLevel.INFO, "Cache size:{} floor:{} ceiling:{} buckets:{}",
+                queryCache.size(), jiveFloorTime, jiveCeilingTime, request.query.divideTimeRangeIntoNSegments);
+        }
 
         AnalyticsAnswer result = new AnalyticsAnswer(waveforms, resultsExhausted);
         return new MiruPartitionResponse<>(result, solutionLog.asList());
