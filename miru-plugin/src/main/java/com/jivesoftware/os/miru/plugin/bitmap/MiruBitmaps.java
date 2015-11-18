@@ -57,6 +57,8 @@ public interface MiruBitmaps<BM> {
      */
     long[] boundedCardinalities(BM container, int[] indexBoundaries);
 
+    boolean supportsInPlace();
+
     boolean isEmpty(BM bitmap);
 
     long sizeInBytes(BM bitmap);
@@ -71,13 +73,19 @@ public interface MiruBitmaps<BM> {
 
     void or(BM container, Collection<BM> bitmaps);
 
+    void inPlaceAnd(BM original, BM bitmap);
+
     void and(BM container, Collection<BM> bitmaps);
+
+    void inPlaceAndNot(BM original, BM not);
 
     void andNot(BM container, BM original, BM not);
 
     void andNot(BM container, BM original, List<BM> not);
 
     void copy(BM container, BM original);
+
+    CardinalityAndLastSetBit inPlaceAndNotWithCardinalityAndLastSetBit(BM original, BM not);
 
     CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(BM container, BM original, BM not);
 

@@ -129,13 +129,28 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
+    public boolean supportsInPlace() {
+        return false;
+    }
+
+    @Override
     public void or(EWAHCompressedBitmap container, Collection<EWAHCompressedBitmap> bitmaps) {
         FastAggregation.bufferedorWithContainer(container, bufferSize, bitmaps.toArray(new EWAHCompressedBitmap[bitmaps.size()]));
     }
 
     @Override
+    public void inPlaceAnd(EWAHCompressedBitmap original, EWAHCompressedBitmap bitmap) {
+        throw new UnsupportedOperationException("NOPE");
+    }
+
+    @Override
     public void and(EWAHCompressedBitmap container, Collection<EWAHCompressedBitmap> bitmaps) {
         FastAggregation.bufferedandWithContainer(container, bufferSize, bitmaps.toArray(new EWAHCompressedBitmap[bitmaps.size()]));
+    }
+
+    @Override
+    public void inPlaceAndNot(EWAHCompressedBitmap original, EWAHCompressedBitmap not) {
+        throw new UnsupportedOperationException("NOPE");
     }
 
     @Override
@@ -175,6 +190,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
             pq.add(x1.or(x2));
         }
         pq.poll().orToContainer(pq.poll(), container);
+    }
+
+    @Override
+    public CardinalityAndLastSetBit inPlaceAndNotWithCardinalityAndLastSetBit(EWAHCompressedBitmap original, EWAHCompressedBitmap not) {
+        throw new UnsupportedOperationException("NOPE");
     }
 
     @Override

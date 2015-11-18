@@ -131,13 +131,28 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
+    public boolean supportsInPlace() {
+        return true;
+    }
+
+    @Override
     public void or(RoaringBitmap container, Collection<RoaringBitmap> bitmaps) {
         RoaringAggregation.or(container, bitmaps.toArray(new RoaringBitmap[bitmaps.size()]));
     }
 
     @Override
+    public void inPlaceAnd(RoaringBitmap original, RoaringBitmap bitmap) {
+        original.and(bitmap);
+    }
+
+    @Override
     public void and(RoaringBitmap container, Collection<RoaringBitmap> bitmaps) {
         RoaringAggregation.and(container, bitmaps.toArray(new RoaringBitmap[bitmaps.size()]));
+    }
+
+    @Override
+    public void inPlaceAndNot(RoaringBitmap original, RoaringBitmap not) {
+        original.andNot(not);
     }
 
     @Override
@@ -159,6 +174,12 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
                 }
             }
         }
+    }
+
+    @Override
+    public CardinalityAndLastSetBit inPlaceAndNotWithCardinalityAndLastSetBit(RoaringBitmap original, RoaringBitmap not) {
+        original.andNot(not);
+        return RoaringInspection.cardinalityAndLastSetBit(original);
     }
 
     @Override

@@ -133,8 +133,14 @@ public class Analytics {
                 BM waveformFiltered = bitmaps.create();
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
                     waveformFiltered, null, context.getActivityIndex().lastId(), -1);
-                BM answer = bitmaps.create();
-                bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
+                BM answer;
+                if (bitmaps.supportsInPlace()) {
+                    answer = waveformFiltered;
+                    bitmaps.inPlaceAnd(waveformFiltered, constrained);
+                } else {
+                    answer = bitmaps.create();
+                    bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
+                }
                 if (!bitmaps.isEmpty(answer)) {
                     waveform = analytics(bitmaps, answer, indexes);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
