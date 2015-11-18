@@ -27,6 +27,11 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-bitmaps-roaring5</artifactId>
+            <version>0.632-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
             <version>0.632-SNAPSHOT</version>
         </dependency>

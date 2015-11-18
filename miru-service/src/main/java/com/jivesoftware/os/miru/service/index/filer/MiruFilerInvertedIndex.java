@@ -18,7 +18,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**

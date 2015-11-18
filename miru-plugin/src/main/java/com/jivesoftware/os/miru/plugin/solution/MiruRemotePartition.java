@@ -4,7 +4,6 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 
 /**
  *

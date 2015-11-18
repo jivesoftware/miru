@@ -17,7 +17,7 @@ public class AggregateCountsQuery {
     public final MiruTimeRange countTimeRange;
     public final MiruFilter streamFilter;
     public final Map<String, AggregateCountsQueryConstraint> constraints;
-    
+
 
     public AggregateCountsQuery(
         @JsonProperty("streamId") MiruStreamId streamId,
@@ -30,7 +30,7 @@ public class AggregateCountsQuery {
         this.countTimeRange = Preconditions.checkNotNull(countTimeRange);
         this.streamFilter = Preconditions.checkNotNull(streamFilter);
         this.constraints = Preconditions.checkNotNull(constraints);
-        
+
     }
 
     @Override
@@ -41,7 +41,7 @@ public class AggregateCountsQuery {
             + ", countTimeRange=" + countTimeRange
             + ", streamFilter=" + streamFilter
             + ", constraints=" + constraints
-            
+
             + '}';
     }
 }

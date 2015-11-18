@@ -16,6 +16,12 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>org.roaringbitmap</groupId>
+            <artifactId>RoaringBitmap</artifactId>
+            <version>0.5.11</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>merlin-config</artifactId>
         </dependency>
@@ -64,6 +70,15 @@
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-service</artifactId>
             <version>0.632-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-bitmaps-roaring5</artifactId>
+            <version>0.632-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>io</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>

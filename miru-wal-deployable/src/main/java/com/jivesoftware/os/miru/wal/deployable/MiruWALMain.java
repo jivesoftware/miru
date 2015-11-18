@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
+import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
@@ -187,7 +188,7 @@ public class MiruWALMain {
             sampler.start();
 
             RCVSWALConfig rcvsWALConfig = deployable.config(RCVSWALConfig.class);
-            com.jivesoftware.os.miru.api.wal.MiruWALConfig walConfig = deployable.config(com.jivesoftware.os.miru.api.wal.MiruWALConfig.class);
+            MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
 
             RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = null;
             if (RowColumnValueStoreProvider.class.isAssignableFrom(rcvsWALConfig.getRowColumnValueStoreProviderClass())) {

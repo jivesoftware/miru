@@ -14,6 +14,10 @@
     <modules>
         <module>inheritance-poms</module>
         <module>miru-service</module>
+        <module>miru-service-test</module>
+        <module>miru-bitmaps-ewah</module>
+        <module>miru-bitmaps-roaring4</module>
+        <module>miru-bitmaps-roaring5</module>
         <module>miru-api</module>
         <module>miru-amza</module>
         <module>miru-ui</module>

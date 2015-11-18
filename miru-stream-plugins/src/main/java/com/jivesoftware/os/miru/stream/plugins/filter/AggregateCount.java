@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 
 /**
- *
  * @author jonathan.colt
  */
 public class AggregateCount {
@@ -33,7 +32,11 @@ public class AggregateCount {
 
     @Override
     public String toString() {
-        return "AggregateCount{" + "mostRecentActivity=" + mostRecentActivity + ", distinctValue=" + distinctValue + ", count=" + count + ", unread=" + unread + '}';
+        return "AggregateCount{" +
+            "mostRecentActivity=" + mostRecentActivity +
+            ", distinctValue=" + distinctValue +
+            ", count=" + count +
+            ", unread=" + unread + '}';
     }
 
     @Override

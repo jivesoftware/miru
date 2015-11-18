@@ -138,16 +138,6 @@
                 <version>1.6.1</version>
             </dependency>
             <dependency>
-                <groupId>com.googlecode.javaewah</groupId>
-                <artifactId>JavaEWAH</artifactId>
-                <version>0.9.0</version>
-            </dependency>
-            <dependency>
-                <groupId>org.roaringbitmap</groupId>
-                <artifactId>RoaringBitmap</artifactId>
-                <version>0.5.11</version>
-            </dependency>
-            <dependency>
                 <groupId>com.jivesoftware.os.routing.bird</groupId>
                 <artifactId>routing-bird-health</artifactId>
                 <version>${routing-bird-version}</version>

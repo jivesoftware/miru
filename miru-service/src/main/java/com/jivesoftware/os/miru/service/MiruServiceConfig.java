@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.service;
 
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
+import org.merlin.config.defaults.ClassDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -181,4 +183,7 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(512)
     int getVersionCacheConcurrencyLevel();
+
+    @ClassDefault(IllegalStateException.class)
+    Class<? extends MiruBitmaps<?>> getBitmapsClass();
 }
