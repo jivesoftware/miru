@@ -47,6 +47,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
 
     private final Distincts distincts;
     private final Analytics analytics;
+    private final int gatherDistinctsBatchSize;
     private final MiruRequest<TrendingQuery> request;
     private final MiruTimeRange combinedTimeRange;
     private final MiruRemotePartition<TrendingQuery, AnalyticsAnswer, TrendingReport> remotePartition;
@@ -55,6 +56,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
 
     public TrendingQuestion(Distincts distincts,
         Analytics analytics,
+        int gatherDistinctsBatchSize,
         MiruTimeRange combinedTimeRange,
         MiruRequest<TrendingQuery> request,
         MiruRemotePartition<TrendingQuery, AnalyticsAnswer, TrendingReport> remotePartition,
@@ -62,6 +64,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         Interner<MiruFilter> constraintsInterner) {
         this.distincts = distincts;
         this.analytics = analytics;
+        this.gatherDistinctsBatchSize = gatherDistinctsBatchSize;
         this.combinedTimeRange = combinedTimeRange;
         this.request = request;
         this.remotePartition = remotePartition;
@@ -106,19 +109,21 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         Collection<MiruTermId> termIds = Collections.emptyList();
         if (request.query.distinctQueries.size() == 1) {
             ArrayList<MiruTermId> termIdsList = Lists.newArrayList();
-            distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), request.query.distinctQueries.get(0), solutionLog, termId -> {
-                termIdsList.add(termId);
-                return true;
-            });
+            distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), request.query.distinctQueries.get(0), gatherDistinctsBatchSize, solutionLog,
+                termId -> {
+                    termIdsList.add(termId);
+                    return true;
+                });
             termIds = termIdsList;
         } else if (request.query.distinctQueries.size() > 1) {
             Set<MiruTermId> joinTerms = null;
             for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
                 Set<MiruTermId> queryTerms = Sets.newHashSet();
-                distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), distinctQuery, solutionLog, termId -> {
-                    queryTerms.add(termId);
-                    return true;
-                });
+                distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), distinctQuery, gatherDistinctsBatchSize, solutionLog,
+                    termId -> {
+                        queryTerms.add(termId);
+                        return true;
+                    });
                 if (joinTerms == null) {
                     joinTerms = queryTerms;
                 } else {
