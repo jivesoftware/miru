@@ -36,7 +36,8 @@ public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnsw
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
 
-        return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, solutionLog), solutionLog.asList());
+        //TODO config batch size
+        return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, 100, solutionLog), solutionLog.asList());
     }
 
     @Override

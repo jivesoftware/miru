@@ -37,6 +37,7 @@ public class Distincts {
     public <BM> DistinctsAnswer gather(MiruBitmaps<BM> bitmaps,
         MiruRequestContext<BM, ?> requestContext,
         final DistinctsQuery query,
+        int gatherBatchSize,
         MiruSolutionLog solutionLog)
         throws Exception {
 
@@ -44,7 +45,7 @@ public class Distincts {
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
 
         List<String> results = Lists.newArrayList();
-        gatherDirect(bitmaps, requestContext, query, solutionLog, input -> results.add(termComposer.decompose(fieldDefinition, input)));
+        gatherDirect(bitmaps, requestContext, query, gatherBatchSize, solutionLog, input -> results.add(termComposer.decompose(fieldDefinition, input)));
 
         boolean resultsExhausted = query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         int collectedDistincts = results.size();
@@ -56,6 +57,7 @@ public class Distincts {
     public <BM> void gatherDirect(MiruBitmaps<BM> bitmaps,
         MiruRequestContext<BM, ?> requestContext,
         DistinctsQuery query,
+        int gatherBatchSize,
         MiruSolutionLog solutionLog,
         TermIdStream termIdStream) throws Exception {
         log.debug("Gather distincts for query={}", query);
@@ -112,7 +114,7 @@ public class Distincts {
                 start = System.currentTimeMillis();
                 Set<MiruTermId> termIds = Sets.newHashSet();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, 100, solutionLog, termIds);
+                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termIds);
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
 
                 if (prefixesAsBytes.length > 0) {

@@ -56,6 +56,7 @@ public class TrendingInjectable {
     private final MiruProvider<? extends Miru> provider;
     private final Distincts distincts;
     private final Analytics analytics;
+    private final int gatherDistinctsBatchSize;
 
     private final PeakDet peakDet = new PeakDet();
     private final Cache<TrendingWaveformKey, TrendingVersionedWaveform> queryCache;
@@ -69,6 +70,8 @@ public class TrendingInjectable {
         this.analytics = analytics;
 
         TrendingPluginConfig config = miruProvider.getConfig(TrendingPluginConfig.class);
+        this.gatherDistinctsBatchSize = config.getGatherDistinctsBatchSize();
+
         if (config.getQueryCacheMaxSize() > 0) {
             this.queryCache = CacheBuilder.newBuilder().maximumSize(config.getQueryCacheMaxSize()).build();
             this.constraintsInterner = Interners.newWeakInterner();
@@ -135,6 +138,7 @@ public class TrendingInjectable {
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(provider.getStats(), "trending", new TrendingQuestion(distincts,
                     analytics,
+                    gatherDistinctsBatchSize,
                     combinedTimeRange,
                     request,
                     provider.getRemotePartition(TrendingRemotePartition.class),
@@ -327,6 +331,7 @@ public class TrendingInjectable {
                     "scoreTrending",
                     new TrendingQuestion(distincts,
                         analytics,
+                        gatherDistinctsBatchSize,
                         combinedTimeRange,
                         request,
                         provider.getRemotePartition(TrendingRemotePartition.class),
