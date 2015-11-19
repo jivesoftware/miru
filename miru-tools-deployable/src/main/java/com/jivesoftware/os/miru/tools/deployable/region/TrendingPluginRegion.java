@@ -71,8 +71,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
         final int toHoursAgo;
         final int buckets;
         final String field;
-        final String typeField;
-        final List<String> types;
+        final List<String> fieldPrefixes;
         final String logLevel;
 
         public TrendingPluginRegionInput(String tenant,
@@ -80,16 +79,14 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
             int toHoursAgo,
             int buckets,
             String field,
-            String typeField,
-            List<String> types,
+            List<String> fieldPrefixes,
             String logLevel) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
             this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
             this.field = field;
-            this.typeField = typeField;
-            this.types = types;
+            this.fieldPrefixes = fieldPrefixes;
             this.logLevel = logLevel;
         }
     }
@@ -109,8 +106,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 data.put("toHoursAgo", String.valueOf(toHoursAgo));
                 data.put("buckets", String.valueOf(input.buckets));
                 data.put("field", input.field);
-                data.put("typeField", input.typeField);
-                data.put("types", input.types != null ? Joiner.on(", ").join(input.types) : "");
+                data.put("fieldPrefixes", input.fieldPrefixes != null ? Joiner.on(", ").join(input.fieldPrefixes) : "");
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -120,17 +116,10 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "activityType",
                     Lists.transform(
-                        Arrays.asList(0, 1, 72, 65),
+                        Arrays.asList(0, 1, 11, 65),
                         Functions.toStringFunction())));
 
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);
-
-                MiruFilter distinctsFilter = input.typeField != null && !input.typeField.isEmpty() ?
-                    new MiruFilter(MiruFilterOperation.and,
-                        false,
-                        Collections.singletonList(new MiruFieldFilter(MiruFieldType.primary, input.typeField, input.types)),
-                        null) :
-                    MiruFilter.NO_FILTER;
 
                 List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<TrendingAnswer> response = null;
@@ -155,8 +144,8 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                         Collections.singletonList(new DistinctsQuery(
                                             timeRange,
                                             input.field,
-                                            distinctsFilter,
-                                            null)),
+                                            MiruFilter.NO_FILTER,
+                                            input.fieldPrefixes)),
                                         100),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
