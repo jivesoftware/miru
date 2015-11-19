@@ -25,13 +25,10 @@ import java.io.DataOutput;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Random;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringAggregation;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.RoaringInspection;
-import org.roaringbitmap.buffer.BufferFastAggregation;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 /**
  * @author jonathan
@@ -108,8 +105,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
-    public long[] boundedCardinalities(RoaringBitmap container, int[] indexBoundaries) {
-        return RoaringInspection.cardinalityInBuckets(container, indexBoundaries);
+    public void boundedCardinalities(RoaringBitmap container, int[] indexBoundaries, long[] rawWaveform) {
+        RoaringInspection.cardinalityInBuckets(container, indexBoundaries, rawWaveform);
     }
 
     @Override

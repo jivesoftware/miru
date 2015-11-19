@@ -4,7 +4,6 @@ import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
@@ -37,7 +36,7 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -93,7 +92,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         long upperTime = combinedTimeRange.largestTimestamp;
         long lowerTime = combinedTimeRange.smallestTimestamp;
         if (upperTime == Long.MAX_VALUE || lowerTime == 0) {
-            return new MiruPartitionResponse<>(new AnalyticsAnswer(Collections.emptyMap(), true), solutionLog.asList());
+            return new MiruPartitionResponse<>(new AnalyticsAnswer(Collections.emptyList(), true), solutionLog.asList());
         }
 
         long timePerSegment = (upperTime - lowerTime) / request.query.divideTimeRangeIntoNSegments;
@@ -139,7 +138,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
 
         start = System.currentTimeMillis();
         Collection<MiruTermId> _termIds = termIds;
-        Map<String, Waveform> waveforms = Maps.newHashMapWithExpectedSize(termIds.size());
+        List<Waveform> waveforms = Lists.newArrayListWithExpectedSize(termIds.size());
         int[] cacheHits = new int[1];
         boolean resultsExhausted = analytics.analyze(solutionLog,
             handle,
@@ -160,7 +159,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                     long version = fieldIndex.getVersion(fieldId, termId);
                     Waveform waveform = queryCache != null ? getCachedWaveform(queryCache, key, version) : null;
                     if (waveform != null) {
-                        waveforms.put(termComposer.decompose(fieldDefinition, termId), waveform);
+                        waveforms.add(waveform);
                         cacheHits[0]++;
                     } else {
                         toAnalyze.analyze(key, version, new MiruFilter(MiruFilterOperation.and,
@@ -172,10 +171,13 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                 }
                 return true;
             },
-            (TrendingWaveformKey key, long version, Waveform waveform) -> {
-                waveforms.put(termComposer.decompose(fieldDefinition, key.termId), waveform);
-                if (queryCache != null) {
-                    queryCache.put(key, new TrendingVersionedWaveform(version, waveform));
+            (TrendingWaveformKey key, long version, long[] waveformBuffer) -> {
+                if (waveformBuffer != null) {
+                    Waveform waveform = Waveform.compressed(termComposer.decompose(fieldDefinition, key.termId), waveformBuffer);
+                    waveforms.add(waveform);
+                    if (queryCache != null) {
+                        queryCache.put(key, new TrendingVersionedWaveform(version, waveform));
+                    }
                 }
                 return true;
             });

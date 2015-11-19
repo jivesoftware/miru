@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.642</version>
+        <version>0.643</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-bitmaps-ewah</artifactId>
-    <version>0.642</version>
+    <version>0.643</version>
     <properties>
         <module.type>service_lib</module.type>
     </properties>
@@ -20,34 +20,38 @@
             <artifactId>guava</artifactId>
         </dependency>
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.sf.trove4j</groupId>
-            <artifactId>trove4j</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.googlecode.javaewah</groupId>
             <artifactId>JavaEWAH</artifactId>
             <version>0.9.0</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-api</artifactId>
-            <version>0.642</version>
+            <artifactId>miru-plugin</artifactId>
+            <version>0.643</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-plugin</artifactId>
-            <version>0.642</version>
+            <artifactId>miru-api</artifactId>
+            <version>0.643</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-service</artifactId>
-            <version>0.642</version>
+            <version>0.643</version>
+            <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>net.sf.trove4j</groupId>
+            <artifactId>trove4j</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>

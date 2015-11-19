@@ -55,10 +55,17 @@ public class MiruAggregateUtil {
         boolean traceEnabled = LOG.isTraceEnabled();
         boolean debugEnabled = LOG.isDebugEnabled();
 
+        if (bitmaps.supportsInPlace()) {
+            BM copy = bitmaps.create();
+            bitmaps.copy(copy, answer);
+            answer = copy;
+        }
+
         final AtomicLong bytesTraversed = new AtomicLong();
         if (debugEnabled) {
             bytesTraversed.addAndGet(bitmaps.sizeInBytes(answer));
         }
+
         CardinalityAndLastSetBit answerCollector = null;
         ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
         MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
@@ -156,6 +163,12 @@ public class MiruAggregateUtil {
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
         MiruFieldIndex<BM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
+        if (bitmaps.supportsInPlace()) {
+            BM copy = bitmaps.create();
+            bitmaps.copy(copy, answer);
+            answer = copy;
+        }
+
         Set<MiruTermId> distincts = new HashSet<>();
         int[] ids = new int[batchSize];
         int gets = 0;
@@ -198,9 +211,6 @@ public class MiruAggregateUtil {
                                     start = System.nanoTime();
                                     bitmaps.inPlaceAndNot(answer, gotIndex.get());
                                     andNotCost += (System.nanoTime() - start);
-                                    if (bitmaps.isEmpty(answer)) {
-                                        break done;
-                                    }
                                 }
                             }
                         }

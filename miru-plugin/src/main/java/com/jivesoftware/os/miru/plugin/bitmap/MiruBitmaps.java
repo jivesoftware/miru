@@ -55,7 +55,7 @@ public interface MiruBitmaps<BM> {
      * @param indexBoundaries lower boundary is inclusive, upper boundary is exclusive
      * @return the cardinalities
      */
-    long[] boundedCardinalities(BM container, int[] indexBoundaries);
+    void boundedCardinalities(BM container, int[] indexBoundaries, long[] rawWaveform);
 
     boolean supportsInPlace();
 

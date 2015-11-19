@@ -4,6 +4,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -13,7 +14,8 @@ public class Metrics {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM> Waveform metricingSum(MiruBitmaps<BM> bitmaps,
+    public <BM> Waveform metricingSum(String id,
+        MiruBitmaps<BM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -24,10 +26,11 @@ public class Metrics {
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
-        return new Waveform(waveform);
+        return Waveform.compressed(id, waveform);
     }
 
-    public <BM> Waveform metricingAvg(MiruBitmaps<BM> bitmaps,
+    public <BM> Waveform metricingAvg(String id,
+        MiruBitmaps<BM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -35,14 +38,15 @@ public class Metrics {
         throws Exception {
 
         log.debug("Get metricing for answers={}", answers);
-        long[] rawCardinalities = bitmaps.boundedCardinalities(rawAnswer, indexes);
+        long[] rawCardinalities = new long[indexes.length - 1];
+        bitmaps.boundedCardinalities(rawAnswer, indexes, rawCardinalities);
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
         for (int i = 0; i < waveform.length; i++) {
             waveform[i] /= rawCardinalities[i];
         }
-        return new Waveform(waveform);
+        return Waveform.compressed(id, waveform);
     }
 
     /*
@@ -53,8 +57,8 @@ public class Metrics {
     10101 - b0 (card 3)
     -----
     12341   avg (1+2+3+4+1)/5 max 4, min 1 (cardinality 5)
-    */
-     public <BM> Waveform metricingMin(MiruBitmaps<BM> bitmaps,
+     */
+    public <BM> Waveform metricingMin(MiruBitmaps<BM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -76,11 +80,13 @@ public class Metrics {
 
     private <BM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM> bitmaps) {
         long[] waveform = new long[indexes.length];
+        long[] cardinalities = new long[indexes.length - 1];
         for (int i = 0; i < numBits; i++) {
             BM answer = answers.get(i);
             if (answer != null) {
                 int multiplier = 1 << (numBits - 1 - i);
-                long[] cardinalities = bitmaps.boundedCardinalities(answer, indexes);
+                Arrays.fill(cardinalities, 0);
+                bitmaps.boundedCardinalities(answer, indexes, cardinalities);
                 for (int j = 0; j < indexes.length; j++) {
                     waveform[j] += multiplier * cardinalities[j];
                 }

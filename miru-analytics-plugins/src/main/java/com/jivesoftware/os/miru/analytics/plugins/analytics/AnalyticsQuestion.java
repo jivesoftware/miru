@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,14 +42,14 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
     public <BM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<AnalyticsReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        Map<String, Waveform> waveforms = Maps.newHashMapWithExpectedSize(request.query.analyticsFilters.size());
+        List<Waveform> waveforms = Lists.newArrayListWithCapacity(request.query.analyticsFilters.size());
+        int segments = request.query.divideTimeRangeIntoNSegments;
         boolean resultsExhausted = analytics.analyze(solutionLog,
             handle,
             context,
             request.authzExpression,
             request.query.timeRange,
-            request.query.constraintsFilter,
-            request.query.divideTimeRangeIntoNSegments,
+            request.query.constraintsFilter, segments,
             (Analytics.ToAnalyze<String> toAnalyze) -> {
                 for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
                     if (!toAnalyze.analyze(entry.getKey(), -1L, entry.getValue())) {
@@ -57,8 +58,12 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
                 }
                 return true;
             },
-            (String term, long version, Waveform waveform) -> {
-                waveforms.put(term, waveform);
+            (String term, long version, long[] waveformBuffer) -> {
+                if (waveformBuffer == null) {
+                    waveforms.add(Waveform.empty(term, segments));
+                } else {
+                    waveforms.add(Waveform.compressed(term, waveformBuffer));
+                }
                 return true;
             });
 

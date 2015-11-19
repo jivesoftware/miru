@@ -12,10 +12,50 @@ import java.util.Arrays;
  */
 public class Waveform implements Serializable {
 
-    private final int offset;
-    private final byte[] waveform;
+    private static final byte[] EMPTY = new byte[0];
 
-    public Waveform(long[] rawWaveform) {
+    public static Waveform empty(String id, int length) {
+        return new Waveform(id, length, EMPTY);
+    }
+
+    public static Waveform compressed(String id, long[] rawWaveform) {
+        return new Waveform(id, -1, null).compress(rawWaveform);
+    }
+
+    private String id;
+    private int offset;
+    private byte[] waveform;
+
+    private Waveform(String id, int offset, byte[] waveform) {
+        this.id = id;
+        this.offset = offset;
+        this.waveform = waveform;
+    }
+
+    @JsonCreator
+    public static Waveform fromJson(@JsonProperty("id") String id,
+        @JsonProperty("offset") int offset,
+        @JsonProperty("waveform") byte[] waveform) throws Exception {
+        return new Waveform(id, offset, waveform);
+    }
+
+    @JsonGetter("id")
+    public String getId() {
+        return id;
+    }
+
+    @JsonGetter("offset")
+    public int getRawOffset() {
+        return offset;
+    }
+
+    @JsonGetter("waveform")
+    public byte[] getRawBytes() {
+        return waveform;
+    }
+
+    @JsonIgnore
+    public Waveform compress(long[] rawWaveform) {
         int offset = rawWaveform.length;
 
         for (int i = 0; i < rawWaveform.length; i++) {
@@ -39,27 +79,7 @@ public class Waveform implements Serializable {
 
         this.offset = offset;
         this.waveform = longsBytes(rawWaveform, offset, count, (byte) precision);
-    }
-
-    private Waveform(int offset, byte[] waveform) {
-        this.offset = offset;
-        this.waveform = waveform;
-    }
-
-    @JsonCreator
-    public static Waveform fromJson(@JsonProperty("offset") int offset,
-        @JsonProperty("waveform") byte[] waveform) throws Exception {
-        return new Waveform(offset, waveform);
-    }
-
-    @JsonGetter("offset")
-    public int getRawOffset() {
-        return offset;
-    }
-
-    @JsonGetter("waveform")
-    public byte[] getRawBytes() {
-        return waveform;
+        return this;
     }
 
     @JsonIgnore

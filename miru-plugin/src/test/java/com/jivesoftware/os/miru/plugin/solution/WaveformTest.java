@@ -36,15 +36,15 @@ public class WaveformTest {
 
     @Test
     public void testEdgeCases() {
-        assertWaveform(new long[] { 0, 0, 0, 0 });
-        assertWaveform(new long[] { -1, -1, -1, -1 });
-        assertWaveform(new long[] { 0, -128, 127, 0 });
-        assertWaveform(new long[] { 0, -129, 128, 0 });
-        assertWaveform(new long[] { Long.MIN_VALUE, Long.MAX_VALUE, 0, 0 });
+        assertWaveform(new long[]{0, 0, 0, 0});
+        assertWaveform(new long[]{-1, -1, -1, -1});
+        assertWaveform(new long[]{0, -128, 127, 0});
+        assertWaveform(new long[]{0, -129, 128, 0});
+        assertWaveform(new long[]{Long.MIN_VALUE, Long.MAX_VALUE, 0, 0});
     }
 
     private void assertWaveform(long[] expected) {
-        Waveform waveform = new Waveform(expected);
+        Waveform waveform = Waveform.compressed("", expected);
         long[] actual = new long[expected.length];
         waveform.mergeWaveform(actual);
         Assert.assertTrue(Arrays.equals(expected, actual), Arrays.toString(expected) + " != " + Arrays.toString(actual));

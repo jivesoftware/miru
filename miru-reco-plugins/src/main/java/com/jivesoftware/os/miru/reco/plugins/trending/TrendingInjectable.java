@@ -37,7 +37,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -149,18 +148,18 @@ public class TrendingInjectable {
                 AnalyticsAnswer.EMPTY_RESULTS,
                 request.logLevel);
 
-            Map<String, Waveform> waveforms = (analyticsResponse.answer != null && analyticsResponse.answer.waveforms != null)
+            List<Waveform> waveforms = (analyticsResponse.answer != null && analyticsResponse.answer.waveforms != null)
                 ? analyticsResponse.answer.waveforms
-                : Collections.<String, Waveform>emptyMap();
+                : Collections.<Waveform>emptyList();
+            
             long[] waveform = new long[divideTimeRangeIntoNSegments];
-
             double bucket95 = 0;
             if (request.query.strategies.contains(Strategy.PEAKS)) {
                 double[] highestBuckets = new double[waveforms.size()];
                 int i = 0;
-                for (Map.Entry<String, Waveform> entry : waveforms.entrySet()) {
+                for (Waveform entry : waveforms) {
                     Arrays.fill(waveform, 0);
-                    entry.getValue().mergeWaveform(waveform);
+                    entry.mergeWaveform(waveform);
                     for (long w : waveform) {
                         highestBuckets[i] = Math.max(highestBuckets[i], w);
                     }
@@ -170,18 +169,17 @@ public class TrendingInjectable {
                 bucket95 = percentile.evaluate(highestBuckets, 0.95);
             }
 
-            Map<String, Waveform> distinctWaveforms = Maps.newHashMapWithExpectedSize(waveforms.size());
             Map<Strategy, MinMaxPriorityQueue<Trendy>> strategyResults = Maps.newHashMapWithExpectedSize(request.query.strategies.size());
             for (Strategy strategy : request.query.strategies) {
                 strategyResults.put(strategy,
                     MinMaxPriorityQueue
-                        .maximumSize(request.query.desiredNumberOfDistincts)
-                        .create());
+                    .maximumSize(request.query.desiredNumberOfDistincts)
+                    .create());
             }
 
-            for (Map.Entry<String, Waveform> entry : waveforms.entrySet()) {
+            for (Waveform entry : waveforms) {
                 Arrays.fill(waveform, 0);
-                entry.getValue().mergeWaveform(waveform);
+                entry.mergeWaveform(waveform);
                 boolean hasCounts = false;
                 double highestBucket = Double.MIN_VALUE;
                 for (long w : waveform) {
@@ -195,9 +193,7 @@ public class TrendingInjectable {
                     int buckets = Math.max(lastBucket - firstBucket, 1);
                     long[] actualWaveform = new long[buckets];
                     System.arraycopy(waveform, firstBucket, actualWaveform, 0, buckets);
-                    distinctWaveforms.put(entry.getKey(), new Waveform(actualWaveform));
-                } else {
-                    distinctWaveforms.put(entry.getKey(), entry.getValue());
+                    entry.compress(actualWaveform);
                 }
 
                 if (hasCounts) {
@@ -206,10 +202,10 @@ public class TrendingInjectable {
                             SimpleRegression regression = WaveformRegression.getRegression(waveform, firstBucket, lastBucket);
                             SimpleRegression regressionRelative = WaveformRegression.getRegression(waveform, firstRelativeBucket, lastRelativeBucket);
                             double rankDelta = regression.getSlope() - regressionRelative.getSlope();
-                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getKey(), regression.getSlope(), rankDelta));
+                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.getSlope(), rankDelta));
                         } else {
                             SimpleRegression regression = WaveformRegression.getRegression(waveform, 0, waveform.length);
-                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getKey(), regression.getSlope(), null));
+                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.getSlope(), null));
                         }
                     }
                     if (request.query.strategies.contains(Strategy.LEADER)) {
@@ -223,13 +219,13 @@ public class TrendingInjectable {
                                 relativeSum += waveform[i];
                             }
                             double rankDelta = sum - relativeSum;
-                            strategyResults.get(Strategy.LEADER).add(new Trendy(entry.getKey(), (double) sum, rankDelta));
+                            strategyResults.get(Strategy.LEADER).add(new Trendy(entry.getId(), (double) sum, rankDelta));
                         } else {
                             long sum = 0;
                             for (long w : waveform) {
                                 sum += w;
                             }
-                            strategyResults.get(Strategy.LEADER).add(new Trendy(entry.getKey(), (double) sum, null));
+                            strategyResults.get(Strategy.LEADER).add(new Trendy(entry.getId(), (double) sum, null));
                         }
                     }
                     if (request.query.strategies.contains(Strategy.PEAKS)) {
@@ -238,10 +234,10 @@ public class TrendingInjectable {
                             List<PeakDet.Peak> peaks = peakDet.peakdet(waveform, firstBucket, lastBucket, threshold);
                             List<PeakDet.Peak> peaksRelative = peakDet.peakdet(waveform, firstRelativeBucket, lastRelativeBucket, threshold);
                             double rankDelta = peaks.size() - peaksRelative.size();
-                            strategyResults.get(Strategy.PEAKS).add(new Trendy(entry.getKey(), (double) peaks.size(), rankDelta));
+                            strategyResults.get(Strategy.PEAKS).add(new Trendy(entry.getId(), (double) peaks.size(), rankDelta));
                         } else {
                             List<PeakDet.Peak> peaks = peakDet.peakdet(waveform, threshold);
-                            strategyResults.get(Strategy.PEAKS).add(new Trendy(entry.getKey(), (double) peaks.size(), null));
+                            strategyResults.get(Strategy.PEAKS).add(new Trendy(entry.getId(), (double) peaks.size(), null));
                         }
                     }
                     if (request.query.strategies.contains(Strategy.HIGHEST_PEAK)) {
@@ -254,13 +250,13 @@ public class TrendingInjectable {
                             for (int i = firstRelativeBucket; i < lastRelativeBucket; i++) {
                                 relativeMax = Math.max(relativeMax, waveform[i]);
                             }
-                            strategyResults.get(Strategy.HIGHEST_PEAK).add(new Trendy(entry.getKey(), max, max - relativeMax));
+                            strategyResults.get(Strategy.HIGHEST_PEAK).add(new Trendy(entry.getId(), max, max - relativeMax));
                         } else {
                             double max = 0;
                             for (int i = 0; i < waveform.length; i++) {
                                 max = Math.max(max, waveform[i]);
                             }
-                            strategyResults.get(Strategy.HIGHEST_PEAK).add(new Trendy(entry.getKey(), max, null));
+                            strategyResults.get(Strategy.HIGHEST_PEAK).add(new Trendy(entry.getId(), max, null));
                         }
                     }
                 }
@@ -277,11 +273,10 @@ public class TrendingInjectable {
                 }
             }
 
-            Iterator<String> iter = distinctWaveforms.keySet().iterator();
-            while (iter.hasNext()) {
-                String key = iter.next();
-                if (!retainKeys.contains(key)) {
-                    iter.remove();
+            Map<String, Waveform> distinctWaveforms = Maps.newHashMap();
+            for (Waveform entry : waveforms) {
+                if (retainKeys.contains(entry.getId())) {
+                    distinctWaveforms.put(entry.getId(), entry);
                 }
             }
 
@@ -292,13 +287,13 @@ public class TrendingInjectable {
 
             return new MiruResponse<>(new TrendingAnswer(distinctWaveforms, strategySortedTrendies),
                 ImmutableList.<MiruSolution>builder()
-                    .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
-                    .build(),
+                .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
+                .build(),
                 analyticsResponse.totalElapsed,
                 analyticsResponse.missingSchema,
                 ImmutableList.<Integer>builder()
-                    .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
-                    .build(),
+                .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
+                .build(),
                 solutionLog);
         } catch (MiruPartitionUnavailableException e) {
             throw e;
