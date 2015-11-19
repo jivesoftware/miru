@@ -132,7 +132,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
 
     @Override
     public boolean supportsInPlace() {
-        return true;
+        return false;
     }
 
     @Override
