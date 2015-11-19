@@ -1,18 +1,18 @@
-package org.roaringbitmap;
+package org.roaringbitmap.buffer;
 
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
+import java.nio.LongBuffer;
 
 /**
  *
  */
-public class RoaringInspection {
+public class RoaringBufferInspection {
 
-    public static CardinalityAndLastSetBit cardinalityAndLastSetBit(RoaringBitmap bitmap) {
+    public static CardinalityAndLastSetBit cardinalityAndLastSetBit(ImmutableRoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;
         int lastSetBit = -1;
         while (pos >= 0) {
-            Container lastContainer = bitmap.highLowContainer.values[pos];
+            MappeableContainer lastContainer = bitmap.highLowContainer.getContainerAtIndex(pos);
             lastSetBit = lastSetBit(bitmap, lastContainer, pos);
             if (lastSetBit >= 0) {
                 break;
@@ -24,51 +24,51 @@ public class RoaringInspection {
         return new CardinalityAndLastSetBit(cardinality, lastSetBit);
     }
 
-    private static int lastSetBit(RoaringBitmap bitmap, Container container, int pos) {
-        if (container instanceof ArrayContainer) {
-            ArrayContainer arrayContainer = (ArrayContainer) container;
+    private static int lastSetBit(ImmutableRoaringBitmap bitmap, MappeableContainer container, int pos) {
+        if (container instanceof MappeableArrayContainer) {
+            MappeableArrayContainer arrayContainer = (MappeableArrayContainer) container;
             int cardinality = arrayContainer.cardinality;
             if (cardinality > 0) {
-                int hs = Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
-                short last = arrayContainer.content[cardinality - 1];
-                return Util.toIntUnsigned(last) | hs;
+                int hs = BufferUtil.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
+                short last = arrayContainer.content.get(cardinality - 1);
+                return BufferUtil.toIntUnsigned(last) | hs;
             }
-        } else if (container instanceof RunContainer) {
-            RunContainer runContainer = (RunContainer) container;
+        } else if (container instanceof MappeableRunContainer) {
+            MappeableRunContainer runContainer = (MappeableRunContainer) container;
             if (runContainer.nbrruns > 0) {
-                int hs = Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
-                int maxlength = Util.toIntUnsigned(runContainer.getLength(runContainer.nbrruns - 1));
-                int base = Util.toIntUnsigned(runContainer.getValue(runContainer.nbrruns - 1));
+                int hs = BufferUtil.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
+                int maxlength = BufferUtil.toIntUnsigned(runContainer.getLength(runContainer.nbrruns - 1));
+                int base = BufferUtil.toIntUnsigned(runContainer.getValue(runContainer.nbrruns - 1));
                 return (base + maxlength) | hs;
             }
         } else {
             // <-- trailing              leading -->
             // [ 0, 0, 0, 0, 0 ... , 0, 0, 0, 0, 0 ]
-            BitmapContainer bitmapContainer = (BitmapContainer) container;
-            long[] longs = bitmapContainer.bitmap;
-            for (int i = longs.length - 1; i >= 0; i--) {
-                long l = longs[i];
+            MappeableBitmapContainer bitmapContainer = (MappeableBitmapContainer) container;
+            LongBuffer longs = bitmapContainer.bitmap;
+            for (int i = longs.limit() - 1; i >= 0; i--) {
+                long l = longs.get(i);
                 int leadingZeros = Long.numberOfLeadingZeros(l);
                 if (leadingZeros < 64) {
-                    int hs = Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
+                    int hs = BufferUtil.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
                     short last = (short) ((i * 64) + 64 - leadingZeros - 1);
-                    return Util.toIntUnsigned(last) | hs;
+                    return BufferUtil.toIntUnsigned(last) | hs;
                 }
             }
         }
         return -1;
     }
 
-    public static long sizeInBits(RoaringBitmap bitmap) {
+    public static long sizeInBits(ImmutableRoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;
         if (pos >= 0) {
-            return (Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) + 1) << 16;
+            return (BufferUtil.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) + 1) << 16;
         } else {
             return 0;
         }
     }
 
-    public static long[] cardinalityInBuckets(RoaringBitmap bitmap, int[] indexes) {
+    public static long[] cardinalityInBuckets(ImmutableRoaringBitmap bitmap, int[] indexes) {
         // indexes = { 10, 20, 30, 40, 50 } length=5
         // buckets = { 10-19, 20-29, 30-39, 40-49 } length=4
         long[] buckets = new long[indexes.length - 1];
@@ -92,18 +92,18 @@ public class RoaringInspection {
             }
 
             if (min < currentBucketEnd) {
-                Container container = bitmap.highLowContainer.values[pos];
+                MappeableContainer container = bitmap.highLowContainer.getContainerAtIndex(pos);
                 int max = min + (1 << 16);
                 boolean bucketContainsPos = (currentBucketStart <= min && max <= currentBucketEnd);
                 if (bucketContainsPos) {
                     //System.out.println("BucketContainsPos");
                     buckets[currentBucket] += container.getCardinality();
                 } else {
-                    if (container instanceof ArrayContainer) {
+                    if (container instanceof MappeableArrayContainer) {
                         //System.out.println("ArrayContainer");
-                        ArrayContainer arrayContainer = (ArrayContainer) container;
+                        MappeableArrayContainer arrayContainer = (MappeableArrayContainer) container;
                         for (int i = 0; i < arrayContainer.cardinality; i++) {
-                            int index = Util.toIntUnsigned(arrayContainer.content[i]) | min;
+                            int index = BufferUtil.toIntUnsigned(arrayContainer.content.get(i)) | min;
                             while (index >= currentBucketEnd) {
                                 //System.out.println("Advance2 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
                                 currentBucket++;
@@ -117,11 +117,11 @@ public class RoaringInspection {
                                 buckets[currentBucket]++;
                             }
                         }
-                    } else if (container instanceof RunContainer) {
-                        RunContainer runContainer = (RunContainer) container;
+                    } else if (container instanceof MappeableRunContainer) {
+                        MappeableRunContainer runContainer = (MappeableRunContainer) container;
                         for (int i = 0; i < runContainer.nbrruns; i++) {
-                            int maxlength = Util.toIntUnsigned(runContainer.getLength(i));
-                            int base = Util.toIntUnsigned(runContainer.getValue(i));
+                            int maxlength = BufferUtil.toIntUnsigned(runContainer.getLength(i));
+                            int base = BufferUtil.toIntUnsigned(runContainer.getValue(i));
                             int index = (maxlength + base) | min;
                             while (index >= currentBucketEnd) {
                                 //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
@@ -138,13 +138,13 @@ public class RoaringInspection {
                         }
                     } else {
                         //System.out.println("BitmapContainer");
-                        BitmapContainer bitmapContainer = (BitmapContainer) container;
+                        MappeableBitmapContainer bitmapContainer = (MappeableBitmapContainer) container;
                         // nextSetBit no longer performs a bounds check
-                        int maxIndex = bitmapContainer.bitmap.length << 6;
+                        int maxIndex = bitmapContainer.bitmap.limit() << 6;
                         for (int i = bitmapContainer.nextSetBit(0);
                              i >= 0;
                              i = (i + 1 >= maxIndex) ? -1 : bitmapContainer.nextSetBit(i + 1)) {
-                            int index = Util.toIntUnsigned((short) i) | min;
+                            int index = BufferUtil.toIntUnsigned((short) i) | min;
                             while (index >= currentBucketEnd) {
                                 //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
                                 currentBucket++;
@@ -165,10 +165,10 @@ public class RoaringInspection {
         return buckets;
     }
 
-    private static int containerMin(RoaringBitmap bitmap, int pos) {
-        return Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
+    private static int containerMin(ImmutableRoaringBitmap bitmap, int pos) {
+        return BufferUtil.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
     }
 
-    private RoaringInspection() {
+    private RoaringBufferInspection() {
     }
 }
