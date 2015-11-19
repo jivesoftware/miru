@@ -180,6 +180,7 @@ public class MiruAggregateUtil {
 
             gets++;
             if (bitmaps.supportsInPlace()) {
+                bitmaps.inPlaceAndNot(answer, seen);
                 long start = System.nanoTime();
                 List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId);
                 getAllCost += (System.nanoTime() - start);
