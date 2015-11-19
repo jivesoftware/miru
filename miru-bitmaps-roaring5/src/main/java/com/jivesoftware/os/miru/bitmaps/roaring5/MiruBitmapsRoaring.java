@@ -25,10 +25,13 @@ import java.io.DataOutput;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringAggregation;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.RoaringInspection;
+import org.roaringbitmap.buffer.BufferFastAggregation;
+import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 /**
  * @author jonathan
@@ -132,7 +135,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
 
     @Override
     public boolean supportsInPlace() {
-        return true;
+        return false;
     }
 
     @Override
@@ -322,6 +325,45 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
         }
         return last;
     }
+
+    /*public static void main(String[] args) throws Exception {
+        for (int i = 0; i < 100; i++) {
+
+            long start = System.currentTimeMillis();
+            RoaringBitmap b1 = new RoaringBitmap();
+            RoaringBitmap b2 = new RoaringBitmap();
+            Random r = new Random(1234);
+            for (int j = 0; j < 100_000; j++) {
+                if (r.nextBoolean()) {
+                    b1.add(j);
+                }
+                if (r.nextBoolean()) {
+                    b2.add(j);
+                }
+                RoaringBitmap b3 = new RoaringBitmap();
+                RoaringAggregation.or(b3, b1, b2);
+            }
+            System.out.println("---- regular ----");
+            System.out.println((System.currentTimeMillis() - start) + " ms");
+
+            start = System.currentTimeMillis();
+            MutableRoaringBitmap m1 = new MutableRoaringBitmap();
+            MutableRoaringBitmap m2 = new MutableRoaringBitmap();
+            r = new Random(1234);
+            for (int j = 0; j < 100_000; j++) {
+                if (r.nextBoolean()) {
+                    m1.add(j);
+                }
+                if (r.nextBoolean()) {
+                    m2.add(j);
+                }
+                MutableRoaringBitmap m3 = BufferFastAggregation.or(m1, m2);
+            }
+            System.out.println("---- buffers ----");
+            System.out.println((System.currentTimeMillis() - start) + " ms");
+
+        }
+    }*/
 
     /*public static void main(String[] args) throws Exception {
         FileReader fileReader = new FileReader("/Users/kevin.karpenske/Desktop/roaring-xor.out");
