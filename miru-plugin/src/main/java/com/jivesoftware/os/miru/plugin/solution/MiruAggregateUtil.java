@@ -161,6 +161,9 @@ public class MiruAggregateUtil {
         int gets = 0;
         int fetched = 0;
         int used = 0;
+        long getAllCost = 0;
+        long getBitmapCost = 0;
+        long andNotCost = 0;
         while (!bitmaps.isEmpty(answer)) {
             MiruIntIterator intIterator = bitmaps.intIterator(answer);
             int added = 0;
@@ -177,18 +180,23 @@ public class MiruAggregateUtil {
 
             gets++;
             if (bitmaps.supportsInPlace()) {
+                long start = System.nanoTime();
                 List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId);
+                getAllCost += (System.nanoTime() - start);
                 done:
                 for (MiruTermId[] termIds : all) {
                     if (termIds != null && termIds.length > 0) {
-                        used++;
                         for (MiruTermId termId : termIds) {
                             if (distincts.add(termId)) {
                                 result.add(termId);
+                                start = System.nanoTime();
                                 MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
                                 Optional<BM> gotIndex = invertedIndex.getIndex();
+                                getBitmapCost += (System.nanoTime() - start);
                                 if (gotIndex.isPresent()) {
+                                    start = System.nanoTime();
                                     bitmaps.inPlaceAndNot(answer, gotIndex.get());
+                                    andNotCost += (System.nanoTime() - start);
                                     if (bitmaps.isEmpty(answer)) {
                                         break done;
                                     }
@@ -222,7 +230,8 @@ public class MiruAggregateUtil {
                 answer = reduced;
             }
         }
-        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} results:{}", gets, fetched, used, result.size());
+        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} results:{} getAllCost:{} getBitmapCost:{} andNotCost:{}",
+            gets, fetched, used, result.size(), getAllCost, getBitmapCost, andNotCost);
     }
 
     public <BM> void filter(MiruBitmaps<BM> bitmaps,
