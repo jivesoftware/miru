@@ -146,12 +146,15 @@ public class MiruServiceInitializer {
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize());
 
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache = CacheBuilder.newBuilder()
-            .expireAfterAccess(config.getFieldIndexCacheExpireAfterMillis(), TimeUnit.MILLISECONDS)
-            .maximumSize(config.getFieldIndexCacheMaxSize())
-            .concurrencyLevel(config.getFieldIndexCacheConcurrencyLevel())
-            .softValues()
-            .build();
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache = null;
+        if (config.getFieldIndexCacheMaxSize() > 0) {
+            fieldIndexCache = CacheBuilder.newBuilder()
+                .expireAfterAccess(config.getFieldIndexCacheExpireAfterMillis(), TimeUnit.MILLISECONDS)
+                .maximumSize(config.getFieldIndexCacheMaxSize())
+                .concurrencyLevel(config.getFieldIndexCacheConcurrencyLevel())
+                .softValues()
+                .build();
+        }
 
         Cache<MiruFieldIndex.IndexKey, Long> versionCache = CacheBuilder.newBuilder()
             .maximumSize(config.getVersionCacheMaxSize())
