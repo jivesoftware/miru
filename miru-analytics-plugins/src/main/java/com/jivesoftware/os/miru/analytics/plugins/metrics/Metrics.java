@@ -14,7 +14,8 @@ public class Metrics {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM> Waveform metricingSum(MiruBitmaps<BM> bitmaps,
+    public <BM> Waveform metricingSum(String id,
+        MiruBitmaps<BM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -25,10 +26,11 @@ public class Metrics {
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
-        return new Waveform(waveform);
+        return Waveform.compressed(id, waveform);
     }
 
-    public <BM> Waveform metricingAvg(MiruBitmaps<BM> bitmaps,
+    public <BM> Waveform metricingAvg(String id,
+        MiruBitmaps<BM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -44,7 +46,7 @@ public class Metrics {
         for (int i = 0; i < waveform.length; i++) {
             waveform[i] /= rawCardinalities[i];
         }
-        return new Waveform(waveform);
+        return Waveform.compressed(id, waveform);
     }
 
     /*

@@ -228,8 +228,9 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 }
 
                 if (response != null && response.answer != null) {
-                    Map<String, Waveform> answerWaveforms = response.answer.waveforms != null ? response.answer.waveforms : Collections.emptyMap();
-                    Map<String, long[]> waveforms = Maps.transformValues(answerWaveforms, w -> {
+                    List<Waveform> answerWaveforms = response.answer.waveforms != null ? response.answer.waveforms : Collections.emptyList();
+                    ImmutableMap<String, Waveform> uniqueIndex = Maps.uniqueIndex(answerWaveforms, w-> w.getId());
+                    Map<String, long[]> waveforms = Maps.transformValues(uniqueIndex, w -> {
                         long[] waveform = new long[input.buckets];
                         w.mergeWaveform(waveform);
                         return waveform;

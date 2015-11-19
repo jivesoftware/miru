@@ -12,22 +12,36 @@ import java.util.Arrays;
  */
 public class Waveform implements Serializable {
 
+    private static final byte[] EMPTY = new byte[0];
+
+    public static Waveform empty(String id, int length) {
+        return new Waveform(id, length, EMPTY);
+    }
+
+    public static Waveform compressed(String id, long[] rawWaveform) {
+        return new Waveform(id, -1, null).compress(rawWaveform);
+    }
+
+    private String id;
     private int offset;
     private byte[] waveform;
 
-    public Waveform(long[] rawWaveform) {
-        compress(rawWaveform);
-    }
-
-    private Waveform(int offset, byte[] waveform) {
+    private Waveform(String id, int offset, byte[] waveform) {
+        this.id = id;
         this.offset = offset;
         this.waveform = waveform;
     }
 
     @JsonCreator
-    public static Waveform fromJson(@JsonProperty("offset") int offset,
+    public static Waveform fromJson(@JsonProperty("id") String id,
+        @JsonProperty("offset") int offset,
         @JsonProperty("waveform") byte[] waveform) throws Exception {
-        return new Waveform(offset, waveform);
+        return new Waveform(id, offset, waveform);
+    }
+
+    @JsonGetter("id")
+    public String getId() {
+        return id;
     }
 
     @JsonGetter("offset")
@@ -41,7 +55,7 @@ public class Waveform implements Serializable {
     }
 
     @JsonIgnore
-    public void compress(long[] rawWaveform) {
+    public Waveform compress(long[] rawWaveform) {
         int offset = rawWaveform.length;
 
         for (int i = 0; i < rawWaveform.length; i++) {
@@ -65,6 +79,7 @@ public class Waveform implements Serializable {
 
         this.offset = offset;
         this.waveform = longsBytes(rawWaveform, offset, count, (byte) precision);
+        return this;
     }
 
     @JsonIgnore

@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.analytics.plugins.metrics;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -31,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -67,12 +67,13 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            return new MiruPartitionResponse<>(
-                new MetricsAnswer(
-                    Maps.transformValues(request.query.filters,
-                        input -> new Waveform(new long[request.query.divideTimeRangeIntoNSegments])),
-                    resultsExhausted),
-                solutionLog.asList());
+
+            Set<String> keys = request.query.filters.keySet();
+            List<Waveform> waveforms = Lists.newArrayListWithCapacity(keys.size());
+            for (String key : keys) {
+                waveforms.add(Waveform.empty(key, request.query.divideTimeRangeIntoNSegments));
+            }
+            return new MiruPartitionResponse<>(new MetricsAnswer(waveforms, resultsExhausted), solutionLog.asList());
         }
 
         long start = System.currentTimeMillis();
@@ -135,7 +136,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             powerBitIndexes.add(invertedIndex.getIndex());
         }
 
-        Map<String, Waveform> waveforms = Maps.newHashMapWithExpectedSize(request.query.filters.size());
+        List<Waveform> waveforms = Lists.newArrayListWithCapacity(request.query.filters.size());
         start = System.currentTimeMillis();
         for (Map.Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
             Waveform waveform = null;
@@ -159,7 +160,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
                         }
                     }
 
-                    waveform = metrics.metricingAvg(bitmaps, rawAnswer, answers, indexes, 64);
+                    waveform = metrics.metricingAvg(entry.getKey(), bitmaps, rawAnswer, answers, indexes, 64);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         int cardinality = 0;
                         for (int i = 0; i < 64; i++) {
@@ -176,9 +177,9 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
                 }
             }
             if (waveform == null) {
-                waveform = new Waveform(new long[request.query.divideTimeRangeIntoNSegments]);
+                waveform = Waveform.empty(entry.getKey(), request.query.divideTimeRangeIntoNSegments);
             }
-            waveforms.put(entry.getKey(), waveform);
+            waveforms.add(waveform);
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "metrics answered: {} millis.", System.currentTimeMillis() - start);
         solutionLog.log(MiruSolutionLogLevel.INFO, "metrics answered: {} iterations.", request.query.filters.size());

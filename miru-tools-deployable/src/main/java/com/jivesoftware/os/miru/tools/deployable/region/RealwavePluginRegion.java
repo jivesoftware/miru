@@ -215,7 +215,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                                 analyticsFilters),
                             MiruSolutionLogLevel.NONE),
                         AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                        new Class[] { AnalyticsAnswer.class },
+                        new Class[]{AnalyticsAnswer.class},
                         null);
                     response = analyticsResponse;
                     if (response != null && response.answer != null) {
@@ -224,7 +224,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                         log.warn("Empty analytics response from {}, trying another", requestHelper);
                     }
                 } catch (Exception e) {
-                    log.warn("Failed analytics request to {}, trying another", new Object[] { requestHelper }, e);
+                    log.warn("Failed analytics request to {}, trying another", new Object[]{requestHelper}, e);
                 }
             }
         }
@@ -233,21 +233,21 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
         if (response != null && response.answer != null) {
             data.put("elapse", String.valueOf(response.totalElapsed));
 
-            Map<String, Waveform> waveforms = response.answer.waveforms;
+            List<Waveform> waveforms = response.answer.waveforms;
             if (waveforms == null) {
-                waveforms = Collections.emptyMap();
+                waveforms = Collections.emptyList();
             }
 
             Map<String, Object> waveformData = Maps.newHashMap();
             long[] waveform = new long[input.buckets];
-            for (Map.Entry<String, Waveform> entry : waveforms.entrySet()) {
+            for (Waveform entry : waveforms) {
                 Arrays.fill(waveform, 0);
-                entry.getValue().mergeWaveform(waveform);
+                entry.mergeWaveform(waveform);
                 int[] counts = new int[waveform.length];
                 for (int i = 0; i < counts.length; i++) {
                     counts[i] = (int) Math.min(waveform[i], Integer.MAX_VALUE);
                 }
-                waveformData.put(entry.getKey(), counts);
+                waveformData.put(entry.getId(), counts);
             }
             data.put("waveforms", waveformData);
         }
