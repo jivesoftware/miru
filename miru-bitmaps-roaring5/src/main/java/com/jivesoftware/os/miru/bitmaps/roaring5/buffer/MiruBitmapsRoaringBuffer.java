@@ -24,16 +24,12 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import org.roaringbitmap.IntIterator;
-import org.roaringbitmap.RoaringAggregation;
 import org.roaringbitmap.RoaringBitmap;
-import org.roaringbitmap.buffer.BufferFastAggregation;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.roaringbitmap.buffer.RoaringBufferAggregation;
 import org.roaringbitmap.buffer.RoaringBufferInspection;
@@ -113,8 +109,8 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public long[] boundedCardinalities(MutableRoaringBitmap container, int[] indexBoundaries) {
-        return RoaringBufferInspection.cardinalityInBuckets(container, indexBoundaries);
+    public void boundedCardinalities(MutableRoaringBitmap container, int[] indexBoundaries, long[] rawWaveform) {
+        RoaringBufferInspection.cardinalityInBuckets(container, indexBoundaries, rawWaveform);
     }
 
     @Override

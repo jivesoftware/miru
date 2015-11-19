@@ -68,10 +68,9 @@ public class RoaringInspection {
         }
     }
 
-    public static long[] cardinalityInBuckets(RoaringBitmap bitmap, int[] indexes) {
+    public static void cardinalityInBuckets(RoaringBitmap bitmap, int[] indexes, long[] buckets) {
         // indexes = { 10, 20, 30, 40, 50 } length=5
         // buckets = { 10-19, 20-29, 30-39, 40-49 } length=4
-        long[] buckets = new long[indexes.length - 1];
         int numContainers = bitmap.highLowContainer.size();
         //System.out.println("NumContainers=" + numContainers);
         int currentBucket = 0;
@@ -98,71 +97,68 @@ public class RoaringInspection {
                 if (bucketContainsPos) {
                     //System.out.println("BucketContainsPos");
                     buckets[currentBucket] += container.getCardinality();
+                } else if (container instanceof ArrayContainer) {
+                    //System.out.println("ArrayContainer");
+                    ArrayContainer arrayContainer = (ArrayContainer) container;
+                    for (int i = 0; i < arrayContainer.cardinality; i++) {
+                        int index = Util.toIntUnsigned(arrayContainer.content[i]) | min;
+                        while (index >= currentBucketEnd) {
+                            //System.out.println("Advance2 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                            currentBucket++;
+                            if (currentBucket == buckets.length) {
+                                break done;
+                            }
+                            currentBucketStart = indexes[currentBucket];
+                            currentBucketEnd = indexes[currentBucket + 1];
+                        }
+                        if (index >= currentBucketStart) {
+                            buckets[currentBucket]++;
+                        }
+                    }
+                } else if (container instanceof RunContainer) {
+                    RunContainer runContainer = (RunContainer) container;
+                    for (int i = 0; i < runContainer.nbrruns; i++) {
+                        int maxlength = Util.toIntUnsigned(runContainer.getLength(i));
+                        int base = Util.toIntUnsigned(runContainer.getValue(i));
+                        int index = (maxlength + base) | min;
+                        while (index >= currentBucketEnd) {
+                            //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                            currentBucket++;
+                            if (currentBucket == buckets.length) {
+                                break done;
+                            }
+                            currentBucketStart = indexes[currentBucket];
+                            currentBucketEnd = indexes[currentBucket + 1];
+                        }
+                        if (index >= currentBucketStart) {
+                            buckets[currentBucket]++;
+                        }
+                    }
                 } else {
-                    if (container instanceof ArrayContainer) {
-                        //System.out.println("ArrayContainer");
-                        ArrayContainer arrayContainer = (ArrayContainer) container;
-                        for (int i = 0; i < arrayContainer.cardinality; i++) {
-                            int index = Util.toIntUnsigned(arrayContainer.content[i]) | min;
-                            while (index >= currentBucketEnd) {
-                                //System.out.println("Advance2 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
-                                currentBucket++;
-                                if (currentBucket == buckets.length) {
-                                    break done;
-                                }
-                                currentBucketStart = indexes[currentBucket];
-                                currentBucketEnd = indexes[currentBucket + 1];
+                    //System.out.println("BitmapContainer");
+                    BitmapContainer bitmapContainer = (BitmapContainer) container;
+                    // nextSetBit no longer performs a bounds check
+                    int maxIndex = bitmapContainer.bitmap.length << 6;
+                    for (int i = bitmapContainer.nextSetBit(0);
+                        i >= 0;
+                        i = (i + 1 >= maxIndex) ? -1 : bitmapContainer.nextSetBit(i + 1)) {
+                        int index = Util.toIntUnsigned((short) i) | min;
+                        while (index >= currentBucketEnd) {
+                            //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                            currentBucket++;
+                            if (currentBucket == buckets.length) {
+                                break done;
                             }
-                            if (index >= currentBucketStart) {
-                                buckets[currentBucket]++;
-                            }
+                            currentBucketStart = indexes[currentBucket];
+                            currentBucketEnd = indexes[currentBucket + 1];
                         }
-                    } else if (container instanceof RunContainer) {
-                        RunContainer runContainer = (RunContainer) container;
-                        for (int i = 0; i < runContainer.nbrruns; i++) {
-                            int maxlength = Util.toIntUnsigned(runContainer.getLength(i));
-                            int base = Util.toIntUnsigned(runContainer.getValue(i));
-                            int index = (maxlength + base) | min;
-                            while (index >= currentBucketEnd) {
-                                //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
-                                currentBucket++;
-                                if (currentBucket == buckets.length) {
-                                    break done;
-                                }
-                                currentBucketStart = indexes[currentBucket];
-                                currentBucketEnd = indexes[currentBucket + 1];
-                            }
-                            if (index >= currentBucketStart) {
-                                buckets[currentBucket]++;
-                            }
-                        }
-                    } else {
-                        //System.out.println("BitmapContainer");
-                        BitmapContainer bitmapContainer = (BitmapContainer) container;
-                        // nextSetBit no longer performs a bounds check
-                        int maxIndex = bitmapContainer.bitmap.length << 6;
-                        for (int i = bitmapContainer.nextSetBit(0);
-                             i >= 0;
-                             i = (i + 1 >= maxIndex) ? -1 : bitmapContainer.nextSetBit(i + 1)) {
-                            int index = Util.toIntUnsigned((short) i) | min;
-                            while (index >= currentBucketEnd) {
-                                //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
-                                currentBucket++;
-                                if (currentBucket == buckets.length) {
-                                    break done;
-                                }
-                                currentBucketStart = indexes[currentBucket];
-                                currentBucketEnd = indexes[currentBucket + 1];
-                            }
-                            if (index >= currentBucketStart) {
-                                buckets[currentBucket]++;
-                            }
+                        if (index >= currentBucketStart) {
+                            buckets[currentBucket]++;
                         }
                     }
                 }
             }
         }
-        return buckets;
     }
 
     private static int containerMin(RoaringBitmap bitmap, int pos) {

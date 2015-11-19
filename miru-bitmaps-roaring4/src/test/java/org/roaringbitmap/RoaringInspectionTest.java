@@ -61,8 +61,9 @@ public class RoaringInspectionTest {
         for (int i = 0; i < 100_000; i++) {
             bitmap.add(i);
         }
-        long[] cardinalityInBuckets = RoaringInspection.cardinalityInBuckets(bitmap,
-            new int[] { 0, 10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000 });
+        int[] indexes = new int[]{0, 10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000};
+        long[] cardinalityInBuckets = new long[indexes.length - 1];
+        RoaringInspection.cardinalityInBuckets(bitmap, indexes, cardinalityInBuckets);
         assertEquals(cardinalityInBuckets.length, 10);
         for (long cardinalityInBucket : cardinalityInBuckets) {
             assertEquals(cardinalityInBucket, 10_000);
@@ -75,8 +76,9 @@ public class RoaringInspectionTest {
         for (int i = 0; i < 100_000; i += 100) {
             bitmap.add(i);
         }
-        long[] cardinalityInBuckets = RoaringInspection.cardinalityInBuckets(bitmap,
-            new int[] { 0, 10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000 });
+        int[] indexes = new int[]{0, 10_000, 20_000, 30_000, 40_000, 50_000, 60_000, 70_000, 80_000, 90_000, 100_000};
+        long[] cardinalityInBuckets = new long[indexes.length - 1];
+        RoaringInspection.cardinalityInBuckets(bitmap, indexes, cardinalityInBuckets);
         assertEquals(cardinalityInBuckets.length, 10);
         for (long cardinalityInBucket : cardinalityInBuckets) {
             assertEquals(cardinalityInBucket, 100);
@@ -89,8 +91,9 @@ public class RoaringInspectionTest {
         for (int i = 0; i < 131_072; i++) {
             bitmap.add(i);
         }
-        long[] cardinalityInBuckets = RoaringInspection.cardinalityInBuckets(bitmap,
-            new int[] { 0, 65_536, 131_072 });
+        int[] indexes = new int[]{0, 65_536, 131_072};
+        long[] cardinalityInBuckets = new long[indexes.length - 1];
+        RoaringInspection.cardinalityInBuckets(bitmap, indexes, cardinalityInBuckets);
         assertEquals(cardinalityInBuckets.length, 2);
         for (long cardinalityInBucket : cardinalityInBuckets) {
             assertEquals(cardinalityInBucket, 65_536);
@@ -103,8 +106,9 @@ public class RoaringInspectionTest {
         for (int i = 0; i < 131_072; i += 128) {
             bitmap.add(i);
         }
-        long[] cardinalityInBuckets = RoaringInspection.cardinalityInBuckets(bitmap,
-            new int[] { 0, 65_536, 131_072 });
+        int[] indexes = new int[]{0, 65_536, 131_072};
+        long[] cardinalityInBuckets = new long[indexes.length - 1];
+        RoaringInspection.cardinalityInBuckets(bitmap, indexes, cardinalityInBuckets);
         assertEquals(cardinalityInBuckets.length, 2);
         for (long cardinalityInBucket : cardinalityInBuckets) {
             assertEquals(cardinalityInBucket, 512);
@@ -117,8 +121,9 @@ public class RoaringInspectionTest {
         for (int i = 0; i < 100_000; i++) {
             bitmap.add(i);
         }
-        long[] cardinalityInBuckets = RoaringInspection.cardinalityInBuckets(bitmap,
-            new int[] { 40_000, 50_000, 60_000 });
+        int[] indexes = new int[]{40_000, 50_000, 60_000};
+        long[] cardinalityInBuckets = new long[indexes.length - 1];
+        RoaringInspection.cardinalityInBuckets(bitmap, indexes, cardinalityInBuckets);
         assertEquals(cardinalityInBuckets.length, 2);
         for (long cardinalityInBucket : cardinalityInBuckets) {
             assertEquals(cardinalityInBucket, 10_000);
@@ -135,8 +140,9 @@ public class RoaringInspectionTest {
         for (int i = 210_000; i < 220_000; i++) {
             bitmap.add(i);
         }
-        long[] cardinalityInBuckets = RoaringInspection.cardinalityInBuckets(bitmap,
-            new int[] { 0, 80_000, 110_000, 200_000, 230_000, 300_000 });
+        int[] indexes = new int[]{0, 80_000, 110_000, 200_000, 230_000, 300_000};
+        long[] cardinalityInBuckets = new long[indexes.length - 1];
+        RoaringInspection.cardinalityInBuckets(bitmap, indexes, cardinalityInBuckets);
         assertEquals(cardinalityInBuckets.length, 5);
         assertEquals(cardinalityInBuckets[0], 0);
         assertEquals(cardinalityInBuckets[1], 10_000);
@@ -151,8 +157,9 @@ public class RoaringInspectionTest {
         for (int i = 0; i < 10; i++) {
             bitmap.add(i);
         }
-        long[] cardinalityInBuckets = RoaringInspection.cardinalityInBuckets(bitmap,
-            new int[] { 2, 2, 3, 3, 4, 4, 5, 5, 6 });
+        int[] indexes = new int[]{2, 2, 3, 3, 4, 4, 5, 5, 6};
+        long[] cardinalityInBuckets = new long[indexes.length - 1];
+        RoaringInspection.cardinalityInBuckets(bitmap, indexes, cardinalityInBuckets);
         assertEquals(cardinalityInBuckets.length, 8);
         assertEquals(cardinalityInBuckets[0], 0);
         assertEquals(cardinalityInBuckets[1], 1);

@@ -59,10 +59,9 @@ public class RoaringInspection {
         }
     }
 
-    public static long[] cardinalityInBuckets(RoaringBitmap bitmap, int[] indexes) {
+    public static void cardinalityInBuckets(RoaringBitmap bitmap, int[] indexes, long[] buckets) {
         // indexes = { 10, 20, 30, 40, 50 } length=5
         // buckets = { 10-19, 20-29, 30-39, 40-49 } length=4
-        long[] buckets = new long[indexes.length - 1];
         int numContainers = bitmap.highLowContainer.size();
         //System.out.println("NumContainers=" + numContainers);
         int currentBucket = 0;
@@ -134,7 +133,6 @@ public class RoaringInspection {
                 }
             }
         }
-        return buckets;
     }
 
     private static int containerMin(RoaringBitmap bitmap, int pos) {

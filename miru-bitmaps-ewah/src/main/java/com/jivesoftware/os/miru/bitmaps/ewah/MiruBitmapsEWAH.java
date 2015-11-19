@@ -100,7 +100,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public long[] boundedCardinalities(EWAHCompressedBitmap container, int[] indexBoundaries) {
+    public void boundedCardinalities(EWAHCompressedBitmap container, int[] indexBoundaries, long[] rawWaveform) {
         //TODO naive implementation can just walk IntIterator iter = container.intIterator();
         throw new UnsupportedOperationException("Not yet!");
     }

@@ -57,8 +57,8 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
                 }
                 return true;
             },
-            (String term, long version, Waveform waveform) -> {
-                waveforms.put(term, waveform);
+            (String term, long version, long[] waveformBuffer) -> {
+                waveforms.put(term, new Waveform(waveformBuffer));
                 return true;
             });
 

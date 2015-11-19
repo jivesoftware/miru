@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -38,7 +37,7 @@ public class Analytics {
     }
 
     public interface Analyzed<T> {
-        boolean analyzed(T term, long version, Waveform waveform) throws Exception;
+        boolean analyzed(T term, long version, long[] waveformBuffer) throws Exception;
     }
 
     public <BM, T> boolean analyze(MiruSolutionLog solutionLog,
@@ -55,10 +54,12 @@ public class Analytics {
         MiruPartitionCoord coord = handle.getCoord();
         MiruTimeIndex timeIndex = context.getTimeIndex();
 
+        long[] rawWaveformBuffer = new long[divideTimeRangeIntoNSegments];
+
         // Short-circuit if this is not a properly bounded query
         if (timeRange.largestTimestamp == Long.MAX_VALUE || timeRange.smallestTimestamp == 0) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "Improperly bounded query: {}", timeRange);
-            analysis.consume((termId, version, filter) -> analyzed.analyzed(termId, version, new Waveform(new long[divideTimeRangeIntoNSegments])));
+            analysis.consume((termId, version, filter) -> analyzed.analyzed(termId, version, rawWaveformBuffer));
             return true;
         }
 
@@ -67,7 +68,7 @@ public class Analytics {
         if (!timeIndex.intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 coord.partitionId, timeIndex, timeRange);
-            analysis.consume((termId, version, filter) -> analyzed.analyzed(termId, version, new Waveform(new long[divideTimeRangeIntoNSegments])));
+            analysis.consume((termId, version, filter) -> analyzed.analyzed(termId, version, rawWaveformBuffer));
             return resultsExhausted;
         }
 
@@ -124,11 +125,11 @@ public class Analytics {
             currentTime += segmentDuration;
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics bucket boundaries: {} millis.", System.currentTimeMillis() - start);
-
+        
         start = System.currentTimeMillis();
         int[] count = new int[1];
         analysis.consume((term, version, filter) -> {
-            Waveform waveform = null;
+            Arrays.fill(rawWaveformBuffer, 0);
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
@@ -142,20 +143,19 @@ public class Analytics {
                     bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 }
                 if (!bitmaps.isEmpty(answer)) {
-                    waveform = analytics(bitmaps, answer, indexes);
+                    //waveform = analytics(bitmaps, answer, indexes);
+                    bitmaps.boundedCardinalities(answer, indexes, rawWaveformBuffer);
+
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics answer: {} items.", bitmaps.cardinality(answer));
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics name: {}, waveform: {}.", term, waveform);
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics name: {}, waveform: {}.", term, Arrays.toString(rawWaveformBuffer));
                     }
                 } else {
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "analytics empty answer.");
                 }
             }
-            if (waveform == null) {
-                waveform = new Waveform(new long[divideTimeRangeIntoNSegments]);
-            }
             count[0]++;
-            return analyzed.analyzed(term, version, waveform);
+            return analyzed.analyzed(term, version, rawWaveformBuffer);
         });
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics answered: {} millis.", System.currentTimeMillis() - start);
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics answered: {} iterations.", count[0]);
@@ -163,13 +163,5 @@ public class Analytics {
         return resultsExhausted;
     }
 
-    private <BM> Waveform analytics(MiruBitmaps<BM> bitmaps,
-        BM answer,
-        int[] indexes)
-        throws Exception {
-
-        log.debug("Get analytics for answer={}", answer);
-        return new Waveform(bitmaps.boundedCardinalities(answer, indexes));
-    }
 
 }

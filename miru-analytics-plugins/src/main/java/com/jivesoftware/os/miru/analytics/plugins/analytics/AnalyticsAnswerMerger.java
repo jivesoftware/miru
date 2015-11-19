@@ -62,19 +62,19 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
     private void mergeWaveform(Map<String, Waveform> mergedWaveforms, AnalyticsAnswer addAnswer, MiruSolutionLog solutionLog) {
         long[] waveform = new long[divideTimeRangeIntoNSegments];
         for (Map.Entry<String, Waveform> addEntry : addAnswer.waveforms.entrySet()) {
-            Arrays.fill(waveform, 0);
             String key = addEntry.getKey();
             Waveform addWaveform = addEntry.getValue();
             mergedWaveforms.compute(key, (s, existing) -> {
                 if (existing != null) {
+                    Arrays.fill(waveform, 0);
                     addWaveform.mergeWaveform(waveform);
                     existing.mergeWaveform(waveform);
-                    Waveform mergedWaveform = new Waveform(waveform);
+                    existing.compress(waveform);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merged {} into {}",
-                            key, addWaveform, mergedWaveform);
+                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merging {} result {}",
+                            key, addWaveform, existing);
                     }
-                    return mergedWaveform;
+                    return existing;
                 } else {
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "merge: key={} merged {} into {}",

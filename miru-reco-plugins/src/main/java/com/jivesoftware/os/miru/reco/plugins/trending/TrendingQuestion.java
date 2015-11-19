@@ -172,7 +172,8 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                 }
                 return true;
             },
-            (TrendingWaveformKey key, long version, Waveform waveform) -> {
+            (TrendingWaveformKey key, long version, long[] waveformBuffer) -> {
+                Waveform waveform = new Waveform(waveformBuffer);
                 waveforms.put(termComposer.decompose(fieldDefinition, key.termId), waveform);
                 if (queryCache != null) {
                     queryCache.put(key, new TrendingVersionedWaveform(version, waveform));
