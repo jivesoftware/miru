@@ -102,14 +102,18 @@ public class IndexTestUtil {
         );
     }
 
-    public static <BM> MiruContext<BM, ?> buildInMemoryContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+    public static <BM> MiruContext<BM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
+        MiruBitmaps<BM> bitmaps,
+        MiruPartitionCoord coord) throws Exception {
+            byte[] primitiveBuffer = new byte[8];
         return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory, primitiveBuffer);
 
     }
 
-    public static <BM> MiruContext<BM, ?> buildOnDiskContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+    public static <BM> MiruContext<BM, RCVSSipCursor> buildOnDiskContext(int numberOfChunkStores,
+        MiruBitmaps<BM> bitmaps,
+        MiruPartitionCoord coord) throws Exception {
+            byte[] primitiveBuffer = new byte[8];
         return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk, primitiveBuffer);
 
     }

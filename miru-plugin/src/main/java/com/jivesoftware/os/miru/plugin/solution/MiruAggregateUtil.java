@@ -177,7 +177,6 @@ public class MiruAggregateUtil {
         int fetched = 0;
         int used = 0;
         long getAllCost = 0;
-        long getBitmapCost = 0;
         long andNotCost = 0;
         while (!bitmaps.isEmpty(answer)) {
             MiruIntIterator intIterator = bitmaps.intIterator(answer);
@@ -207,13 +206,9 @@ public class MiruAggregateUtil {
                                 result.add(termId);
                                 start = System.nanoTime();
                                 MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
-                                Optional<BM> gotIndex = invertedIndex.getIndex(primitiveBuffer);
-                                getBitmapCost += (System.nanoTime() - start);
-                                if (gotIndex.isPresent()) {
-                                    start = System.nanoTime();
-                                    bitmaps.inPlaceAndNot(answer, gotIndex.get());
-                                    andNotCost += (System.nanoTime() - start);
-                                }
+                                start = System.nanoTime();
+                                bitmaps.inPlaceAndNot(answer, invertedIndex, primitiveBuffer);
+                                andNotCost += (System.nanoTime() - start);
                             }
                         }
                     }
@@ -243,8 +238,8 @@ public class MiruAggregateUtil {
                 answer = reduced;
             }
         }
-        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} results:{} getAllCost:{} getBitmapCost:{} andNotCost:{}",
-            gets, fetched, used, result.size(), getAllCost, getBitmapCost, andNotCost);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} results:{} getAllCost:{} andNotCost:{}",
+            gets, fetched, used, result.size(), getAllCost, andNotCost);
     }
 
     public <BM> void filter(MiruBitmaps<BM> bitmaps,

@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -38,6 +40,7 @@ public class MiruIndexer<BM> {
     }
 
     public void index(final MiruContext<BM, ?> context,
+        final MiruPartitionCoord coord,
         final List<MiruActivityAndId<MiruActivity>> activityAndIds,
         boolean repair,
         ExecutorService indexExecutor)
@@ -80,17 +83,17 @@ public class MiruIndexer<BM> {
         Future<List<PairedLatestWork>> pairedLatestPrepared = indexPairedLatest.prepare(context, pairedLatestComposed, indexExecutor);
 
         // 3. Index field values work
-        List<Future<?>> fieldFutures = indexFieldValues.index(context, fieldValuesComposed, repair, indexExecutor);
+        List<Future<?>> fieldFutures = indexFieldValues.index(context, coord.tenantId, fieldValuesComposed, repair, indexExecutor);
 
         // 4. Wait for completion
         awaitFutures(fieldFutures, "indexFieldValues");
 
         // 5. Index remaining work
         final List<Future<?>> otherFutures = new ArrayList<>();
-        otherFutures.addAll(indexAuthz.index(context, internalActivityAndIds, repair, indexExecutor));
-        otherFutures.addAll(indexBloom.index(context, bloomPrepared, repair, indexExecutor));
-        otherFutures.addAll(indexLatest.index(context, internalActivityAndIds, repair, indexExecutor));
-        otherFutures.addAll(indexPairedLatest.index(context, pairedLatestPrepared, repair, indexExecutor));
+        otherFutures.addAll(indexAuthz.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
+        otherFutures.addAll(indexBloom.index(context, coord.tenantId, bloomPrepared, repair, indexExecutor));
+        otherFutures.addAll(indexLatest.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
+        otherFutures.addAll(indexPairedLatest.index(context, coord.tenantId, pairedLatestPrepared, repair, indexExecutor));
 
         // 6. Update activity index
         otherFutures.add(indexExecutor.submit(() -> {
@@ -104,6 +107,8 @@ public class MiruIndexer<BM> {
             otherFutures.add(indexExecutor.submit(() -> {
                 byte[] primitiveBuffer = new byte[8];
                 // repairs also unhide (remove from removal)
+                log.inc("count>remove", activityAndIds.size());
+                log.inc("count>remove", activityAndIds.size(), coord.tenantId.toString());
                 for (MiruActivityAndId<MiruActivity> activityAndId : activityAndIds) {
                     context.removalIndex.remove(activityAndId.id, primitiveBuffer);
                 }

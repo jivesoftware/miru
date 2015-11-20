@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -98,7 +99,7 @@ public class MiruIndexPairedLatest<BM> {
     }
 
     public List<Future<?>> index(final MiruContext<BM, ?> context,
-        Future<List<PairedLatestWork>> pairedLatestWorksFuture,
+        MiruTenantId tenantId, Future<List<PairedLatestWork>> pairedLatestWorksFuture,
         final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
@@ -133,12 +134,18 @@ public class MiruIndexPairedLatest<BM> {
                     }
                 }
 
+                log.inc("count>andNot", aggregateBitmaps.size());
+                log.inc("count>andNot", aggregateBitmaps.size(), tenantId.toString());
                 invertedIndex.andNotToSourceSize(aggregateBitmaps, primitiveBuffer);
 
                 ids.reverse(); // we built in reverse order, so flip back to ascending
                 if (repair) {
+                    log.inc("count>set", 1);
+                    log.inc("count>set", 1, tenantId.toString());
                     pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, primitiveBuffer);
                 } else {
+                    log.inc("count>append", 1);
+                    log.inc("count>append", 1, tenantId.toString());
                     pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, primitiveBuffer);
                 }
 

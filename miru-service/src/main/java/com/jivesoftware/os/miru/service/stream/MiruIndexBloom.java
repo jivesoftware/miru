@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.stream;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
@@ -91,7 +92,7 @@ public class MiruIndexBloom<BM> {
     }
 
     public List<Future<?>> index(final MiruContext<BM, ?> context,
-        final Future<List<BloomWork>> bloomWorksFuture,
+        MiruTenantId tenantId, final Future<List<BloomWork>> bloomWorksFuture,
         boolean repair,
         ExecutorService indexExecutor)
         throws ExecutionException, InterruptedException {
@@ -103,6 +104,8 @@ public class MiruIndexBloom<BM> {
         List<Future<?>> futures = Lists.newArrayList();
         for (final BloomWork bloomWork : bloomWorks) {
             futures.add(indexExecutor.submit(() -> {
+                log.inc("count", bloomWork.bloomFieldValues.size());
+                log.inc("count", bloomWork.bloomFieldValues.size(), tenantId.toString());
                 MiruFieldDefinition bloomFieldDefinition = context.schema.getFieldDefinition(bloomWork.bloomFieldId);
                 MiruTermId compositeBloomId = indexUtil.makeBloomTerm(bloomWork.fieldValue, bloomFieldDefinition.name);
                 MiruInvertedIndex<BM> invertedIndex = bloomFieldIndex.getOrCreateInvertedIndex(bloomWork.fieldId, compositeBloomId);

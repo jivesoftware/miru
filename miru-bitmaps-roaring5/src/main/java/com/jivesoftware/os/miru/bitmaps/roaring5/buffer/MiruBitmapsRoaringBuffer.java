@@ -21,6 +21,7 @@ import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -30,6 +31,8 @@ import java.util.List;
 import java.util.Random;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringBitmap;
+import org.roaringbitmap.buffer.BufferFastAggregation;
+import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.roaringbitmap.buffer.RoaringBufferAggregation;
 import org.roaringbitmap.buffer.RoaringBufferInspection;
@@ -140,6 +143,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
+    public void inPlaceOr(MutableRoaringBitmap original, MutableRoaringBitmap or) {
+        original.or(or);
+    }
+
+    @Override
     public void or(MutableRoaringBitmap container, Collection<MutableRoaringBitmap> bitmaps) {
         RoaringBufferAggregation.or(container, bitmaps.toArray(new MutableRoaringBitmap[bitmaps.size()]));
     }
@@ -157,6 +165,19 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     @Override
     public void inPlaceAndNot(MutableRoaringBitmap original, MutableRoaringBitmap not) {
         original.andNot(not);
+    }
+
+    @Override
+    public void inPlaceAndNot(MutableRoaringBitmap original, MiruInvertedIndex<MutableRoaringBitmap> not, byte[] primitiveBuffer) throws Exception {
+        not.txIndex((bitmap, buffer) -> {
+            if (bitmap != null) {
+                original.andNot(bitmap);
+            } else if (buffer != null) {
+                ImmutableRoaringBitmap notBitmap = new ImmutableRoaringBitmap(buffer);
+                original.andNot(notBitmap);
+            }
+            return null;
+        }, primitiveBuffer);
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.stream;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -10,6 +11,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -20,10 +23,12 @@ import java.util.concurrent.Future;
  */
 public class MiruIndexLatest<BM> {
 
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
     private final MiruTermId fieldAggregateTermId = new MiruIndexUtil().makeLatestTerm();
 
     public List<Future<?>> index(final MiruContext<BM, ?> context,
-        List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
+        MiruTenantId tenantId, List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
@@ -49,13 +54,21 @@ public class MiruIndexLatest<BM> {
                             MiruInvertedIndex<BM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
                             Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe(primitiveBuffer);
                             if (optionalIndex.isPresent()) {
+                                log.inc("count>andNot", 1);
+                                log.inc("count>andNot", 1, tenantId.toString());
                                 aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()), primitiveBuffer);
                             }
                         }
+
                         if (repair) {
-                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[]{internalActivityAndId.id}, null, primitiveBuffer);
+                            log.inc("count>set", 1);
+                            log.inc("count>set", 1, tenantId.toString());
+                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null, primitiveBuffer);
                         } else {
-                            latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, new int[]{internalActivityAndId.id}, null, primitiveBuffer);
+                            log.inc("count>append", 1);
+                            log.inc("count>append", 1, tenantId.toString());
+                            latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null,
+                                primitiveBuffer);
                         }
                         return null;
                     }));

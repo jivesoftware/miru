@@ -19,6 +19,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -136,6 +137,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
+    public void inPlaceOr(RoaringBitmap original, RoaringBitmap or) {
+        original.or(or);
+    }
+
+    @Override
     public void or(RoaringBitmap container, Collection<RoaringBitmap> bitmaps) {
         RoaringAggregation.or(container, bitmaps.toArray(new RoaringBitmap[bitmaps.size()]));
     }
@@ -153,6 +159,14 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     @Override
     public void inPlaceAndNot(RoaringBitmap original, RoaringBitmap not) {
         original.andNot(not);
+    }
+
+    @Override
+    public void inPlaceAndNot(RoaringBitmap original, MiruInvertedIndex<RoaringBitmap> not, byte[] primitiveBuffer) throws Exception {
+        Optional<RoaringBitmap> index = not.getIndex(primitiveBuffer);
+        if (index.isPresent()) {
+            original.andNot(index.get());
+        }
     }
 
     @Override

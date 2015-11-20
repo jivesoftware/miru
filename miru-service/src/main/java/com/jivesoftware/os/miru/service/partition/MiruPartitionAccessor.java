@@ -449,7 +449,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             partitionedActivities.clear();
             if (!indexables.isEmpty()) {
                 activityCount = indexables.size(); // indexer consumes, so count first
-                indexer.index(got, indexables, false, indexExecutor);
+                indexer.index(got, coord, indexables, false, indexExecutor);
             }
         }
         return activityCount;
@@ -499,7 +499,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             if (!indexables.isEmpty()) {
                 count = indexables.size(); // indexer consumes, so count first
                 Collections.sort(indexables);
-                indexer.index(got, indexables, true, indexExecutor);
+                indexer.index(got, coord, indexables, true, indexExecutor);
             }
         }
         return count;
