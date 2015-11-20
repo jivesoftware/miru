@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -90,6 +91,7 @@ public class MiruIndexFieldValues<BM> {
     }
 
     public List<Future<?>> index(final MiruContext<BM, ?> context,
+        MiruTenantId tenantId,
         List<Future<List<FieldValuesWork>>> fieldWorkFutures,
         final boolean repair,
         ExecutorService indexExecutor)
@@ -107,12 +109,16 @@ public class MiruIndexFieldValues<BM> {
                 futures.add(indexExecutor.submit(() -> {
                     byte[] primitiveBuffer = new byte[8];
                     if (repair) {
+                        log.inc("count>set", fieldValuesWork.ids.size());
+                        log.inc("count>set", fieldValuesWork.ids.size(), tenantId.toString());
                         fieldIndex.set(finalFieldId,
                             fieldValuesWork.fieldValue,
                             fieldValuesWork.ids.toArray(),
                             fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
                             primitiveBuffer);
                     } else {
+                        log.inc("count>append", fieldValuesWork.ids.size());
+                        log.inc("count>append", fieldValuesWork.ids.size(), tenantId.toString());
                         fieldIndex.append(finalFieldId,
                             fieldValuesWork.fieldValue,
                             fieldValuesWork.ids.toArray(),

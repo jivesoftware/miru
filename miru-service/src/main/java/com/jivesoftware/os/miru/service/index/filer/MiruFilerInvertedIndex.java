@@ -17,6 +17,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -72,6 +73,38 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             lastId = -1;
             return Optional.absent();
         }
+    }
+
+    @Override
+    public <R> R txIndex(IndexTx<R, BM> tx, byte[] primitiveBuffer) throws Exception {
+        if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
+            return tx.tx(null, null);
+        }
+
+        return keyedFilerStore.read(indexKey.keyBytes, null, (monkey, filer, primitiveBuffer1, lock) -> {
+            try {
+                if (filer != null) {
+                    synchronized (lock) {
+                        if (filer.length() < LAST_ID_LENGTH + 4) {
+                            return tx.tx(null, null);
+                        } else if (filer.canLeakUnsafeByteBuffer()) {
+                            ByteBuffer buffer = filer.leakUnsafeByteBuffer();
+                            buffer.position(LAST_ID_LENGTH);
+                            return tx.tx(null, buffer);
+                        } else {
+                            filer.seek(LAST_ID_LENGTH);
+                            byte[] bytes = new byte[(int) filer.length() - LAST_ID_LENGTH];
+                            FilerIO.read(filer, bytes);
+                            return tx.tx(null, ByteBuffer.wrap(bytes));
+                        }
+                    }
+                } else {
+                    return tx.tx(null, null);
+                }
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }, primitiveBuffer);
     }
 
     @Override

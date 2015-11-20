@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.google.common.base.Optional;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
@@ -17,6 +19,13 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
      * @throws Exception
      */
     Optional<BM> getIndex(byte[] primitiveBuffer) throws Exception;
+
+    <R> R txIndex(IndexTx<R, BM> tx, byte[] primitiveBuffer) throws Exception;
+
+    interface IndexTx<R, BM> {
+
+        R tx(BM bitmap, ByteBuffer buffer) throws Exception;
+    }
 
     /**
      * Gets the raw index in an unsafe manner. The returned index is not guaranteed to be free of concurrent writes,

@@ -1,9 +1,12 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
-import java.util.Arrays;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -14,22 +17,31 @@ import java.util.concurrent.Future;
  */
 public class MiruIndexAuthz<BM> {
 
+    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
     public List<Future<?>> index(final MiruContext<BM, ?> context,
+        MiruTenantId tenantId,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
 
         //TODO create work based on distinct authz strings
-        return Arrays.<Future<?>>asList(indexExecutor.submit(() -> {
+        return Collections.<Future<?>>singletonList(indexExecutor.submit(() -> {
             byte[] primitiveBuffer = new byte[8];
             for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                 MiruInternalActivity activity = internalActivityAndId.activity;
                 if (activity.authz != null) {
-                    for (String authz : activity.authz) {
-                        if (repair) {
+                    if (repair) {
+                        log.inc("count>set", activity.authz.length);
+                        log.inc("count>set", activity.authz.length, tenantId.toString());
+                        for (String authz : activity.authz) {
                             context.authzIndex.set(authz, primitiveBuffer, internalActivityAndId.id);
-                        } else {
+                        }
+                    } else {
+                        log.inc("count>append", activity.authz.length);
+                        log.inc("count>append", activity.authz.length, tenantId.toString());
+                        for (String authz : activity.authz) {
                             context.authzIndex.append(authz, primitiveBuffer, internalActivityAndId.id);
                         }
                     }
@@ -46,7 +58,7 @@ public class MiruIndexAuthz<BM> {
         ExecutorService indexExecutor)
         throws Exception {
 
-        return Arrays.<Future<?>>asList(indexExecutor.submit(() -> {
+        return Collections.<Future<?>>singletonList(indexExecutor.submit(() -> {
             byte[] primitiveBuffer = new byte[8];
             for (int i = 0; i < internalActivityAndIds.size(); i++) {
                 MiruActivityAndId<MiruInternalActivity> internalActivityAndId = internalActivityAndIds.get(i);

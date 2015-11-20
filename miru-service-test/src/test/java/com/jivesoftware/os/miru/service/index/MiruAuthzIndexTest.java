@@ -3,20 +3,20 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.googlecode.javaewah.IntIterator;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.bitmaps.ewah.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
 import java.util.List;
 import java.util.Map;
+import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -29,16 +29,16 @@ import static org.testng.Assert.assertTrue;
 public class MiruAuthzIndexTest {
 
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
-    public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<String, List<Integer>> bitsIn)
+    public void storeAndGetAuthz(MiruAuthzIndex<MutableRoaringBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<String, List<Integer>> bitsIn)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
         for (Map.Entry<String, List<Integer>> entry : bitsIn.entrySet()) {
             String authz = entry.getKey();
             MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(ImmutableList.of(authz));
 
-            EWAHCompressedBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, primitiveBuffer);
+            MutableRoaringBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, primitiveBuffer);
             List<Integer> actual = Lists.newArrayList();
-            IntIterator iter = bitsOut.intIterator();
+            IntIterator iter = bitsOut.getIntIterator();
             while (iter.hasNext()) {
                 actual.add(iter.next());
             }
@@ -49,42 +49,42 @@ public class MiruAuthzIndexTest {
 
     @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
-        MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8_192);
-        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("localhost", 10000));
-        MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
+        MiruAuthzUtils<MutableRoaringBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
-        MiruAuthzIndex<EWAHCompressedBitmap> unmergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap> unmergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeHybridBitsIn = populateAuthzIndex(unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2, false, false);
 
-        MiruAuthzIndex<EWAHCompressedBitmap> unmergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeOnDiskBitsIn = populateAuthzIndex(unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2, false, false);
 
-        MiruAuthzIndex<EWAHCompressedBitmap> mergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap> mergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> mergedLargeHybridBitsIn = populateAuthzIndex(mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2, false, true);
 
-        MiruAuthzIndex<EWAHCompressedBitmap> mergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap> mergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> mergedLargeOnDiskBitsIn = populateAuthzIndex(mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2, false, true);
 
-        MiruAuthzIndex<EWAHCompressedBitmap> partiallyMergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap> partiallyMergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> partiallyMergedLargeHybridBitsIn = populateAuthzIndex(partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2,
             true, false);
 
-        MiruAuthzIndex<EWAHCompressedBitmap> partiallyMergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap> partiallyMergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> partiallyMergedLargeOnDiskBitsIn = populateAuthzIndex(partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2,
             true, false);
 
-        return new Object[][]{
-            {unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, unmergedLargeHybridBitsIn},
-            {unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, unmergedLargeOnDiskBitsIn},
-            {mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, mergedLargeHybridBitsIn},
-            {mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, mergedLargeOnDiskBitsIn},
-            {partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, partiallyMergedLargeHybridBitsIn},
-            {partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, partiallyMergedLargeOnDiskBitsIn}
+        return new Object[][] {
+            { unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, unmergedLargeHybridBitsIn },
+            { unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, unmergedLargeOnDiskBitsIn },
+            { mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, mergedLargeHybridBitsIn },
+            { mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, mergedLargeOnDiskBitsIn },
+            { partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, partiallyMergedLargeHybridBitsIn },
+            { partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, partiallyMergedLargeOnDiskBitsIn }
         };
     }
 
-    private <BM> Map<String, List<Integer>> populateAuthzIndex(MiruAuthzIndex<EWAHCompressedBitmap> authzIndex,
+    private <BM> Map<String, List<Integer>> populateAuthzIndex(MiruAuthzIndex<MutableRoaringBitmap> authzIndex,
         MiruAuthzUtils<BM> miruAuthzUtils,
         int size,
         boolean mergeMiddle,

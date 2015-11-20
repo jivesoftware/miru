@@ -23,6 +23,7 @@ import com.googlecode.javaewah.IntIterator;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -135,6 +136,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
+    public void inPlaceOr(EWAHCompressedBitmap original, EWAHCompressedBitmap or) {
+        throw new UnsupportedOperationException("NOPE");
+    }
+
+    @Override
     public void or(EWAHCompressedBitmap container, Collection<EWAHCompressedBitmap> bitmaps) {
         FastAggregation.bufferedorWithContainer(container, bufferSize, bitmaps.toArray(new EWAHCompressedBitmap[bitmaps.size()]));
     }
@@ -151,6 +157,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
 
     @Override
     public void inPlaceAndNot(EWAHCompressedBitmap original, EWAHCompressedBitmap not) {
+        throw new UnsupportedOperationException("NOPE");
+    }
+
+    @Override
+    public void inPlaceAndNot(EWAHCompressedBitmap original, MiruInvertedIndex<EWAHCompressedBitmap> not, byte[] primitiveBuffer) throws Exception {
         throw new UnsupportedOperationException("NOPE");
     }
 

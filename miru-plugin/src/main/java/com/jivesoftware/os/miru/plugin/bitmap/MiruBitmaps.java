@@ -16,6 +16,7 @@
 package com.jivesoftware.os.miru.plugin.bitmap;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -71,6 +72,8 @@ public interface MiruBitmaps<BM> {
 
     void serialize(BM bitmap, DataOutput dataOutput) throws Exception;
 
+    void inPlaceOr(BM original, BM or);
+
     void or(BM container, Collection<BM> bitmaps);
 
     void inPlaceAnd(BM original, BM bitmap);
@@ -78,6 +81,8 @@ public interface MiruBitmaps<BM> {
     void and(BM container, Collection<BM> bitmaps);
 
     void inPlaceAndNot(BM original, BM not);
+
+    void inPlaceAndNot(BM original, MiruInvertedIndex<BM> not, byte[] primitiveBuffer) throws Exception;
 
     void andNot(BM container, BM original, BM not);
 

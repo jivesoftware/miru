@@ -6,6 +6,9 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.DataInputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -14,6 +17,8 @@ import java.util.concurrent.Callable;
  * DELTA FORCE
  */
 public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergeable {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruBitmaps<BM> bitmaps;
     private final MiruInvertedIndex<BM> backingIndex;
@@ -68,6 +73,29 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
             return (Optional<BM>) fieldIndexCache.get(indexKey, indexLoader);
         } else {
             return indexLoader.call();
+        }
+    }
+
+    @Override
+    public <R> R txIndex(IndexTx<R, BM> tx, byte[] primitiveBuffer) throws Exception {
+        if (fieldIndexCache != null) {
+            Optional<BM> index = (Optional<BM>) fieldIndexCache.getIfPresent(indexKey);
+            if (index != null) {
+                LOG.inc("txIndex>cached", 1);
+                return tx.tx(index.orNull(), null);
+            }
+        }
+
+        if (delta.replaced) {
+            LOG.inc("txIndex>replaced", 1);
+            return tx.tx(delta.or, null);
+        } else if (delta.or != null || delta.andNot != null) {
+            LOG.inc("txIndex>delta", 1);
+            Optional<BM> index = getIndex(primitiveBuffer);
+            return tx.tx(index.orNull(), null);
+        } else {
+            LOG.inc("txIndex>backing", 1);
+            return backingIndex.txIndex(tx, primitiveBuffer);
         }
     }
 
